@@ -173,7 +173,7 @@ export default function Cifras() {
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tickFormatter={(v) => `$${(v / 1_000_000).toFixed(0)}M`} tick={{ fontSize: 10 }} />
                 <YAxis type="category" dataKey="squad" width={160} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => [fmtCOP(v), 'Monto pactado']} />
+                <Tooltip formatter={(v: unknown) => [fmtCOP(Number(v)), 'Monto pactado']} />
                 <Bar dataKey="monto" fill="#059669" name="Monto pactado" radius={[0, 4, 4, 0]} barSize={18} />
               </BarChart>
             </ResponsiveContainer>
@@ -189,7 +189,7 @@ export default function Cifras() {
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10 }} />
                 <YAxis type="category" dataKey="squad" width={160} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => [v.toLocaleString('es-CO', { maximumFractionDigits: 1 }), 'Horas']} />
+                <Tooltip formatter={(v: unknown) => [Number(v).toLocaleString('es-CO', { maximumFractionDigits: 1 }), 'Horas']} />
                 <Bar dataKey="horas" fill="#f97316" name="Horas estimadas" radius={[0, 4, 4, 0]} barSize={18} />
               </BarChart>
             </ResponsiveContainer>

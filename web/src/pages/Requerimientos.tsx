@@ -4,7 +4,6 @@ import * as XLSX from 'xlsx'
 import client from '../api/client'
 import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { ESTADOS_ENTREGA, ESTADOS_REQUERIMIENTO } from '../constantes'
 import type { Aplicacion, Estimacion, EstimacionConResumen, FilaEstimacion, Persona, Requerimiento, Squad } from '../types'
 
 export default function Requerimientos() {
@@ -491,42 +490,56 @@ export default function Requerimientos() {
 
   const datosFiltrados = useMemo(() => {
     return datos.filter((req) => {
+      // Texto libre
       if (filtros.codigoReq && !req.codigo_req.toLowerCase().includes(filtros.codigoReq.toLowerCase())) return false
       if (filtros.sc && !(req.solicitud?.codigo_sc ?? '').toLowerCase().includes(filtros.sc.toLowerCase())) return false
+
+      // Squad: comparar contra nombre resuelto
       if (filtros.squad) {
         const nombreSquad = req.solicitud?.squad_id
           ? (squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id))
           : ''
-        if (!nombreSquad.toLowerCase().includes(filtros.squad.toLowerCase())) return false
+        if (nombreSquad !== filtros.squad) return false
       }
+
+      // Estado exacto del requerimiento
       if (filtros.estado && req.estado !== filtros.estado) return false
+
+      // Líder técnico por ID
       if (filtros.liderTecnico && req.solicitud?.lt_hitss_id !== filtros.liderTecnico) return false
+
+      // Fecha solicitud acta (campo que se ve en el formulario)
       if (filtros.fechaSolicitudDesde || filtros.fechaSolicitudHasta) {
-        const fecha = req.solicitud?.fecha_solicitud ? req.solicitud.fecha_solicitud.slice(0, 10) : null
+        const fecha = req.fecha_solicitud_acta ? req.fecha_solicitud_acta.slice(0, 10) : null
         if (!fecha) return false
         if (filtros.fechaSolicitudDesde && fecha < filtros.fechaSolicitudDesde) return false
         if (filtros.fechaSolicitudHasta && fecha > filtros.fechaSolicitudHasta) return false
       }
+
+      // Fecha comprometida (usa la misma lógica que la columna)
       if (filtros.fechaComprometidaDesde || filtros.fechaComprometidaHasta) {
-        const match = (req.entregas ?? []).some((en) => {
-          const fc = en.fecha_comprometida ? en.fecha_comprometida.slice(0, 10) : null
-          if (!fc) return false
-          if (filtros.fechaComprometidaDesde && fc < filtros.fechaComprometidaDesde) return false
-          if (filtros.fechaComprometidaHasta && fc > filtros.fechaComprometidaHasta) return false
-          return true
-        })
-        if (!match) return false
+        const fc = fechaComprometidaReq(req)
+        if (!fc) return false
+        if (filtros.fechaComprometidaDesde && fc < filtros.fechaComprometidaDesde) return false
+        if (filtros.fechaComprometidaHasta && fc > filtros.fechaComprometidaHasta) return false
       }
+
+      // Fecha límite
       if (filtros.fechaLimiteDesde || filtros.fechaLimiteHasta) {
         const fl = req.fecha_limite ? req.fecha_limite.slice(0, 10) : null
         if (!fl) return false
         if (filtros.fechaLimiteDesde && fl < filtros.fechaLimiteDesde) return false
         if (filtros.fechaLimiteHasta && fl > filtros.fechaLimiteHasta) return false
       }
+
+      // Estado de entrega: case-insensitive
       if (filtros.estadoEntrega) {
-        const match = (req.entregas ?? []).some((en) => en.estado === filtros.estadoEntrega)
+        const match = (req.entregas ?? []).some(
+          (en) => (en.estado ?? '').toLowerCase() === filtros.estadoEntrega.toLowerCase()
+        )
         if (!match) return false
       }
+
       return true
     })
   }, [datos, filtros, squadPorId])
