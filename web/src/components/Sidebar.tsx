@@ -14,10 +14,12 @@ interface Grupo {
 
 const GRUPOS: Grupo[] = [
   {
-    titulo: 'General',
+    titulo: 'Dashboard',
     items: [
       { to: '/dashboard', label: 'Dashboard', soloAdmin: false },
       { to: '/cifras', label: 'Cifras y ANS' },
+      { to: '/dashboard-estados', label: 'Estados' },
+      { to: '/dashboard-squad', label: 'Squad' },
     ],
   },
   {

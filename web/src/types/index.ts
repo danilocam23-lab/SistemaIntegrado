@@ -165,6 +165,7 @@ export interface Asignacion {
   categoria_id: string
   total_porcentaje: number
   estado: string
+  prioridad?: boolean
   proyectos: Proyecto[]
 }
 

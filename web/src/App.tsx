@@ -20,6 +20,8 @@ import AzureDevOps from './pages/AzureDevOps'
 import Configuracion from './pages/Configuracion'
 import Cifras from './pages/Cifras'
 import EntregasActas from './pages/EntregasActas'
+import DashboardEstados from './pages/DashboardEstados'
+import DashboardSquad from './pages/DashboardSquad'
 
 export default function App() {
   return (
@@ -38,6 +40,8 @@ export default function App() {
             >
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardRequerimientos />} />
+              <Route path="dashboard-estados" element={<DashboardEstados />} />
+              <Route path="dashboard-squad" element={<DashboardSquad />} />
               <Route path="requerimientos" element={<Requerimientos />} />
               <Route path="requerimientos/nuevo" element={<RequerimientoNuevo />} />
               <Route path="requerimientos/:reqId" element={<RequerimientoDetalle />} />

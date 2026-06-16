@@ -16,6 +16,7 @@ class AsignacionIn(BaseModel):
     total_porcentaje: float = 0
     estado: str = "active"
     activo: bool = True
+    prioridad: bool = False
     proyectos: list[Proyecto] = []
 
 
@@ -64,7 +65,36 @@ async def actualizar(
     return asignacion
 
 
-@router.delete("/{asignacion_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.patch("/{asignacion_id}/prioridad")
+async def cambiar_prioridad(
+    asignacion_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+):
+    """Marca esta asignación como prioritaria para la persona y desmarca las demás."""
+    asignacion = await Asignacion.get(asignacion_id)
+    if asignacion is None or asignacion.aplicacion_id not in ctx.codigos:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Asignación no encontrada")
+
+    nueva_prioridad = not asignacion.prioridad
+
+    if nueva_prioridad:
+        # Desmarcar todas las demás asignaciones de la misma persona
+        otras = await Asignacion.find(
+            {"persona_id": asignacion.persona_id, "_id": {"$ne": asignacion.id}}
+        ).to_list()
+        for otra in otras:
+            if otra.prioridad:
+                otra.prioridad = False
+                otra.marcar_actualizado()
+                await otra.save()
+
+    asignacion.prioridad = nueva_prioridad
+    asignacion.marcar_actualizado()
+    await asignacion.save()
+    return asignacion
+
+
+
 async def eliminar(
     asignacion_id: str, ctx: ContextoAplicacion = Depends(contexto_escritura)
 ) -> None:

@@ -702,7 +702,7 @@ export default function Requerimientos() {
               <th className="p-2 text-left">Líder técnico</th>
               <th className="p-2 text-left">Scrum</th>
               <th className="p-2 text-right">Horas</th>
-              <th className="p-2 text-center">F. Comprometida</th>
+              <th className="p-2 text-center">F. Solicitud</th>
               <th className="p-2 text-center">Entregas</th>
               <th className="p-2 text-center">Est.</th>
               <th className="p-2"></th>
@@ -747,16 +747,9 @@ export default function Requerimientos() {
                     <td className="p-2">{renderCelda(req, 'scrum_id', nombrePersona(req.solicitud?.scrum_id ?? null), 'select-persona', 'SCRUM')}</td>
                     <td className="p-2 text-right">{renderCelda(req, 'total_horas_estimadas', req.total_horas_estimadas != null ? String(req.total_horas_estimadas) : '', 'number')}</td>
                     <td className="p-2 text-center text-xs">
-                      {(() => {
-                        const f = fechaComprometidaReq(req)
-                        if (!f) return <span className="text-slate-400">—</span>
-                        const vencida = f < new Date().toISOString().slice(0, 10)
-                        return (
-                          <span className={vencida ? 'font-medium text-red-600' : 'text-slate-700'}>
-                            {f}{vencida && ' ⚠'}
-                          </span>
-                        )
-                      })()}
+                      {req.fecha_solicitud_acta
+                        ? req.fecha_solicitud_acta.slice(0, 10)
+                        : <span className="text-slate-400">—</span>}
                     </td>
                     <td className="p-2 text-center">
                       {(req.entregas?.length ?? 0) > 0 ? (

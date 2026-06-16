@@ -66,6 +66,7 @@ class Asignacion(DocumentoOperativo):
     total_porcentaje: float = 0
     estado: str = "active"
     activo: bool = True
+    prioridad: bool = False
     proyectos: list[Proyecto] = []
 
     class Settings:

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
-import { useLista, useEstados } from '../api/hooks'
+import { useLista } from '../api/hooks'
 import type { Aplicacion, Requerimiento, Squad } from '../types'
 
 interface FilaEntrega {
@@ -18,12 +18,22 @@ interface FilaEntrega {
 }
 
 export default function EntregasActas() {
-  const { datos: requerimientos, error, cargando } = useLista<Requerimiento>('/requerimientos')
+  const { datos: requerimientos, error, cargando, recargar } = useLista<Requerimiento>('/requerimientos')
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
-  const { estadosEnt } = useEstados()
   const [squadsCol, setSquadsCol] = useState<Squad[]>([])
   const [filtroTexto, setFiltroTexto] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('PENDIENTE')
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('')
+
+  // Auto-refresca cuando el usuario vuelve a esta pestaña/vista
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') recargar()
+    }
+    document.addEventListener('visibilitychange', handleVisible)
+    return () => document.removeEventListener('visibilitychange', handleVisible)
+  }, [recargar])
 
   useEffect(() => {
     client
@@ -87,6 +97,12 @@ export default function EntregasActas() {
           )
             return false
         }
+        if (filtroFechaDesde || filtroFechaHasta) {
+          const fc = f.fechaComprometida ? f.fechaComprometida.slice(0, 10) : null
+          if (!fc) return false
+          if (filtroFechaDesde && fc < filtroFechaDesde) return false
+          if (filtroFechaHasta && fc > filtroFechaHasta) return false
+        }
         return true
       })
       .sort((a, b) => {
@@ -95,7 +111,16 @@ export default function EntregasActas() {
         if (!b.fechaComprometida) return -1
         return a.fechaComprometida.localeCompare(b.fechaComprometida)
       })
-  }, [filas, filtroTexto, filtroEstado])
+  }, [filas, filtroTexto, filtroEstado, filtroFechaDesde, filtroFechaHasta])
+
+  /** Estados reales que tienen las entregas en la BD */
+  const estadosEnBD = useMemo(() => {
+    const set = new Set<string>()
+    for (const f of filas) {
+      if (f.estado) set.add(f.estado)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
+  }, [filas])
 
   const estadoBadge = (estado: string | null) => {
     const s = estado ?? ''
@@ -103,18 +128,31 @@ export default function EntregasActas() {
       s.toUpperCase() === 'PENDIENTE' ? 'bg-amber-100 text-amber-700' :
       s.toUpperCase() === 'APROBADA' ? 'bg-green-100 text-green-700' :
       s.toUpperCase() === 'RECHAZADA' ? 'bg-red-100 text-red-700' :
-      s.toUpperCase().includes('ENTREGA CARGADA') ? 'bg-blue-100 text-blue-700' :
+      s.toUpperCase() === 'ENTREGA CARGADA' ? 'bg-blue-100 text-blue-700' :
+      s.toUpperCase() === 'ENTREGA NO CARGADA' ? 'bg-orange-100 text-orange-700' :
+      s.toUpperCase() === 'EN GARANTIA' ? 'bg-purple-100 text-purple-700' :
       'bg-slate-100 text-slate-600'
     return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>{s || '—'}</span>
   }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-marca-osc">Entregas de Actas</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Entregas ordenadas de la más próxima a la más lejana.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-marca-osc">Entregas de Actas</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Entregas ordenadas de la más próxima a la más lejana.
+          </p>
+        </div>
+        <button
+          onClick={recargar}
+          disabled={cargando}
+          title="Recargar estados desde Requerimientos"
+          className="flex items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        >
+          <span className={cargando ? 'animate-spin' : ''}>↺</span>
+          Actualizar
+        </button>
       </div>
 
       {/* Filtros */}
@@ -136,12 +174,30 @@ export default function EntregasActas() {
             className="rounded border px-3 py-2 text-sm w-52"
           >
             <option value="">Todos los estados</option>
-            {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
+            {estadosEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
-        {(filtroTexto || filtroEstado) && (
+        <label className="text-sm">
+          <span className="mb-1 block text-slate-600">F. Comprometida</span>
+          <div className="flex items-center gap-1">
+            <input
+              type="date"
+              value={filtroFechaDesde}
+              onChange={(e) => setFiltroFechaDesde(e.target.value)}
+              className="rounded border px-2 py-2 text-sm"
+            />
+            <span className="text-xs text-slate-400">–</span>
+            <input
+              type="date"
+              value={filtroFechaHasta}
+              onChange={(e) => setFiltroFechaHasta(e.target.value)}
+              className="rounded border px-2 py-2 text-sm"
+            />
+          </div>
+        </label>
+        {(filtroTexto || filtroEstado || filtroFechaDesde || filtroFechaHasta) && (
           <button
-            onClick={() => { setFiltroTexto(''); setFiltroEstado('') }}
+            onClick={() => { setFiltroTexto(''); setFiltroEstado(''); setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
             className="text-xs text-red-500 hover:underline self-end pb-2"
           >
             Limpiar
