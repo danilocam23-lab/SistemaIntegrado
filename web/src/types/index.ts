@@ -61,6 +61,8 @@ export interface Entrega {
   fecha_aprobacion: string | null
   fecha_ejecucion: string | null
   estado: string | null
+  observaciones: string | null
+  mes_aprobacion: string | null
   ans_entrega: string | null
   garantia: boolean
 }

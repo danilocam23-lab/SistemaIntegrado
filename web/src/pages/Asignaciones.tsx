@@ -75,6 +75,7 @@ export default function Asignaciones() {
   const [edicionInlineId, setEdicionInlineId] = useState<string | null>(null)
   const [edicionInlineValor, setEdicionInlineValor] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<string>('__todos__')
+  const [filtroPersona, setFiltroPersona] = useState<string>('__todos__')
   const reqBoxRef = useRef<HTMLDivElement | null>(null)
   const autoFixedRef = useRef(false)
   const modoEdicion = editandoAsig !== null
@@ -252,10 +253,28 @@ export default function Asignaciones() {
   }, [gruposReq])
 
   const gruposFiltrados = useMemo(() => {
-    if (filtroEstado === '__todos__') return gruposReq
-    if (filtroEstado === '__sin_estado__') return gruposReq.filter((g) => !g.reqEstado)
-    return gruposReq.filter((g) => g.reqEstado === filtroEstado)
-  }, [gruposReq, filtroEstado])
+    let resultado = gruposReq
+    
+    // Filtrar por estado
+    if (filtroEstado === '__todos__') {
+      // Mantener todos
+    } else if (filtroEstado === '__sin_estado__') {
+      resultado = resultado.filter((g) => !g.reqEstado)
+    } else {
+      resultado = resultado.filter((g) => g.reqEstado === filtroEstado)
+    }
+    
+    // Filtrar por persona
+    if (filtroPersona !== '__todos__') {
+      resultado = resultado.map((g) => ({
+        ...g,
+        items: g.items.filter((item) => item.asig.persona_id === filtroPersona),
+      }))
+      resultado = resultado.filter((g) => g.items.length > 0)
+    }
+    
+    return resultado
+  }, [gruposReq, filtroEstado, filtroPersona])
 
   useEffect(() => {
     setGruposExpandidos(new Set(gruposReq.map((grupo) => grupo.reqId)))
@@ -698,28 +717,56 @@ export default function Asignaciones() {
         <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{aviso || error}</div>
       )}
 
-      <div className="mb-4 flex items-center gap-3">
-        <label className="text-sm text-slate-600">Filtrar por estado del requerimiento:</label>
-        <select
-          value={filtroEstado}
-          onChange={(e) => setFiltroEstado(e.target.value)}
-          className="rounded border px-3 py-1.5 text-sm"
-        >
-          <option value="__todos__">Todos</option>
-          {estadosUnicos.map((estado) => (
-            <option key={estado} value={estado}>{estado}</option>
-          ))}
-          <option value="__sin_estado__">Sin estado</option>
-        </select>
-        {filtroEstado !== '__todos__' && (
-          <button
-            type="button"
-            onClick={() => setFiltroEstado('__todos__')}
-            className="text-xs text-slate-400 hover:text-red-500"
+      <div className="mb-4 flex items-center gap-6">
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-slate-600">Filtrar por estado del requerimiento:</label>
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="rounded border px-3 py-1.5 text-sm"
           >
-            Limpiar ✕
-          </button>
-        )}
+            <option value="__todos__">Todos</option>
+            {estadosUnicos.map((estado) => (
+              <option key={estado} value={estado}>{estado}</option>
+            ))}
+            <option value="__sin_estado__">Sin estado</option>
+          </select>
+          {filtroEstado !== '__todos__' && (
+            <button
+              type="button"
+              onClick={() => setFiltroEstado('__todos__')}
+              className="text-xs text-slate-400 hover:text-red-500"
+            >
+              Limpiar ✕
+            </button>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-slate-600">Filtrar por persona:</label>
+          <select
+            value={filtroPersona}
+            onChange={(e) => setFiltroPersona(e.target.value)}
+            className="rounded border px-3 py-1.5 text-sm"
+          >
+            <option value="__todos__">Todas</option>
+            {personas
+              .slice()
+              .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+              .map((persona) => (
+                <option key={persona.id} value={persona.id}>{persona.nombre}</option>
+              ))}
+          </select>
+          {filtroPersona !== '__todos__' && (
+            <button
+              type="button"
+              onClick={() => setFiltroPersona('__todos__')}
+              className="text-xs text-slate-400 hover:text-red-500"
+            >
+              Limpiar ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -735,6 +782,23 @@ export default function Asignaciones() {
                 >
                   <span className="text-sm">{expandido ? '▼' : '▶'}</span>
                   <span className="truncate text-sm font-semibold">{grupo.reqLabel}</span>
+                  {grupo.reqId && (() => {
+                    const req = requerimientos.find(r => r.id === grupo.reqId)
+                    if (!req?.total_horas_estimadas) return null
+                    const horasReales = req.total_horas_estimadas * 0.9
+                    return (
+                      <div className="ml-4 flex shrink-0 items-center gap-4 border-l border-white/30 pl-4 text-xs font-medium">
+                        <div>
+                          <div className="text-white/70">Horas est.</div>
+                          <div>{req.total_horas_estimadas.toFixed(1)} h</div>
+                        </div>
+                        <div>
+                          <div className="text-white/70">Horas reales (90%)</div>
+                          <div>{horasReales.toFixed(1)} h</div>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </button>
                 <div className="flex shrink-0 items-center gap-2">
                   {grupo.reqId && (

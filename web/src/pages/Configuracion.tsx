@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
@@ -112,7 +112,6 @@ export default function Configuracion() {
 
   // ── Festivos ──
   const [festFecha, setFestFecha] = useState('')
-  const [festDescripcion, setFestDescripcion] = useState('')
 
   useEffect(() => {
     client.get<string[]>('/personas/roles').then((r) => setRoles(r.data)).catch(() => {})
@@ -153,10 +152,8 @@ export default function Configuracion() {
     try {
       await client.post('/festivos', {
         fecha: festFecha,
-        descripcion: festDescripcion || null,
       })
       setFestFecha('')
-      setFestDescripcion('')
       recargarFestivos()
     } catch (err) {
       setAviso(mensajeError(err))
@@ -167,6 +164,32 @@ export default function Configuracion() {
     await client.delete(`/festivos/${f.id}`)
     recargarFestivos()
   }
+
+  const festivosAgrupados = useMemo(() => {
+    const grupos = new Map<string, Festivo[]>()
+    for (const festivo of festivos) {
+      const fecha = (festivo.fecha ?? '').slice(0, 10)
+      const clave = fecha ? fecha.slice(0, 7) : 'sin-fecha'
+      if (!grupos.has(clave)) grupos.set(clave, [])
+      grupos.get(clave)?.push(festivo)
+    }
+
+    return Array.from(grupos.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([clave, items]) => {
+        const [anio, mes] = clave.split('-')
+        const fechaMes = anio && mes ? new Date(Number(anio), Number(mes) - 1, 1) : null
+        const tituloBase = fechaMes
+          ? fechaMes.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
+          : 'Sin fecha'
+        const titulo = tituloBase.charAt(0).toUpperCase() + tituloBase.slice(1)
+        return {
+          clave,
+          titulo,
+          items: items.slice().sort((a, b) => a.fecha.localeCompare(b.fecha)),
+        }
+      })
+  }, [festivos])
 
   const valorDe = (c: Config): string =>
     valores[c.clave] !== undefined ? valores[c.clave] : c.valor
@@ -553,23 +576,24 @@ export default function Configuracion() {
               <input value={festFecha} onChange={(e) => setFestFecha(e.target.value)} type="date" required
                 className="rounded border px-3 py-2" />
             </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-600">Descripción</span>
-              <input value={festDescripcion} onChange={(e) => setFestDescripcion(e.target.value)}
-                placeholder="Día festivo" className="rounded border px-3 py-2" />
-            </label>
             <button className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">+ Agregar</button>
           </form>
-          <ul className="flex flex-wrap gap-2">
-            {festivos.slice().sort((a, b) => (a.fecha < b.fecha ? -1 : 1)).map((f) => (
-              <li key={f.id} className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm">
-                <span className="font-medium">{f.fecha?.slice(0, 10)}</span>
-                {f.descripcion && <span className="text-slate-500">{f.descripcion}</span>}
-                <button onClick={() => eliminarFestivo(f)} className="text-red-400 hover:text-red-600" title="Quitar">✕</button>
-              </li>
+          <div className="space-y-3">
+            {festivosAgrupados.map((grupo) => (
+              <div key={grupo.clave}>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{grupo.titulo}</h3>
+                <ul className="flex flex-wrap gap-2">
+                  {grupo.items.map((f) => (
+                    <li key={f.id} className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm">
+                      <span className="font-medium">{f.fecha?.slice(0, 10)}</span>
+                      <button onClick={() => eliminarFestivo(f)} className="text-red-400 hover:text-red-600" title="Quitar">✕</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-            {festivos.length === 0 && <li className="text-sm text-slate-400">Sin festivos registrados</li>}
-          </ul>
+            {festivos.length === 0 && <div className="text-sm text-slate-400">Sin festivos registrados</div>}
+          </div>
           {(aviso || error) && <div className="mt-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>}
         </div>
       )}

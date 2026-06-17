@@ -25,7 +25,13 @@ router = APIRouter(prefix="/requerimientos", tags=["requerimientos"])
 
 
 async def _registrar_bitacora(
-    aplicacion_id: str, entidad_id: str, accion: str, descripcion: str, usuario: Usuario
+    aplicacion_id: str,
+    entidad_id: str,
+    accion: str,
+    descripcion: str,
+    usuario: Usuario,
+    datos_antes: dict | None = None,
+    datos_despues: dict | None = None,
 ) -> None:
     await Bitacora(
         aplicacion_id=aplicacion_id,
@@ -34,6 +40,8 @@ async def _registrar_bitacora(
         accion=accion,
         descripcion=descripcion,
         autor=usuario.email,
+        datos_antes=datos_antes,
+        datos_despues=datos_despues,
     ).insert()
 
 
@@ -261,7 +269,11 @@ async def guardar_entrega(
 ):
     """Agrega o reemplaza una entrega (por número) en el requerimiento."""
     req = await _buscar(ctx, codigo_req)
-    nueva = Entrega(**datos.model_dump())
+    entrega_anterior = next((e for e in req.entregas if e.numero == datos.numero), None)
+    payload_entrega = datos.model_dump()
+    if (payload_entrega.get("estado") or "").upper() != "APROBADA":
+        payload_entrega["mes_aprobacion"] = None
+    nueva = Entrega(**payload_entrega)
 
     # Calcular ANS: si hay fecha_recepcion, comparar con fecha_comprometida
     from app.documents.enums import AnsResultado
@@ -299,8 +311,20 @@ async def guardar_entrega(
     req.cantidad_entregas = len(req.entregas)
     req.marcar_actualizado()
     await req.save()
+    accion = "actualizar_entrega" if entrega_anterior is not None else "crear_entrega"
+    descripcion = f"Entrega {nueva.numero} {'actualizada' if entrega_anterior is not None else 'registrada'}"
+    if nueva.observaciones:
+        descripcion += f" · Observaciones: {nueva.observaciones}"
+    if nueva.mes_aprobacion:
+        descripcion += f" · Mes aprobación: {nueva.mes_aprobacion}"
     await _registrar_bitacora(
-        ctx.codigo, str(req.id), "entrega", f"Entrega {nueva.numero} registrada", usuario
+        ctx.codigo,
+        str(req.id),
+        accion,
+        descripcion,
+        usuario,
+        datos_antes=entrega_anterior.model_dump() if entrega_anterior is not None else None,
+        datos_despues=nueva.model_dump(),
     )
     return req
 

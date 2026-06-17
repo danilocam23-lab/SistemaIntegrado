@@ -15,6 +15,7 @@ interface FilaEntrega {
   porcentaje: number | null
   fechaComprometida: string | null
   estado: string | null
+  mesAprobacion: string | null
 }
 
 export default function EntregasActas() {
@@ -78,6 +79,7 @@ export default function EntregasActas() {
           porcentaje,
           fechaComprometida: en.fecha_comprometida ?? null,
           estado: en.estado ?? null,
+          mesAprobacion: en.mes_aprobacion ?? null,
         })
       }
     }
@@ -223,17 +225,18 @@ export default function EntregasActas() {
               <th className="p-2 text-right">% Avance</th>
               <th className="p-2 text-left">F. Comprometida</th>
               <th className="p-2 text-center">Estado</th>
+              <th className="p-2 text-left">Mes de aprobación</th>
             </tr>
           </thead>
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={9} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={10} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={9} className="p-4 text-center text-slate-400">Sin entregas.</td>
+                <td colSpan={10} className="p-4 text-center text-slate-400">Sin entregas.</td>
               </tr>
             )}
             {filasFiltradas.map((f, i) => {
@@ -273,6 +276,7 @@ export default function EntregasActas() {
                   {vencida && <span className="ml-1 text-xs">⚠</span>}
                 </td>
                 <td className="p-2 text-center">{estadoBadge(f.estado)}</td>
+                <td className="p-2">{f.mesAprobacion ?? '—'}</td>
               </tr>
               )
             })}

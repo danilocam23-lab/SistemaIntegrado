@@ -8,6 +8,21 @@ import { useAuth } from '../context/AuthContext'
 import { TIPOS_COSTO, ESTADOS_ENTREGA } from '../constantes'
 import type { Aplicacion, EventoBitacora, Liquidacion, Persona, Requerimiento, Squad } from '../types'
 
+const MESES_ES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+]
+
 export default function RequerimientoDetalle() {
   const { reqId } = useParams<{ reqId: string }>()
   const { usuario } = useAuth()
@@ -54,6 +69,8 @@ export default function RequerimientoDetalle() {
   const [eFecha, setEFecha] = useState('')
   const [eFechaReal, setEFechaReal] = useState('')
   const [eEstado, setEEstado] = useState(ESTADOS_ENTREGA[0])
+  const [eMesAprobacion, setEMesAprobacion] = useState('')
+  const [eObservaciones, setEObservaciones] = useState('')
   const [eGarantia, setEGarantia] = useState(false)
   const [eEditando, setEEditando] = useState(false)
 
@@ -63,6 +80,8 @@ export default function RequerimientoDetalle() {
     setEFecha(en.fecha_comprometida ? en.fecha_comprometida.slice(0, 10) : '')
     setEFechaReal(en.fecha_recepcion ? en.fecha_recepcion.slice(0, 10) : '')
     setEEstado(en.estado ?? estadosEnt[0])
+    setEMesAprobacion(en.mes_aprobacion ?? '')
+    setEObservaciones(en.observaciones ?? '')
     setEGarantia(en.garantia ?? false)
     setEEditando(true)
   }
@@ -73,6 +92,8 @@ export default function RequerimientoDetalle() {
     setEFecha('')
     setEFechaReal('')
     setEEstado(estadosEnt[0])
+    setEMesAprobacion('')
+    setEObservaciones('')
     setEGarantia(false)
     setEEditando(false)
   }
@@ -192,12 +213,16 @@ export default function RequerimientoDetalle() {
         fecha_comprometida: eFecha || null,
         fecha_recepcion: eFechaReal || null,
         estado: eEstado,
+        mes_aprobacion: eEstado.toUpperCase() === 'APROBADA' ? (eMesAprobacion || null) : null,
+        observaciones: eObservaciones || null,
         garantia: eGarantia,
       }, writeConfig())
       setENumero('')
       setEHoras('')
       setEFecha('')
       setEFechaReal('')
+      setEMesAprobacion('')
+      setEObservaciones('')
       setEEditando(false)
       recargar()
     } catch (err) {
@@ -415,8 +440,8 @@ export default function RequerimientoDetalle() {
             <tr>
               <th className="py-1">N°</th><th className="py-1">Horas</th>
               <th className="py-1">% Avance</th><th className="py-1">F. Comprometida</th>
-              <th className="py-1">F. Real</th><th className="py-1">Estado</th>
-              <th className="py-1">ANS</th><th className="py-1">Garantía</th>
+              <th className="py-1">F. Real</th><th className="py-1">Estado</th><th className="py-1">Mes aprobación</th>
+              <th className="py-1">Observaciones</th><th className="py-1">ANS</th><th className="py-1">Garantía</th>
               <th className="py-1"></th>
             </tr>
           </thead>
@@ -437,6 +462,8 @@ export default function RequerimientoDetalle() {
                   <td className="py-1">{en.fecha_comprometida?.slice(0, 10) ?? '—'}</td>
                   <td className="py-1">{en.fecha_recepcion?.slice(0, 10) ?? '—'}</td>
                   <td className="py-1">{en.estado ?? '—'}</td>
+                  <td className="py-1">{en.mes_aprobacion ?? '—'}</td>
+                  <td className="py-1">{en.observaciones ?? '—'}</td>
                   <td className={`py-1 font-medium ${ansColor}`}>{ansLabel}</td>
                   <td className="py-1">{en.garantia ? 'Sí' : 'No'}</td>
                   <td className="py-1">
@@ -463,7 +490,7 @@ export default function RequerimientoDetalle() {
               )
             })}
             {req.entregas.length === 0 && (
-              <tr><td colSpan={9} className="py-2 text-slate-400">Sin entregas.</td></tr>
+              <tr><td colSpan={11} className="py-2 text-slate-400">Sin entregas.</td></tr>
             )}
           </tbody>
         </table>
@@ -497,10 +524,36 @@ export default function RequerimientoDetalle() {
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Estado</span>
-            <select value={eEstado} onChange={(e) => setEEstado(e.target.value)}
+            <select value={eEstado} onChange={(e) => {
+              const nuevoEstado = e.target.value
+              setEEstado(nuevoEstado)
+              if (nuevoEstado.toUpperCase() !== 'APROBADA') setEMesAprobacion('')
+            }}
               className="rounded border px-3 py-2">
               {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
+          </label>
+          {eEstado.toUpperCase() === 'APROBADA' && (
+            <label className="text-sm">
+              <span className="mb-1 block text-slate-600">Mes de aprobación</span>
+              <select
+                value={eMesAprobacion}
+                onChange={(e) => setEMesAprobacion(e.target.value)}
+                className="rounded border px-3 py-2"
+              >
+                <option value="">— Seleccionar —</option>
+                {MESES_ES.map((mes) => <option key={mes} value={mes}>{mes}</option>)}
+              </select>
+            </label>
+          )}
+          <label className="min-w-[280px] flex-1 text-sm">
+            <span className="mb-1 block text-slate-600">Observaciones</span>
+            <input
+              value={eObservaciones}
+              onChange={(e) => setEObservaciones(e.target.value)}
+              placeholder="Notas de la entrega"
+              className="w-full rounded border px-3 py-2"
+            />
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={eGarantia} onChange={(e) => setEGarantia(e.target.checked)} />

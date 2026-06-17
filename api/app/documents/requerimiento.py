@@ -57,6 +57,8 @@ class Entrega(BaseModel):
     fecha_aprobacion: datetime | None = None
     fecha_ejecucion: datetime | None = None
     estado: str | None = None
+    observaciones: str | None = None
+    mes_aprobacion: str | None = None
     ans_entrega: AnsResultado | None = None
     garantia: bool = False
     acta_trabajo_id: str | None = None

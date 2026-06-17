@@ -49,10 +49,14 @@ export default function DashboardRequerimientos() {
     const allEntregas = reqs.flatMap((r) => r.entregas ?? [])
     const totalEntregas = allEntregas.length
 
-    // ANS ACTA: campo ans_acta del requerimiento
-    const conAnsActa    = reqs.filter((r) => r.ans_acta)
-    const ansActaCumple = conAnsActa.filter((r) => r.ans_acta === 'CUMPLE').length
-    const ansActaPct    = conAnsActa.length > 0 ? Math.round((ansActaCumple / conAnsActa.length) * 100) : 0
+    // ANS Requerimientos: evalúa todos los requerimientos activos
+    const reqsActivos = reqs.filter((r) => {
+      const normalized = r.estado.toUpperCase()
+      return !normalized.includes('CANCELADO') && !normalized.includes('REEMPLAZADO')
+    })
+    const requerimentosConAns = reqsActivos.filter((r) => r.ans_acta)
+    const ansReqCumple = requerimentosConAns.filter((r) => r.ans_acta === 'CUMPLE').length
+    const ansReqPct = requerimentosConAns.length > 0 ? Math.round((ansReqCumple / requerimentosConAns.length) * 100) : 0
 
     // ANS Entregas: campo ans_entrega de cada entrega
     const conAnsEnt    = allEntregas.filter((e) => e.ans_entrega)
@@ -61,7 +65,7 @@ export default function DashboardRequerimientos() {
 
     return {
       total: reqs.length, totalHoras, totalEntregas,
-      ansActaPct, ansActaCumple, ansActaTotal: conAnsActa.length,
+      ansReqPct, ansReqCumple, ansReqTotal: requerimentosConAns.length,
       ansEntPct, ansEntCumple, ansEntTotal: conAnsEnt.length,
     }
   }, [reqs])
@@ -132,26 +136,13 @@ export default function DashboardRequerimientos() {
         else if (e.ans_entrega === 'NO_CUMPLE') map[mes].noCumple++
       }
     }
-    return Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([mes, v]) => ({ mes, ...v }))
-  }, [reqs])
-
-  // ─── Horas por tecnología (horizontal bar) ─────────────
-  const porTecnologia = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const r of reqs) {
-      const tec = r.solicitud?.tecnologia ?? 'Sin tecnología'
-      map[tec] = (map[tec] ?? 0) + (r.total_horas_estimadas ?? 0)
-    }
-    return Object.entries(map)
-      .map(([name, horas]) => ({ name, horas }))
-      .sort((a, b) => b.horas - a.horas)
-      .slice(0, 8)
+   return Object.entries(map)
+     .sort(([a], [b]) => a.localeCompare(b))
+     .map(([mes, v]) => ({ mes, ...v }))
   }, [reqs])
 
   if (cargando) {
-    return <div className="p-8 text-center text-slate-500">Cargando dashboard…</div>
+   return <div className="p-8 text-center text-slate-500">Cargando dashboard…</div>
   }
 
   return (
@@ -176,8 +167,8 @@ export default function DashboardRequerimientos() {
           sub={`de ${reqs.length} requerimientos`}
           color={COLORES_KPI.entregas} />
         <KpiCard
-          icon={COLORES_KPI.ansActa.icon} label="ANS ACTA" value={`${kpis.ansActaPct}%`}
-          sub={`${kpis.ansActaCumple} / ${kpis.ansActaTotal} evaluados`}
+          icon={COLORES_KPI.ansActa.icon} label="ANS Requerimientos" value={`${kpis.ansReqPct}%`}
+          sub={`${kpis.ansReqCumple} / ${kpis.ansReqTotal} evaluados`}
           color={COLORES_KPI.ansActa} />
         <KpiCard
           icon={COLORES_KPI.ansEnt.icon} label="ANS Entregas" value={`${kpis.ansEntPct}%`}
@@ -238,8 +229,8 @@ export default function DashboardRequerimientos() {
         </Panel>
       </div>
 
-      {/* ═══ Row 3: Tipo costo + Tendencia + Tecnología ═══ */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      {/* ═══ Row 3: Tipo costo + Tendencia ═══ */}
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Tipo de costo (Pie) */}
         <Panel titulo="Por tipo de costo">
           {porTipoCosto.length === 0 ? <Empty /> : (
@@ -277,25 +268,6 @@ export default function DashboardRequerimientos() {
             </ResponsiveContainer>
           )}
         </Panel>
-
-        {/* Horas por tecnología */}
-        <Panel titulo="Horas por tecnología">
-          {porTecnologia.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={porTecnologia} layout="vertical" margin={{ left: 10, right: 16, top: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(v) => [v, 'Horas']} />
-                <Bar dataKey="horas" radius={[0, 4, 4, 0]} barSize={16}>
-                  {porTecnologia.map((_, i) => (
-                    <Cell key={i} fill={COLORES[i % COLORES.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
       </div>
     </div>
   )
@@ -321,8 +293,8 @@ function KpiCard({ icon, label, value, sub, color }: {
 
 function Panel({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-slate-700">{titulo}</h3>
+    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <h3 className="mb-4 text-sm font-semibold text-slate-900 uppercase tracking-wide">{titulo}</h3>
       {children}
     </div>
   )
