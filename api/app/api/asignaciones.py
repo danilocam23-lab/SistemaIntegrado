@@ -94,7 +94,7 @@ async def cambiar_prioridad(
     return asignacion
 
 
-
+@router.delete("/{asignacion_id}")
 async def eliminar(
     asignacion_id: str, ctx: ContextoAplicacion = Depends(contexto_escritura)
 ) -> None:

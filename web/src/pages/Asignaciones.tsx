@@ -16,6 +16,10 @@ import type {
 
 const ESTADO_ACTIVO = 'ESTIMACION APROBADA ENTREGA PENDIENTE'
 
+// Roles válidos para asignaciones (excluye LT_EPM)
+// Si se crean nuevos roles, se incluirán automáticamente
+const ROLES_EXCLUIDOS = ['LT_EPM']
+
 type AsignacionItem = Asignacion & {
   aplicacion_id?: string
   activo?: boolean
@@ -100,7 +104,7 @@ export default function Asignaciones() {
 
   const personasDisponibles = useMemo(
     () => personas
-      .filter((p) => p.rol_operativo === 'DEV' || p.rol_operativo === 'LT_HITSS')
+      .filter((p) => p.rol_operativo && !ROLES_EXCLUIDOS.includes(p.rol_operativo))
       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
     [personas],
   )
@@ -404,19 +408,13 @@ export default function Asignaciones() {
     }
 
     try {
-      // Calcular % equitativo para esta persona (incluyendo la nueva)
-      const existentes = asignaciones.filter((a) =>
-        a.persona_id === personaId &&
-        a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id)),
-      ).length
-      const pctEquitativo = Math.round(100 / (existentes + 1))
-
+      // Usar el porcentaje ingresado por el usuario
       await client.post(
         '/asignaciones',
         {
           persona_id: personaId,
           categoria_id: categoriaId,
-          total_porcentaje: pctEquitativo,
+          total_porcentaje: nuevoPct,
           estado: 'active',
           activo: true,
           proyectos: requerimientoId
@@ -425,8 +423,6 @@ export default function Asignaciones() {
         },
         writeHeaders(aplicacionId),
       )
-      // Redistribuir % equitativamente en todas las asignaciones activas existentes
-      await redistribuirPct(personaId)
       limpiarFormulario()
       await recargar()
     } catch (err) {
@@ -751,6 +747,7 @@ export default function Asignaciones() {
           >
             <option value="__todos__">Todas</option>
             {personas
+              .filter((p) => p.rol_operativo && !ROLES_EXCLUIDOS.includes(p.rol_operativo))
               .slice()
               .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
               .map((persona) => (

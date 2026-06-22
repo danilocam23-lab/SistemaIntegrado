@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Integración Sistema Liquidador + Workload Manager — Arquitectura Unificada Multi-Aplicación</title>
+<title>IntegraciÃ³n Sistema Liquidador + Workload Manager â€” Arquitectura Unificada Multi-AplicaciÃ³n</title>
 <style>
   :root{
     --azul:#1e5fa8; --azul-osc:#0f3a6b; --azul-cl:#e8f1fb;
@@ -178,1162 +178,341 @@
   <h2>Integración</h2>
   <div class="sub">Plataforma Unificada Multi-Aplicación · HITSS</div>
   <a href="#resumen"><span class="n">1</span>Resumen ejecutivo</a>
-  <a href="#diagnostico"><span class="n">2</span>Diagnóstico y documentos de entrada</a>
-  <a href="#decisiones"><span class="n">3</span>Decisiones de arquitectura</a>
-  <a href="#arquitectura"><span class="n">4</span>Arquitectura final</a>
+  <a href="#diagnostico"><span class="n">2</span>Estado actual del repositorio</a>
+  <a href="#decisiones"><span class="n">3</span>Decisiones de arquitectura vigentes</a>
+  <a href="#arquitectura"><span class="n">4</span>Arquitectura general del sistema</a>
   <a href="#multiapp"><span class="n">5</span>Modelo multi-aplicación</a>
-  <a href="#seguridad"><span class="n">6</span>Autenticación y autorización</a>
+  <a href="#seguridad"><span class="n">6</span>Seguridad, autenticación y autorización</a>
   <a href="#modelo"><span class="n">7</span>Modelo de datos MongoDB</a>
-  <a href="#mapeo"><span class="n">8</span>Mapeo de migración SQL→Mongo</a>
-  <a href="#cambios"><span class="n">9</span>Plan de cambios 1 a 1</a>
-  <a href="#datos"><span class="n">10</span>Migración de datos existentes</a>
-  <a href="#despliegue"><span class="n">11</span>Despliegue en IIS</a>
-  <a href="#riesgos"><span class="n">12</span>Riesgos y mitigaciones</a>
-  <a href="#cronograma"><span class="n">13</span>Cronograma estimado</a>
-  <a href="#checklist"><span class="n">14</span>Checklist de cierre</a>
+  <a href="#mapeo"><span class="n">8</span>Módulos funcionales del backend</a>
+  <a href="#cambios"><span class="n">9</span>Frontend y dashboards</a>
+  <a href="#datos"><span class="n">10</span>Flujo principal de datos</a>
+  <a href="#despliegue"><span class="n">11</span>Integraciones y operación</a>
+  <a href="#riesgos"><span class="n">12</span>Despliegue y ejecución</a>
+  <a href="#cronograma"><span class="n">13</span>Riesgos técnicos actuales</a>
+  <a href="#checklist"><span class="n">14</span>Próximos pasos recomendados</a>
 </nav>
 
 <main>
 <!-- ============ HERO ============ -->
 <header class="hero">
-  <span class="tag">Documento de Arquitectura · v2.0</span>
-  <h1>Integración del Sistema Liquidador EPM-HITSS y el Workload Manager en una plataforma unificada multi-aplicación</h1>
-  <p class="lead">Arquitectura final, modelo de datos y plan de cambios paso a paso para fusionar
-  ambas aplicaciones en una sola base MongoDB, un backend FastAPI y una interfaz React única,
-  con soporte multi-aplicación, autenticación y control de permisos.</p>
+  <span class="tag">Documento de Arquitectura · v2.1</span>
+  <h1>Integración del Sistema Liquidador EPM-HITSS y Workload Manager en una plataforma unificada</h1>
+  <p class="lead">Estado técnico actualizado del monorepo <code>Sistema Integrado</code>: frontend React,
+  backend FastAPI, MongoDB con Beanie, modelo multi-aplicación, seguridad JWT y módulos operativos de
+  liquidación y carga de trabajo.</p>
   <div class="meta">
-    <div><b>HITSS — Desarrollos IA</b>Documento técnico</div>
-    <div><b>21 de mayo de 2026</b>Versión 2.0</div>
-    <div><b>FastAPI · MongoDB · React · Multi-tenant</b>Stack objetivo</div>
+    <div><b>HITSS — Desarrollos IA</b>Documento técnico de arquitectura</div>
+    <div><b>18 de junio de 2026</b>Actualización basada en código fuente</div>
+    <div><b>FastAPI · React · MongoDB · Azure DevOps</b>Stack implementado</div>
   </div>
 </header>
 
 <!-- ============ 1. RESUMEN ============ -->
 <section id="resumen">
   <h2 class="sec"><span class="num">1</span>Resumen ejecutivo</h2>
-  <p class="desc">Qué se va a integrar, qué exige la nueva versión y cuál es el resultado esperado.</p>
+  <p class="desc">Vista de alto nivel del estado actual, sin supuestos de diseño futuro.</p>
 
-  <p>HITSS opera hoy dos aplicaciones independientes que <strong>gestionan información
-  parcialmente solapada</strong> sobre el mismo flujo de trabajo EPM-HITSS, y existe además un
-  conjunto de documentos de <em>"nueva versión"</em> que exige convertir la plataforma en un
-  producto <strong>multi-aplicación</strong>.</p>
+  <p>El repositorio <code>C:\Sistema Integrado</code> ya opera como <strong>plataforma unificada</strong>:
+  una SPA React consume una API FastAPI única y persiste en MongoDB. El sistema implementa
+  <strong>aislamiento multi-aplicación</strong> por <code>aplicacion_id</code>, autenticación JWT,
+  administración de usuarios/squads y módulos de negocio para liquidación y carga de trabajo.</p>
 
   <div class="grid3">
+    <div class="card nv">
+      <div class="sys">FRONTEND</div>
+      <h4>React + TypeScript + Vite</h4>
+      <p style="font-size:13px;">Rutas protegidas, selector de aplicación, dashboards y vistas operativas para requerimientos, personas, asignaciones, capacidades, estimaciones y Azure DevOps.</p>
+    </div>
     <div class="card lq">
-      <div class="sys">SISTEMA A</div>
-      <h4>Sistema Liquidador EPM-HITSS</h4>
-      <p style="font-size:13px;">Ciclo <em>Solicitud → Requerimiento → Entregas → Facturación</em>,
-      con ANS, tarifas y liquidación. Python/FastAPI, SQLite, Jinja2 + HTMX.</p>
+      <div class="sys">BACKEND</div>
+      <h4>FastAPI + Beanie</h4>
+      <p style="font-size:13px;">Routers por dominio, servicios de ANS/liquidación/sincronización y scheduler con APScheduler. Puede servir también el build del frontend en <code>web/dist</code>.</p>
     </div>
     <div class="card wm">
-      <div class="sys">SISTEMA B</div>
-      <h4>Workload Manager</h4>
-      <p style="font-size:13px;">Carga de trabajo de desarrolladores: asignaciones, sprints,
-      capacidad, Azure DevOps y catálogo de proyectos. Node.js/Express, SQLite, React.</p>
-    </div>
-    <div class="card nv">
-      <div class="sys">DOCUMENTOS "NUEVA VERSIÓN"</div>
-      <h4>Requisitos multi-aplicación</h4>
-      <p style="font-size:13px;">Exigen una plataforma multi-tenant sobre MongoDB, con
-      autenticación, roles/permisos y un módulo de administración de aplicaciones.</p>
+      <div class="sys">DATOS</div>
+      <h4>MongoDB unificado</h4>
+      <p style="font-size:13px;">Colecciones de plataforma y operativas, documentos embebidos para requerimientos y asignaciones, e índices por aplicación para garantizar aislamiento y rendimiento.</p>
     </div>
   </div>
-
-  <div class="callout">
-    <span class="ct">El solapamiento que justifica la integración</span>
-    El <code>project_catalog</code> del Workload Manager es una copia parcial de los
-    Requerimientos del Liquidador: ambos importan del mismo Excel <em>"BITÁCORA GENERAL"</em> y
-    comparten códigos (<code>code</code>/<code>codigo_sc</code>,
-    <code>req_code</code>/<code>codigo_req</code>), aplicativos, estados y el LT EPM. Los
-    <code>developers</code> equivalen a las <code>Persona</code> del Liquidador, y la capacidad
-    mensual existe en ambos.
-  </div>
-
-  <div class="callout tenant">
-    <span class="ct">Lo que añade la "nueva versión": multi-aplicación</span>
-    Los documentos <code>requerimientos-multiaplicacion.md</code> y
-    <code>manual-dummies-migracion-mongo.md</code> (incorporados al proyecto en la carpeta
-    <code>referencias/</code>) elevan el alcance: la plataforma debe soportar <strong>varias
-    aplicaciones</strong> (CRM, BI, Soporte, Mesa de Ayuda…) sobre <strong>una sola base</strong>,
-    aisladas por un campo <code>aplicacion_id</code>. Cada aplicación tiene sus propios datos;
-    una aplicación nueva nace con estructura base pero sin datos operativos. Esto exige también
-    autenticación, roles/permisos y un módulo de administración.
-  </div>
-
-  <h3>Resultado esperado</h3>
-  <ul>
-    <li>Una <strong>única base de datos MongoDB</strong> como fuente de verdad.</li>
-    <li>Un <strong>único backend</strong> Python/FastAPI que expone una API REST.</li>
-    <li>Una <strong>única interfaz</strong> React (SPA) con todos los módulos, login y selector de aplicación.</li>
-    <li><strong>Multi-aplicación:</strong> los datos de hoy se migran como una aplicación inicial;
-      se pueden crear nuevas aplicaciones aisladas desde administración.</li>
-    <li><strong>Seguridad:</strong> autenticación JWT, contraseñas con bcrypt y autorización por roles.</li>
-    <li><strong>Vista consolidada:</strong> los roles de administración ven todas sus aplicaciones
-      a la vez en un dashboard unificado con gráficas comparativas.</li>
-    <li>El Requerimiento se captura <strong>una sola vez</strong> y alimenta liquidación y planeación de carga.</li>
-  </ul>
-
-  <table class="compact">
-    <tr><th>Decisión</th><th>Opción adoptada</th><th>Motivo principal</th></tr>
-    <tr><td>Backend</td><td><strong>Python / FastAPI único</strong></td>
-        <td>El Liquidador aporta autenticación, tests y tipado estricto; se porta el backend Node.</td></tr>
-    <tr><td>Base de datos</td><td><strong>MongoDB (local en el servidor IIS)</strong></td>
-        <td>Una sola BD documental; elimina los problemas de SQLite en IIS.</td></tr>
-    <tr><td>Frontend</td><td><strong>React SPA único</strong></td>
-        <td>Se reutiliza la SPA del Workload Manager y se incorporan las pantallas del Liquidador.</td></tr>
-    <tr><td>Modelo</td><td><strong>Multi-aplicación (multi-tenant)</strong></td>
-        <td>Exigido por los documentos de la nueva versión; aislamiento por <code>aplicacion_id</code>.</td></tr>
-    <tr><td>Seguridad</td><td><strong>JWT + bcrypt + roles</strong></td>
-        <td>Requerimiento explícito de la nueva versión.</td></tr>
-  </table>
 </section>
 
 <!-- ============ 2. DIAGNÓSTICO ============ -->
 <section id="diagnostico">
-  <h2 class="sec"><span class="num">2</span>Diagnóstico y documentos de entrada</h2>
-  <p class="desc">Inventario técnico de partida y los requisitos de la nueva versión.</p>
+  <h2 class="sec"><span class="num">2</span>Estado actual del repositorio</h2>
+  <p class="desc">Inventario técnico real del código existente.</p>
 
   <table>
-    <tr><th style="width:22%;">Aspecto</th><th style="width:39%;">Sistema Liquidador</th>
-        <th style="width:39%;">Workload Manager</th></tr>
-    <tr><td>Lenguaje / framework</td><td>Python 3.11 · FastAPI · Uvicorn</td><td>Node.js · Express</td></tr>
-    <tr><td>Base de datos</td><td>SQLite · SQLAlchemy 2.x · Alembic</td>
-        <td>SQLite · <code>node:sqlite</code> nativo</td></tr>
-    <tr><td>Interfaz</td><td>Server-rendered: Jinja2 + HTMX + Tailwind</td>
-        <td>SPA: React + TypeScript + Vite + Tailwind</td></tr>
-    <tr><td>Autenticación</td><td>Sí — <code>Persona</code> con roles, sesión por cookie, hash SHA-256</td>
-        <td>No — instancia de administrador único</td></tr>
-    <tr><td>Multi-aplicación</td><td>No</td><td>No</td></tr>
-    <tr><td>Integraciones</td><td>Importación de Excel "BITÁCORA GENERAL"</td>
-        <td>Azure DevOps (sync programado), Excel, correo</td></tr>
-    <tr><td>Despliegue</td><td>IIS · <code>/SistemaLiquidador</code> · HttpPlatformHandler</td>
-        <td>IIS · <code>/WorkloadManager</code> · iisnode</td></tr>
+    <tr><th style="width:26%;">Ruta</th><th>Contenido principal</th><th style="width:26%;">Rol en la arquitectura</th></tr>
+    <tr><td><code>api/app/main.py</code></td><td>Inicialización FastAPI, CORS, lifespan, conexión BD, bootstrap y scheduler.</td><td>Entrada de backend y ciclo de vida.</td></tr>
+    <tr><td><code>api/app/api/</code></td><td>Routers de auth, aplicaciones, usuarios, requerimientos, personas, asignaciones, capacidades, estimaciones, Azure DevOps, reportes, cifras, etc.</td><td>Contrato REST por dominio.</td></tr>
+    <tr><td><code>api/app/documents/</code></td><td>Modelos Beanie para colecciones MongoDB.</td><td>Modelo de persistencia unificado.</td></tr>
+    <tr><td><code>web/src/</code></td><td>SPA React: contexto de autenticación/aplicación, páginas operativas y dashboards.</td><td>Capa de presentación y UX.</td></tr>
+    <tr><td><code>deploy/</code></td><td><code>web.config</code> y scripts de publicación IIS.</td><td>Despliegue en servidor Windows/IIS.</td></tr>
   </table>
 
-  <h3>Documentos de la nueva versión incorporados al proyecto</h3>
-  <p>La carpeta <code>workload-manager/nueva version</code> contenía dos documentos que han sido
-  copiados a <code>Sistema Integrado/referencias/</code> y cuyos requisitos quedan incorporados a
-  esta arquitectura:</p>
-  <table class="compact">
-    <tr><th>Documento</th><th>Aporte</th></tr>
-    <tr><td><code>requerimientos-multiaplicacion.md</code></td>
-        <td>Define el modelo multi-aplicación, los roles y permisos, el módulo de administración,
-        el modelo mínimo de <code>applications</code> y <code>users</code>, los endpoints base y
-        los criterios de aceptación.</td></tr>
-    <tr><td><code>manual-dummies-migracion-mongo.md</code></td>
-        <td>Guía de la migración a MongoDB: qué se migra, qué no se copia a aplicaciones nuevas,
-        qué estructura base sí se clona, el flujo de migraciones de prueba + corte final y las
-        validaciones mínimas.</td></tr>
-  </table>
-
-  <h3>Puntos de contacto entre los dos sistemas</h3>
-  <table class="compact">
-    <tr><th>Concepto</th><th>En el Liquidador</th><th>En el Workload Manager</th><th>Llave de cruce</th></tr>
-    <tr><td>Requerimiento / proyecto</td><td><code>Requerimiento</code> + <code>SolicitudCotizacion</code></td>
-        <td><code>project_catalog</code></td><td><code>codigo_req</code> ↔ <code>req_code</code></td></tr>
-    <tr><td>Persona / desarrollador</td><td><code>Persona</code></td>
-        <td><code>developers</code></td><td><code>email</code></td></tr>
-    <tr><td>Capacidad mensual</td><td><code>CapacidadMensual</code> (squad)</td>
-        <td><code>developer_monthly_capacity</code> (persona)</td><td>mes + entidad</td></tr>
-    <tr><td>Bitácora / auditoría</td><td><code>EventoBitacora</code></td>
-        <td><code>audit_logs</code></td><td>entidad + fecha</td></tr>
-    <tr><td>Estimación de horas</td><td><code>Requerimiento.total_horas_estimadas</code></td>
-        <td><code>project_estimation_*</code></td><td>requerimiento</td></tr>
-  </table>
+  <div class="callout ok">
+    <span class="ct">Conclusión</span>
+    La integración tecnológica base (frontend, backend, BD, seguridad y dominios principales) ya está implementada en el código; este documento pasa de enfoque "plan de portabilidad" a enfoque "arquitectura operativa actual".
+  </div>
 </section>
 
 <!-- ============ 3. DECISIONES ============ -->
 <section id="decisiones">
-  <h2 class="sec"><span class="num">3</span>Decisiones de arquitectura</h2>
-  <p class="desc">Decisiones confirmadas que enmarcan todo el plan.</p>
+  <h2 class="sec"><span class="num">3</span>Decisiones de arquitectura vigentes</h2>
+  <p class="desc">Decisiones confirmadas por implementación.</p>
 
-  <div class="grid4">
-    <div class="card"><h4>① Backend</h4>
-      <p style="font-size:12.5px;">FastAPI único. El backend Express se porta a routers FastAPI.</p></div>
-    <div class="card"><h4>② Base de datos</h4>
-      <p style="font-size:12.5px;">MongoDB local en el servidor IIS, como servicio de Windows.</p></div>
-    <div class="card"><h4>③ Frontend</h4>
-      <p style="font-size:12.5px;">React SPA único; FastAPI queda como API REST pura.</p></div>
-    <div class="card"><h4>④ Multi-aplicación</h4>
-      <p style="font-size:12.5px;">Plataforma multi-tenant aislada por <code>aplicacion_id</code>.</p></div>
-  </div>
-
-  <h3>Implicaciones de adoptar MongoDB</h3>
   <ul>
-    <li><strong>Desaparece Alembic.</strong> MongoDB no tiene esquema rígido; la evolución del
-    modelo se gestiona en el código.</li>
-    <li><strong>Desaparecen SQLAlchemy y <code>node:sqlite</code>.</strong> El acceso a datos se
-    hace con <strong>Beanie</strong> (ODM asíncrono sobre Pydantic v2) y el driver <strong>Motor</strong>.</li>
-    <li><strong>La integridad referencial pasa a la aplicación:</strong> se embeben documentos
-    (1:1 y 1:pocos) o se referencian por <code>ObjectId</code>; se valida en la capa de servicios.</li>
-    <li>Las consultas agregadas se reescriben como <em>aggregation pipelines</em>.</li>
+    <li><strong>Backend único:</strong> toda la API vive bajo <code>/api</code> en FastAPI.</li>
+    <li><strong>Persistencia documental:</strong> MongoDB con <code>pymongo.AsyncMongoClient</code> + Beanie (no SQLite).</li>
+    <li><strong>Multi-aplicación:</strong> aislamiento por <code>aplicacion_id</code> y cabecera <code>X-Aplicacion</code>.</li>
+    <li><strong>Modo consolidado:</strong> centinela <code>__todas__</code> para roles administrativos en lectura.</li>
+    <li><strong>Frontend único:</strong> React Router + contexto global para token y aplicación activa.</li>
   </ul>
 
-  <h3>Implicaciones de adoptar el modelo multi-aplicación</h3>
-  <ul>
-    <li>Aparecen dos colecciones de plataforma: <code>aplicaciones</code> (los <em>tenants</em>) y
-    <code>usuarios</code> (cuentas de acceso).</li>
-    <li><strong>Toda la data operativa lleva <code>aplicacion_id</code></strong> y toda consulta
-    o inserción debe filtrar por él — es la regla más crítica del diseño.</li>
-    <li>Se necesita un <strong>middleware de resolución de aplicación</strong> que determine y
-    valide la aplicación activa en cada petición.</li>
-    <li>Crear una aplicación nueva <strong>clona la estructura base</strong> (categorías, estados,
-    configuración) pero <strong>no copia datos de negocio</strong>.</li>
-  </ul>
-
-  <div class="callout warn">
-    <span class="ct">Decisión que reemplaza a la versión 1.0 de este documento</span>
-    La v1.0 proponía sesión por cookie. Atendiendo el documento
-    <code>requerimientos-multiaplicacion.md</code>, la autenticación pasa a <strong>JWT</strong> y
-    el hash de contraseñas a <strong>bcrypt</strong>. Ver sección 6.
-  </div>
-
-  <h3>Aclaración de un choque de nombres</h3>
   <div class="callout tenant">
-    <span class="ct">"Aplicación" tiene dos significados — se desambiguan así</span>
-    El Liquidador ya tiene una entidad <code>Aplicacion</code> (el software o aplicativo al que
-    apunta una solicitud, ligado a una Dirección). La nueva versión usa "aplicación" para el
-    <em>tenant</em>. Para evitar ambigüedad:
-    <ul style="margin-top:6px;">
-      <li><code>aplicaciones</code> → colección de <strong>tenants</strong> (CRM, BI, Soporte).</li>
-      <li><code>aplicativos</code> → la antigua <code>Aplicacion</code> del Liquidador (software objetivo del requerimiento). <span class="badge b-mod">renombrar</span></li>
-    </ul>
+    <span class="ct">Nota de consistencia terminológica</span>
+    En el código, el concepto de unidad funcional/tenant se gestiona como <code>Aplicacion</code> y en UI se presenta como <strong>Squad</strong>. Este documento usa ambos términos como equivalentes operativos.
   </div>
 </section>
 
-<!-- ============ 4. ARQUITECTURA FINAL ============ -->
+<!-- ============ 4. ARQUITECTURA ============ -->
 <section id="arquitectura">
-  <h2 class="sec"><span class="num">4</span>Arquitectura final</h2>
-  <p class="desc">Cómo queda la plataforma unificada — capas, componentes y stack.</p>
+  <h2 class="sec"><span class="num">4</span>Arquitectura general del sistema</h2>
+  <p class="desc">Capas implementadas y principales componentes.</p>
 
   <div class="diagram">
-    <div class="layer l-client">
-      <div class="lt">Cliente</div>
-      <div class="lc"><span class="chip">Navegador (LAN HITSS)</span>
-        <span class="chip">Login</span><span class="chip">Selector de aplicación</span></div>
-    </div>
-    <div class="arrow">▼  HTTPS  ▼</div>
-    <div class="layer l-front">
-      <div class="lt">Capa de presentación — React SPA</div>
-      <div class="lc">
-        <span class="chip">Módulo Liquidación</span><span class="chip">Módulo Carga de trabajo</span>
-        <span class="chip">Módulo Azure DevOps</span><span class="chip">Estimaciones</span>
-        <span class="chip">Administración de aplicaciones</span>
-        <span class="chip">Dashboard unificado</span><span class="chip">Configuración</span>
-      </div>
-    </div>
-    <div class="arrow">▼  REST / JSON + token JWT  ▼</div>
-    <div class="layer l-mw">
-      <div class="lt">Middleware FastAPI</div>
-      <div class="lc">
-        <span class="chip">Sesión JWT</span><span class="chip">Autorización por rol/permiso</span>
-        <span class="chip">Resolución de aplicación (una o consolidada)</span>
-        <span class="chip">Filtro obligatorio por aplicación</span>
-      </div>
-    </div>
+    <div class="layer l-client"><div class="lt">Cliente</div><div class="lc"><span class="chip">Navegador</span></div></div>
     <div class="arrow">▼</div>
-    <div class="layer l-api">
-      <div class="lt">Capa de API — FastAPI (routers)</div>
-      <div class="lc">
-        <span class="chip">auth</span><span class="chip">aplicaciones</span>
-        <span class="chip">usuarios</span><span class="chip">requerimientos</span>
-        <span class="chip">tarifas</span><span class="chip">cifras / ANS</span>
-        <span class="chip">personas</span><span class="chip">asignaciones</span>
-        <span class="chip">capacidad</span><span class="chip">roadmap</span>
-        <span class="chip">azdo</span><span class="chip">estimaciones</span>
-        <span class="chip">bitácora</span><span class="chip">configuración</span>
-        <span class="chip">dashboard consolidado</span>
-      </div>
-    </div>
+    <div class="layer l-front"><div class="lt">Frontend SPA</div><div class="lc"><span class="chip">React 18</span><span class="chip">TypeScript</span><span class="chip">Vite</span><span class="chip">Axios</span><span class="chip">Recharts</span></div></div>
     <div class="arrow">▼</div>
-    <div class="layer l-domain">
-      <div class="lt">Capa de dominio — Servicios</div>
-      <div class="lc">
-        <span class="chip">ANS</span><span class="chip">Liquidación</span>
-        <span class="chip">Máquina de estados</span><span class="chip">Gestión de requerimientos</span>
-        <span class="chip">Provisión de aplicación nueva</span>
-        <span class="chip">Sincronización catálogo↔carga</span>
-        <span class="chip">Azure DevOps (httpx)</span><span class="chip">Importador Excel</span>
-        <span class="chip">Correo</span><span class="chip">Scheduler (APScheduler)</span>
-      </div>
-    </div>
-    <div class="arrow">▼  Beanie ODM + Motor  ▼</div>
-    <div class="layer l-data">
-      <div class="lt">Capa de datos — MongoDB local</div>
-      <div class="lc"><span class="chip">BD única: hitss_unificado</span>
-        <span class="chip">~19 colecciones</span>
-        <span class="chip">Aislamiento por aplicacion_id</span></div>
-    </div>
+    <div class="layer l-mw"><div class="lt">Contexto de aplicación</div><div class="lc"><span class="chip">JWT en Authorization</span><span class="chip">X-Aplicacion</span><span class="chip">selector localStorage</span></div></div>
     <div class="arrow">▼</div>
-    <div class="layer l-ext">
-      <div class="lt">Servicios externos</div>
-      <div class="lc"><span class="chip">Azure DevOps REST API</span>
-        <span class="chip">Servidor SMTP corporativo</span>
-        <span class="chip">Excel "BITÁCORA GENERAL"</span></div>
-    </div>
+    <div class="layer l-api"><div class="lt">API FastAPI</div><div class="lc"><span class="chip">/auth</span><span class="chip">/requerimientos</span><span class="chip">/asignaciones</span><span class="chip">/estimaciones</span><span class="chip">/azdo</span><span class="chip">/cifras</span></div></div>
+    <div class="arrow">▼</div>
+    <div class="layer l-domain"><div class="lt">Servicios de dominio</div><div class="lc"><span class="chip">ANS</span><span class="chip">Liquidación</span><span class="chip">Sync catálogo</span><span class="chip">Azure DevOps sync</span><span class="chip">Scheduler</span></div></div>
+    <div class="arrow">▼</div>
+    <div class="layer l-data"><div class="lt">Persistencia</div><div class="lc"><span class="chip">MongoDB</span><span class="chip">Beanie ODM</span><span class="chip">Colecciones por aplicación</span></div></div>
+    <div class="arrow">▼</div>
+    <div class="layer l-ext"><div class="lt">Integraciones externas</div><div class="lc"><span class="chip">Azure DevOps REST API</span><span class="chip">IIS</span></div></div>
   </div>
 
-  <h3>Stack tecnológico objetivo</h3>
-  <table class="compact">
-    <tr><th>Capa</th><th>Tecnología</th><th>Notas</th></tr>
-    <tr><td>Frontend</td><td>React 18 · TypeScript · Vite · Tailwind</td><td>Base: SPA del Workload Manager</td></tr>
-    <tr><td>API</td><td>FastAPI · Uvicorn · Pydantic v2</td><td>Base: estructura del Liquidador</td></tr>
-    <tr><td>Acceso a datos</td><td>Beanie (ODM) · Motor (driver async)</td><td>Reemplaza SQLAlchemy y <code>node:sqlite</code></td></tr>
-    <tr><td>Base de datos</td><td>MongoDB Community 7.x</td><td>Servicio de Windows en el servidor IIS</td></tr>
-    <tr><td>Autenticación</td><td>JWT (python-jose) · bcrypt (passlib)</td><td>Requisito de la nueva versión</td></tr>
-    <tr><td>Tareas programadas</td><td>APScheduler</td><td>Reemplaza el scheduler AzDO de Node</td></tr>
-    <tr><td>Integraciones</td><td>httpx · openpyxl · aiosmtplib</td><td>Reemplazan azure-devops-node, xlsx, nodemailer</td></tr>
-    <tr><td>Despliegue</td><td>IIS · HttpPlatformHandler · <code>/SistemaIntegrado</code></td><td>Un solo sitio</td></tr>
+  <table>
+    <tr><th style="width:24%;">Capa</th><th style="width:34%;">Tecnología</th><th>Observación</th></tr>
+    <tr><td>Frontend</td><td>React 18, TypeScript, Vite, Tailwind</td><td>Construcción SPA, rutas protegidas y consumo API.</td></tr>
+    <tr><td>API</td><td>FastAPI + Uvicorn + Pydantic v2</td><td>Routers por dominio y OpenAPI automático.</td></tr>
+    <tr><td>Datos</td><td>Beanie + AsyncMongoClient (PyMongo)</td><td>Documentos embebidos y validación tipada.</td></tr>
+    <tr><td>Procesos</td><td>APScheduler</td><td>Auto-sincronización de Azure DevOps cada 30 minutos.</td></tr>
   </table>
-
-  <h3>Estructura del proyecto unificado (monorepo)</h3>
-  <pre>sistema-integrado/
-├─ api/                      <span class="cm"># Backend FastAPI</span>
-│  ├─ app/
-│  │  ├─ main.py             <span class="cm"># App, middlewares, lifespan (init Beanie)</span>
-│  │  ├─ config.py           <span class="cm"># Settings: MONGO_URL, MONGO_DB, JWT_SECRET...</span>
-│  │  ├─ db.py               <span class="cm"># Cliente Motor + init_beanie()</span>
-│  │  ├─ security/           <span class="cm"># JWT, hashing bcrypt, dependencias de rol</span>
-│  │  ├─ middleware/         <span class="cm"># Sesión, permisos, resolución de aplicacion_id</span>
-│  │  ├─ documents/          <span class="cm"># Modelos Beanie (1 archivo por colección)</span>
-│  │  ├─ schemas/            <span class="cm"># DTOs Pydantic de entrada/salida</span>
-│  │  ├─ repositories/       <span class="cm"># Consultas con filtro por aplicacion_id</span>
-│  │  ├─ services/           <span class="cm"># ANS, liquidación, provisión de app, sync...</span>
-│  │  └─ api/                <span class="cm"># Routers REST</span>
-│  └─ pyproject.toml
-├─ web/                      <span class="cm"># Frontend React (base: workload-manager)</span>
-│  ├─ src/{pages,components,api,types}
-│  └─ package.json
-├─ scripts/
-│  └─ migrar_a_mongo.py      <span class="cm"># Migración SQLite → MongoDB</span>
-├─ referencias/              <span class="cm"># Documentos de la nueva versión</span>
-└─ deploy/
-   └─ web.config            <span class="cm"># Configuración IIS</span></pre>
 </section>
 
-<!-- ============ 5. MULTI-APP ============ -->
+<!-- ============ 5. MULTIAPP ============ -->
 <section id="multiapp">
   <h2 class="sec"><span class="num">5</span>Modelo multi-aplicación</h2>
-  <p class="desc">Cómo una sola plataforma y una sola base sirven a varias aplicaciones aisladas.</p>
+  <p class="desc">Aislamiento de datos y comportamiento de contexto activo.</p>
 
-  <p>La plataforma no crea un sistema distinto por aplicación: existe <strong>un solo backend, un
-  solo frontend y una sola base MongoDB</strong>. La separación es lógica, mediante un campo
-  <code>aplicacion_id</code> presente en todo documento operativo.</p>
-
-  <h3>Concepto</h3>
-  <div class="grid3">
-    <div class="card"><h4>Una plataforma</h4>
-      <p style="font-size:13px;">Mismo código base para todas las aplicaciones. No se duplica desarrollo.</p></div>
-    <div class="card"><h4>Datos aislados</h4>
-      <p style="font-size:13px;">Cada documento operativo pertenece a una aplicación. Ninguna
-      consulta cruza el límite de su <code>aplicacion_id</code>.</p></div>
-    <div class="card"><h4>Aplicación inicial</h4>
-      <p style="font-size:13px;">Todos los datos migrados de Liquidador + Workload Manager quedan
-      bajo una aplicación inicial (p. ej. código <code>epm-hitss</code>).</p></div>
-  </div>
+  <h3>Resolución del contexto</h3>
+  <ul>
+    <li>La cabecera <code>X-Aplicacion</code> define el ámbito de consulta/escritura.</li>
+    <li><code>contexto_aplicacion</code> valida acceso del usuario y retorna filtros Mongo por aplicación.</li>
+    <li><code>contexto_escritura</code> bloquea escrituras cuando <code>X-Aplicacion=__todas__</code>.</li>
+  </ul>
 
   <h3>Ciclo de vida de una aplicación</h3>
-  <ol>
-    <li>Un <strong>superadmin</strong> crea la aplicación desde el módulo de administración
-      (nombre, código, descripción).</li>
-    <li>El sistema ejecuta el servicio de <strong>provisión</strong>: crea la configuración base,
-      las categorías base y los estados base de esa aplicación.</li>
-    <li>La aplicación aparece en el selector y queda disponible para asignarle usuarios.</li>
-    <li>Los usuarios autorizados comienzan a operar; todos los datos que generan nacen con el
-      <code>aplicacion_id</code> de esa aplicación.</li>
-    <li>Una aplicación puede activarse o desactivarse sin borrar sus datos.</li>
+  <ol class="steps">
+    <li>Se crea en <code>/aplicaciones</code> (solo superadmin).</li>
+    <li><code>provisionar_aplicacion()</code> crea estructura base (categorías y parámetros).</li>
+    <li>No se clonan datos operativos (requerimientos, personas, asignaciones, etc.).</li>
   </ol>
 
-  <h3>Qué se clona y qué no al crear una aplicación nueva</h3>
-  <div class="grid2">
-    <div class="card" style="border-top:3px solid var(--verde);">
-      <h4>✔ Sí se clona (estructura)</h4>
-      <ul style="font-size:13px;margin-bottom:0;">
-        <li>Categorías base</li>
-        <li>Estados de proyecto base</li>
-        <li>Configuraciones generales base</li>
-        <li>Parámetros funcionales mínimos</li>
-        <li>Estructura de permisos</li>
-      </ul>
-    </div>
-    <div class="card" style="border-top:3px solid var(--rojo);">
-      <h4>✗ No se copia (datos de negocio)</h4>
-      <ul style="font-size:13px;margin-bottom:0;">
-        <li>Personas / desarrolladores</li>
-        <li>Requerimientos, entregas, facturación</li>
-        <li>Asignaciones, proyectos, sprints, roadmap</li>
-        <li>Tarifas, estimaciones, capacidades, horas</li>
-        <li>Historial de bitácora / auditoría</li>
-        <li>Datos de Azure DevOps y work items</li>
-        <li>Información importada de Excel</li>
-      </ul>
-    </div>
+  <div class="callout tenant">
+    <span class="ct">Bootstrap inicial</span>
+    En cada arranque, <code>bootstrap()</code> garantiza aplicación inicial y superadmin; la provisión es idempotente.
   </div>
-  <p style="font-size:13px;"><strong>En una frase:</strong> se clona la estructura, no la data del negocio.</p>
-
-  <h3>Resolución de la aplicación activa</h3>
-  <ol>
-    <li>Tras el login, el frontend muestra un <strong>selector de aplicación</strong> con las
-      aplicaciones autorizadas para el usuario. Para los roles <code>superadmin</code> y
-      <code>admin_app</code> el selector incluye además la opción <strong>"Todas las
-      aplicaciones"</strong> (vista consolidada).</li>
-    <li>La aplicación elegida viaja en cada petición mediante una cabecera
-      <code>X-Aplicacion</code> (y/o como reclamo en el token).</li>
-    <li>El <strong>middleware de resolución</strong> valida que el usuario tenga acceso a esa
-      aplicación e inyecta el <code>aplicacion_id</code> en el contexto de la petición.</li>
-    <li>Todos los repositorios añaden <code>aplicacion_id</code> al filtro de forma obligatoria.</li>
-    <li>Cambiar de aplicación en el frontend recarga todo el contexto.</li>
-  </ol>
-
-  <div class="callout danger">
-    <span class="ct">Regla crítica de aislamiento</span>
-    Si una sola consulta o inserción no maneja el <code>aplicacion_id</code>, se mezclan datos
-    entre aplicaciones. Mitigación: el filtro se centraliza en una capa base de repositorios (no
-    se escribe a mano en cada consulta) y se cubre con pruebas de aislamiento.
-  </div>
-
-  <h3>Vista consolidada para administradores</h3>
-  <p>El aislamiento estricto rige la operación diaria. Pero los roles de administración necesitan
-  una mirada transversal — por eso el selector de aplicación ofrece el modo <strong>"Todas las
-  aplicaciones"</strong>, disponible solo para <code>superadmin</code> y <code>admin_app</code>.</p>
-  <table class="compact">
-    <tr><th style="width:22%;">Aspecto</th><th style="width:39%;">Modo operativo (una aplicación)</th>
-        <th style="width:39%;">Modo consolidado (todas)</th></tr>
-    <tr><td>Quién</td><td>Todos los roles</td>
-        <td>Solo <code>superadmin</code> (todas) y <code>admin_app</code> (sus aplicaciones asignadas)</td></tr>
-    <tr><td>Cabecera <code>X-Aplicacion</code></td><td>Un código de aplicación</td>
-        <td>Valor centinela <code>__todas__</code></td></tr>
-    <tr><td>Filtro del repositorio</td><td><code>aplicacion_id = </code> una</td>
-        <td><code>aplicacion_id ∈ </code> conjunto autorizado (<code>$in</code>)</td></tr>
-    <tr><td>Operaciones permitidas</td><td>Lectura y escritura</td>
-        <td><strong>Solo lectura</strong> — tableros y reportes</td></tr>
-    <tr><td>Presentación</td><td>Datos de esa aplicación</td>
-        <td>Datos agregados con la <strong>aplicación como dimensión</strong></td></tr>
-  </table>
-  <div class="callout ok">
-    <span class="ct">El aislamiento se mantiene</span>
-    El modo consolidado no "mezcla" datos: los <strong>agrega</strong> usando la aplicación como
-    una dimensión más — cada cifra sigue identificando a qué aplicación pertenece — y solo para
-    lectura. Cualquier creación o edición exige seleccionar una aplicación concreta; el middleware
-    de resolución rechaza las escrituras hechas en modo consolidado.
-  </div>
-  <p>El <strong>Dashboard unificado</strong> es la pantalla que aprovecha este modo: presenta
-  gráficas consolidadas (requerimientos por estado, cumplimiento de ANS, horas estimadas,
-  facturación y carga del equipo) apiladas o comparadas <strong>por aplicación</strong>, de modo
-  que un administrador ve el panorama completo de todas sus aplicaciones en una sola vista.</p>
-
-  <h3>Colecciones de plataforma vs. operativas</h3>
-  <table class="compact">
-    <tr><th>Tipo</th><th>Colecciones</th><th>¿Lleva <code>aplicacion_id</code>?</th></tr>
-    <tr><td>Plataforma</td><td><code>aplicaciones</code>, <code>usuarios</code></td>
-        <td>No — son transversales a todas las aplicaciones</td></tr>
-    <tr><td>Operativas</td><td>Las 17 restantes (personas, requerimientos, asignaciones, …)</td>
-        <td>Sí — obligatorio en todo documento</td></tr>
-  </table>
 </section>
 
 <!-- ============ 6. SEGURIDAD ============ -->
 <section id="seguridad">
-  <h2 class="sec"><span class="num">6</span>Autenticación y autorización</h2>
-  <p class="desc">Quién entra, cómo se identifica y qué puede hacer.</p>
+  <h2 class="sec"><span class="num">6</span>Seguridad, autenticación y autorización</h2>
+  <p class="desc">Esquema implementado de control de acceso.</p>
 
   <h3>Autenticación</h3>
   <ul>
-    <li>Inicio de sesión con <strong>usuario y contraseña</strong>; las contraseñas se almacenan
-      con <strong>bcrypt</strong>.</li>
-    <li>La sesión se mantiene con un <strong>token JWT</strong> firmado por el backend.</li>
-    <li>Endpoints de sesión: <code>POST /api/auth/login</code>, <code>GET /api/auth/me</code>,
-      cierre de sesión en el cliente (descarte del token).</li>
-    <li>El token transporta: identificador de usuario, rol y aplicaciones autorizadas.</li>
+    <li><code>POST /auth/login</code> valida credenciales y emite JWT.</li>
+    <li>Contraseñas con <code>bcrypt</code> (hash + verificación).</li>
+    <li><code>GET /auth/me</code> devuelve identidad actual a partir del token.</li>
   </ul>
 
-  <h3>Roles de plataforma</h3>
-  <p>La nueva versión define cuatro roles. Se guardan en la colección <code>usuarios</code> y
-  controlan el acceso al sistema y al módulo de administración.</p>
+  <h3>Roles y permisos de plataforma</h3>
   <table class="compact">
-    <tr><th style="width:14%;">Rol</th><th style="width:48%;">Puede</th><th style="width:38%;">Visibilidad de datos</th></tr>
-    <tr><td><code>superadmin</code></td>
-        <td>Crear, editar, activar/desactivar cualquier aplicación; asignar usuarios; entrar al módulo de administración.</td>
-        <td><strong>Todas las aplicaciones.</strong> Accede a la vista consolidada y al dashboard unificado de toda la plataforma.</td></tr>
-    <tr><td><code>admin_app</code></td>
-        <td>Administrar las aplicaciones asignadas y su configuración interna.</td>
-        <td><strong>Sus aplicaciones asignadas.</strong> Vista consolidada y dashboard unificado limitados a ese conjunto.</td></tr>
-    <tr><td><code>editor</code></td>
-        <td>Operar la información de su aplicación; no puede crear aplicaciones.</td>
-        <td>Solo la aplicación activa.</td></tr>
-    <tr><td><code>viewer</code></td>
-        <td>Solo consultar; no modifica ni crea.</td>
-        <td>Solo la aplicación activa.</td></tr>
-  </table>
-  <div class="callout ok">
-    <span class="ct">Los roles admin ven todo</span>
-    <code>superadmin</code> y <code>admin_app</code> no quedan atrapados en una sola aplicación:
-    pueden cambiar al modo consolidado y obtener un panorama completo de todas sus aplicaciones
-    autorizadas en el dashboard unificado (ver sección 5).
-  </div>
-
-  <div class="callout">
-    <span class="ct">Dos niveles de rol — no se confunden</span>
-    El <strong>rol de plataforma</strong> (<code>superadmin</code> / <code>admin_app</code> /
-    <code>editor</code> / <code>viewer</code>) vive en <code>usuarios</code> y define qué puede
-    hacer en el sistema. El <strong>rol operativo</strong> (LT HITSS, LT EPM, EPM, COORD, DEV…)
-    vive en <code>personas</code> y describe la función de esa persona en el dominio. Una persona
-    operativa que además inicia sesión se vincula con su cuenta de usuario por <code>email</code>.
-  </div>
-
-  <h3>Permisos</h3>
-  <table class="compact">
-    <tr><th>Permiso</th><th>Significado</th></tr>
-    <tr><td><code>crear_aplicaciones</code></td><td>Dar de alta nuevas aplicaciones.</td></tr>
-    <tr><td><code>gestionar_todas_las_aplicaciones</code></td><td>Editar cualquier aplicación.</td></tr>
-    <tr><td><code>gestionar_aplicaciones_asignadas</code></td><td>Editar solo las aplicaciones propias.</td></tr>
-    <tr><td><code>acceso_modulo_admin</code></td><td>Entrar al módulo de administración.</td></tr>
-    <tr><td><code>ver_consolidado</code></td><td>Usar el modo "Todas las aplicaciones" y el dashboard unificado.</td></tr>
+    <tr><th style="width:24%;">Rol</th><th style="width:24%;">Propósito</th><th>Permisos destacados</th></tr>
+    <tr><td><code>superadmin</code></td><td>Administración total</td><td>Crear aplicaciones, gestionar todas, ver consolidado, administrar usuarios.</td></tr>
+    <tr><td><code>admin_app</code></td><td>Administración parcial</td><td>Gestionar aplicaciones asignadas, acceso módulo admin, ver consolidado.</td></tr>
+    <tr><td><code>editor</code></td><td>Operación funcional</td><td>Sin permisos administrativos de plataforma.</td></tr>
+    <tr><td><code>viewer</code></td><td>Consulta</td><td>Sin permisos administrativos de plataforma.</td></tr>
   </table>
 
-  <h3>Endpoints base de seguridad y administración</h3>
-  <pre><span class="cm"># Sesión</span>
-POST   /api/auth/login
-GET    /api/auth/me
-
-<span class="cm"># Administración de aplicaciones</span>
-GET    /api/aplicaciones
-POST   /api/aplicaciones
-PUT    /api/aplicaciones/{id}
-PATCH  /api/aplicaciones/{id}/estado
-
-<span class="cm"># Usuarios por aplicación</span>
-GET    /api/aplicaciones/{id}/usuarios
-POST   /api/aplicaciones/{id}/usuarios
-DELETE /api/aplicaciones/{id}/usuarios/{usuario_id}
-
-<span class="cm"># Dashboard consolidado — solo lectura, roles admin en modo "todas"</span>
-GET    /api/dashboard/consolidado</pre>
-
-  <h3>Autorización en cada petición</h3>
-  <ol>
-    <li>El middleware de sesión valida el JWT y carga el usuario.</li>
-    <li>El middleware de permisos verifica el rol/permiso requerido por el endpoint.</li>
-    <li>El middleware de resolución de aplicación valida que el usuario tenga acceso a la
-      aplicación activa.</li>
-    <li>El endpoint se ejecuta con el <code>aplicacion_id</code> ya fijado en el contexto.</li>
-  </ol>
+  <h3>Autorización por dependencia</h3>
+  <p>El backend aplica dependencias de seguridad por endpoint (<code>usuario_actual</code>,
+  <code>requiere_rol</code>, <code>requiere_permiso</code>) y valida además el alcance por aplicación.</p>
 </section>
 
-<!-- ============ 7. MODELO DE DATOS ============ -->
+<!-- ============ 7. MODELO ============ -->
 <section id="modelo">
-  <h2 class="sec"><span class="num">7</span>Modelo de datos MongoDB unificado</h2>
-  <p class="desc">Las colecciones de la BD <code>hitss_unificado</code> y su criterio de
-  embebido vs. referencia.</p>
+  <h2 class="sec"><span class="num">7</span>Modelo de datos MongoDB</h2>
+  <p class="desc">Colecciones activas y relaciones de mayor impacto funcional.</p>
+
+  <table>
+    <tr><th style="width:30%;">Grupo</th><th>Colecciones</th><th style="width:28%;">Notas</th></tr>
+    <tr><td>Plataforma</td><td><code>aplicaciones</code>, <code>usuarios</code></td><td>Sincronizan acceso y visibilidad por aplicación.</td></tr>
+    <tr><td>Liquidación</td><td><code>requerimientos</code>, <code>tarifas</code>, <code>festivos</code>, <code>actas_trabajo</code>, <code>ordenes_compra</code>, <code>squads</code>, <code>aplicativos</code></td><td><code>requerimientos</code> embebe solicitud + entregas + facturación.</td></tr>
+    <tr><td>Carga de trabajo</td><td><code>personas</code>, <code>categorias</code>, <code>asignaciones</code>, <code>capacidades</code>, <code>estimaciones</code></td><td><code>asignaciones</code> embebe proyectos y sprints.</td></tr>
+    <tr><td>Integración AzDO</td><td><code>azdo_config</code>, <code>azdo_work_items</code>, <code>azdo_sync_log</code></td><td>Config, cache y trazabilidad de sincronización.</td></tr>
+    <tr><td>Transversal</td><td><code>bitacora</code>, <code>configuracion</code></td><td>Auditoría y parámetros de operación.</td></tr>
+  </table>
 
   <div class="callout">
-    <span class="ct">Criterio de modelado</span>
-    Se <strong>embebe</strong> lo que se lee siempre junto y es acotado (la solicitud y las
-    entregas dentro del requerimiento; los sprints dentro del proyecto). Se <strong>referencia</strong>
-    por <code>ObjectId</code> lo que se consulta de forma independiente o crece sin límite
-    (personas, bitácora, work items). <strong>Toda colección operativa lleva además
-    <code>aplicacion_id</code>.</strong>
+    <span class="ct">Índices relevantes observados</span>
+    Se definen índices por <code>aplicacion_id</code> y claves de negocio (por ejemplo,
+    <code>uq_app_req_squad_sc</code> en requerimientos y <code>uq_app_azdo_id</code> en work items).
   </div>
-
-  <h4>Colecciones de plataforma</h4>
-  <table>
-    <tr><th style="width:16%;">Colección</th><th style="width:28%;">Origen</th>
-        <th style="width:56%;">Contenido</th></tr>
-    <tr><td><code>aplicaciones</code> <span class="badge b-tenant">tenant</span></td>
-        <td>Nueva — documentos de la nueva versión</td>
-        <td>code, name, description, is_active, created_by, created_at, updated_at</td></tr>
-    <tr><td><code>usuarios</code> <span class="badge b-new">nueva</span></td>
-        <td>Nueva (capa de acceso) + parte de <code>Persona</code></td>
-        <td>name, email (único), password_hash (bcrypt), role (superadmin|admin_app|editor|viewer), is_active, aplicaciones_ids[], permisos</td></tr>
-  </table>
-
-  <h4>Colecciones operativas (todas con <code>aplicacion_id</code>)</h4>
-  <table>
-    <tr><th style="width:16%;">Colección</th><th style="width:27%;">Unifica</th>
-        <th style="width:35%;">Contenido / embebidos</th><th style="width:22%;">Relaciones</th></tr>
-    <tr><td><code>personas</code></td>
-        <td><code>Persona</code> (Liq.) + <code>developers</code> (WM)</td>
-        <td>nombre, email, rol operativo, activo, equipo, es_lider_tecnico, permite_sobrecarga, usuario_id</td>
-        <td>ref → squads, usuarios</td></tr>
-    <tr><td><code>squads</code></td><td><code>Squad</code> + <code>team_name</code></td>
-        <td>nombre, activo</td><td>ref → personas</td></tr>
-    <tr><td><code>aplicativos</code> <span class="badge b-mod">renombrado</span></td>
-        <td><code>Aplicacion</code> + <code>Direccion</code></td>
-        <td>nombre · <em>dirección embebida</em></td><td>—</td></tr>
-    <tr><td><code>requerimientos</code> <span class="badge b-new">núcleo</span></td>
-        <td><code>Requerimiento</code> + <code>SolicitudCotizacion</code> + <code>project_catalog</code> + <code>project_catalog_developers</code></td>
-        <td>codigo_req, <em>solicitud embebida</em>, estado, ans_estimacion, total_horas_estimadas, mes_objetivo, monto_pactado, categoria_id, <em>entregas embebidas</em> (con <em>facturación embebida</em>)</td>
-        <td>ref → aplicativos, squads, personas, tarifas, categorias</td></tr>
-    <tr><td><code>tarifas</code></td><td><code>Tarifa</code></td>
-        <td>anio, valor_hora, vigencia, tecnología</td><td>ref → personas</td></tr>
-    <tr><td><code>actas_trabajo</code></td><td><code>ActaDeTrabajo</code></td>
-        <td>codigo, fecha, totales</td><td>—</td></tr>
-    <tr><td><code>ordenes_compra</code></td><td><code>OrdenCompra</code></td>
-        <td>numero, vigencia, monto</td><td>—</td></tr>
-    <tr><td><code>asignaciones</code></td>
-        <td><code>workload_assignments</code> + <code>workload_projects</code> + <code>sprints</code></td>
-        <td>persona_id, categoria_id, total_porcentaje · <em>proyectos embebidos</em> → <em>sprints embebidos</em> (datos AzDO cacheados + mapping)</td>
-        <td>ref → personas, categorias, requerimientos</td></tr>
-    <tr><td><code>categorias</code></td><td><code>categories</code></td>
-        <td>nombre, color, orden · es_base</td><td>—</td></tr>
-    <tr><td><code>capacidades</code></td>
-        <td><code>CapacidadMensual</code> + <code>developer_monthly_capacity</code></td>
-        <td>scope (persona|squad), mes, horas_disponibles, personas, notas</td>
-        <td>ref → personas | squads</td></tr>
-    <tr><td><code>estimaciones</code></td>
-        <td><code>project_estimation_meta</code> + <code>project_estimation_rows</code></td>
-        <td>título, cliente, totales · <em>filas embebidas</em></td><td>ref → requerimientos</td></tr>
-    <tr><td><code>azdo_work_items</code></td><td><code>azdo_work_items</code></td>
-        <td>azdo_id, tipo, título, estado, horas, iteración</td><td>ref → personas, asignaciones</td></tr>
-    <tr><td><code>azdo_sync_log</code></td><td><code>azdo_sync_log</code></td>
-        <td>estado, conteos, fechas</td><td>—</td></tr>
-    <tr><td><code>bitacora</code></td><td><code>EventoBitacora</code> + <code>audit_logs</code></td>
-        <td>entidad_tipo, entidad_id, acción, descripción, autor, datos_antes/después, fecha_hora</td>
-        <td>ref polimórfica</td></tr>
-    <tr><td><code>alertas</code></td><td><code>email_alerts_log</code> + <code>wo_alerts_log</code></td>
-        <td>tipo (email|wo), persona, mes, horas, fecha_envío</td><td>ref → personas</td></tr>
-    <tr><td><code>festivos</code></td><td><code>Festivo</code></td>
-        <td>fecha, descripción</td><td>—</td></tr>
-    <tr><td><code>configuracion</code></td>
-        <td><code>app_settings</code> + <code>ConfiguracionGeneral</code> + <code>monthly_hours_config</code> + <code>ConfiguracionEstado</code> + <code>project_statuses</code></td>
-        <td>documentos clave/valor + sub-documentos: colores de estado, estados de proyecto, horas por mes · marca <code>es_base</code></td><td>—</td></tr>
-  </table>
-
-  <h3>Forma del documento núcleo: <code>requerimientos</code></h3>
-  <pre>{
-  <span class="ky">"_id"</span>: ObjectId,
-  <span class="ky">"aplicacion_id"</span>: <span class="st">"epm-hitss"</span>,        <span class="cm">// aislamiento multi-tenant</span>
-  <span class="ky">"codigo_req"</span>: <span class="st">"REQ-2026-0142"</span>,        <span class="cm">// ↔ project_catalog.req_code</span>
-  <span class="ky">"solicitud"</span>: {                       <span class="cm">// embebido 1:1</span>
-    <span class="ky">"codigo_sc"</span>: <span class="st">"SC-2026-0098"</span>,        <span class="cm">// ↔ project_catalog.code</span>
-    <span class="ky">"fecha_solicitud"</span>: ISODate, <span class="ky">"tipo_costo"</span>: <span class="st">"FIJO"</span>,
-    <span class="ky">"aplicativo_id"</span>: ObjectId, <span class="ky">"squad_id"</span>: ObjectId,
-    <span class="ky">"lt_hitss_id"</span>: ObjectId, <span class="ky">"lt_epm_id"</span>: ObjectId,
-    <span class="ky">"tecnologia"</span>: <span class="st">"Java"</span>, <span class="ky">"tarifa_id"</span>: ObjectId
-  },
-  <span class="ky">"estado"</span>: <span class="st">"ENTREGA CARGADA"</span>,
-  <span class="ky">"total_horas_estimadas"</span>: 320.0, <span class="ky">"ans_estimacion"</span>: <span class="st">"CUMPLE"</span>,
-  <span class="ky">"mes_objetivo"</span>: ISODate, <span class="ky">"monto_pactado"</span>: 4800000,
-  <span class="ky">"categoria_id"</span>: ObjectId,
-  <span class="ky">"developers_asignados"</span>: [ObjectId, ...],
-  <span class="ky">"entregas"</span>: [
-    { <span class="ky">"numero"</span>: 1, <span class="ky">"horas"</span>: 160, <span class="ky">"estado"</span>: <span class="st">"APROBADA"</span>,
-      <span class="ky">"ans_entrega"</span>: <span class="st">"CUMPLE"</span>, <span class="ky">"acta_trabajo_id"</span>: ObjectId,
-      <span class="ky">"facturacion"</span>: { <span class="ky">"estado"</span>: <span class="st">"FACTURADA"</span>, <span class="ky">"valor_facturado"</span>: 2400000 } }
-  ],
-  <span class="ky">"creado_en"</span>: ISODate, <span class="ky">"actualizado_en"</span>: ISODate
-}</pre>
-
-  <h3>Índices recomendados</h3>
-  <table class="compact">
-    <tr><th>Colección</th><th>Índice</th><th>Tipo</th></tr>
-    <tr><td><code>aplicaciones</code></td><td><code>code</code></td><td>único</td></tr>
-    <tr><td><code>usuarios</code></td><td><code>email</code></td><td>único</td></tr>
-    <tr><td><code>personas</code></td><td><code>aplicacion_id</code> + <code>email</code></td><td>único compuesto</td></tr>
-    <tr><td><code>requerimientos</code></td><td><code>aplicacion_id</code> + <code>codigo_req</code></td><td>único compuesto</td></tr>
-    <tr><td><code>requerimientos</code></td><td><code>aplicacion_id</code> + <code>estado</code> + <code>mes_objetivo</code></td><td>compuesto</td></tr>
-    <tr><td><code>azdo_work_items</code></td><td><code>aplicacion_id</code> + <code>azdo_id</code></td><td>único compuesto</td></tr>
-    <tr><td><code>capacidades</code></td><td><code>aplicacion_id</code> + scope + entidad + <code>mes</code></td><td>único compuesto</td></tr>
-    <tr><td>Todas las operativas</td><td><code>aplicacion_id</code></td><td>simple (filtro base)</td></tr>
-  </table>
 </section>
 
-<!-- ============ 8. MAPEO ============ -->
+<!-- ============ 8. MÓDULOS BACKEND ============ -->
 <section id="mapeo">
-  <h2 class="sec"><span class="num">8</span>Mapeo de migración SQL → MongoDB</h2>
-  <p class="desc">Equivalencia tabla por tabla. Todos los registros migrados reciben
-  <code>aplicacion_id</code> = aplicación inicial.</p>
+  <h2 class="sec"><span class="num">8</span>Módulos funcionales del backend</h2>
+  <p class="desc">Routers REST activos en <code>api/app/api/router.py</code>.</p>
 
-  <h3>Origen: Sistema Liquidador</h3>
-  <table class="compact">
-    <tr><th>Tabla SQLite</th><th>Colección destino</th><th>Tratamiento</th></tr>
-    <tr><td><code>direcciones</code></td><td><code>aplicativos</code></td><td>Embebida en cada aplicativo</td></tr>
-    <tr><td><code>aplicaciones</code></td><td><code>aplicativos</code></td><td>Renombrada para evitar el choque con el tenant</td></tr>
-    <tr><td><code>personas</code></td><td><code>personas</code> (+ <code>usuarios</code>)</td>
-        <td>Fusión con <code>developers</code>; las que tienen contraseña generan también una cuenta de usuario</td></tr>
-    <tr><td><code>squads</code></td><td><code>squads</code></td><td>1:1</td></tr>
-    <tr><td><code>festivos</code></td><td><code>festivos</code></td><td>1:1</td></tr>
-    <tr><td><code>tarifas</code></td><td><code>tarifas</code></td><td>1:1</td></tr>
-    <tr><td><code>capacidades_mensuales</code></td><td><code>capacidades</code></td><td><code>scope="squad"</code></td></tr>
-    <tr><td><code>solicitudes_cotizacion</code></td><td><code>requerimientos.solicitud</code></td><td>Embebida</td></tr>
-    <tr><td><code>requerimientos</code></td><td><code>requerimientos</code></td><td>Documento núcleo</td></tr>
-    <tr><td><code>entregas</code></td><td><code>requerimientos.entregas[]</code></td><td>Embebidas</td></tr>
-    <tr><td><code>facturaciones</code></td><td><code>requerimientos.entregas[].facturacion</code></td><td>Embebida 1:1</td></tr>
-    <tr><td><code>actas_trabajo</code> / <code>ordenes_compra</code></td><td>colecciones homónimas</td><td>1:1</td></tr>
-    <tr><td><code>eventos_bitacora</code></td><td><code>bitacora</code></td><td>Fusión con <code>audit_logs</code></td></tr>
-    <tr><td><code>configuracion_estados</code> / <code>configuracion_general</code></td><td><code>configuracion</code></td><td>Sub-documentos / clave-valor</td></tr>
-  </table>
-
-  <h3>Origen: Workload Manager</h3>
-  <table class="compact">
-    <tr><th>Tabla SQLite</th><th>Colección destino</th><th>Tratamiento</th></tr>
-    <tr><td><code>developers</code></td><td><code>personas</code></td><td>Fusión por <code>email</code>; rol DEV si es nueva</td></tr>
-    <tr><td><code>categories</code></td><td><code>categorias</code></td><td>1:1</td></tr>
-    <tr><td><code>workload_assignments</code></td><td><code>asignaciones</code></td><td>Documento</td></tr>
-    <tr><td><code>workload_projects</code></td><td><code>asignaciones.proyectos[]</code></td><td><code>catalog_project_id</code> → <code>requerimiento_id</code></td></tr>
-    <tr><td><code>sprints</code></td><td><code>asignaciones.proyectos[].sprints[]</code></td><td>Embebidos</td></tr>
-    <tr><td><code>developer_monthly_capacity</code></td><td><code>capacidades</code></td><td><code>scope="persona"</code></td></tr>
-    <tr><td><code>monthly_hours_config</code> / <code>app_settings</code> / <code>project_statuses</code></td><td><code>configuracion</code></td><td>Sub-documentos</td></tr>
-    <tr><td><code>project_catalog</code></td><td><code>requerimientos</code></td><td>Cruce por <code>req_code</code>/<code>code</code></td></tr>
-    <tr><td><code>project_catalog_developers</code></td><td><code>requerimientos.developers_asignados[]</code></td><td>Lista de refs embebida</td></tr>
-    <tr><td><code>project_estimation_meta</code></td><td><code>estimaciones</code></td><td>Documento</td></tr>
-    <tr><td><code>project_estimation_rows</code></td><td><code>estimaciones.filas[]</code></td><td>Embebidas</td></tr>
-    <tr><td><code>azdo_work_items</code> / <code>azdo_sync_log</code></td><td>colecciones homónimas</td><td>1:1</td></tr>
-    <tr><td><code>azdo_sprint_mapping</code></td><td><code>asignaciones...sprints[].azdo_mapping</code></td><td>Embebido</td></tr>
-    <tr><td><code>audit_logs</code></td><td><code>bitacora</code></td><td>Fusión con <code>eventos_bitacora</code></td></tr>
-    <tr><td><code>email_alerts_log</code> / <code>wo_alerts_log</code></td><td><code>alertas</code></td><td>Fusión con campo <code>tipo</code></td></tr>
+  <table>
+    <tr><th style="width:20%;">Dominio</th><th style="width:36%;">Routers</th><th>Capacidades principales</th></tr>
+    <tr><td>Plataforma</td><td><code>/auth</code>, <code>/aplicaciones</code>, <code>/usuarios</code>, <code>/dashboard</code></td><td>Login JWT, gestión de squads, gestión de usuarios y vista consolidada administrativa.</td></tr>
+    <tr><td>Liquidación</td><td><code>/requerimientos</code>, <code>/tarifas</code>, <code>/festivos</code>, <code>/actas</code></td><td>Ciclo de requerimientos, entregas, ANS, liquidación por entrega, catálogos de soporte.</td></tr>
+    <tr><td>Carga de trabajo</td><td><code>/personas</code>, <code>/categorias</code>, <code>/asignaciones</code>, <code>/capacidades</code>, <code>/estimaciones</code>, <code>/azdo</code>, <code>/configuracion</code></td><td>Equipo, distribución de carga, estimaciones Excel y sincronización con Azure DevOps.</td></tr>
+    <tr><td>Analítica y auditoría</td><td><code>/cifras</code>, <code>/reportes</code>, <code>/bitacora</code></td><td>KPIs, reportes de roadmap/equipo y trazabilidad de eventos.</td></tr>
   </table>
 </section>
 
-<!-- ============ 9. PLAN DE CAMBIOS ============ -->
+<!-- ============ 9. FRONTEND Y DASHBOARDS ============ -->
 <section id="cambios">
-  <h2 class="sec"><span class="num">9</span>Plan de cambios 1 a 1</h2>
-  <p class="desc">Cada cambio concreto, ordenado por fase. Leyenda:
-    <span class="badge b-new">crear</span>
-    <span class="badge b-mod">modificar</span>
-    <span class="badge b-port">portar</span>
-    <span class="badge b-keep">conservar</span>
-    <span class="badge b-del">eliminar</span>
-    <span class="badge b-tenant">multi-app</span></p>
+  <h2 class="sec"><span class="num">9</span>Frontend y dashboards</h2>
+  <p class="desc">Estructura React actual y tableros disponibles en producción.</p>
 
-  <!-- FASE 0 -->
-  <div class="fase">
-    <div class="fase-h"><span class="fn">FASE 0</span>
-      <span class="ft">Preparación del entorno</span><span class="fd">2–3 días</span></div>
-    <div class="fase-b">
-      <ol class="steps">
-        <li>Crear el repositorio <code>sistema-integrado</code> con la estructura monorepo.</li>
-        <li>Instalar <strong>MongoDB Community 7.x</strong> en el servidor IIS como servicio de
-          Windows con arranque automático y autenticación habilitada.</li>
-        <li>Crear la BD <code>hitss_unificado</code> y un usuario con rol <code>readWrite</code>.</li>
-        <li>Programar respaldo con <code>mongodump</code> (Programador de tareas de Windows).</li>
-        <li>Respaldar <code>liquidador.db</code>, <code>workload.db</code> y los Excel de origen.</li>
-        <li>Definir convención: colecciones y campos en español, <code>snake_case</code>.</li>
-      </ol>
-    </div>
-  </div>
-
-  <!-- FASE 1 -->
-  <div class="fase">
-    <div class="fase-h tn"><span class="fn">FASE 1</span>
-      <span class="ft">Esqueleto backend FastAPI + Beanie + modelo multi-aplicación</span>
-      <span class="fd">3–4 días</span></div>
-    <div class="fase-b">
-      <table class="compact">
-        <tr><th>Archivo / elemento</th><th>Acción</th><th>Detalle</th></tr>
-        <tr><td><code>app/config.py</code></td><td><span class="badge b-mod">modificar</span></td>
-            <td>Quitar <code>database_url</code>; agregar <code>mongo_url</code>, <code>mongo_db</code>, <code>jwt_secret</code>, <code>jwt_expira_min</code>.</td></tr>
-        <tr><td><code>app/db.py</code></td><td><span class="badge b-mod">modificar</span></td>
-            <td>Eliminar el <em>engine</em> SQLAlchemy. Crear cliente Motor + <code>init_beanie()</code>.</td></tr>
-        <tr><td><code>app/documents/aplicacion.py</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Document Beanie <code>Aplicacion</code> (tenant): code, name, description, is_active, created_by.</td></tr>
-        <tr><td><code>app/documents/_base.py</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Clase base <code>DocumentoOperativo</code> con el campo <code>aplicacion_id</code> que heredan todas las colecciones operativas.</td></tr>
-        <tr><td><code>app/repositories/_base.py</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Repositorio base que añade <code>aplicacion_id</code> a todo filtro de forma automática.</td></tr>
-        <tr><td><code>app/main.py</code></td><td><span class="badge b-mod">modificar</span></td>
-            <td><code>lifespan</code> que inicializa Beanie y el scheduler. Mantener StripPrefix; reemplazar el AuthMiddleware por la cadena de middlewares de la Fase 2.</td></tr>
-        <tr><td><code>pyproject.toml</code></td><td><span class="badge b-mod">modificar</span></td>
-            <td>Quitar <code>sqlalchemy</code>, <code>alembic</code>. Agregar <code>beanie</code>, <code>motor</code>, <code>python-jose</code>, <code>passlib[bcrypt]</code>, <code>apscheduler</code>, <code>openpyxl</code>, <code>aiosmtplib</code>.</td></tr>
-        <tr><td><code>alembic/</code>, <code>alembic.ini</code></td><td><span class="badge b-del">eliminar</span></td>
-            <td>MongoDB no usa migraciones de esquema.</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- FASE 2 -->
-  <div class="fase">
-    <div class="fase-h tn"><span class="fn">FASE 2</span>
-      <span class="ft">Autenticación (JWT) y autorización (roles y permisos)</span>
-      <span class="fd">4–5 días</span></div>
-    <div class="fase-b">
-      <table class="compact">
-        <tr><th>Elemento</th><th>Acción</th><th>Detalle</th></tr>
-        <tr><td><code>app/documents/usuario.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Document <code>Usuario</code>: name, email, password_hash, role, is_active, aplicaciones_ids, permisos.</td></tr>
-        <tr><td><code>app/security/hashing.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Hash y verificación con bcrypt (passlib). Reemplaza el SHA-256 de <code>auth.py</code>.</td></tr>
-        <tr><td><code>app/security/jwt.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Emisión y validación de tokens JWT.</td></tr>
-        <tr><td><code>app/middleware/sesion.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Valida el JWT y carga el usuario en el contexto.</td></tr>
-        <tr><td><code>app/middleware/permisos.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Dependencias FastAPI que exigen rol/permiso por endpoint.</td></tr>
-        <tr><td><code>app/middleware/aplicacion.py</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Resuelve y valida la aplicación activa (cabecera <code>X-Aplicacion</code>); inyecta <code>aplicacion_id</code>. Admite el modo consolidado (<code>__todas__</code>) para roles admin resolviendo el conjunto de aplicaciones autorizadas, y rechaza escrituras en ese modo.</td></tr>
-        <tr><td><code>app/api/auth.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Endpoints <code>POST /auth/login</code> y <code>GET /auth/me</code>.</td></tr>
-        <tr><td><code>app/auth.py</code> (Liquidador)</td><td><span class="badge b-del">eliminar</span></td>
-            <td>Sustituido por <code>app/security/</code>. La lógica de cookie/itsdangerous se retira.</td></tr>
-        <tr><td><code>crear_admin.py</code></td><td><span class="badge b-mod">modificar</span></td>
-            <td>Crear el usuario <code>superadmin</code> inicial.</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- FASE 3 -->
-  <div class="fase">
-    <div class="fase-h"><span class="fn">FASE 3</span>
-      <span class="ft">Portar el dominio del Liquidador a Beanie</span><span class="fd">5–7 días</span></div>
-    <div class="fase-b">
-      <table class="compact">
-        <tr><th>Archivo origen</th><th>Acción</th><th>Detalle</th></tr>
-        <tr><td><code>app/models/enums.py</code></td><td><span class="badge b-keep">conservar</span></td>
-            <td>Los <code>StrEnum</code> funcionan sin cambios con Beanie.</td></tr>
-        <tr><td><code>app/models/domain.py</code></td><td><span class="badge b-port">portar</span></td>
-            <td>Cada clase SQLAlchemy → <code>Document</code> Beanie heredando <code>DocumentoOperativo</code>. <code>Aplicacion</code>→<code>aplicativos</code>. <code>SolicitudCotizacion</code> y <code>Entrega</code> pasan a modelos embebidos.</td></tr>
-        <tr><td><code>app/repositories/requerimientos.py</code></td><td><span class="badge b-port">portar</span></td>
-            <td>Consultas SQLAlchemy → queries Beanie y aggregation pipelines, sobre el repositorio base con filtro por <code>aplicacion_id</code>.</td></tr>
-        <tr><td><code>app/services/ans.py</code>, <code>liquidacion.py</code>, <code>state_machine.py</code></td>
-            <td><span class="badge b-keep">conservar</span></td>
-            <td>Lógica pura; solo cambian los tipos de entrada.</td></tr>
-        <tr><td><code>app/services/gestion_requerimientos.py</code>, <code>administracion_tarifas.py</code>, <code>import_control.py</code></td>
-            <td><span class="badge b-mod">modificar</span></td>
-            <td>Reemplazar <code>session.add/commit</code> por <code>await documento.save()</code>.</td></tr>
-        <tr><td><code>app/importer/excel_importer.py</code></td><td><span class="badge b-mod">modificar</span></td>
-            <td>Conservar la lectura; cambiar la escritura a Beanie; estampar <code>aplicacion_id</code>.</td></tr>
-        <tr><td><code>app/api/router.py</code>, <code>requerimientos.py</code>, <code>tarifas.py</code></td>
-            <td><span class="badge b-port">portar</span></td>
-            <td>Convertir cada <em>page route</em> Jinja en endpoint REST que devuelve JSON.</td></tr>
-        <tr><td><code>app/templates/*.html</code></td><td><span class="badge b-del">eliminar</span></td>
-            <td>Las 10 plantillas Jinja se rehacen como pantallas React en la Fase 7.</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- FASE 4 -->
-  <div class="fase">
-    <div class="fase-h"><span class="fn">FASE 4</span>
-      <span class="ft">Portar el dominio del Workload Manager a FastAPI</span><span class="fd">7–10 días</span></div>
-    <div class="fase-b">
-      <p style="font-size:13px;">Cada archivo Node se reescribe como router o servicio Python; el
-      acceso a datos pasa a Beanie con filtro por <code>aplicacion_id</code>.</p>
-      <table class="compact">
-        <tr><th>Archivo origen (Node)</th><th>Destino (FastAPI)</th><th>Notas</th></tr>
-        <tr><td><code>backend/src/index.js</code></td><td>cubierto por <code>app/main.py</code></td>
-            <td>El scheduler AzDO se reimplementa con APScheduler.</td></tr>
-        <tr><td><code>database/init.js</code></td><td><span class="badge b-del">eliminar</span></td>
-            <td>DDL y CRUD genérico → Documents Beanie. Los <em>seeds</em> pasan al servicio de provisión (Fase 6).</td></tr>
-        <tr><td><code>routes/developers.js</code></td><td><code>app/api/personas.py</code></td>
-            <td>Fusión con personas del Liquidador.</td></tr>
-        <tr><td><code>routes/categories.js</code></td><td><code>app/api/categorias.py</code></td><td>—</td></tr>
-        <tr><td><code>routes/workload.js</code>, <code>sprints.js</code></td><td><code>app/api/asignaciones.py</code></td>
-            <td>Asignaciones, proyectos y sprints embebidos.</td></tr>
-        <tr><td><code>routes/team.js</code></td><td><code>app/api/equipo.py</code></td><td>—</td></tr>
-        <tr><td><code>routes/roadmap.js</code></td><td><code>app/api/roadmap.py</code></td><td>—</td></tr>
-        <tr><td><code>routes/capacity.js</code></td><td><code>app/api/capacidad.py</code></td>
-            <td>Unifica capacidad por persona y por squad.</td></tr>
-        <tr><td><code>routes/audit.js</code></td><td><code>app/api/bitacora.py</code></td>
-            <td>Fusión con la bitácora del Liquidador.</td></tr>
-        <tr><td><code>routes/settings.js</code>, <code>statuses.js</code></td><td><code>app/api/configuracion.py</code></td><td>—</td></tr>
-        <tr><td><code>routes/azdo.js</code></td><td><code>app/api/azdo.py</code></td><td>—</td></tr>
-        <tr><td><code>routes/projectCatalog.js</code></td><td><code>app/api/requerimientos.py</code></td>
-            <td>El "catálogo" pasa a ser una vista sobre <code>requerimientos</code>.</td></tr>
-        <tr><td><code>routes/estimations.js</code></td><td><code>app/api/estimaciones.py</code></td><td>—</td></tr>
-        <tr><td><code>azureDevOpsService.js</code></td><td><code>app/services/azure_devops.py</code></td>
-            <td>Cliente HTTP con <code>httpx</code> asíncrono.</td></tr>
-        <tr><td><code>routes/catalogSync.js</code></td><td><code>app/services/sync_catalogo.py</code></td>
-            <td>Reescrito sobre el modelo unificado.</td></tr>
-        <tr><td>nodemailer / xlsx</td><td><code>aiosmtplib</code> / <code>openpyxl</code></td><td>Correo e importación de Excel.</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- FASE 5 -->
-  <div class="fase">
-    <div class="fase-h"><span class="fn">FASE 5</span>
-      <span class="ft">Unificación del modelo de dominio</span><span class="fd">3–4 días</span></div>
-    <div class="fase-b">
-      <ol class="steps">
-        <li><strong>Fusionar <code>developers</code> en <code>personas</code></strong> con los campos de equipo.</li>
-        <li><strong>Fusionar <code>project_catalog</code> con <code>requerimientos</code>:</strong>
-          el Requerimiento es la entidad canónica.</li>
-        <li><strong>Reapuntar el vínculo carga↔requerimiento:</strong> <code>catalog_project_id</code>
-          → <code>requerimiento_id</code>.</li>
-        <li><strong>Unificar la bitácora</strong> (<code>EventoBitacora</code> + <code>audit_logs</code>) y
-          <strong>la capacidad mensual</strong> (<code>scope = persona | squad</code>).</li>
-        <li>Adaptar <code>sync_catalogo.py</code> para operar sobre el modelo unificado.</li>
-      </ol>
-      <div class="callout warn">
-        <span class="ct">Decisión operativa</span>
-        Tras la unificación debe quedar <strong>un solo punto de importación</strong> del Excel
-        "BITÁCORA GENERAL"; el segundo flujo se deshabilita.
-      </div>
-    </div>
-  </div>
-
-  <!-- FASE 6 -->
-  <div class="fase">
-    <div class="fase-h tn"><span class="fn">FASE 6</span>
-      <span class="ft">Módulo de administración de aplicaciones + plantilla base</span>
-      <span class="fd">4–5 días</span></div>
-    <div class="fase-b">
-      <table class="compact">
-        <tr><th>Elemento</th><th>Acción</th><th>Detalle</th></tr>
-        <tr><td><code>app/api/aplicaciones.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>CRUD de aplicaciones: listar, crear, editar, activar/desactivar.</td></tr>
-        <tr><td><code>app/api/usuarios.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>CRUD de usuarios y asignación de usuarios a aplicaciones.</td></tr>
-        <tr><td><code>app/services/provision_aplicacion.py</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Al crear una aplicación: genera categorías base, estados base y configuración base; <strong>no copia datos de negocio</strong>.</td></tr>
-        <tr><td>Catálogos base</td><td><span class="badge b-new">crear</span></td>
-            <td>Definir las plantillas base (categorías, estados, parámetros) que hereda toda aplicación nueva.</td></tr>
-        <tr><td><code>app/api/dashboard.py</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Endpoint del dashboard consolidado: <em>aggregation pipelines</em> con <code>$group</code> por aplicación y estado; solo lectura; exige rol admin y permiso <code>ver_consolidado</code>.</td></tr>
-      </table>
-      <div class="callout tenant">
-        <span class="ct">Criterios de aceptación cubiertos</span>
-        Solo el <code>superadmin</code> crea aplicaciones; la aplicación nueva aparece en el
-        selector, nace con estructura base y sin datos operativos; se puede activar/desactivar.
-      </div>
-    </div>
-  </div>
-
-  <!-- FASE 7 -->
-  <div class="fase">
-    <div class="fase-h"><span class="fn">FASE 7</span>
-      <span class="ft">Frontend React unificado (login, selector, admin)</span><span class="fd">9–12 días</span></div>
-    <div class="fase-b">
-      <table class="compact">
-        <tr><th>Componente</th><th>Acción</th><th>Detalle</th></tr>
-        <tr><td><code>src/api/client.ts</code></td><td><span class="badge b-mod">modificar</span></td>
-            <td>Adjuntar el token JWT y la cabecera <code>X-Aplicacion</code>; ante <code>401</code> ir al login.</td></tr>
-        <tr><td><code>Login.tsx</code></td><td><span class="badge b-new">crear</span></td><td>Pantalla de inicio de sesión.</td></tr>
-        <tr><td><code>SelectorAplicacion.tsx</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Selector en la cabecera; incluye la opción "Todas las aplicaciones" para roles admin; cambiar de aplicación recarga el contexto.</td></tr>
-        <tr><td><code>AdminAplicaciones.tsx</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Listado, alta/edición y activación de aplicaciones; asignación de usuarios.</td></tr>
-        <tr><td><code>DashboardUnificado.tsx</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Tablero gerencial consolidado con gráficas por aplicación (estados, ANS, horas, facturación, carga del equipo). Visible para roles admin en modo consolidado.</td></tr>
-        <tr><td><code>AplicacionContext.tsx</code></td><td><span class="badge b-new">crear</span> <span class="badge b-tenant">multi-app</span></td>
-            <td>Contexto React con la aplicación activa y el usuario autenticado.</td></tr>
-        <tr><td><code>Requerimientos.tsx</code>, <code>RequerimientoForm.tsx</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Lista, filtros y formulario, desde <code>index.html</code> y <code>requerimiento_form.html</code>.</td></tr>
-        <tr><td><code>CifrasEstado/Squad/Ans.tsx</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Tableros de cifras, desde <code>cifras_*.html</code>.</td></tr>
-        <tr><td><code>Tarifas/Administracion/Usuarios/ColoresEstado.tsx</code></td><td><span class="badge b-new">crear</span></td>
-            <td>Desde las plantillas de administración del Liquidador.</td></tr>
-        <tr><td><code>Sidebar.tsx</code></td><td><span class="badge b-mod">modificar</span></td>
-            <td>Menú agrupado: Dashboard unificado · Liquidación · Carga de trabajo · Azure DevOps · Estimaciones · Administración · Configuración. El Dashboard unificado solo aparece para roles admin.</td></tr>
-        <tr><td>Páginas existentes de WM</td><td><span class="badge b-keep">conservar</span></td>
-            <td>Dashboard, Roadmap, ByProject/Role/Activity, OrgChart, etc.</td></tr>
-        <tr><td>Guard de rutas</td><td><span class="badge b-new">crear</span></td>
-            <td>Mostrar/ocultar módulos y acciones según rol y permisos.</td></tr>
-      </table>
-    </div>
-  </div>
-
-  <!-- FASE 8 -->
-  <div class="fase">
-    <div class="fase-h"><span class="fn">FASE 8</span>
-      <span class="ft">Migración de datos (aplicación inicial)</span><span class="fd">3–5 días</span></div>
-    <div class="fase-b"><p style="font-size:13px;">Detallada en la sección 10. Script
-      <code>scripts/migrar_a_mongo.py</code>.</p></div>
-  </div>
-
-  <!-- FASE 9 -->
-  <div class="fase">
-    <div class="fase-h"><span class="fn">FASE 9</span>
-      <span class="ft">Despliegue en IIS</span><span class="fd">2–3 días</span></div>
-    <div class="fase-b"><p style="font-size:13px;">Detallado en la sección 11.</p></div>
-  </div>
-
-  <!-- FASE 10 -->
-  <div class="fase">
-    <div class="fase-h"><span class="fn">FASE 10</span>
-      <span class="ft">QA, puesta en marcha y rollback</span><span class="fd">3–4 días</span></div>
-    <div class="fase-b">
-      <ol class="steps">
-        <li>Pruebas funcionales módulo por módulo.</li>
-        <li><strong>Pruebas de aislamiento multi-aplicación:</strong> verificar que ningún dato
-          cruza entre aplicaciones y que una aplicación nueva nace vacía.</li>
-        <li><strong>Pruebas comparativas:</strong> contrastar cifras contra los sistemas antiguos.</li>
-        <li>Migración final de corte con la data más reciente (ver sección 10).</li>
-        <li>Puesta en marcha; mantener los sistemas viejos en solo lectura 2–4 semanas como rollback.</li>
-      </ol>
-    </div>
-  </div>
-</section>
-
-<!-- ============ 10. MIGRACIÓN DE DATOS ============ -->
-<section id="datos">
-  <h2 class="sec"><span class="num">10</span>Migración de datos existentes</h2>
-  <p class="desc">Cómo se trasladan los datos de los dos SQLite a MongoDB bajo la aplicación inicial.</p>
-
-  <p>Se desarrolla <code>scripts/migrar_a_mongo.py</code>, que abre ambos archivos SQLite en modo
-  solo lectura y vuelca los datos a MongoDB en orden de dependencias. <strong>Todo registro
-  migrado recibe <code>aplicacion_id</code> = aplicación inicial</strong> (p. ej. código
-  <code>epm-hitss</code>).</p>
-
-  <h3>Orden de carga</h3>
-  <ol>
-    <li><strong>Aplicación inicial:</strong> crear el documento en <code>aplicaciones</code>.</li>
-    <li><strong>Usuarios:</strong> crear el <code>superadmin</code> y, a partir de las
-      <code>Persona</code> con contraseña del Liquidador, las cuentas de <code>usuarios</code>.</li>
-    <li><strong>Catálogos base:</strong> <code>squads</code>, <code>aplicativos</code> (con
-      dirección embebida), <code>tarifas</code>, <code>festivos</code>, <code>categorias</code>,
-      <code>configuracion</code>.</li>
-    <li><strong>Personas:</strong> insertar las <code>Persona</code> del Liquidador; cruzar cada
-      <code>developer</code> de WM por <code>email</code> — si coincide, fusionar campos de
-      equipo; si no, crear persona con rol <code>DEV</code>.</li>
-    <li><strong>Requerimientos:</strong> insertar desde el Liquidador (con solicitud, entregas y
-      facturación embebidas); cruzar el <code>project_catalog</code> de WM por
-      <code>req_code</code>/<code>code</code> para completar categoría, developers y fechas;
-      los sin coincidencia se crean marcados para revisión.</li>
-    <li><strong>Asignaciones de carga:</strong> migrar asignaciones → proyectos → sprints,
-      reapuntando al <code>_id</code> del requerimiento.</li>
-    <li><strong>Resto:</strong> <code>azdo_*</code>, <code>estimaciones</code>,
-      <code>capacidades</code>, <code>bitacora</code>, <code>alertas</code>.</li>
-    <li><strong>Reporte de discrepancias</strong> y validación de conteos origen vs. destino.</li>
-  </ol>
-
-  <h3>Migraciones de prueba + corte final</h3>
-  <p>Siguiendo el manual de la nueva versión: la aplicación origen sigue cambiando mientras se
-  desarrolla. Por eso se hacen <strong>una o varias migraciones de prueba</strong> en un entorno
-  de pruebas y una <strong>migración final de corte</strong> que toma el estado más reciente,
-  conservando altas, bajas y cambios hechos hasta el momento del paso a producción.</p>
-
-  <h3>Validaciones mínimas</h3>
+  <h3>Rutas principales de la SPA</h3>
   <ul>
-    <li>Los conteos coinciden entre origen y destino.</li>
-    <li>Las relaciones (referencias por <code>ObjectId</code>) siguen funcionando.</li>
-    <li>El frontend muestra la información esperada y los filtros operan.</li>
-    <li>La aplicación inicial conserva toda su información histórica.</li>
-    <li>Un dato de la aplicación inicial no aparece en otra aplicación.</li>
-    <li>Una aplicación nueva aparece sin datos operativos.</li>
+    <li><code>/dashboard</code> (resumen de requerimientos).</li>
+    <li><code>/dashboard-estados</code> y <code>/dashboard-squad</code>.</li>
+    <li><code>/cifras</code> (estado, ANS y liquidación agregada).</li>
+    <li>Módulos operativos: requerimientos, personas, asignaciones, capacidades, roadmap, estimaciones, Azure DevOps.</li>
+    <li>Administración: aplicaciones, usuarios y configuración (según rol).</li>
   </ul>
 
-  <div class="callout warn">
-    <span class="ct">Riesgo de la fusión</span>
-    El cruce de personas depende del <code>email</code> y el de requerimientos de los códigos.
-    El script debe emitir un <strong>reporte de discrepancias</strong> (personas sin email,
-    requerimientos sin par) para revisión manual antes del corte final.
-  </div>
+  <h3>Dashboards implementados</h3>
+  <table class="compact">
+    <tr><th style="width:28%;">Pantalla</th><th style="width:32%;">Fuente de datos</th><th>Indicadores</th></tr>
+    <tr><td>Dashboard de Requerimientos</td><td><code>/requerimientos</code>, <code>/personas</code></td><td>KPIs de volumen, horas, entregas, ANS y tendencias.</td></tr>
+    <tr><td>Dashboard Estados</td><td><code>/requerimientos</code>, <code>/aplicaciones</code></td><td>Distribución por estado, evolución mensual y totales.</td></tr>
+    <tr><td>Dashboard Squad</td><td><code>/requerimientos</code>, <code>/capacidades</code>, <code>/festivos</code>, <code>/configuracion</code></td><td>Capacidad mensual, horas por squad y métricas cruzadas de equipo.</td></tr>
+    <tr><td>Cifras y ANS</td><td><code>/cifras/estado</code>, <code>/cifras/squad</code>, <code>/cifras/ans</code>, <code>/cifras/liquidacion</code></td><td>ANS, distribución y resumen económico.</td></tr>
+  </table>
 </section>
 
-<!-- ============ 11. DESPLIEGUE ============ -->
-<section id="despliegue">
-  <h2 class="sec"><span class="num">11</span>Despliegue en IIS</h2>
-  <p class="desc">Cómo queda publicado el sistema unificado en el servidor Windows.</p>
+<!-- ============ 10. FLUJO DATOS ============ -->
+<section id="datos">
+  <h2 class="sec"><span class="num">10</span>Flujo principal de datos</h2>
+  <p class="desc">Secuencia principal de operación entre frontend, backend y MongoDB.</p>
 
-  <table class="compact">
-    <tr><th>Componente</th><th>Despliegue</th></tr>
-    <tr><td>MongoDB</td><td>Servicio de Windows, <code>localhost:27017</code>, con autenticación y respaldo programado.</td></tr>
-    <tr><td>Backend FastAPI</td><td>Sub-aplicación IIS <code>/SistemaIntegrado</code> mediante HttpPlatformHandler (Uvicorn). Se reutiliza el patrón de <code>web.config</code> y <code>publicar-iis.bat</code> del Liquidador.</td></tr>
-    <tr><td>Frontend React</td><td>Compilado con Vite a <code>web/dist</code> y servido por FastAPI vía <code>StaticFiles</code>, con <em>fallback</em> SPA.</td></tr>
-    <tr><td>Variables de entorno</td><td><code>MONGO_URL</code>, <code>MONGO_DB</code>, <code>JWT_SECRET</code>, <code>APP_ROOT_PATH=/SistemaIntegrado</code>. El PAT de Azure DevOps queda en <code>configuracion</code>.</td></tr>
-    <tr><td>Permisos</td><td>El usuario del Application Pool requiere acceso al directorio y conexión local a MongoDB.</td></tr>
-  </table>
+  <ol class="steps">
+    <li>Usuario inicia sesión en <code>/login</code> → <code>POST /auth/login</code>.</li>
+    <li>Frontend almacena JWT + usuario y consulta aplicaciones visibles en <code>/aplicaciones</code>.</li>
+    <li>Usuario selecciona squad (o consolidado) y el cliente adjunta <code>X-Aplicacion</code> en cada petición.</li>
+    <li>Backend valida token y autorización; resuelve contexto con <code>contexto_aplicacion</code>.</li>
+    <li>Routers consultan/actualizan colecciones filtrando por <code>aplicacion_id</code>.</li>
+    <li>Servicios de dominio calculan ANS, liquidación y sincronizaciones; eventos críticos se registran en bitácora.</li>
+    <li>Dashboards consumen endpoints agregados y renderizan KPIs en tiempo real.</li>
+  </ol>
 
   <div class="callout ok">
-    <span class="ct">Mejora respecto a la situación actual</span>
-    Con MongoDB desaparecen los problemas de SQLite en IIS (modo solo lectura por aislamiento de
-    procesos, archivos WAL/SHM). El backend ya no escribe archivos de base de datos en el
-    directorio de la aplicación.
+    <span class="ct">Flujos adicionales implementados</span>
+    <strong>Estimaciones:</strong> carga de Excel en base64, persistencia estructurada y creación opcional de tareas en Azure DevOps.<br>
+    <strong>Sincronización AzDO:</strong> descarga de work items por iteración y consolidación en <code>azdo_work_items</code> + <code>azdo_sync_log</code>.
   </div>
 </section>
 
-<!-- ============ 12. RIESGOS ============ -->
+<!-- ============ 11. INTEGRACIONES ============ -->
+<section id="despliegue">
+  <h2 class="sec"><span class="num">11</span>Integraciones y operación</h2>
+  <p class="desc">Componentes transversales relevantes para la operación diaria.</p>
+
+  <h3>Azure DevOps</h3>
+  <ul>
+    <li>Configuración en <code>azdo_config</code> con alcance app/squad/usuario.</li>
+    <li>Endpoints para probar conexión, listar proyectos/iteraciones, descubrir campos requeridos y sincronizar.</li>
+    <li>Sincronización manual (<code>/azdo/sync</code>) y automática con scheduler.</li>
+  </ul>
+
+  <h3>Scheduler</h3>
+  <p><code>app/services/scheduler.py</code> ejecuta revisión cada 30 minutos y dispara sincronizaciones según
+  intervalo configurado (<code>manual</code>, <code>hourly</code>, <code>daily</code>).</p>
+
+  <h3>Importación de datos</h3>
+  <p>Existe importador de Excel (<code>app/importer/excel_importer.py</code>) para la bitácora general, con carga de requerimientos,
+  entregas y catálogos asociados.</p>
+</section>
+
+<!-- ============ 12. DESPLIEGUE ============ -->
 <section id="riesgos">
-  <h2 class="sec"><span class="num">12</span>Riesgos y mitigaciones</h2>
-  <p class="desc">Lo que puede salir mal y cómo se controla.</p>
+  <h2 class="sec"><span class="num">12</span>Despliegue y ejecución</h2>
+  <p class="desc">Forma de ejecución y publicación soportada por el repositorio.</p>
 
   <table>
-    <tr><th style="width:30%;">Riesgo</th><th style="width:12%;">Impacto</th><th style="width:58%;">Mitigación</th></tr>
-    <tr><td>Mezcla de datos entre aplicaciones por falta de filtro <code>aplicacion_id</code></td>
-        <td>Crítico</td>
-        <td>Centralizar el filtro en un repositorio base; pruebas de aislamiento; revisión de todo endpoint que reciba o devuelva datos operativos.</td></tr>
-    <tr><td>Migración final desactualizada (copia vieja)</td><td>Alto</td>
-        <td>Migraciones de prueba + corte final con la data más reciente; congelar el origen al ejecutar el corte.</td></tr>
-    <tr><td>Datos sin cruce en la fusión (personas / requerimientos)</td><td>Alto</td>
-        <td>Reporte de discrepancias del script; revisión manual previa al corte.</td></tr>
-    <tr><td>Pérdida de integridad referencial al no haber <em>foreign keys</em></td><td>Alto</td>
-        <td>Validar referencias en la capa de servicios; índices únicos; embebido cuando la relación es 1:1 o 1:pocos.</td></tr>
-    <tr><td>Aplicación nueva mal inicializada (sin catálogos base)</td><td>Medio</td>
-        <td>Servicio de provisión obligatorio; pruebas que verifican la estructura base.</td></tr>
-    <tr><td>Usuarios sin permiso creando o administrando aplicaciones</td><td>Medio</td>
-        <td>Autorización por rol/permiso en cada endpoint; guard de rutas en el frontend.</td></tr>
-    <tr><td>Regresiones al rehacer la UI del Liquidador en React</td><td>Medio</td>
-        <td>Pruebas comparativas de cifras; mantener el sistema viejo en solo lectura durante el rollback.</td></tr>
-    <tr><td>Reescritura del backend Node a Python</td><td>Medio</td>
-        <td>Portar router por router con su prueba; el comportamiento queda fijado por la API REST.</td></tr>
-    <tr><td>Respaldo manual de MongoDB local</td><td>Medio</td>
-        <td><code>mongodump</code> programado; verificación periódica de los respaldos.</td></tr>
-    <tr><td>Doble importación del Excel "BITÁCORA GENERAL"</td><td>Medio</td>
-        <td>Un único punto de importación tras la unificación (Fase 5).</td></tr>
+    <tr><th style="width:24%;">Componente</th><th>Ejecución actual</th><th>Observación</th></tr>
+    <tr><td>Backend</td><td>Uvicorn sobre <code>app.main:app</code></td><td>Incluye lifespan para BD, bootstrap y scheduler.</td></tr>
+    <tr><td>Frontend</td><td>Vite en desarrollo / build en <code>web/dist</code></td><td>FastAPI puede servir la SPA compilada en producción.</td></tr>
+    <tr><td>IIS</td><td><code>deploy/web.config</code> + <code>deploy/publicar-iis.bat</code></td><td>Publicación bajo subaplicación IIS (HttpPlatformHandler).</td></tr>
+    <tr><td>BD</td><td>MongoDB local (servicio Windows)</td><td>Conexión configurable en <code>api/.env</code>.</td></tr>
   </table>
 </section>
 
-<!-- ============ 13. CRONOGRAMA ============ -->
+<!-- ============ 13. RIESGOS ============ -->
 <section id="cronograma">
-  <h2 class="sec"><span class="num">13</span>Cronograma estimado</h2>
-  <p class="desc">Estimación para un desarrollador a tiempo completo. Las fases 3 y 4 pueden
-  solaparse parcialmente con la 7.</p>
+  <h2 class="sec"><span class="num">13</span>Riesgos técnicos actuales</h2>
+  <p class="desc">Riesgos observados directamente en el código actual.</p>
 
   <table>
-    <tr><th>Fase</th><th>Descripción</th><th>Esfuerzo</th></tr>
-    <tr><td>0</td><td>Preparación del entorno</td><td>2–3 días</td></tr>
-    <tr><td>1</td><td>Esqueleto backend + modelo multi-aplicación</td><td>3–4 días</td></tr>
-    <tr><td>2</td><td>Autenticación (JWT) y autorización</td><td>4–5 días</td></tr>
-    <tr><td>3</td><td>Portar dominio Liquidador</td><td>5–7 días</td></tr>
-    <tr><td>4</td><td>Portar dominio Workload Manager</td><td>7–10 días</td></tr>
-    <tr><td>5</td><td>Unificación del modelo de dominio</td><td>3–4 días</td></tr>
-    <tr><td>6</td><td>Módulo de administración + plantilla base</td><td>4–5 días</td></tr>
-    <tr><td>7</td><td>Frontend React unificado</td><td>9–12 días</td></tr>
-    <tr><td>8</td><td>Migración de datos</td><td>3–5 días</td></tr>
-    <tr><td>9</td><td>Despliegue en IIS</td><td>2–3 días</td></tr>
-    <tr><td>10</td><td>QA, puesta en marcha y rollback</td><td>3–4 días</td></tr>
-    <tr><td colspan="2"><strong>Total</strong></td>
-        <td><strong>45–62 días hábiles ≈ 9–13 semanas</strong></td></tr>
+    <tr><th style="width:34%;">Riesgo</th><th style="width:18%;">Impacto</th><th>Detalle observado</th></tr>
+    <tr><td>Configuración AzDO HITSS/EPM no diferenciada en backend</td><td>Alto</td><td>El frontend envía <code>target</code> (HITSS/EPM), pero el router <code>/azdo</code> no separa esa dimensión; puede mezclar configuración entre paneles.</td></tr>
+    <tr><td>Ruta de importación no registrada en router principal</td><td>Medio</td><td>Existe <code>api/app/api/importacion.py</code>, pero no está incluida en <code>api/app/api/router.py</code>, por lo que el endpoint no queda expuesto.</td></tr>
+    <tr><td>Dashboard consolidado backend aún parcial</td><td>Medio</td><td><code>/dashboard/consolidado</code> reporta principalmente personas/categorías y mantiene TODO para métricas de negocio extendidas.</td></tr>
+    <tr><td>Configuración global sin dependencia explícita de autenticación</td><td>Medio</td><td><code>/configuracion</code> no aplica <code>usuario_actual</code> ni <code>requiere_rol</code>; requiere endurecimiento según política de seguridad del entorno.</td></tr>
   </table>
-
-  <div class="callout">
-    <span class="ct">Hito intermedio recomendado</span>
-    Al terminar las fases 1–6 se tiene un backend FastAPI multi-aplicación funcional sobre
-    MongoDB, con seguridad y administración. Es un buen punto para una demostración y validación
-    antes de invertir en el frontend (fase 7).
-  </div>
 </section>
 
-<!-- ============ 14. CHECKLIST ============ -->
+<!-- ============ 14. PRÓXIMOS PASOS ============ -->
 <section id="checklist">
-  <h2 class="sec"><span class="num">14</span>Checklist de cierre</h2>
-  <p class="desc">Criterios verificables de que la integración está completa.</p>
+  <h2 class="sec"><span class="num">14</span>Próximos pasos recomendados</h2>
+  <p class="desc">Acciones priorizadas para cerrar brechas detectadas.</p>
 
-  <table class="compact">
-    <tr><th style="width:6%;">✓</th><th>Criterio</th></tr>
-    <tr><td>☐</td><td>MongoDB instalado como servicio de Windows con respaldo programado.</td></tr>
-    <tr><td>☐</td><td>Backend FastAPI único sirviendo toda la API REST.</td></tr>
-    <tr><td>☐</td><td>Autenticación JWT y autorización por roles funcionando.</td></tr>
-    <tr><td>☐</td><td>Toda la data operativa lleva <code>aplicacion_id</code>; el filtro es obligatorio.</td></tr>
-    <tr><td>☐</td><td>Módulo de administración de aplicaciones operativo (crear, editar, activar).</td></tr>
-    <tr><td>☐</td><td>Una aplicación nueva nace con estructura base y sin datos operativos.</td></tr>
-    <tr><td>☐</td><td>Pruebas de aislamiento: ningún dato cruza entre aplicaciones.</td></tr>
-    <tr><td>☐</td><td>Todos los routers del Liquidador y del Workload Manager portados y probados.</td></tr>
-    <tr><td>☐</td><td>Frontend React único con login, selector de aplicación y todos los módulos.</td></tr>
-    <tr><td>☐</td><td>Los roles <code>superadmin</code> y <code>admin_app</code> acceden al modo consolidado de todas sus aplicaciones autorizadas.</td></tr>
-    <tr><td>☐</td><td>Dashboard unificado con gráficas consolidadas por aplicación, en modo solo lectura.</td></tr>
-    <tr><td>☐</td><td>Datos migrados a la aplicación inicial; conteos validados.</td></tr>
-    <tr><td>☐</td><td>Reporte de discrepancias revisado y resuelto.</td></tr>
-    <tr><td>☐</td><td>Cifras coinciden con los sistemas antiguos.</td></tr>
-    <tr><td>☐</td><td>Sincronización con Azure DevOps operativa con APScheduler.</td></tr>
-    <tr><td>☐</td><td>Importación del Excel "BITÁCORA GENERAL" desde un único punto.</td></tr>
-    <tr><td>☐</td><td>Sistema publicado en IIS bajo <code>/SistemaIntegrado</code>.</td></tr>
-    <tr><td>☐</td><td>Sistemas antiguos en modo solo lectura como rollback durante el periodo de gracia.</td></tr>
-  </table>
+  <ol class="steps">
+    <li><strong>Separar configuración AzDO por destino</strong> (HITSS/EPM) en backend y persistencia.</li>
+    <li><strong>Decidir el estado de importación Excel</strong>: exponer <code>/importacion</code> en router principal o retirar código/UI no usados.</li>
+    <li><strong>Endurecer seguridad de <code>/configuracion</code></strong> con autenticación y control de rol.</li>
+    <li><strong>Completar métricas de <code>/dashboard/consolidado</code></strong> para alinear backend y dashboards de negocio.</li>
+    <li><strong>Agregar pruebas automatizadas focalizadas</strong> para autenticación, contexto multi-aplicación y modo consolidado.</li>
+    <li><strong>Actualizar documentación operativa</strong> (backup MongoDB, monitoreo de scheduler y fallos de sync AzDO).</li>
+  </ol>
 </section>
 
 <footer>
   Documento de arquitectura — Integración Sistema Liquidador EPM-HITSS + Workload Manager ·
-  Plataforma unificada multi-aplicación · HITSS, Desarrollos IA · 21 de mayo de 2026 ·
-  Versión 2.0.<br>
-  Decisiones marco: backend FastAPI único · base de datos MongoDB local · frontend React SPA único ·
-  modelo multi-aplicación · seguridad JWT + bcrypt + roles.<br>
-  Documentos de entrada incorporados: <code>referencias/requerimientos-multiaplicacion.md</code>,
-  <code>referencias/manual-dummies-migracion-mongo.md</code>.
+  Plataforma unificada multi-aplicación · HITSS, Desarrollos IA · 18 de junio de 2026 ·
+  Versión 2.1.<br>
+  Alcance verificado en código: FastAPI + React + MongoDB + modelo multi-aplicación + seguridad JWT +
+  integración Azure DevOps.<br>
+  Revisión realizada sobre el repositorio: <code>C:\Sistema Integrado</code>.
 </footer>
 
 </main>
 </div>
 </body>
 </html>
+
