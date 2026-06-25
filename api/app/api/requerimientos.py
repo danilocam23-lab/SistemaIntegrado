@@ -397,3 +397,81 @@ async def eliminar(
         ctx.codigo, str(req.id), "eliminar", f"Requerimiento {req.codigo_req} eliminado", usuario
     )
     await req.delete()
+
+
+@router.post("/{codigo_req}/reasignar-aplicacion")
+async def reasignar_aplicacion(
+    codigo_req: str,
+    nueva_aplicacion: str,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    """[ADMIN] Reasigna un requerimiento a otra aplicación.
+    
+    Nota: Solo disponible en modo consolidado (__todas__).
+    """
+    if usuario.rol != RolUsuario.SUPERADMIN:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo superadmin")
+    if not ctx.modo_consolidado:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo en modo consolidado")
+    
+    # Buscar en TODAS las aplicaciones
+    req = await Requerimiento.find_one({"codigo_req": codigo_req})
+    if not req:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo_req} no encontrado")
+    
+    app_anterior = req.aplicacion_id
+    req.aplicacion_id = nueva_aplicacion
+    req.marcar_actualizado()
+    await req.save()
+    
+    await _registrar_bitacora(
+        nueva_aplicacion,
+        str(req.id),
+        "reasignar_aplicacion",
+        f"Reasignado de {app_anterior} a {nueva_aplicacion}",
+        usuario,
+    )
+    
+    return {
+        "codigo_req": req.codigo_req,
+        "aplicacion_anterior": app_anterior,
+        "aplicacion_nueva": nueva_aplicacion,
+        "status": "reasignado"
+    }
+
+
+@router.post("/{codigo_req}/diagnostico")
+async def diagnostico(
+    codigo_req: str,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    """[ADMIN] Info de diagnóstico del requerimiento.
+    
+    Nota: Solo disponible para superadmin.
+    """
+    if usuario.rol != RolUsuario.SUPERADMIN:
+       raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo superadmin")
+    
+    # Buscar en TODAS las aplicaciones si estamos en consolidado
+    if ctx.modo_consolidado:
+       req = await Requerimiento.find_one({"codigo_req": codigo_req})
+    else:
+       req = await _buscar(ctx, codigo_req)
+    
+    if not req:
+       raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo_req} no encontrado")
+    
+    return {
+       "_id": str(req.id),
+       "codigo_req": req.codigo_req,
+       "aplicacion_id": req.aplicacion_id,
+       "estado": req.estado,
+       "solicitud": {
+           "codigo_sc": req.solicitud.codigo_sc,
+           "squad_id": req.solicitud.squad_id,
+       },
+       "creado_en": req.creado_en.isoformat() if req.creado_en else None,
+       "actualizado_en": req.actualizado_en.isoformat() if req.actualizado_en else None,
+    }
