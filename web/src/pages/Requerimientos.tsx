@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import client from '../api/client'
@@ -746,7 +746,7 @@ export default function Requerimientos() {
               const estCargada = estimacionesMap[req.id]
               const grupos = estCargada ? agruparPorHU(estCargada.filas) : []
               return (
-                <>{/* Fila principal del requerimiento */}
+                <React.Fragment key={req.id}>{/* Fila principal del requerimiento */}
                   <tr key={req.id} className={`border-t ${isExpanded ? 'bg-cyan-50/30' : ''}`}>
                     <td className="p-2 text-center">
                       {hasEst ? (
@@ -991,7 +991,7 @@ export default function Requerimientos() {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               )
             })}
             {datosFiltrados.length === 0 && (

@@ -31,6 +31,14 @@ export function useLista<T>(endpoint: string) {
 export function mensajeError(err: unknown): string {
   const data = (err as { response?: { data?: { detail?: unknown } } })?.response?.data
   const detalle = data?.detail
+  
+  // Log para debugging
+  if (typeof window !== 'undefined' && window.console) {
+    console.error('Error completo:', err)
+    console.error('Datos de error:', data)
+    console.error('Detalle:', detalle)
+  }
+  
   if (typeof detalle === 'string') return detalle
   // Pydantic validation errors return detail as an array of objects
   if (Array.isArray(detalle) && detalle.length > 0) {
@@ -38,7 +46,7 @@ export function mensajeError(err: unknown): string {
     const campo = primero.loc ? primero.loc.filter((l) => l !== 'body').join('.') : ''
     return campo ? `${campo}: ${primero.msg ?? 'Error de validación'}` : (primero.msg ?? 'Error de validación')
   }
-  return 'Ocurrió un error'
+  return 'Ocurrió un error (revisa la consola del navegador para más detalles)'
 }
 
 /** Carga los estados de requerimiento y entrega desde la configuración. */
