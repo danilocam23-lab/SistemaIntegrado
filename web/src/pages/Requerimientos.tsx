@@ -456,6 +456,34 @@ export default function Requerimientos() {
     return fechas.sort().reverse()[0].slice(0, 10)
   }
 
+  function calcularDiasTranscurridos(fechaLimite: string | null, fechaReal: string | null): { dias: number; esNegativo: boolean } | null {
+    const hoy = new Date().toISOString().slice(0, 10)
+    
+    if (!fechaLimite) return null
+    
+    // Fecha a usar para el cálculo del rango
+    const fechaFin = fechaReal ? fechaReal.slice(0, 10) : hoy
+    const fechaInicio = fechaLimite.slice(0, 10)
+    
+    // Calcular diferencia en días
+    const fecha1 = new Date(fechaInicio)
+    const fecha2 = new Date(fechaFin)
+    const diferencia = Math.floor((fecha2.getTime() - fecha1.getTime()) / (1000 * 60 * 60 * 24))
+    
+    // Determinar si es negativo:
+    // - Si no hay fecha real y hoy > fechaLimite: negativo (atraso)
+    // - Si hay fecha real y fechaReal > fechaLimite: negativo (atraso)
+    // - En caso contrario: positivo (días restantes o dentro de plazo)
+    let esNegativo = false
+    if (!fechaReal && hoy > fechaInicio) {
+      esNegativo = true
+    } else if (fechaReal && fechaReal.slice(0, 10) > fechaInicio) {
+      esNegativo = true
+    }
+    
+    return { dias: Math.abs(diferencia), esNegativo }
+  }
+
   const reqSeleccionado = estModalReqId ? datos.find((req) => req.id === estModalReqId) ?? null : null
   const estimacion = estData?.estimacion ?? null
   const summary = estData?.summary
@@ -703,6 +731,9 @@ export default function Requerimientos() {
               <th className="p-2 text-left">Scrum</th>
               <th className="p-2 text-right">Horas</th>
               <th className="p-2 text-center">F. Solicitud</th>
+              <th className="p-2 text-center">F. Límite</th>
+              <th className="p-2 text-center">F. Real</th>
+              <th className="p-2 text-right">Días transcurridos</th>
               <th className="p-2 text-center">Entregas</th>
               <th className="p-2 text-center">Est.</th>
               <th className="p-2"></th>
@@ -750,6 +781,28 @@ export default function Requerimientos() {
                       {req.fecha_solicitud_acta
                         ? req.fecha_solicitud_acta.slice(0, 10)
                         : <span className="text-slate-400">—</span>}
+                    </td>
+                    <td className="p-2 text-center text-xs">
+                      {req.fecha_limite
+                        ? req.fecha_limite.slice(0, 10)
+                        : <span className="text-slate-400">—</span>}
+                    </td>
+                    <td className="p-2 text-center text-xs">
+                      {req.fecha_real_entrega_estimacion
+                        ? req.fecha_real_entrega_estimacion.slice(0, 10)
+                        : <span className="text-slate-400">—</span>}
+                    </td>
+                    <td className="p-2 text-right">
+                      {(() => {
+                        const result = calcularDiasTranscurridos(req.fecha_limite, req.fecha_real_entrega_estimacion)
+                        if (!result) return '—'
+                        const color = result.esNegativo ? 'text-red-600 font-semibold' : 'text-emerald-600'
+                        return (
+                          <span className={color}>
+                            {result.esNegativo ? '-' : '+'}{result.dias}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="p-2 text-center">
                       {(req.entregas?.length ?? 0) > 0 ? (

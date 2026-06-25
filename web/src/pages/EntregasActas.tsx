@@ -14,6 +14,7 @@ interface FilaEntrega {
   horas: number | null
   porcentaje: number | null
   fechaComprometida: string | null
+  fechaEjecucion: string | null
   estado: string | null
   mesAprobacion: string | null
 }
@@ -78,6 +79,7 @@ export default function EntregasActas() {
           horas: en.horas ?? null,
           porcentaje,
           fechaComprometida: en.fecha_comprometida ?? null,
+          fechaEjecucion: en.fecha_ejecucion ?? null,
           estado: en.estado ?? null,
           mesAprobacion: en.mes_aprobacion ?? null,
         })
@@ -135,6 +137,34 @@ export default function EntregasActas() {
       s.toUpperCase() === 'EN GARANTIA' ? 'bg-purple-100 text-purple-700' :
       'bg-slate-100 text-slate-600'
     return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>{s || '—'}</span>
+  }
+
+  const calcularDiasTranscurridos = (fechaComprometida: string | null, fechaEjecucion: string | null): { dias: number; esNegativo: boolean } | null => {
+    const hoy = new Date().toISOString().slice(0, 10)
+    
+    if (!fechaComprometida) return null
+    
+    // Fecha a usar para el cálculo del rango
+    const fechaFin = fechaEjecucion ? fechaEjecucion.slice(0, 10) : hoy
+    const fechaInicio = fechaComprometida.slice(0, 10)
+    
+    // Calcular diferencia en días
+    const fecha1 = new Date(fechaInicio)
+    const fecha2 = new Date(fechaFin)
+    const diferencia = Math.floor((fecha2.getTime() - fecha1.getTime()) / (1000 * 60 * 60 * 24))
+    
+    // Determinar si es negativo:
+    // - Si no hay fecha ejecución y hoy > fechaComprometida: negativo (atraso)
+    // - Si hay fecha ejecución y fechaEjecucion > fechaComprometida: negativo (atraso)
+    // - En caso contrario: positivo (días restantes o dentro de plazo)
+    let esNegativo = false
+    if (!fechaEjecucion && hoy > fechaInicio) {
+      esNegativo = true
+    } else if (fechaEjecucion && fechaEjecucion.slice(0, 10) > fechaInicio) {
+      esNegativo = true
+    }
+    
+    return { dias: Math.abs(diferencia), esNegativo }
   }
 
   return (
@@ -224,6 +254,8 @@ export default function EntregasActas() {
               <th className="p-2 text-right">Horas</th>
               <th className="p-2 text-right">% Avance</th>
               <th className="p-2 text-left">F. Comprometida</th>
+              <th className="p-2 text-left">F. Real</th>
+              <th className="p-2 text-right">Días transcurridos</th>
               <th className="p-2 text-center">Estado</th>
               <th className="p-2 text-left">Mes de aprobación</th>
             </tr>
@@ -231,12 +263,12 @@ export default function EntregasActas() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={10} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={12} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={10} className="p-4 text-center text-slate-400">Sin entregas.</td>
+                <td colSpan={12} className="p-4 text-center text-slate-400">Sin entregas.</td>
               </tr>
             )}
             {filasFiltradas.map((f, i) => {
@@ -274,6 +306,21 @@ export default function EntregasActas() {
                 <td className={`p-2 font-medium ${vencida ? 'text-red-700' : ''}`}>
                   {f.fechaComprometida ? f.fechaComprometida.slice(0, 10) : '—'}
                   {vencida && <span className="ml-1 text-xs">⚠</span>}
+                </td>
+                <td className="p-2">
+                  {f.fechaEjecucion ? f.fechaEjecucion.slice(0, 10) : '—'}
+                </td>
+                <td className="p-2 text-right">
+                  {(() => {
+                    const result = calcularDiasTranscurridos(f.fechaComprometida, f.fechaEjecucion)
+                    if (!result) return '—'
+                    const color = result.esNegativo ? 'text-red-600 font-semibold' : 'text-emerald-600'
+                    return (
+                      <span className={color}>
+                        {result.esNegativo ? '-' : '+'}{result.dias}
+                      </span>
+                    )
+                  })()}
                 </td>
                 <td className="p-2 text-center">{estadoBadge(f.estado)}</td>
                 <td className="p-2">{f.mesAprobacion ?? '—'}</td>
