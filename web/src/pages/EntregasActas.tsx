@@ -4,6 +4,31 @@ import client from '../api/client'
 import { useLista } from '../api/hooks'
 import type { Aplicacion, Requerimiento, Squad } from '../types'
 
+const MESES_NOMBRES: Record<string, string> = {
+  ene: 'Enero', feb: 'Febrero', mar: 'Marzo', abr: 'Abril', may: 'Mayo', jun: 'Junio',
+  jul: 'Julio', ago: 'Agosto', sep: 'Septiembre', oct: 'Octubre', nov: 'Noviembre', dic: 'Diciembre',
+  jan: 'Enero', apr: 'Abril', aug: 'Agosto', dec: 'Diciembre',
+}
+
+/**
+ * Normaliza `mes_aprobacion` al formato canónico "Enero", "Febrero"...
+ * Defensivo: si el dato ya viene normalizado del back, lo retorna tal cual.
+ * Si viene en cualquier otro formato (MAYÚS, con año, abreviado) lo convierte.
+ */
+function normalizarMes(raw: string): string {
+  const s = raw.trim()
+  // Quitar dígitos y caracteres no alfabéticos, quedarse con la parte de letras
+  const soloLetras = s.replace(/[^A-Za-z\u00C0-\u024F]/g, ' ').trim().split(/\s+/)[0] ?? ''
+  if (!soloLetras) return s
+  // Normalizar tildes y pasar a minúsculas para comparar
+  const norm = soloLetras.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const clave = norm.slice(0, 3)
+  const nombreCompleto = MESES_NOMBRES[clave]
+  if (nombreCompleto) return nombreCompleto
+  // Si no reconoce, devuelve primera letra mayúscula del valor original
+  return soloLetras.charAt(0).toUpperCase() + soloLetras.slice(1).toLowerCase()
+}
+
 interface FilaEntrega {
   reqId: string
   codigoReq: string
@@ -16,6 +41,7 @@ interface FilaEntrega {
   fechaComprometida: string | null
   fechaReal: string | null
   estado: string | null
+  ansEntrega: string | null
   mesAprobacion: string | null
 }
 
@@ -25,6 +51,7 @@ export default function EntregasActas() {
   const [squadsCol, setSquadsCol] = useState<Squad[]>([])
   const [filtroTexto, setFiltroTexto] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroAns, setFiltroAns] = useState('')
   const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
   const [filtroFechaHasta, setFiltroFechaHasta] = useState('')
   const [filtroMes, setFiltroMes] = useState('')
@@ -82,7 +109,8 @@ export default function EntregasActas() {
           fechaComprometida: en.fecha_comprometida ?? null,
           fechaReal: en.fecha_recepcion ?? null,
           estado: en.estado ?? null,
-          mesAprobacion: en.mes_aprobacion ?? null,
+          ansEntrega: en.ans_entrega ?? null,
+          mesAprobacion: en.mes_aprobacion ? normalizarMes(en.mes_aprobacion) : null,
         })
       }
     }
@@ -93,6 +121,8 @@ export default function EntregasActas() {
     return filas
       .filter((f) => {
         if (filtroEstado && (f.estado ?? '').toUpperCase() !== filtroEstado.toUpperCase()) return false
+        if (filtroAns === '__SIN_ANS__' && f.ansEntrega) return false
+        if (filtroAns && filtroAns !== '__SIN_ANS__' && (f.ansEntrega ?? '') !== filtroAns) return false
         if (filtroMes && (f.mesAprobacion ?? '') !== filtroMes) return false
         if (filtroTexto) {
           const t = filtroTexto.toLowerCase()
@@ -111,13 +141,8 @@ export default function EntregasActas() {
         }
         return true
       })
-      .sort((a, b) => {
-        if (!a.fechaComprometida && !b.fechaComprometida) return 0
-        if (!a.fechaComprometida) return 1
-        if (!b.fechaComprometida) return -1
-        return a.fechaComprometida.localeCompare(b.fechaComprometida)
-      })
-  }, [filas, filtroTexto, filtroEstado, filtroMes, filtroFechaDesde, filtroFechaHasta])
+      .sort((a, b) => a.sc.localeCompare(b.sc, 'es', { numeric: true }))
+  }, [filas, filtroTexto, filtroEstado, filtroAns, filtroMes, filtroFechaDesde, filtroFechaHasta])
 
   /** Meses de aprobación únicos presentes en los datos */
   const mesesEnBD = useMemo(() => {
@@ -137,6 +162,14 @@ export default function EntregasActas() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
   }, [filas])
 
+  const ansEnBD = useMemo(() => {
+    const set = new Set<string>()
+    for (const f of filas) {
+      if (f.ansEntrega) set.add(f.ansEntrega)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
+  }, [filas])
+
   const estadoBadge = (estado: string | null) => {
     const s = estado ?? ''
     const cls =
@@ -151,30 +184,33 @@ export default function EntregasActas() {
   }
 
   const calcularDiasTranscurridos = (fechaComprometida: string | null, fechaReal: string | null): { dias: number; esNegativo: boolean } | null => {
-    const hoy = new Date().toISOString().slice(0, 10)
-    
     if (!fechaComprometida) return null
-    
-    // Fecha a usar para el cálculo del rango
-    const fechaFin = fechaReal ? fechaReal.slice(0, 10) : hoy
+
+    const hoyLocal = (() => {
+      const d = new Date()
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    })()
+
     const fechaInicio = fechaComprometida.slice(0, 10)
-    
-    // Calcular diferencia en días
-    const fecha1 = new Date(fechaInicio)
-    const fecha2 = new Date(fechaFin)
-    const diferencia = Math.floor((fecha2.getTime() - fecha1.getTime()) / (1000 * 60 * 60 * 24))
-    
-    // Determinar si es negativo:
-    // - Si no hay fecha ejecución y hoy > fechaComprometida: negativo (atraso)
-    // - Si hay fecha real y fechaReal > fechaComprometida: negativo (atraso)
-    // - En caso contrario: positivo (días restantes o dentro de plazo)
+    const fechaFin = fechaReal ? fechaReal.slice(0, 10) : hoyLocal
+
+    const toUtcDate = (ymd: string) => {
+      const [y, m, d] = ymd.split('-').map(Number)
+      return Date.UTC(y, m - 1, d)
+    }
+
+    const diferencia = Math.floor((toUtcDate(fechaFin) - toUtcDate(fechaInicio)) / (1000 * 60 * 60 * 24))
+
     let esNegativo = false
-    if (!fechaReal && hoy > fechaInicio) {
+    if (!fechaReal && hoyLocal > fechaInicio) {
       esNegativo = true
     } else if (fechaReal && fechaReal.slice(0, 10) > fechaInicio) {
       esNegativo = true
     }
-    
+
     return { dias: Math.abs(diferencia), esNegativo }
   }
 
@@ -223,6 +259,18 @@ export default function EntregasActas() {
           </select>
         </label>
         <label className="text-sm">
+          <span className="mb-1 block text-slate-600">ANS</span>
+          <select
+            value={filtroAns}
+            onChange={(e) => setFiltroAns(e.target.value)}
+            className="rounded border px-3 py-2 text-sm w-44"
+          >
+            <option value="">Todos</option>
+            <option value="__SIN_ANS__">Sin ANS</option>
+            {ansEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <label className="text-sm">
           <span className="mb-1 block text-slate-600">F. Comprometida</span>
           <div className="flex items-center gap-1">
             <input
@@ -240,9 +288,9 @@ export default function EntregasActas() {
             />
           </div>
         </label>
-        {(filtroTexto || filtroEstado || filtroMes || filtroFechaDesde || filtroFechaHasta) && (
+        {(filtroTexto || filtroEstado || filtroAns || filtroMes || filtroFechaDesde || filtroFechaHasta) && (
           <button
-            onClick={() => { setFiltroTexto(''); setFiltroEstado(''); setFiltroMes(''); setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
+            onClick={() => { setFiltroTexto(''); setFiltroEstado(''); setFiltroAns(''); setFiltroMes(''); setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
             className="text-xs text-red-500 hover:underline self-end pb-2"
           >
             Limpiar
@@ -285,11 +333,11 @@ export default function EntregasActas() {
               </tr>
             )}
             {filasFiltradas.map((f, i) => {
-              const hoy = new Date().toISOString().slice(0, 10)
-              const vencida = f.fechaComprometida ? f.fechaComprometida.slice(0, 10) < hoy : false
+              const diasInfo = calcularDiasTranscurridos(f.fechaComprometida, f.fechaReal)
+              const vencida = diasInfo?.esNegativo ?? false
               return (
               <tr key={`${f.codigoReq}-${f.entregaNum}-${i}`}
-                className={`border-t ${vencida ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50'}`}>
+                className={`border-t ${vencida ? '[&>td]:bg-[#fecfcf]' : '[&>td]:hover:bg-slate-50'}`}>
                 <td className="p-2">
                   <Link
                     to={`/requerimientos/${f.reqId}`}
@@ -324,19 +372,14 @@ export default function EntregasActas() {
                   {f.fechaReal ? f.fechaReal.slice(0, 10) : '—'}
                 </td>
                 <td className="p-2 text-right">
-                  {(() => {
-                    const result = calcularDiasTranscurridos(f.fechaComprometida, f.fechaReal)
-                    if (!result) return '—'
-                    const color = result.esNegativo ? 'text-red-600 font-semibold' : 'text-emerald-600'
-                    return (
-                      <span className={color}>
-                        {result.esNegativo ? '-' : '+'}{result.dias}
-                      </span>
-                    )
-                  })()}
+                  {diasInfo ? (
+                    <span className={diasInfo.esNegativo ? 'text-red-600 font-semibold' : 'text-emerald-600'}>
+                      {diasInfo.esNegativo ? '-' : '+'}{diasInfo.dias}
+                    </span>
+                  ) : '—'}
                 </td>
                 <td className="p-2 text-center">{estadoBadge(f.estado)}</td>
-                <td className="p-2">{f.mesAprobacion ?? '—'}</td>
+                <td className="p-2">{f.mesAprobacion ? normalizarMes(f.mesAprobacion) : '—'}</td>
               </tr>
               )
             })}

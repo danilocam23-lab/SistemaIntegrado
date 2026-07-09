@@ -33,6 +33,12 @@ MESES = {
     "noviembre": 11, "diciembre": 12,
 }
 
+# Nombre canónico por número de mes (primera letra mayúscula, resto minúscula)
+MESES_NOMBRES: dict[int, str] = {
+    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio",
+    7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+}
+
 
 @dataclass
 class ResultadoImportacion:
@@ -654,7 +660,7 @@ class ImportadorExcel:
         entrega.orden_compra_id = await self._orden(payload.get("ORDEN DE COMPRA"))
         entrega.estado = self._parse_estado_entrega(payload.get("ESTADO ENTREGAS"), entrega)
         entrega.observaciones = self._txt(payload.get("OBSERVACIONES"))
-        entrega.mes_aprobacion = self._txt(payload.get("MES APROBACIÓN"))
+        entrega.mes_aprobacion = self._normalizar_mes(payload.get("MES APROBACIÓN"))
 
     def _hidratar_facturacion(self, entrega: Entrega, payload: dict) -> None:
         raw = self._txt(payload.get("FACTURACIÓN"))
@@ -838,6 +844,41 @@ class ImportadorExcel:
             return None
         texto = str(valor).replace("\xa0", " ").strip()
         return " ".join(texto.split()) or None
+
+    @staticmethod
+    def _normalizar_mes(valor: object) -> str | None:
+        """Convierte cualquier representación de mes a formato canónico.
+
+        Devuelve "Enero", "Febrero", … "Diciembre" (primera letra mayúscula,
+        resto minúscula, sin año). Acepta: "ENERO 2025", "enero", "ene-25",
+        "ENE", "01", "1", "01/2025", "2025-01", "2025-01-15 00:00:00", etc.
+        """
+        txt = ImportadorExcel._txt(valor)
+        if not txt:
+            return None
+
+        def quitar_tildes(s: str) -> str:
+            return "".join(
+                c for c in unicodedata.normalize("NFD", s.lower())
+                if unicodedata.category(c) != "Mn"
+            )
+
+        txt_norm = quitar_tildes(txt)
+
+        # Buscar nombre de mes por coincidencia (nombre completo o 3 primeras letras)
+        for nombre, numero in MESES.items():
+            nombre_norm = quitar_tildes(nombre)
+            if nombre_norm in txt_norm or txt_norm.startswith(nombre_norm[:3]):
+                return MESES_NOMBRES[numero]
+
+        # Buscar número de mes (1-12) en el texto
+        m = re.search(r'\b(\d{1,2})\b', txt)
+        if m:
+            num = int(m.group(1))
+            if 1 <= num <= 12:
+                return MESES_NOMBRES[num]
+
+        return None
 
     @staticmethod
     def _ident(valor: object) -> str:

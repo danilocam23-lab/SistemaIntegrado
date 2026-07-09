@@ -39,6 +39,12 @@ const GRUPOS: Grupo[] = [
     ],
   },
   {
+    titulo: 'Facturación',
+    items: [
+      { to: '/facturacion/general', label: 'General', permiso: 'facturacion.ver' },
+    ],
+  },
+  {
     titulo: 'Administración',
     items: [
       { to: '/admin/aplicaciones', label: 'Squads', permiso: 'aplicaciones.ver' },
