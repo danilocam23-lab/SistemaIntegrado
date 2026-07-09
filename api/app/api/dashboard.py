@@ -8,18 +8,17 @@ from fastapi import APIRouter, Depends
 
 from app.documents.aplicacion import Aplicacion
 from app.documents.categoria import Categoria
-from app.documents.enums import RolUsuario
 from app.documents.persona import Persona
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
-from app.security.deps import requiere_rol
+from app.security.deps import requiere_permiso
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/consolidado")
 async def consolidado(
-    _: Usuario = Depends(requiere_rol(RolUsuario.SUPERADMIN, RolUsuario.ADMIN_APP)),
+    _: Usuario = Depends(requiere_permiso("consolidado.ver")),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     """Cifras agregadas por aplicación para el dashboard unificado."""

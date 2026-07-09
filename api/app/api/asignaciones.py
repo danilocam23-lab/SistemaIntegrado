@@ -4,7 +4,9 @@ from pydantic import BaseModel
 
 from app.documents.asignacion import Asignacion, Proyecto
 from app.documents.requerimiento import Requerimiento
+from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.security.deps import requiere_permiso
 from app.services.sync_catalogo import sincronizar_requerimiento_a_carga
 
 router = APIRouter(prefix="/asignaciones", tags=["asignaciones"])
@@ -43,7 +45,11 @@ async def obtener(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def crear(datos: AsignacionIn, ctx: ContextoAplicacion = Depends(contexto_escritura)):
+async def crear(
+    datos: AsignacionIn,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: Usuario = Depends(requiere_permiso("asignaciones.editar")),
+):
     asignacion = Asignacion(aplicacion_id=ctx.codigo, **datos.model_dump())
     await asignacion.insert()
     return asignacion
@@ -54,6 +60,7 @@ async def actualizar(
     asignacion_id: str,
     datos: AsignacionIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: Usuario = Depends(requiere_permiso("asignaciones.editar")),
 ):
     asignacion = await Asignacion.get(asignacion_id)
     if asignacion is None or asignacion.aplicacion_id != ctx.codigo:
@@ -69,6 +76,7 @@ async def actualizar(
 async def cambiar_prioridad(
     asignacion_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: Usuario = Depends(requiere_permiso("asignaciones.editar")),
 ):
     """Marca esta asignación como prioritaria para la persona y desmarca las demás."""
     asignacion = await Asignacion.get(asignacion_id)
@@ -96,7 +104,9 @@ async def cambiar_prioridad(
 
 @router.delete("/{asignacion_id}")
 async def eliminar(
-    asignacion_id: str, ctx: ContextoAplicacion = Depends(contexto_escritura)
+    asignacion_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: Usuario = Depends(requiere_permiso("asignaciones.editar")),
 ) -> None:
     asignacion = await Asignacion.get(asignacion_id)
     if asignacion is None or asignacion.aplicacion_id != ctx.codigo:
@@ -106,7 +116,9 @@ async def eliminar(
 
 @router.post("/sincronizar/{codigo_req}")
 async def sincronizar(
-    codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_escritura)
+    codigo_req: str,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: Usuario = Depends(requiere_permiso("asignaciones.editar")),
 ) -> dict:
     """Proyecta un requerimiento sobre las asignaciones de carga de sus developers."""
     req = await Requerimiento.find_one(

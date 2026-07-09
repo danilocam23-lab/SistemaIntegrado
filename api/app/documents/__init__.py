@@ -17,6 +17,7 @@ from app.documents.festivo import Festivo
 from app.documents.orden_compra import OrdenCompra
 from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
+from app.documents.rol import Rol
 from app.documents.squad import Squad
 from app.documents.tarifa import Tarifa
 from app.documents.usuario import Usuario
@@ -24,6 +25,7 @@ from app.documents.usuario import Usuario
 ALL_DOCUMENTS = [
     # Plataforma
     Aplicacion,
+    Rol,
     Usuario,
     # Operativas — base
     Persona,
@@ -50,6 +52,7 @@ ALL_DOCUMENTS = [
 __all__ = [
     "ALL_DOCUMENTS",
     "Aplicacion",
+    "Rol",
     "Usuario",
     "Persona",
     "Categoria",

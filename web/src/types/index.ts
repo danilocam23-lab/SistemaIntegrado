@@ -1,12 +1,22 @@
-export type RolUsuario = 'superadmin' | 'admin_app' | 'editor' | 'viewer'
+export type RolUsuario = string
 
-export const ROLES_ADMIN: RolUsuario[] = ['superadmin', 'admin_app']
+export interface Rol {
+  id: string
+  clave: string
+  nombre: string
+  descripcion: string
+  activo: boolean
+  es_sistema: boolean
+  permisos: string[]
+}
 
 export interface Usuario {
   id: string
   nombre: string
   email: string
   rol: RolUsuario
+  rol_id?: string | null
+  rol_nombre?: string | null
   activo: boolean
   aplicaciones_codigos: string[]
   permisos: string[]

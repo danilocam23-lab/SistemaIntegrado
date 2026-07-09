@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 
 export default function SelectorAplicacion() {
   const { aplicaciones, activa, setActiva } = useAplicacion()
-  const { esAdmin } = useAuth()
+  const { tienePermiso } = useAuth()
 
   function cambiar(codigo: string): void {
     setActiva(codigo)
@@ -26,7 +26,7 @@ export default function SelectorAplicacion() {
             {a.nombre}
           </option>
         ))}
-        {esAdmin && <option value={CONSOLIDADO}>★ Todos los squads</option>}
+        {tienePermiso('consolidado.ver') && <option value={CONSOLIDADO}>★ Todos los squads</option>}
       </select>
     </div>
   )

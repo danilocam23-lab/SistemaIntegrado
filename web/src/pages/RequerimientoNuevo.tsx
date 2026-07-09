@@ -10,9 +10,10 @@ import type { Aplicacion, Persona } from '../types'
 
 export default function RequerimientoNuevo() {
   const navigate = useNavigate()
-  const { usuario } = useAuth()
+  const { tienePermiso } = useAuth()
   const { modoConsolidado } = useAplicacion()
-  const esSuperadmin = usuario?.rol === 'superadmin'
+  const puedeCrear = tienePermiso('requerimientos.crear')
+  const puedeCrearConsolidado = tienePermiso('consolidado.ver') && puedeCrear
   const { datos: personas } = useLista<Persona>('/personas')
   const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
   const { estadosReq } = useEstados()
@@ -47,8 +48,12 @@ export default function RequerimientoNuevo() {
   async function crear(e: FormEvent): Promise<void> {
     e.preventDefault()
     setAviso('')
+    if (!puedeCrear) {
+      setAviso('No tienes permiso para crear requerimientos.')
+      return
+    }
 
-    // En modo consolidado el superadmin debe elegir un squad destino
+    // En modo consolidado debe elegir un squad destino
     if (modoConsolidado && !aplicacionDestino) {
       setAviso('En modo "Todos los squads" debes seleccionar el squad destino del requerimiento.')
       return
@@ -91,13 +96,14 @@ export default function RequerimientoNuevo() {
 
       {aviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
 
-      {modoConsolidado && !esSuperadmin && (
+      {modoConsolidado && !puedeCrearConsolidado && (
         <div className="rounded bg-amber-50 p-3 text-sm text-amber-700">
-          La creación de requerimientos en modo consolidado solo está disponible para superadmin.
+          La creación de requerimientos en modo consolidado requiere permisos de consolidado y creación.
         </div>
       )}
 
       <form onSubmit={crear} className="rounded-xl border bg-white p-4">
+        <fieldset disabled={!puedeCrear} className="space-y-0">
         {modoConsolidado && (
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
             <label className="text-sm">
@@ -203,6 +209,7 @@ export default function RequerimientoNuevo() {
         <button className="mt-4 rounded bg-marca px-6 py-2 text-white hover:bg-marca-osc">
           Crear requerimiento
         </button>
+        </fieldset>
       </form>
     </div>
   )

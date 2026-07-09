@@ -3,12 +3,39 @@ import logging
 
 from app.config import get_settings
 from app.documents.aplicacion import Aplicacion
-from app.documents.enums import RolUsuario, permisos_de
+from app.documents.enums import RolUsuario
+from app.documents.rol import Rol
 from app.documents.usuario import Usuario
 from app.security.hashing import hash_password
+from app.security.rbac import ROLES_BASE, normalizar_permisos
 from app.services.provision_aplicacion import provisionar_aplicacion
 
 _log = logging.getLogger("bootstrap")
+
+
+async def _asegurar_roles_base() -> dict[str, Rol]:
+    roles: dict[str, Rol] = {}
+    for cfg in ROLES_BASE:
+        rol = await Rol.find_one(Rol.clave == cfg["clave"])
+        if rol is None:
+            rol = await Rol(
+                clave=cfg["clave"],
+                nombre=cfg["nombre"],
+                descripcion=cfg["descripcion"],
+                es_sistema=cfg["es_sistema"],
+                permisos=normalizar_permisos(cfg["permisos"]),
+            ).insert()
+            _log.info("Rol base creado: %s", rol.clave)
+        elif rol.es_sistema:
+            esperados = normalizar_permisos(cfg["permisos"])
+            actuales = set(rol.permisos)
+            faltantes = [p for p in esperados if p not in actuales]
+            if faltantes:
+                rol.permisos = normalizar_permisos([*rol.permisos, *faltantes])
+                rol.marcar_actualizado()
+                await rol.save()
+        roles[rol.clave] = rol
+    return roles
 
 
 async def bootstrap() -> None:
@@ -38,16 +65,40 @@ async def bootstrap() -> None:
     # o se hayan eliminado datos. La función no crea duplicados.
     await provisionar_aplicacion(app_inicial.codigo)
 
+    roles = await _asegurar_roles_base()
+
     superadmin = await Usuario.find_one(Usuario.rol == RolUsuario.SUPERADMIN)
     if superadmin is None:
+        rol_superadmin = roles[RolUsuario.SUPERADMIN.value]
         await Usuario(
             nombre=settings.superadmin_nombre,
             email=settings.superadmin_email,
             password_hash=hash_password(settings.superadmin_password),
-            rol=RolUsuario.SUPERADMIN,
+            rol=RolUsuario.SUPERADMIN.value,
+            rol_id=str(rol_superadmin.id),
             aplicaciones_codigos=[settings.aplicacion_inicial_codigo],
-            permisos=permisos_de(RolUsuario.SUPERADMIN),
+            permisos=["*"],
         ).insert()
         _log.info("Usuario superadmin creado: %s", settings.superadmin_email)
     else:
+        if not superadmin.rol_id and RolUsuario.SUPERADMIN.value in roles:
+            superadmin.rol_id = str(roles[RolUsuario.SUPERADMIN.value].id)
+            superadmin.permisos = ["*"]
+            superadmin.marcar_actualizado()
+            await superadmin.save()
         _log.info("Superadmin ya existe: %s", superadmin.email)
+
+    # Backfill de rol_id para usuarios legacy.
+    usuarios = await Usuario.find_all().to_list()
+    for usuario in usuarios:
+        if usuario.rol_id:
+            continue
+        clave_rol = (usuario.rol or RolUsuario.VIEWER.value).strip().lower()
+        rol_obj = roles.get(clave_rol) or roles.get(RolUsuario.VIEWER.value)
+        if rol_obj is None:
+            continue
+        usuario.rol_id = str(rol_obj.id)
+        if not usuario.permisos:
+            usuario.permisos = normalizar_permisos(rol_obj.permisos)
+        usuario.marcar_actualizado()
+        await usuario.save()

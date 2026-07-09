@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
 from app.documents.bitacora import Bitacora
-from app.documents.enums import RolUsuario
 from app.documents.estimacion import Estimacion
 from app.documents.requerimiento import Entrega, Requerimiento, Solicitud
 from app.documents.usuario import Usuario
@@ -17,7 +16,7 @@ from app.schemas.requerimiento import (
     RequerimientoUpdate,
     TransicionIn,
 )
-from app.security.deps import usuario_actual
+from app.security.deps import tiene_permiso, usuario_actual
 from app.services.ans import ANSService
 from app.services.liquidacion import LiquidacionService
 
@@ -102,8 +101,8 @@ async def crear(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Crea un requerimiento con su solicitud embebida."""
-    if usuario.rol != RolUsuario.SUPERADMIN:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo superadmin puede crear requerimientos")
+    if not await tiene_permiso(usuario, "requerimientos.crear"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para crear requerimientos")
     existe = await Requerimiento.find_one({
         "aplicacion_id": ctx.codigo,
         "codigo_req": datos.codigo_req,
@@ -166,8 +165,8 @@ async def actualizar(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Actualiza los campos enviados de un requerimiento."""
-    if usuario.rol != RolUsuario.SUPERADMIN:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo superadmin puede editar requerimientos")
+    if not await tiene_permiso(usuario, "requerimientos.editar"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para editar requerimientos")
     from app.documents.enums import AnsResultado
     from app.services.fecha_limite import calcular_fecha_limite
 
@@ -385,8 +384,8 @@ async def eliminar(
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     usuario: Usuario = Depends(usuario_actual),
 ) -> None:
-    if usuario.rol != RolUsuario.SUPERADMIN:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo superadmin puede eliminar requerimientos")
+    if not await tiene_permiso(usuario, "requerimientos.eliminar"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para eliminar requerimientos")
     req = await _buscar(ctx, codigo_req)
     # Eliminar estimaciones asociadas (cascade)
     await Estimacion.find(
@@ -403,20 +402,25 @@ async def eliminar(
 async def reasignar_aplicacion(
     codigo_req: str,
     nueva_aplicacion: str,
-    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     usuario: Usuario = Depends(usuario_actual),
 ) -> dict:
     """[ADMIN] Reasigna un requerimiento a otra aplicación.
     
     Nota: Solo disponible en modo consolidado (__todas__).
+    Busca por codigo_req O por solicitud.codigo_sc si es numérico.
     """
-    if usuario.rol != RolUsuario.SUPERADMIN:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo superadmin")
+    if not await tiene_permiso(usuario, "requerimientos.editar"):
+         raise HTTPException(status.HTTP_403_FORBIDDEN, "No autorizado")
     if not ctx.modo_consolidado:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo en modo consolidado")
     
     # Buscar en TODAS las aplicaciones
     req = await Requerimiento.find_one({"codigo_req": codigo_req})
+    # Si no, buscar por SC
+    if not req:
+        req = await Requerimiento.find_one({"solicitud.codigo_sc": codigo_req})
+    
     if not req:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo_req} no encontrado")
     
@@ -435,13 +439,14 @@ async def reasignar_aplicacion(
     
     return {
         "codigo_req": req.codigo_req,
+        "codigo_sc": req.solicitud.codigo_sc,
         "aplicacion_anterior": app_anterior,
         "aplicacion_nueva": nueva_aplicacion,
         "status": "reasignado"
     }
 
 
-@router.post("/{codigo_req}/diagnostico")
+@router.get("/{codigo_req}/diagnostico")
 async def diagnostico(
     codigo_req: str,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
@@ -450,28 +455,33 @@ async def diagnostico(
     """[ADMIN] Info de diagnóstico del requerimiento.
     
     Nota: Solo disponible para superadmin.
+    Busca por codigo_req O por solicitud.codigo_sc si es numérico.
     """
-    if usuario.rol != RolUsuario.SUPERADMIN:
-       raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo superadmin")
+    if not await tiene_permiso(usuario, "requerimientos.editar"):
+       raise HTTPException(status.HTTP_403_FORBIDDEN, "No autorizado")
     
     # Buscar en TODAS las aplicaciones si estamos en consolidado
     if ctx.modo_consolidado:
-       req = await Requerimiento.find_one({"codigo_req": codigo_req})
+        # Primero buscar por codigo_req
+        req = await Requerimiento.find_one({"codigo_req": codigo_req})
+        # Si no, buscar por SC
+        if not req:
+            req = await Requerimiento.find_one({"solicitud.codigo_sc": codigo_req})
     else:
-       req = await _buscar(ctx, codigo_req)
+        req = await _buscar(ctx, codigo_req)
     
     if not req:
-       raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo_req} no encontrado")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo_req} no encontrado")
     
     return {
-       "_id": str(req.id),
-       "codigo_req": req.codigo_req,
-       "aplicacion_id": req.aplicacion_id,
-       "estado": req.estado,
-       "solicitud": {
-           "codigo_sc": req.solicitud.codigo_sc,
-           "squad_id": req.solicitud.squad_id,
-       },
-       "creado_en": req.creado_en.isoformat() if req.creado_en else None,
-       "actualizado_en": req.actualizado_en.isoformat() if req.actualizado_en else None,
+        "_id": str(req.id),
+        "codigo_req": req.codigo_req,
+        "aplicacion_id": req.aplicacion_id,
+        "estado": req.estado,
+        "solicitud": {
+            "codigo_sc": req.solicitud.codigo_sc,
+            "squad_id": req.solicitud.squad_id,
+        },
+        "creado_en": req.creado_en.isoformat() if req.creado_en else None,
+        "actualizado_en": req.actualizado_en.isoformat() if req.actualizado_en else None,
     }

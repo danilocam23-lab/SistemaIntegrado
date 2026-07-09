@@ -2,7 +2,6 @@
 from pymongo import ASCENDING, IndexModel
 
 from app.documents.base import DocumentoBase
-from app.documents.enums import RolUsuario
 
 
 class Usuario(DocumentoBase):
@@ -11,7 +10,8 @@ class Usuario(DocumentoBase):
     nombre: str
     email: str
     password_hash: str
-    rol: RolUsuario = RolUsuario.VIEWER
+    rol: str = "viewer"
+    rol_id: str | None = None
     activo: bool = True
     aplicaciones_codigos: list[str] = []
     permisos: list[str] = []

@@ -2,11 +2,14 @@ import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
+import { useAuth } from '../context/AuthContext'
 import type { Capacidad, Persona } from '../types'
 
 export default function Capacidades() {
   const { datos, error, recargar } = useLista<Capacidad>('/capacidades')
   const { datos: personas } = useLista<Persona>('/personas')
+  const { tienePermiso } = useAuth()
+  const puedeEditarCapacidades = tienePermiso('capacidades.editar')
   const [personaId, setPersonaId] = useState('')
   const [mes, setMes] = useState('')
   const [horas, setHoras] = useState('180')
@@ -19,6 +22,7 @@ export default function Capacidades() {
     (id && personas.find((p) => p.id === id)?.nombre) || '—'
 
   function iniciarEdicion(id: string, campo: string, valorActual: string) {
+    if (!puedeEditarCapacidades) return
     setEditCell({ id, campo })
     setEditValue(valorActual)
     cancelarBlurRef.current = false
@@ -31,6 +35,7 @@ export default function Capacidades() {
   }
 
   async function guardarEdicion(capacidad: Capacidad) {
+    if (!puedeEditarCapacidades) return
     if (!editCell) return
     try {
       const payload = {
@@ -50,6 +55,7 @@ export default function Capacidades() {
 
   async function crear(e: FormEvent): Promise<void> {
     e.preventDefault()
+    if (!puedeEditarCapacidades) return
     setAviso('')
     try {
       await client.post('/capacidades', {
@@ -66,6 +72,7 @@ export default function Capacidades() {
   }
 
   async function eliminar(capacidad: Capacidad): Promise<void> {
+    if (!puedeEditarCapacidades) return
     await client.delete(`/capacidades/${capacidad.id}`)
     recargar()
   }
@@ -74,6 +81,7 @@ export default function Capacidades() {
     <div>
       <h1 className="mb-4 text-xl font-bold text-marca-osc">Capacidades mensuales</h1>
 
+      {puedeEditarCapacidades && (
       <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Persona</span>
@@ -95,6 +103,7 @@ export default function Capacidades() {
         </label>
         <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
       </form>
+      )}
 
       {(aviso || error) && (
         <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
@@ -115,8 +124,8 @@ export default function Capacidades() {
               <td className="p-2">{nombrePersona(c.persona_id)}</td>
               <td className="p-2">{c.mes}</td>
               <td
-                className="cursor-pointer p-2 text-right"
-                title="Doble clic para editar"
+                className={`p-2 text-right ${puedeEditarCapacidades ? 'cursor-pointer' : ''}`}
+                title={puedeEditarCapacidades ? 'Doble clic para editar' : undefined}
                 onDoubleClick={() => iniciarEdicion(c.id, 'horas_disponibles', String(c.horas_disponibles))}
               >
                 {editCell?.id === c.id && editCell.campo === 'horas_disponibles' ? (
@@ -147,9 +156,11 @@ export default function Capacidades() {
                 ) : c.horas_disponibles}
               </td>
               <td className="p-2 text-center">
-                <button onClick={() => eliminar(c)} className="text-red-600 hover:underline">
-                  Eliminar
-                </button>
+                {puedeEditarCapacidades && (
+                  <button onClick={() => eliminar(c)} className="text-red-600 hover:underline">
+                    Eliminar
+                  </button>
+                )}
               </td>
             </tr>
           ))}

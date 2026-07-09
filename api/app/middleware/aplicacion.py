@@ -8,9 +8,9 @@ Cada petición a recursos operativos debe traer la cabecera ``X-Aplicacion``:
 from fastapi import Depends, Header, HTTPException, status
 
 from app.documents.aplicacion import Aplicacion
-from app.documents.enums import ROLES_ADMIN, RolUsuario
 from app.documents.usuario import Usuario
-from app.security.deps import usuario_actual
+from app.security.deps import es_admin_app, es_superadmin, tiene_permiso, usuario_actual
+from app.security.rbac import PERM_CONSOLIDADO_VER
 
 CONSOLIDADO = "__todas__"
 
@@ -49,7 +49,10 @@ async def _codigos_autorizados(usuario: Usuario) -> list[str]:
 
     El superadmin ve todas las aplicaciones activas; el resto, solo las asignadas.
     """
-    if usuario.rol == RolUsuario.SUPERADMIN:
+    if await es_superadmin(usuario):
+        apps = await Aplicacion.find(Aplicacion.activa == True).to_list()  # noqa: E712
+        return [a.codigo for a in apps]
+    if await es_admin_app(usuario) and len(usuario.aplicaciones_codigos) == 0:
         apps = await Aplicacion.find(Aplicacion.activa == True).to_list()  # noqa: E712
         return [a.codigo for a in apps]
     return list(usuario.aplicaciones_codigos)
@@ -65,7 +68,7 @@ async def contexto_aplicacion(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Falta la cabecera X-Aplicacion")
 
     if x_aplicacion == CONSOLIDADO:
-        if usuario.rol not in ROLES_ADMIN:
+        if not await tiene_permiso(usuario, PERM_CONSOLIDADO_VER):
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
                 "El modo consolidado solo está disponible para roles de administración",

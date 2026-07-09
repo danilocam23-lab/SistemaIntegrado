@@ -57,10 +57,10 @@ export default function Asignaciones() {
   const { datos: requerimientos } = useLista<Requerimiento>('/requerimientos')
   const { datos: configuraciones } = useLista<Configuracion>('/configuracion')
   const { modoConsolidado, activa } = useAplicacion()
-  const { usuario } = useAuth()
+  const { tienePermiso } = useAuth()
 
   const asignaciones = useMemo(() => asignacionesBase as AsignacionItem[], [asignacionesBase])
-  const esSuperadmin = usuario?.rol === 'superadmin'
+  const puedeEditarAsignaciones = tienePermiso('asignaciones.editar')
   const mesSel = useMemo(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -309,6 +309,7 @@ export default function Asignaciones() {
   }, [activa, requerimientos])
 
   const abrirEdicion = useCallback((asig: AsignacionItem) => {
+    if (!puedeEditarAsignaciones) return
     const primerReq = asig.proyectos.find((p) => p.requerimiento_id)?.requerimiento_id ?? ''
     setEditandoAsig(asig)
     setPersonaId(asig.persona_id)
@@ -320,7 +321,7 @@ export default function Asignaciones() {
     setAviso('')
     setEdicionInlineId(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [etiquetaReq])
+  }, [etiquetaReq, puedeEditarAsignaciones])
 
   const seleccionarReq = useCallback((opcion: OpcionReq) => {
     setRequerimientoId(opcion.id)
@@ -387,6 +388,7 @@ export default function Asignaciones() {
 
   const crear = useCallback(async (e: FormEvent) => {
     e.preventDefault()
+    if (!puedeEditarAsignaciones) return
     setAviso('')
 
     const nuevoPct = porcentaje ? Number(porcentaje) : 0
@@ -428,10 +430,11 @@ export default function Asignaciones() {
     } catch (err) {
       setAviso(mensajeError(err))
     }
-  }, [asignaciones, categoriaId, limpiarFormulario, opcionReqSeleccionada, personaId, porcentaje, recargar, requerimientoId, reqIdsActivos, redistribuirPct, resolverAppCreacion, validarCapacidad])
+  }, [asignaciones, categoriaId, limpiarFormulario, opcionReqSeleccionada, personaId, porcentaje, puedeEditarAsignaciones, recargar, requerimientoId, reqIdsActivos, redistribuirPct, resolverAppCreacion, validarCapacidad])
 
   const actualizar = useCallback(async (e: FormEvent) => {
     e.preventDefault()
+    if (!puedeEditarAsignaciones) return
     if (!editandoAsig) return
     setAviso('')
 
@@ -464,9 +467,10 @@ export default function Asignaciones() {
     } catch (err) {
       setAviso(mensajeError(err))
     }
-  }, [categoriaId, editandoAsig, etiquetaReq, limpiarFormulario, opcionReqSeleccionada, personaId, porcentaje, recargar, requerimientoId, resolverAppAsignacion, validarCapacidad])
+  }, [categoriaId, editandoAsig, etiquetaReq, limpiarFormulario, opcionReqSeleccionada, personaId, porcentaje, puedeEditarAsignaciones, recargar, requerimientoId, resolverAppAsignacion, validarCapacidad])
 
   const eliminar = useCallback(async (asig: AsignacionItem) => {
+    if (!puedeEditarAsignaciones) return
     if (!window.confirm('¿Eliminar esta asignación?')) return
     setAviso('')
 
@@ -485,13 +489,14 @@ export default function Asignaciones() {
     } catch (err) {
       setAviso(mensajeError(err))
     }
-  }, [editandoAsig?.id, limpiarFormulario, recargar, redistribuirPct, resolverAppAsignacion])
+  }, [editandoAsig?.id, limpiarFormulario, puedeEditarAsignaciones, recargar, redistribuirPct, resolverAppAsignacion])
 
   const iniciarEdicionInline = useCallback((asig: AsignacionItem) => {
+    if (!puedeEditarAsignaciones) return
     setAviso('')
     setEdicionInlineId(asig.id)
     setEdicionInlineValor(String(asig.total_porcentaje))
-  }, [])
+  }, [puedeEditarAsignaciones])
 
   const cancelarEdicionInline = useCallback(() => {
     setEdicionInlineId(null)
@@ -499,6 +504,7 @@ export default function Asignaciones() {
   }, [])
 
   const guardarEdicionInline = useCallback(async (asig: AsignacionItem) => {
+    if (!puedeEditarAsignaciones) return
     if (edicionInlineId !== asig.id) return
 
     const nuevoPct = edicionInlineValor ? Number(edicionInlineValor) : 0
@@ -529,9 +535,10 @@ export default function Asignaciones() {
     } catch (err) {
       setAviso(mensajeError(err))
     }
-  }, [cancelarEdicionInline, edicionInlineId, edicionInlineValor, recargar, resolverAppAsignacion, validarCapacidad])
+  }, [cancelarEdicionInline, edicionInlineId, edicionInlineValor, puedeEditarAsignaciones, recargar, resolverAppAsignacion, validarCapacidad])
 
   const cambiarPrioridad = useCallback(async (asig: AsignacionItem) => {
+    if (!puedeEditarAsignaciones) return
     const aplicacionId = resolverAppAsignacion(asig)
     if (!aplicacionId) return
     try {
@@ -540,7 +547,7 @@ export default function Asignaciones() {
     } catch (err) {
       setAviso(mensajeError(err))
     }
-  }, [recargar, resolverAppAsignacion])
+  }, [puedeEditarAsignaciones, recargar, resolverAppAsignacion])
 
   const onPersonaChange = useCallback((value: string) => {
     setPersonaId(value)
@@ -573,6 +580,7 @@ export default function Asignaciones() {
     <div>
       <h1 className="mb-4 text-xl font-bold text-marca-osc">Asignaciones de carga</h1>
 
+      {puedeEditarAsignaciones && (
       <form onSubmit={modoEdicion ? actualizar : crear} className="mb-4 rounded-xl border bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="text-sm font-semibold text-slate-600">
@@ -694,18 +702,18 @@ export default function Asignaciones() {
           </div>
 
           <button
+            disabled={!puedeEditarAsignaciones}
             className={`rounded px-5 py-2 text-white ${modoEdicion ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-marca hover:bg-marca-osc'}`}
           >
             {modoEdicion ? 'Actualizar' : 'Crear'}
           </button>
         </div>
       </form>
+      )}
 
       {modoConsolidado && !requerimientoId && !modoEdicion && (
         <div className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-          {esSuperadmin
-            ? 'Modo consolidado: selecciona un requerimiento para crear la asignación en la aplicación correcta.'
-            : 'Modo consolidado: selecciona un requerimiento para poder crear la asignación en la aplicación correcta.'}
+          {'Modo consolidado: selecciona un requerimiento para crear la asignación en la aplicación correcta.'}
         </div>
       )}
 
@@ -841,7 +849,8 @@ export default function Asignaciones() {
                                 checked={asig.prioridad === true}
                                 onChange={() => void cambiarPrioridad(asig)}
                                 title="Marcar como prioridad"
-                                className="h-4 w-4 cursor-pointer accent-marca"
+                                className={`h-4 w-4 accent-marca ${puedeEditarAsignaciones ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                                disabled={!puedeEditarAsignaciones}
                               />
                             </td>
                             <td className="p-3 text-right font-medium">
@@ -862,33 +871,39 @@ export default function Asignaciones() {
                                   <span className={asig.total_porcentaje === 0 ? 'text-red-500' : ''}>
                                     {asig.total_porcentaje}%
                                   </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => iniciarEdicionInline(asig)}
-                                    title="Editar %"
-                                    className="text-slate-400 hover:text-marca"
-                                  >
-                                    ✎
-                                  </button>
+                                  {puedeEditarAsignaciones && (
+                                    <button
+                                      type="button"
+                                      onClick={() => iniciarEdicionInline(asig)}
+                                      title="Editar %"
+                                      className="text-slate-400 hover:text-marca"
+                                    >
+                                      ✎
+                                    </button>
+                                  )}
                                 </span>
                               )}
                             </td>
                             <td className="p-3 text-right text-slate-700">{horasCarga.toFixed(1)} h</td>
                             <td className="p-3 text-center whitespace-nowrap">
-                              <button
-                                type="button"
-                                onClick={() => abrirEdicion(asig)}
-                                className="mr-3 text-xs text-marca hover:underline"
-                              >
-                                Editar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void eliminar(asig)}
-                                className="text-xs text-red-600 hover:underline"
-                              >
-                                Eliminar
-                              </button>
+                              {puedeEditarAsignaciones && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => abrirEdicion(asig)}
+                                    className="mr-3 text-xs text-marca hover:underline"
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void eliminar(asig)}
+                                    className="text-xs text-red-600 hover:underline"
+                                  >
+                                    Eliminar
+                                  </button>
+                                </>
+                              )}
                             </td>
                           </tr>
                         )

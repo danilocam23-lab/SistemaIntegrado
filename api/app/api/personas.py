@@ -1,4 +1,7 @@
 """Router de personas (directorio operativo del dominio)."""
+import unicodedata
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
@@ -8,7 +11,7 @@ from app.documents.capacidad import Capacidad
 from app.documents.persona import Persona
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
-from app.security.deps import usuario_actual
+from app.security.deps import es_superadmin, requiere_permiso, usuario_actual
 
 router = APIRouter(prefix="/personas", tags=["personas"])
 
@@ -26,6 +29,46 @@ class PersonaIn(BaseModel):
     usuario_id: str | None = None
     aplicacion_id: str | None = None  # requerido en modo consolidado; derivado del squad si no se indica
 
+
+# ── helpers deduplicación ──────────────────────────────────────────────────────
+
+def _norm_nombre(s: str) -> str:
+    """Normaliza nombre: sin acentos, sin mayúsculas, sin espacios extra."""
+    n = unicodedata.normalize("NFKD", (s or "").strip().lower())
+    n = "".join(c for c in n if not unicodedata.combining(c))
+    return " ".join(n.split())  # colapsa espacios múltiples
+
+
+def _score_persona(p: Persona) -> tuple:
+    """Puntuación para elegir cuál persona conservar (mayor = más completa)."""
+    score = (3 if p.email else 0) + (2 if p.usuario_id else 0) + len(p.squads or []) + (1 if p.activo else 0)
+    ts = p.creado_en.timestamp() if p.creado_en else 0
+    return (score, -ts)  # más antiguo gana en caso de empate
+
+
+def _persona_resumen(p: Persona) -> dict:
+    score = (3 if p.email else 0) + (2 if p.usuario_id else 0) + len(p.squads or []) + (1 if p.activo else 0)
+    return {
+        "id": str(p.id),
+        "nombre": p.nombre,
+        "email": p.email,
+        "squads": p.squads or [],
+        "activo": p.activo,
+        "aplicacion_id": p.aplicacion_id,
+        "score": score,
+    }
+
+
+def _agrupar_duplicados(todas: list[Persona]) -> dict[tuple, list[Persona]]:
+    grupos: dict[tuple, list[Persona]] = defaultdict(list)
+    for p in todas:
+        # Normaliza nombre (sin acentos, sin mayúsculas, sin espacios extra)
+        # y rol (siempre MAYÚSCULAS) para agrupar correctamente
+        clave = (_norm_nombre(p.nombre), (p.rol_operativo or "").strip().upper())
+        grupos[clave].append(p)
+    return grupos
+
+
 @router.get("/roles")
 async def obtener_roles():
     """Devuelve la lista de roles configurados para personas (global)."""
@@ -36,6 +79,113 @@ async def obtener_roles():
     if config and config.valor:
         return [r.strip() for r in config.valor.split(",") if r.strip()]
     return ROLES_PERSONA_DEFAULT
+
+
+# ── GET /duplicados ────────────────────────────────────────────────────────────
+@router.get("/duplicados")
+async def listar_duplicados(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> list[dict]:
+    """Devuelve grupos de personas duplicadas (mismo nombre + rol_operativo) en todas las apps accesibles."""
+    # Siempre busca en TODAS las apps del tenant para no perderse duplicados cross-app
+    todas = await Persona.find({}).to_list()
+    grupos = _agrupar_duplicados(todas)
+
+    resultado = []
+    for (_, rol), lista in grupos.items():
+        if len(lista) < 2:
+            continue
+        ordenada = sorted(lista, key=_score_persona, reverse=True)
+        ganador = ordenada[0]
+        resultado.append({
+            "nombre": ganador.nombre,
+            "rol": rol,
+            "total": len(lista),
+            "ganador": _persona_resumen(ganador),
+            "duplicados": [_persona_resumen(p) for p in ordenada[1:]],
+        })
+
+    return sorted(resultado, key=lambda x: (x["nombre"], x["rol"]))
+
+
+# ── POST /deduplicar ───────────────────────────────────────────────────────────
+@router.post("/deduplicar")
+async def deduplicar_personas(
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    _: Usuario = Depends(requiere_permiso("personas.editar")),
+) -> dict:
+    """Fusiona personas duplicadas conservando la más completa y redirige sus referencias."""
+    from app.documents.requerimiento import Requerimiento
+
+    # Opera sobre TODAS las apps para eliminar duplicados cross-app
+    todas = await Persona.find({}).to_list()
+    grupos = _agrupar_duplicados(todas)
+
+    fusionados = 0
+    refs_actualizadas = 0
+
+    for lista in grupos.values():
+        if len(lista) < 2:
+            continue
+
+        ordenada = sorted(lista, key=_score_persona, reverse=True)
+        ganador = ordenada[0]
+        perdedores = ordenada[1:]
+        gid = str(ganador.id)
+
+        # Fusionar squads, email y usuario_id al ganador
+        squads_union = list(ganador.squads or [])
+        for p in perdedores:
+            for sq in (p.squads or []):
+                if sq not in squads_union:
+                    squads_union.append(sq)
+            if not ganador.email and p.email:
+                ganador.email = p.email
+            if not ganador.usuario_id and p.usuario_id:
+                ganador.usuario_id = p.usuario_id
+        ganador.squads = squads_union
+        ganador.marcar_actualizado()
+        await ganador.save()
+
+        for perdedor in perdedores:
+            pid = str(perdedor.id)
+
+            # Redirigir referencias en requerimientos en TODAS las apps
+            reqs = await Requerimiento.find({
+                "$or": [
+                    {"solicitud.lt_hitss_id": pid},
+                    {"solicitud.lt_epm_id": pid},
+                    {"solicitud.scrum_id": pid},
+                ],
+            }).to_list()
+            for req in reqs:
+                cambio = False
+                if req.solicitud.lt_hitss_id == pid:
+                    req.solicitud.lt_hitss_id = gid
+                    cambio = True
+                if req.solicitud.lt_epm_id == pid:
+                    req.solicitud.lt_epm_id = gid
+                    cambio = True
+                if req.solicitud.scrum_id == pid:
+                    req.solicitud.scrum_id = gid
+                    cambio = True
+                if cambio:
+                    await req.save()
+                    refs_actualizadas += 1
+
+            # Redirigir asignaciones, capacidades y work items (no eliminar, reasignar)
+            await Asignacion.get_motor_collection().update_many(
+                {"persona_id": pid}, {"$set": {"persona_id": gid}}
+            )
+            await Capacidad.get_motor_collection().update_many(
+                {"persona_id": pid}, {"$set": {"persona_id": gid}}
+            )
+            await AzdoWorkItem.get_motor_collection().update_many(
+                {"persona_id": pid}, {"$set": {"persona_id": gid}}
+            )
+
+            await perdedor.delete()
+            fusionados += 1
+
+    return {"fusionados": fusionados, "referencias_actualizadas": refs_actualizadas}
 
 
 @router.get("")
@@ -67,8 +217,7 @@ async def _resolver_app_id(datos: PersonaIn, ctx: ContextoAplicacion, usuario: U
     El superadmin puede crear en cualquier aplicación sin restricción de contexto.
     """
     if datos.aplicacion_id:
-        es_superadmin = usuario.rol == "superadmin"
-        if not es_superadmin and datos.aplicacion_id not in ctx.codigos:
+        if not await es_superadmin(usuario) and datos.aplicacion_id not in ctx.codigos:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin acceso a esa aplicación.")
         return datos.aplicacion_id
     if ctx.modo_consolidado:
@@ -84,6 +233,7 @@ async def crear(
     datos: PersonaIn,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     usuario: Usuario = Depends(usuario_actual),
+    _: Usuario = Depends(requiere_permiso("personas.crear")),
 ):
     app_id = await _resolver_app_id(datos, ctx, usuario)
     data = datos.model_dump(exclude={"aplicacion_id"})
@@ -97,6 +247,7 @@ async def actualizar(
     persona_id: str,
     datos: PersonaIn,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    _: Usuario = Depends(requiere_permiso("personas.editar")),
 ):
     persona = await Persona.get(persona_id)
     if persona is None or persona.aplicacion_id not in ctx.codigos:
@@ -111,7 +262,9 @@ async def actualizar(
 
 @router.delete("/{persona_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar(
-    persona_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
+    persona_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    _: Usuario = Depends(requiere_permiso("personas.eliminar")),
 ) -> None:
     persona = await Persona.get(persona_id)
     if persona is None or persona.aplicacion_id not in ctx.codigos:

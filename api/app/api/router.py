@@ -15,9 +15,11 @@ from app.api import (
     dashboard,
     estimaciones,
     festivos,
+    importacion,
     personas,
     reportes,
     requerimientos,
+    roles,
     squads,
     tarifas,
     usuarios,
@@ -28,6 +30,7 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(auth.router)
 api_router.include_router(aplicaciones.router)
 api_router.include_router(usuarios.router)
+api_router.include_router(roles.router)
 api_router.include_router(dashboard.router)
 # Dominio de liquidación
 api_router.include_router(requerimientos.router)
@@ -43,6 +46,7 @@ api_router.include_router(capacidad.router)
 api_router.include_router(estimaciones.router)
 api_router.include_router(configuracion.router)
 api_router.include_router(azdo.router)
+api_router.include_router(importacion.router)
 # Transversal
 api_router.include_router(bitacora.router)
 api_router.include_router(reportes.router)

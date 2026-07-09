@@ -24,5 +24,3 @@ export const ESTADOS_ENTREGA = [
 ]
 
 export const TIPOS_COSTO = ['TYM', 'FIJO']
-
-export const ROLES_USUARIO = ['superadmin', 'admin_app', 'editor', 'viewer']

@@ -12,6 +12,8 @@ class UsuarioOut(BaseModel):
     nombre: str
     email: str
     rol: str
+    rol_id: str | None = None
+    rol_nombre: str | None = None
     activo: bool
     aplicaciones_codigos: list[str]
     permisos: list[str]

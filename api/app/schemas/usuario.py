@@ -1,20 +1,20 @@
 """Esquemas del módulo de usuarios."""
 from pydantic import BaseModel
 
-from app.documents.enums import RolUsuario
-
 
 class UsuarioIn(BaseModel):
     nombre: str
     email: str
     password: str
-    rol: RolUsuario = RolUsuario.VIEWER
+    rol: str | None = "viewer"
+    rol_id: str | None = None
     aplicaciones_codigos: list[str] = []
 
 
 class UsuarioUpdate(BaseModel):
     nombre: str | None = None
-    rol: RolUsuario | None = None
+    rol: str | None = None
+    rol_id: str | None = None
     activo: bool | None = None
     aplicaciones_codigos: list[str] | None = None
 

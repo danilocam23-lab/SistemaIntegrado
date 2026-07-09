@@ -22,6 +22,8 @@ import Cifras from './pages/Cifras'
 import EntregasActas from './pages/EntregasActas'
 import DashboardEstados from './pages/DashboardEstados'
 import DashboardSquad from './pages/DashboardSquad'
+import AdminEndpoints from './pages/AdminEndpoints'
+import Importacion from './pages/Importacion'
 
 export default function App() {
   return (
@@ -39,9 +41,9 @@ export default function App() {
               }
             >
               <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardRequerimientos />} />
-              <Route path="dashboard-estados" element={<DashboardEstados />} />
-              <Route path="dashboard-squad" element={<DashboardSquad />} />
+              <Route path="dashboard" element={<RoleRoute permiso="dashboard.ver"><DashboardRequerimientos /></RoleRoute>} />
+              <Route path="dashboard-estados" element={<RoleRoute permiso="dashboard.estados.ver"><DashboardEstados /></RoleRoute>} />
+              <Route path="dashboard-squad" element={<RoleRoute permiso="dashboard.squad.ver"><DashboardSquad /></RoleRoute>} />
               <Route path="requerimientos" element={<Requerimientos />} />
               <Route path="requerimientos/nuevo" element={<RequerimientoNuevo />} />
               <Route path="requerimientos/:reqId" element={<RequerimientoDetalle />} />
@@ -54,13 +56,21 @@ export default function App() {
               <Route path="roadmap" element={<Roadmap />} />
               <Route path="estimaciones" element={<Estimaciones />} />
               <Route path="azure-devops" element={<AzureDevOps />} />
-              <Route path="configuracion" element={<RoleRoute soloSuperadmin><Configuracion /></RoleRoute>} />
-              <Route path="cifras" element={<Cifras />} />
+              <Route path="configuracion" element={<RoleRoute permiso="admin.configuracion.ver"><Configuracion /></RoleRoute>} />
+              <Route path="cifras" element={<RoleRoute permiso="cifras.ver"><Cifras /></RoleRoute>} />
               <Route
                 path="admin/aplicaciones"
-                element={<RoleRoute soloSuperadmin><AdminAplicaciones /></RoleRoute>}
+                element={<RoleRoute permiso="aplicaciones.ver"><AdminAplicaciones /></RoleRoute>}
               />
-              <Route path="admin/usuarios" element={<RoleRoute><Usuarios /></RoleRoute>} />
+              <Route path="admin/usuarios" element={<RoleRoute permiso="admin.usuarios.ver"><Usuarios /></RoleRoute>} />
+              <Route
+                path="admin/endpoints"
+                element={<RoleRoute permiso="admin.endpoints.ver"><AdminEndpoints /></RoleRoute>}
+              />
+              <Route
+                path="admin/importacion"
+                element={<RoleRoute permiso="admin.importacion.ver"><Importacion /></RoleRoute>}
+              />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

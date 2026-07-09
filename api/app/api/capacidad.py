@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.documents.capacidad import Capacidad
+from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.security.deps import requiere_permiso
 
 router = APIRouter(prefix="/capacidades", tags=["capacidad"])
 
@@ -30,7 +32,11 @@ async def listar(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def crear(datos: CapacidadIn, ctx: ContextoAplicacion = Depends(contexto_escritura)):
+async def crear(
+    datos: CapacidadIn,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: Usuario = Depends(requiere_permiso("capacidades.editar")),
+):
     capacidad = Capacidad(aplicacion_id=ctx.codigo, **datos.model_dump())
     await capacidad.insert()
     return capacidad
@@ -41,6 +47,7 @@ async def actualizar(
     capacidad_id: str,
     datos: CapacidadIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: Usuario = Depends(requiere_permiso("capacidades.editar")),
 ):
     capacidad = await Capacidad.get(capacidad_id)
     if capacidad is None or capacidad.aplicacion_id != ctx.codigo:
@@ -54,7 +61,9 @@ async def actualizar(
 
 @router.delete("/{capacidad_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar(
-    capacidad_id: str, ctx: ContextoAplicacion = Depends(contexto_escritura)
+    capacidad_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: Usuario = Depends(requiere_permiso("capacidades.editar")),
 ) -> None:
     capacidad = await Capacidad.get(capacidad_id)
     if capacidad is None or capacidad.aplicacion_id != ctx.codigo:

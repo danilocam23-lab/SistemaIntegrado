@@ -25,9 +25,10 @@ const MESES_ES = [
 
 export default function RequerimientoDetalle() {
   const { reqId } = useParams<{ reqId: string }>()
-  const { usuario } = useAuth()
+  const { tienePermiso } = useAuth()
   const { modoConsolidado } = useAplicacion()
-  const esSuperadmin = usuario?.rol === 'superadmin'
+  const puedeEditarReq = tienePermiso('requerimientos.editar')
+  const puedeEliminarBitacora = tienePermiso('admin.roles.editar')
   const { datos: personas } = useLista<Persona>('/personas')
   const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
   const { estadosReq, estadosEnt } = useEstados()
@@ -280,7 +281,7 @@ export default function RequerimientoDetalle() {
 
       {/* Datos generales */}
       <form onSubmit={guardar} className="rounded-xl border bg-white p-4">
-        <fieldset disabled={!esSuperadmin}>
+        <fieldset disabled={!puedeEditarReq}>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Datos generales
         </h2>
@@ -308,7 +309,7 @@ export default function RequerimientoDetalle() {
             <div className="mb-1 rounded border bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
               {resolverNombreSquad(squadId)}
             </div>
-            {esSuperadmin && (
+            {puedeEditarReq && (
               <select
                 value={squadId}
                 onChange={(e) => { setSquadId(e.target.value); setScrumId('') }}
@@ -365,7 +366,7 @@ export default function RequerimientoDetalle() {
             <span className="mb-1 block text-slate-600">Fecha real entrega de estimaciones</span>
             <input value={fechaRealEntregaEst} onChange={(e) => setFechaRealEntregaEst(e.target.value)}
               type="datetime-local"
-              disabled={!esSuperadmin}
+              disabled={!puedeEditarReq}
               className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
           </label>
           <label className="text-sm">
@@ -394,7 +395,7 @@ export default function RequerimientoDetalle() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Acta de trabajo</span>
             <input value={actaTrabajo} onChange={(e) => setActaTrabajo(e.target.value)}
-              disabled={!esSuperadmin}
+              disabled={!puedeEditarReq}
               placeholder="Número o referencia del acta de trabajo"
               className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
           </label>
@@ -410,7 +411,7 @@ export default function RequerimientoDetalle() {
           </label>
         </div>
         </fieldset>
-        {esSuperadmin && (
+        {puedeEditarReq && (
           <button className="mt-3 rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">
             Guardar cambios
           </button>
@@ -467,7 +468,7 @@ export default function RequerimientoDetalle() {
                   <td className={`py-1 font-medium ${ansColor}`}>{ansLabel}</td>
                   <td className="py-1">{en.garantia ? 'Sí' : 'No'}</td>
                   <td className="py-1">
-                    {esSuperadmin && (
+                    {puedeEditarReq && (
                       <div className="flex gap-2">
                         <button
                           type="button"
@@ -494,7 +495,7 @@ export default function RequerimientoDetalle() {
             )}
           </tbody>
         </table>
-        {esSuperadmin && (
+        {puedeEditarReq && (
         <form onSubmit={agregarEntrega} className={`flex flex-wrap items-end gap-3 border-t pt-3 ${eEditando ? 'rounded-lg bg-amber-50 p-3' : ''}`}>
           {eEditando && (
             <div className="w-full text-xs font-semibold text-amber-700">
@@ -609,7 +610,7 @@ export default function RequerimientoDetalle() {
                 {' · '}<b>{ev.accion}</b> · {ev.descripcion}
                 {ev.autor ? <span className="text-slate-400"> ({ev.autor})</span> : null}
               </span>
-              {esSuperadmin && (
+              {puedeEliminarBitacora && (
                 <button
                   onClick={() => { void eliminarEvento(ev.id) }}
                   className="shrink-0 rounded p-0.5 text-slate-300 hover:bg-red-50 hover:text-red-500"

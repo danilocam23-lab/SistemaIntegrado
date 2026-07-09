@@ -1,14 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import * as XLSX from 'xlsx'
 import client from '../api/client'
 import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Estimacion, EstimacionConResumen, FilaEstimacion, Persona, Requerimiento, Squad } from '../types'
 
 export default function Requerimientos() {
-  const { usuario } = useAuth()
-  const esSuperadmin = usuario?.rol === 'superadmin'
+  const { tienePermiso } = useAuth()
+  const puedeEditar = tienePermiso('requerimientos.editar')
+  const puedeEliminar = tienePermiso('requerimientos.eliminar')
+  const puedeCrear = tienePermiso('requerimientos.crear')
+  const puedeGestionarEstimaciones = tienePermiso('requerimientos.editar')
   const { datos, error, recargar } = useLista<Requerimiento>('/requerimientos')
   const { estadosReq, estadosEnt } = useEstados()
   const { datos: personas } = useLista<Persona>('/personas')
@@ -84,11 +86,13 @@ export default function Requerimientos() {
   }
 
   function handleUploadClick(reqId: string): void {
+    if (!puedeGestionarEstimaciones) return
     uploadTargetRef.current = reqId
     fileInputRef.current?.click()
   }
 
   async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    if (!puedeGestionarEstimaciones) return
     const file = e.target.files?.[0]
     if (!file || !uploadTargetRef.current) return
     const reqId = uploadTargetRef.current
@@ -119,6 +123,7 @@ export default function Requerimientos() {
   }
 
   async function handleCreateTasks(org: 'hitss' | 'epm'): Promise<void> {
+    if (!puedeGestionarEstimaciones) return
     if (!estData?.estimacion) return
     setAviso('')
     setCreatingTasks(org)
@@ -138,6 +143,7 @@ export default function Requerimientos() {
   }
 
   async function deleteEstimation(): Promise<void> {
+    if (!puedeGestionarEstimaciones) return
     if (!estData?.estimacion) return
     setAviso('')
     try {
@@ -379,70 +385,12 @@ export default function Requerimientos() {
       )
     }
     return (
-      <span onDoubleClick={esSuperadmin ? () => iniciarEdicionCelda(req, campo) : undefined}
-        className={`block w-full rounded px-1 py-0.5 ${esSuperadmin ? 'cursor-pointer hover:bg-slate-100' : ''}`}
-        title={esSuperadmin ? 'Doble clic para editar' : undefined}>
+      <span onDoubleClick={puedeEditar ? () => iniciarEdicionCelda(req, campo) : undefined}
+        className={`block w-full rounded px-1 py-0.5 ${puedeEditar ? 'cursor-pointer hover:bg-slate-100' : ''}`}
+        title={puedeEditar ? 'Doble clic para editar' : undefined}>
         {displayValue || '—'}
       </span>
     )
-  }
-
-  function exportarExcel(): void {
-    const fuente = datos
-    // Hoja 1: Requerimientos
-    const filasReq = fuente.map((req) => ({
-      'Código REQ': req.codigo_req,
-      'Nombre / Acta': req.nombre ?? '',
-      'Estado': req.estado,
-      'Código SC': req.solicitud?.codigo_sc ?? '',
-      'Tipo Costo': req.solicitud?.tipo_costo ?? '',
-      'Tecnología': req.solicitud?.tecnologia ?? '',
-      'Squad': req.solicitud?.squad_id ? (squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id)) : '',
-      'Líder Técnico': req.solicitud?.lt_hitss_id ? nombrePersona(req.solicitud.lt_hitss_id) : '',
-      'Scrum': req.solicitud?.scrum_id ? nombrePersona(req.solicitud.scrum_id) : '',
-      'Horas Estimadas': req.total_horas_estimadas ?? '',
-      'Monto Pactado': req.monto_pactado ?? '',
-      'Fecha Solicitud': req.solicitud?.fecha_solicitud ?? '',
-      'Fecha Inicio': req.fecha_inicio ?? '',
-      'Fecha Fin': req.fecha_fin ?? '',
-      'Fecha Límite': req.fecha_limite ?? '',
-      'Fecha Real Entrega Estimaciones': req.fecha_real_entrega_estimacion ?? '',
-      'ANS Estimación': req.ans_estimacion ?? '',
-      'ANS Acta': req.ans_acta ?? '',
-      'Cantidad Entregas': req.cantidad_entregas ?? 0,
-      'Motivo Cierre': req.motivo_cierre ?? '',
-      'Acta de Trabajo': req.acta_trabajo ?? '',
-      'Observaciones / Seguimiento': req.seguimiento ?? '',
-    }))
-
-    // Hoja 2: Entregas
-    const filasEntregas: object[] = []
-    for (const req of fuente) {
-      for (const en of req.entregas ?? []) {
-        filasEntregas.push({
-          'Código REQ': req.codigo_req,
-          'Nombre REQ': req.nombre ?? '',
-          '# Entrega': en.numero,
-          'Horas': en.horas ?? '',
-          'Porcentaje': en.porcentaje ?? '',
-          'Fecha Comprometida': en.fecha_comprometida ?? '',
-          'Fecha Recepción': en.fecha_recepcion ?? '',
-          'Fecha Cargue': en.fecha_cargue ?? '',
-          'Fecha Aprobación': en.fecha_aprobacion ?? '',
-          'Fecha Ejecución': en.fecha_ejecucion ?? '',
-          'Estado': en.estado ?? '',
-          'ANS Entrega': en.ans_entrega ?? '',
-          'Garantía': en.garantia ? 'Sí' : 'No',
-        })
-      }
-    }
-
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filasReq), 'Requerimientos')
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filasEntregas.length ? filasEntregas : [{}]), 'Entregas')
-
-    const fecha = new Date().toISOString().slice(0, 10)
-    XLSX.writeFile(wb, `requerimientos_${fecha}.xlsx`)
   }
 
   function fechaComprometidaReq(req: Requerimiento): string | null {
@@ -577,17 +525,7 @@ export default function Requerimientos() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-marca-osc">Requerimientos</h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={exportarExcel}
-            disabled={datos.length === 0}
-            className="flex items-center gap-2 rounded border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Exportar Excel
-          </button>
-          {esSuperadmin && (
+          {puedeCrear && (
             <Link to="/requerimientos/nuevo" className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc text-sm">
               Crear
             </Link>
@@ -836,7 +774,7 @@ export default function Requerimientos() {
                         </button>
                       ) : uploadingId === req.id ? (
                         <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-amber-500" />
-                      ) : (
+                      ) : puedeGestionarEstimaciones ? (
                         <button onClick={() => handleUploadClick(req.id)} title="Cargar estimación (Excel)"
                           className="rounded p-0.5 text-slate-400 hover:text-cyan-600">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -844,17 +782,23 @@ export default function Requerimientos() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 17h6m-6-4h6m-6-4h3" />
                           </svg>
                         </button>
+                      ) : (
+                        <span className="text-slate-300">—</span>
                       )}
                     </td>
                     <td className="p-2 text-center whitespace-nowrap">
-                      {esSuperadmin && (
+                      {(puedeEditar || puedeEliminar) && (
                         <>
-                          <Link to={`/requerimientos/${req.id}`} className="mr-2 text-marca hover:underline text-xs">
-                            Editar
-                          </Link>
-                          <button onClick={() => { void eliminar(req) }} className="text-red-600 hover:underline text-xs">
-                            Eliminar
-                          </button>
+                          {puedeEditar && (
+                            <Link to={`/requerimientos/${req.id}`} className="mr-2 text-marca hover:underline text-xs">
+                              Editar
+                            </Link>
+                          )}
+                          {puedeEliminar && (
+                            <button onClick={() => { void eliminar(req) }} className="text-red-600 hover:underline text-xs">
+                              Eliminar
+                            </button>
+                          )}
                         </>
                       )}
                     </td>
@@ -1000,6 +944,22 @@ export default function Requerimientos() {
               </td></tr>
             )}
           </tbody>
+          {datosFiltrados.length > 0 && (() => {
+            const totalHoras = datosFiltrados.reduce((s, r) => s + (r.total_horas_estimadas ?? 0), 0)
+            const totalEntregas = datosFiltrados.reduce((s, r) => s + (r.entregas?.length ?? 0), 0)
+            return (
+              <tfoot>
+                <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700 text-sm">
+                  <td className="p-2"></td>
+                  <td className="p-2" colSpan={7}>Total ({datosFiltrados.length} requerimientos)</td>
+                  <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>
+                  <td className="p-2" colSpan={4}></td>
+                  <td className="p-2 text-center">{totalEntregas}</td>
+                  <td className="p-2" colSpan={2}></td>
+                </tr>
+              </tfoot>
+            )
+          })()}
         </table>
       </div>
 
@@ -1025,43 +985,47 @@ export default function Requerimientos() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { void handleCreateTasks('hitss') }}
-                  disabled={!estData?.estimacion || creatingTasks !== null}
-                  title="Crear tareas en Azure DevOps HITSS"
-                  className="flex items-center gap-1 rounded-lg border border-cyan-300 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {creatingTasks === 'hitss' ? (
-                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" />
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                    </svg>
-                  )}
-                  Crear tareas HITSS
-                </button>
-                <button
-                  onClick={() => { void handleCreateTasks('epm') }}
-                  disabled={!estData?.estimacion || creatingTasks !== null}
-                  title="Crear tareas en Azure DevOps EPM"
-                  className="flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {creatingTasks === 'epm' ? (
-                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600" />
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                  )}
-                  Crear tareas EPM
-                </button>
-                <div className="mx-1 h-5 w-px bg-slate-200" />
-                <button onClick={() => handleUploadClick(estModalReqId)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                  Reemplazar
-                </button>
-                <button onClick={() => { void deleteEstimation() }} disabled={!estimacion} className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">
-                  Eliminar
-                </button>
+                {puedeGestionarEstimaciones && (
+                  <>
+                    <button
+                      onClick={() => { void handleCreateTasks('hitss') }}
+                      disabled={!estData?.estimacion || creatingTasks !== null}
+                      title="Crear tareas en Azure DevOps HITSS"
+                      className="flex items-center gap-1 rounded-lg border border-cyan-300 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {creatingTasks === 'hitss' ? (
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                        </svg>
+                      )}
+                      Crear tareas HITSS
+                    </button>
+                    <button
+                      onClick={() => { void handleCreateTasks('epm') }}
+                      disabled={!estData?.estimacion || creatingTasks !== null}
+                      title="Crear tareas en Azure DevOps EPM"
+                      className="flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {creatingTasks === 'epm' ? (
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      )}
+                      Crear tareas EPM
+                    </button>
+                    <div className="mx-1 h-5 w-px bg-slate-200" />
+                    <button onClick={() => handleUploadClick(estModalReqId)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                      Reemplazar
+                    </button>
+                    <button onClick={() => { void deleteEstimation() }} disabled={!estimacion} className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">
+                      Eliminar
+                    </button>
+                  </>
+                )}
                 <button onClick={() => setEstModalReqId(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800" title="Cerrar">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

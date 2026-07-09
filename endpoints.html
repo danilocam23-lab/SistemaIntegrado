@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ultimo cambio de endpoints</title>
+</head>
+<body>
+  <h1>Ultimo cambio de endpoints</h1>
+  <p>
+    El <strong>ultimo cambio de endpoints</strong> fue el commit
+    <strong>bb55e34</strong> (2026-06-25 10:08), con el mensaje:
+    <em>“Add requerimiento endpoints: reasignar-aplicacion and diagnostico”</em>,
+    en <code>api/app/api/requerimientos.py</code>.
+  </p>
+
+  <h2>URLs</h2>
+  <h3>Localhost</h3>
+  <ul>
+    <li>
+      <code>POST http://localhost:8000/api/requerimientos/{codigo_req}/reasignar-aplicacion</code>
+    </li>
+    <li>
+      <code>GET http://localhost:8000/api/requerimientos/{codigo_req}/diagnostico</code>
+    </li>
+  </ul>
+
+  <h3>Produccion</h3>
+  <ul>
+    <li>
+      <code>POST https://&lt;tu-dominio&gt;/&lt;base&gt;/api/requerimientos/{codigo_req}/reasignar-aplicacion</code>
+    </li>
+    <li>
+      <code>GET https://&lt;tu-dominio&gt;/&lt;base&gt;/api/requerimientos/{codigo_req}/diagnostico</code>
+    </li>
+  </ul>
+
+  <p>
+    Donde <code>&lt;base&gt;</code> depende de <code>VITE_APP_BASE</code> /
+    <code>APP_ROOT_PATH</code> (ejemplo tipico: <code>/SistemaIntegrado</code>).
+  </p>
+</body>
+</html>

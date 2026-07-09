@@ -4,14 +4,37 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import Modal from '../components/Modal'
 import { useAplicacion } from '../context/AplicacionContext'
+import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona } from '../types'
 
 const ROLES_DEFAULT = ['DEV', 'LT_HITSS', 'LT_EPM', 'SCRUM', 'EPM', 'COORD', 'LECTOR']
+
+interface PersonaResumen {
+  id: string
+  nombre: string
+  email: string | null
+  squads: string[]
+  activo: boolean
+  aplicacion_id: string
+  score: number
+}
+
+interface GrupoDuplicados {
+  nombre: string
+  rol: string
+  total: number
+  ganador: PersonaResumen
+  duplicados: PersonaResumen[]
+}
 
 export default function Personas() {
   const { datos, error, recargar } = useLista<Persona>('/personas')
   const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
   const { modoConsolidado, activa } = useAplicacion()
+  const { tienePermiso } = useAuth()
+  const puedeCrearPersonas = tienePermiso('personas.crear')
+  const puedeEditarPersonas = tienePermiso('personas.editar')
+  const puedeEliminarPersonas = tienePermiso('personas.eliminar')
   const [roles, setRoles] = useState<string[]>(ROLES_DEFAULT)
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
@@ -24,9 +47,25 @@ export default function Personas() {
   const [aviso, setAviso] = useState('')
   const [aplicacionId, setAplicacionId] = useState('')
 
+  // Estados para deduplicación
+  const [duplicados, setDuplicados] = useState<GrupoDuplicados[]>([])
+  const [modalDupAbierto, setModalDupAbierto] = useState(false)
+  const [deduplicando, setDeduplicando] = useState(false)
+  const [resultadoDedup, setResultadoDedup] = useState<{ fusionados: number; referencias_actualizadas: number } | null>(null)
+
+  async function cargarDuplicados(): Promise<void> {
+    try {
+      const { data } = await client.get<GrupoDuplicados[]>('/personas/duplicados')
+      setDuplicados(data)
+    } catch {
+      // silencioso
+    }
+  }
+
   // Recargar la lista cuando cambia la aplicación activa
   useEffect(() => {
     recargar()
+    cargarDuplicados()
   }, [activa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -39,6 +78,7 @@ export default function Personas() {
         }
       })
       .catch(() => {})
+    cargarDuplicados()
   }, [])
 
   const filtradas = useMemo(() => {
@@ -83,6 +123,7 @@ export default function Personas() {
   }
 
   async function eliminar(persona: Persona): Promise<void> {
+    if (!puedeEliminarPersonas) return
     if (!window.confirm(`¿Eliminar a "${persona.nombre}"? Esta acción no se puede deshacer.`)) return
     try {
       await client.delete(`/personas/${persona.id}`)
@@ -95,6 +136,8 @@ export default function Personas() {
   async function guardar(e: FormEvent): Promise<void> {
     e.preventDefault()
     setAviso('')
+    if (editando && !puedeEditarPersonas) return
+    if (!editando && !puedeCrearPersonas) return
 
     // Validar unicidad correo+squad
     if (email) {
@@ -190,9 +233,63 @@ export default function Personas() {
     })
   }
 
+  async function deduplicar(): Promise<void> {
+    if (!window.confirm(`¿Fusionar ${duplicados.length} grupo(s) de duplicados? Se conservará la persona con más información completa y se redirigirán todas las referencias.`)) return
+    setDeduplicando(true)
+    setResultadoDedup(null)
+    try {
+      const { data } = await client.post<{ fusionados: number; referencias_actualizadas: number }>('/personas/deduplicar')
+      setResultadoDedup(data)
+      setDuplicados([])
+      recargar()
+    } catch (err) {
+      alert(mensajeError(err))
+    } finally {
+      setDeduplicando(false)
+    }
+  }
+
+  function cerrarModalDup(): void {
+    setModalDupAbierto(false)
+    setResultadoDedup(null)
+  }
+
   return (
     <div>
       <h1 className="mb-4 text-xl font-bold text-marca-osc">Personas</h1>
+
+      {/* Banner de duplicados */}
+      {duplicados.length > 0 && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+          <span>
+            ⚠️ Se encontraron <strong>{duplicados.length}</strong> grupo(s) con personas duplicadas.
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setModalDupAbierto(true)}
+              className="rounded border border-amber-400 px-3 py-1 text-xs hover:bg-amber-100"
+            >
+              Ver detalle
+            </button>
+            {puedeEditarPersonas && (
+              <button
+                onClick={deduplicar}
+                disabled={deduplicando}
+                className="rounded bg-amber-600 px-3 py-1 text-xs text-white hover:bg-amber-700 disabled:opacity-60"
+              >
+                {deduplicando ? 'Fusionando…' : 'Fusionar duplicados'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {resultadoDedup && (
+        <div className="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+          ✅ Deduplicación completada: <strong>{resultadoDedup.fusionados}</strong> persona(s) fusionadas,{' '}
+          <strong>{resultadoDedup.referencias_actualizadas}</strong> referencia(s) actualizadas.
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <input
@@ -201,12 +298,14 @@ export default function Personas() {
           placeholder="Buscar por nombre, correo, squad o rol…"
           className="w-72 rounded border px-3 py-2 text-sm"
         />
-        <button
-          onClick={abrirNuevo}
-          className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc"
-        >
-          + Nueva persona
-        </button>
+        {puedeCrearPersonas && (
+          <button
+            onClick={abrirNuevo}
+            className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc"
+          >
+            + Nueva persona
+          </button>
+        )}
       </div>
 
       {error && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
@@ -263,33 +362,39 @@ export default function Personas() {
                             : <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">No</span>}
                         </td>
                         <td className="p-2 text-center whitespace-nowrap">
-                          <button onClick={() => abrirEditar(p)} className="mr-2 text-marca hover:underline text-xs">
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => eliminar(p)}
-                            className="mr-2 text-red-600 hover:underline text-xs"
-                          >
-                            Eliminar
-                          </button>
-                          <button
-                            onClick={async () => {
-                              await client.put(`/personas/${p.id}`, {
-                                nombre: p.nombre,
-                                email: p.email,
-                                rol_operativo: p.rol_operativo,
-                                squads: p.squads ?? [],
-                                activo: !p.activo,
-                                es_lider_tecnico: p.es_lider_tecnico ?? false,
-                                permite_sobrecarga: p.permite_sobrecarga ?? false,
-                                usuario_id: p.usuario_id ?? null,
-                              })
-                              recargar()
-                            }}
-                            className={`text-xs ${p.activo ? 'text-amber-600 hover:underline' : 'text-emerald-600 hover:underline'}`}
-                          >
-                            {p.activo ? 'Desactivar' : 'Activar'}
-                          </button>
+                          {puedeEditarPersonas && (
+                            <button onClick={() => abrirEditar(p)} className="mr-2 text-marca hover:underline text-xs">
+                              Editar
+                            </button>
+                          )}
+                          {puedeEliminarPersonas && (
+                            <button
+                              onClick={() => eliminar(p)}
+                              className="mr-2 text-red-600 hover:underline text-xs"
+                            >
+                              Eliminar
+                            </button>
+                          )}
+                          {puedeEditarPersonas && (
+                            <button
+                              onClick={async () => {
+                                await client.put(`/personas/${p.id}`, {
+                                  nombre: p.nombre,
+                                  email: p.email,
+                                  rol_operativo: p.rol_operativo,
+                                  squads: p.squads ?? [],
+                                  activo: !p.activo,
+                                  es_lider_tecnico: p.es_lider_tecnico ?? false,
+                                  permite_sobrecarga: p.permite_sobrecarga ?? false,
+                                  usuario_id: p.usuario_id ?? null,
+                                })
+                                recargar()
+                              }}
+                              className={`text-xs ${p.activo ? 'text-amber-600 hover:underline' : 'text-emerald-600 hover:underline'}`}
+                            >
+                              {p.activo ? 'Desactivar' : 'Activar'}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -369,11 +474,81 @@ export default function Personas() {
               className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
               Cancelar
             </button>
-            <button className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">
-              {editando ? 'Guardar cambios' : 'Crear'}
-            </button>
+            {((editando && puedeEditarPersonas) || (!editando && puedeCrearPersonas)) && (
+              <button className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">
+                {editando ? 'Guardar cambios' : 'Crear'}
+              </button>
+            )}
           </div>
         </form>
+      </Modal>
+
+      {/* Modal detalle de duplicados */}
+      <Modal
+        titulo={`Personas duplicadas (${duplicados.length} grupo${duplicados.length !== 1 ? 's' : ''})`}
+        abierto={modalDupAbierto}
+        onCerrar={cerrarModalDup}
+      >
+        <div className="space-y-4 text-sm">
+          <p className="text-slate-500">
+            Se conservará la persona con mayor información (email, squads, usuario vinculado).
+            Las demás se eliminarán y sus referencias serán redirigidas automáticamente.
+          </p>
+          <div className="max-h-96 overflow-auto space-y-3">
+            {duplicados.map((g) => (
+              <div key={`${g.nombre}-${g.rol}`} className="rounded border bg-slate-50 p-3">
+                <div className="mb-2 font-semibold text-slate-700">
+                  {g.nombre} <span className="ml-2 text-xs font-normal text-slate-500">[{g.rol}]</span>
+                  <span className="ml-2 text-xs text-amber-600">{g.total} registros</span>
+                </div>
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-200">
+                      <th className="border px-1 py-0.5 text-left">Nombre</th>
+                      <th className="border px-1 py-0.5 text-left">Email</th>
+                      <th className="border px-1 py-0.5 text-left">Squads</th>
+                      <th className="border px-1 py-0.5 text-left">App</th>
+                      <th className="border px-1 py-0.5 text-center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="bg-emerald-50">
+                      <td className="border px-1 py-0.5 font-medium text-emerald-700">✅ {g.ganador.nombre}</td>
+                      <td className="border px-1 py-0.5">{g.ganador.email ?? '—'}</td>
+                      <td className="border px-1 py-0.5">{g.ganador.squads.join(', ') || '—'}</td>
+                      <td className="border px-1 py-0.5">{g.ganador.aplicacion_id}</td>
+                      <td className="border px-1 py-0.5 text-center text-emerald-700">Conservar</td>
+                    </tr>
+                    {g.duplicados.map((d) => (
+                      <tr key={d.id} className="bg-red-50">
+                        <td className="border px-1 py-0.5 text-red-700">🗑 {d.nombre}</td>
+                        <td className="border px-1 py-0.5">{d.email ?? '—'}</td>
+                        <td className="border px-1 py-0.5">{d.squads.join(', ') || '—'}</td>
+                        <td className="border px-1 py-0.5">{d.aplicacion_id}</td>
+                        <td className="border px-1 py-0.5 text-center text-red-600">Eliminar</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button onClick={cerrarModalDup}
+              className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+              Cancelar
+            </button>
+            {puedeEditarPersonas && (
+              <button
+                onClick={() => { cerrarModalDup(); deduplicar() }}
+                disabled={deduplicando}
+                className="rounded bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-60"
+              >
+                {deduplicando ? 'Fusionando…' : 'Confirmar fusión'}
+              </button>
+            )}
+          </div>
+        </div>
       </Modal>
     </div>
   )

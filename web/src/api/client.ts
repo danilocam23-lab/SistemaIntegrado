@@ -23,6 +23,7 @@ client.interceptors.request.use((config) => {
 // Los documentos Beanie llegan con `_id`; se expone también como `id`.
 function normalizarIds(data: unknown): unknown {
   if (Array.isArray(data)) return data.map(normalizarIds)
+  if (typeof Blob !== 'undefined' && data instanceof Blob) return data
   if (data && typeof data === 'object') {
     const obj = data as Record<string, unknown>
     const resultado: Record<string, unknown> = {}

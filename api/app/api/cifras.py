@@ -2,10 +2,18 @@
 from fastapi import APIRouter, Depends
 
 from app.documents.aplicacion import Aplicacion
+from app.documents.squad import Squad
 from app.documents.requerimiento import Requerimiento
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
 
 router = APIRouter(prefix="/cifras", tags=["cifras"])
+
+
+def _resolver_nombre_squad(squad_id: str | None, squads_por_id: dict[str, str], apps_por_codigo: dict[str, str]) -> str:
+    if not squad_id:
+        return "Sin squad"
+    valor = str(squad_id)
+    return squads_por_id.get(valor) or apps_por_codigo.get(valor) or valor
 
 
 @router.get("/estado")
@@ -26,10 +34,12 @@ async def por_squad(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> d
     """Cantidad de requerimientos y horas estimadas, agrupadas por squad."""
     reqs = await Requerimiento.find(ctx.filtro()).to_list()
     apps = await Aplicacion.find_all().to_list()
+    squads = await Squad.find(ctx.filtro()).to_list()
     app_map: dict[str, str] = {a.codigo: a.nombre for a in apps}
+    squad_map: dict[str, str] = {str(s.id): s.nombre for s in squads}
     agg: dict[str, dict] = {}
     for r in reqs:
-        nombre = app_map.get(r.solicitud.squad_id or "", r.solicitud.squad_id or "Sin squad")
+        nombre = _resolver_nombre_squad(r.solicitud.squad_id, squad_map, app_map)
         fila = agg.setdefault(nombre, {"squad": nombre, "cantidad": 0, "horas": 0.0})
         fila["cantidad"] += 1
         fila["horas"] += float(r.total_horas_estimadas or 0)
@@ -56,7 +66,9 @@ async def por_liquidacion(ctx: ContextoAplicacion = Depends(contexto_aplicacion)
     """Resumen de liquidación: monto pactado y horas por squad."""
     reqs = await Requerimiento.find(ctx.filtro()).to_list()
     apps = await Aplicacion.find_all().to_list()
+    squads = await Squad.find(ctx.filtro()).to_list()
     app_map: dict[str, str] = {a.codigo: a.nombre for a in apps}
+    squad_map: dict[str, str] = {str(s.id): s.nombre for s in squads}
 
     total_monto = 0.0
     total_horas = 0.0
@@ -72,7 +84,7 @@ async def por_liquidacion(ctx: ContextoAplicacion = Depends(contexto_aplicacion)
         total_entregas += len(r.entregas)
         if r.monto_pactado:
             con_monto += 1
-        squad = app_map.get(r.solicitud.squad_id or "", r.solicitud.squad_id or "Sin squad")
+        squad = _resolver_nombre_squad(r.solicitud.squad_id, squad_map, app_map)
         fila = por_squad.setdefault(squad, {"squad": squad, "monto": 0.0, "horas": 0.0, "cantidad": 0})
         fila["monto"] += monto
         fila["horas"] += horas

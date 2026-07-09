@@ -14,7 +14,7 @@ interface FilaEntrega {
   horas: number | null
   porcentaje: number | null
   fechaComprometida: string | null
-  fechaEjecucion: string | null
+  fechaReal: string | null
   estado: string | null
   mesAprobacion: string | null
 }
@@ -24,9 +24,10 @@ export default function EntregasActas() {
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
   const [squadsCol, setSquadsCol] = useState<Squad[]>([])
   const [filtroTexto, setFiltroTexto] = useState('')
-  const [filtroEstado, setFiltroEstado] = useState('PENDIENTE')
+  const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
   const [filtroFechaHasta, setFiltroFechaHasta] = useState('')
+  const [filtroMes, setFiltroMes] = useState('')
 
   // Auto-refresca cuando el usuario vuelve a esta pestaña/vista
   useEffect(() => {
@@ -79,7 +80,7 @@ export default function EntregasActas() {
           horas: en.horas ?? null,
           porcentaje,
           fechaComprometida: en.fecha_comprometida ?? null,
-          fechaEjecucion: en.fecha_ejecucion ?? null,
+          fechaReal: en.fecha_recepcion ?? null,
           estado: en.estado ?? null,
           mesAprobacion: en.mes_aprobacion ?? null,
         })
@@ -92,6 +93,7 @@ export default function EntregasActas() {
     return filas
       .filter((f) => {
         if (filtroEstado && (f.estado ?? '').toUpperCase() !== filtroEstado.toUpperCase()) return false
+        if (filtroMes && (f.mesAprobacion ?? '') !== filtroMes) return false
         if (filtroTexto) {
           const t = filtroTexto.toLowerCase()
           if (
@@ -115,7 +117,16 @@ export default function EntregasActas() {
         if (!b.fechaComprometida) return -1
         return a.fechaComprometida.localeCompare(b.fechaComprometida)
       })
-  }, [filas, filtroTexto, filtroEstado, filtroFechaDesde, filtroFechaHasta])
+  }, [filas, filtroTexto, filtroEstado, filtroMes, filtroFechaDesde, filtroFechaHasta])
+
+  /** Meses de aprobación únicos presentes en los datos */
+  const mesesEnBD = useMemo(() => {
+    const set = new Set<string>()
+    for (const f of filas) {
+      if (f.mesAprobacion) set.add(f.mesAprobacion)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
+  }, [filas])
 
   /** Estados reales que tienen las entregas en la BD */
   const estadosEnBD = useMemo(() => {
@@ -139,13 +150,13 @@ export default function EntregasActas() {
     return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>{s || '—'}</span>
   }
 
-  const calcularDiasTranscurridos = (fechaComprometida: string | null, fechaEjecucion: string | null): { dias: number; esNegativo: boolean } | null => {
+  const calcularDiasTranscurridos = (fechaComprometida: string | null, fechaReal: string | null): { dias: number; esNegativo: boolean } | null => {
     const hoy = new Date().toISOString().slice(0, 10)
     
     if (!fechaComprometida) return null
     
     // Fecha a usar para el cálculo del rango
-    const fechaFin = fechaEjecucion ? fechaEjecucion.slice(0, 10) : hoy
+    const fechaFin = fechaReal ? fechaReal.slice(0, 10) : hoy
     const fechaInicio = fechaComprometida.slice(0, 10)
     
     // Calcular diferencia en días
@@ -155,12 +166,12 @@ export default function EntregasActas() {
     
     // Determinar si es negativo:
     // - Si no hay fecha ejecución y hoy > fechaComprometida: negativo (atraso)
-    // - Si hay fecha ejecución y fechaEjecucion > fechaComprometida: negativo (atraso)
+    // - Si hay fecha real y fechaReal > fechaComprometida: negativo (atraso)
     // - En caso contrario: positivo (días restantes o dentro de plazo)
     let esNegativo = false
-    if (!fechaEjecucion && hoy > fechaInicio) {
+    if (!fechaReal && hoy > fechaInicio) {
       esNegativo = true
-    } else if (fechaEjecucion && fechaEjecucion.slice(0, 10) > fechaInicio) {
+    } else if (fechaReal && fechaReal.slice(0, 10) > fechaInicio) {
       esNegativo = true
     }
     
@@ -176,15 +187,6 @@ export default function EntregasActas() {
             Entregas ordenadas de la más próxima a la más lejana.
           </p>
         </div>
-        <button
-          onClick={recargar}
-          disabled={cargando}
-          title="Recargar estados desde Requerimientos"
-          className="flex items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-        >
-          <span className={cargando ? 'animate-spin' : ''}>↺</span>
-          Actualizar
-        </button>
       </div>
 
       {/* Filtros */}
@@ -199,6 +201,17 @@ export default function EntregasActas() {
           />
         </label>
         <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Mes de aprobación</span>
+            <select
+              value={filtroMes}
+              onChange={(e) => setFiltroMes(e.target.value)}
+              className="rounded border px-3 py-2 text-sm w-52"
+            >
+              <option value="">Todos los meses</option>
+              {mesesEnBD.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label className="text-sm">
           <span className="mb-1 block text-slate-600">Estado</span>
           <select
             value={filtroEstado}
@@ -227,9 +240,9 @@ export default function EntregasActas() {
             />
           </div>
         </label>
-        {(filtroTexto || filtroEstado || filtroFechaDesde || filtroFechaHasta) && (
+        {(filtroTexto || filtroEstado || filtroMes || filtroFechaDesde || filtroFechaHasta) && (
           <button
-            onClick={() => { setFiltroTexto(''); setFiltroEstado(''); setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
+            onClick={() => { setFiltroTexto(''); setFiltroEstado(''); setFiltroMes(''); setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
             className="text-xs text-red-500 hover:underline self-end pb-2"
           >
             Limpiar
@@ -308,11 +321,11 @@ export default function EntregasActas() {
                   {vencida && <span className="ml-1 text-xs">⚠</span>}
                 </td>
                 <td className="p-2">
-                  {f.fechaEjecucion ? f.fechaEjecucion.slice(0, 10) : '—'}
+                  {f.fechaReal ? f.fechaReal.slice(0, 10) : '—'}
                 </td>
                 <td className="p-2 text-right">
                   {(() => {
-                    const result = calcularDiasTranscurridos(f.fechaComprometida, f.fechaEjecucion)
+                    const result = calcularDiasTranscurridos(f.fechaComprometida, f.fechaReal)
                     if (!result) return '—'
                     const color = result.esNegativo ? 'text-red-600 font-semibold' : 'text-emerald-600'
                     return (
@@ -328,6 +341,24 @@ export default function EntregasActas() {
               )
             })}
           </tbody>
+          {!cargando && filasFiltradas.length > 0 && (() => {
+            const totalHoras = filasFiltradas.reduce((s, f) => s + (f.horas ?? 0), 0)
+            const filasConPct = filasFiltradas.filter((f) => f.porcentaje != null)
+            const promPct = filasConPct.length
+              ? Number((filasConPct.reduce((s, f) => s + f.porcentaje!, 0) / filasConPct.length).toFixed(1))
+              : null
+            return (
+              <tfoot>
+                <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700">
+                  <td className="p-2" colSpan={4}>Total ({filasFiltradas.length} entregas)</td>
+                  <td className="p-2 text-center">—</td>
+                  <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>
+                  <td className="p-2 text-right">{promPct != null ? `${promPct}%` : '—'}</td>
+                  <td className="p-2" colSpan={5}></td>
+                </tr>
+              </tfoot>
+            )
+          })()}
         </table>
       </div>
     </div>

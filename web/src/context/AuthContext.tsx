@@ -1,12 +1,12 @@
 import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
 import client, { TOKEN_KEY, USUARIO_KEY, APP_KEY } from '../api/client'
-import { ROLES_ADMIN } from '../types'
 import type { TokenResponse, Usuario } from '../types'
 
 interface AuthContextValue {
   usuario: Usuario | null
   esAdmin: boolean
+  tienePermiso: (permiso: string) => boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
 }
@@ -35,10 +35,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(null)
   }
 
-  const esAdmin = usuario ? ROLES_ADMIN.includes(usuario.rol) : false
+  function tienePermiso(permiso: string): boolean {
+    if (!usuario) return false
+    return usuario.permisos.includes('*') || usuario.permisos.includes(permiso)
+  }
+
+  const esAdmin = !!usuario && (tienePermiso('admin.acceso') || usuario.rol === 'superadmin')
 
   return (
-    <AuthContext.Provider value={{ usuario, esAdmin, login, logout }}>
+    <AuthContext.Provider value={{ usuario, esAdmin, tienePermiso, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

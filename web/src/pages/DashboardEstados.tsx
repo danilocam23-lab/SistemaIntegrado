@@ -67,7 +67,7 @@ export default function DashboardEstados() {
 
   const kpis = useMemo(() => {
     const totalHoras = requerimientos.reduce((sum, req) => sum + Number(req.total_horas_estimadas ?? 0), 0)
-    const totalEntregas = requerimientos.reduce((sum, req) => sum + Number(req.cantidad_entregas ?? 0), 0)
+    const totalEntregas = requerimientos.reduce((sum, req) => sum + (req.entregas?.length ?? 0), 0)
     const activos = requerimientos.filter((req) => esActivo(req.estado)).length
     return {
       total: requerimientos.length,
@@ -83,7 +83,7 @@ export default function DashboardEstados() {
       const actual = mapa.get(req.estado) ?? { estado: req.estado, cantidad: 0, horas: 0, entregas: 0 }
       actual.cantidad += 1
       actual.horas += Number(req.total_horas_estimadas ?? 0)
-      actual.entregas += Number(req.cantidad_entregas ?? 0)
+      actual.entregas += req.entregas?.length ?? 0
       mapa.set(req.estado, actual)
     }
     const total = requerimientos.length || 1

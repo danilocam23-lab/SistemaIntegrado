@@ -196,14 +196,15 @@
 <main>
 <!-- ============ HERO ============ -->
 <header class="hero">
-  <span class="tag">Documento de Arquitectura · v2.1</span>
+  <span class="tag">Documento de Arquitectura · v2.2</span>
   <h1>Integración del Sistema Liquidador EPM-HITSS y Workload Manager en una plataforma unificada</h1>
   <p class="lead">Estado técnico actualizado del monorepo <code>Sistema Integrado</code>: frontend React,
   backend FastAPI, MongoDB con Beanie, modelo multi-aplicación, seguridad JWT y módulos operativos de
-  liquidación y carga de trabajo.</p>
+  liquidación y carga de trabajo. v2.2 incorpora módulo de importación/exportación masiva Excel,
+  correcciones al motor de importación, mejoras en resolución de nombres de squad y vista de entregas.</p>
   <div class="meta">
     <div><b>HITSS — Desarrollos IA</b>Documento técnico de arquitectura</div>
-    <div><b>18 de junio de 2026</b>Actualización basada en código fuente</div>
+    <div><b>Julio de 2026</b>Actualización v2.2 basada en código fuente</div>
     <div><b>FastAPI · React · MongoDB · Azure DevOps</b>Stack implementado</div>
   </div>
 </header>
@@ -376,6 +377,24 @@
     Se definen índices por <code>aplicacion_id</code> y claves de negocio (por ejemplo,
     <code>uq_app_req_squad_sc</code> en requerimientos y <code>uq_app_azdo_id</code> en work items).
   </div>
+
+  <h3>Convenciones de campos relevantes (Entrega embebida en Requerimiento)</h3>
+  <table class="compact">
+    <tr><th style="width:32%;">Campo en BD</th><th>Semántica</th><th>Notas</th></tr>
+    <tr><td><code>entrega.fecha_recepcion</code></td><td><strong>F. Real de entrega</strong> (F.Real en vistas)</td><td>Almacena la fecha real de entrega proveniente de la columna <em>FECHA REAL</em> en la plantilla Excel.</td></tr>
+    <tr><td><code>entrega.fecha_ejecucion</code></td><td>Fecha de ejecución interna</td><td>Campo independiente; no es la F.Real que se muestra en la vista de entregas.</td></tr>
+    <tr><td><code>solicitud.squad_id</code></td><td>Referencia al Squad (ObjectId)</td><td>Al importar desde Excel el importer almacena el <code>_id</code> del documento <code>Squad</code>, no el código de aplicación. Ver sección de resolución de nombres.</td></tr>
+    <tr><td><code>req.cantidad_entregas</code></td><td>Contador derivado</td><td>Puede quedar desfasado; los dashboards usan <code>req.entregas?.length</code> para conteos precisos en tiempo real.</td></tr>
+  </table>
+
+  <h3>Resolución de nombres de Squad</h3>
+  <p>Dado que <code>solicitud.squad_id</code> almacena el <code>ObjectId</code> del documento <code>Squad</code>,
+  la resolución de nombre sigue el orden de prioridad siguiente, tanto en el frontend como en el backend (<code>cifras.py</code>):</p>
+  <ol class="steps">
+    <li>Buscar el id en la colección <code>squads</code> → retornar <code>squad.nombre</code>.</li>
+    <li>Si no se encuentra, buscar en <code>aplicaciones</code> por código → retornar <code>aplicacion.nombre</code>.</li>
+    <li>Si tampoco, retornar el valor crudo almacenado.</li>
+  </ol>
 </section>
 
 <!-- ============ 8. MÓDULOS BACKEND ============ -->
@@ -389,8 +408,16 @@
     <tr><td>Liquidación</td><td><code>/requerimientos</code>, <code>/tarifas</code>, <code>/festivos</code>, <code>/actas</code></td><td>Ciclo de requerimientos, entregas, ANS, liquidación por entrega, catálogos de soporte.</td></tr>
     <tr><td>Carga de trabajo</td><td><code>/personas</code>, <code>/categorias</code>, <code>/asignaciones</code>, <code>/capacidades</code>, <code>/estimaciones</code>, <code>/azdo</code>, <code>/configuracion</code></td><td>Equipo, distribución de carga, estimaciones Excel y sincronización con Azure DevOps.</td></tr>
     <tr><td>Analítica y auditoría</td><td><code>/cifras</code>, <code>/reportes</code>, <code>/bitacora</code></td><td>KPIs, reportes de roadmap/equipo y trazabilidad de eventos.</td></tr>
+    <tr><td>Administración / Importación</td><td><code>/admin/importacion</code></td><td>Exportación de plantilla Excel y carga masiva de requerimientos y entregas. Ver sección 11.</td></tr>
   </table>
-</section>
+
+  <div class="callout ok">
+    <span class="ct">Personas: solo consulta, sin creación automática</span>
+    El importer de Excel <strong>no crea personas nuevas</strong>. Únicamente busca personas existentes en la colección
+    <code>personas</code> usando coincidencia insensible a espacios múltiples (<code>\s+</code> entre palabras).
+    Si una persona no se encuentra, la fila se omite con advertencia. Para deduplicar personas existentes se
+    exponen <code>GET /personas/duplicados</code> y <code>POST /personas/deduplicar</code>.
+  </div>
 
 <!-- ============ 9. FRONTEND Y DASHBOARDS ============ -->
 <section id="cambios">
@@ -403,17 +430,26 @@
     <li><code>/dashboard-estados</code> y <code>/dashboard-squad</code>.</li>
     <li><code>/cifras</code> (estado, ANS y liquidación agregada).</li>
     <li>Módulos operativos: requerimientos, personas, asignaciones, capacidades, roadmap, estimaciones, Azure DevOps.</li>
-    <li>Administración: aplicaciones, usuarios y configuración (según rol).</li>
+    <li><code>/entregas-actas</code> — listado de todas las entregas con F.Comprometida, F.Real y días transcurridos.</li>
+    <li>Administración: aplicaciones, usuarios, configuración e <strong>importar/exportar datos</strong> (según rol).</li>
   </ul>
 
   <h3>Dashboards implementados</h3>
   <table class="compact">
     <tr><th style="width:28%;">Pantalla</th><th style="width:32%;">Fuente de datos</th><th>Indicadores</th></tr>
     <tr><td>Dashboard de Requerimientos</td><td><code>/requerimientos</code>, <code>/personas</code></td><td>KPIs de volumen, horas, entregas, ANS y tendencias.</td></tr>
-    <tr><td>Dashboard Estados</td><td><code>/requerimientos</code>, <code>/aplicaciones</code></td><td>Distribución por estado, evolución mensual y totales.</td></tr>
-    <tr><td>Dashboard Squad</td><td><code>/requerimientos</code>, <code>/capacidades</code>, <code>/festivos</code>, <code>/configuracion</code></td><td>Capacidad mensual, horas por squad y métricas cruzadas de equipo.</td></tr>
-    <tr><td>Cifras y ANS</td><td><code>/cifras/estado</code>, <code>/cifras/squad</code>, <code>/cifras/ans</code>, <code>/cifras/liquidacion</code></td><td>ANS, distribución y resumen económico.</td></tr>
+    <tr><td>Dashboard Estados</td><td><code>/requerimientos</code>, <code>/aplicaciones</code></td><td>Distribución por estado, evolución mensual y totales. Usa <code>req.entregas?.length</code> para conteos precisos.</td></tr>
+    <tr><td>Dashboard Squad</td><td><code>/requerimientos</code>, <code>/squads</code>, <code>/capacidades</code>, <code>/festivos</code>, <code>/configuracion</code></td><td>Capacidad mensual, horas por squad y métricas cruzadas. Resuelve nombres vía Squad._id → Squad.nombre → Aplicacion.nombre.</td></tr>
+    <tr><td>Cifras y ANS</td><td><code>/cifras/estado</code>, <code>/cifras/squad</code>, <code>/cifras/ans</code>, <code>/cifras/liquidacion</code></td><td>ANS, distribución y resumen económico. Backend resuelve squad_id contra colección squads antes de retornar nombres.</td></tr>
   </table>
+
+  <div class="callout warn">
+    <span class="ct">Botones removidos por decisión de diseño</span>
+    <ul style="margin:4px 0 0;">
+      <li>Vista <strong>Requerimientos</strong>: se eliminó el botón <em>Exportar Excel</em> individual; la exportación masiva ocurre desde Administración → Importar/Exportar.</li>
+      <li>Vista <strong>Entregas de Actas</strong>: se eliminó el botón <em>Actualizar</em>; los datos se recargan al navegar a la vista.</li>
+    </ul>
+  </div>
 </section>
 
 <!-- ============ 10. FLUJO DATOS ============ -->
@@ -454,9 +490,44 @@
   <p><code>app/services/scheduler.py</code> ejecuta revisión cada 30 minutos y dispara sincronizaciones según
   intervalo configurado (<code>manual</code>, <code>hourly</code>, <code>daily</code>).</p>
 
-  <h3>Importación de datos</h3>
-  <p>Existe importador de Excel (<code>app/importer/excel_importer.py</code>) para la bitácora general, con carga de requerimientos,
-  entregas y catálogos asociados.</p>
+  <h3>Importación/Exportación masiva de datos</h3>
+  <p>El módulo <code>api/app/api/importacion.py</code> (router <code>/admin/importacion</code>) implementa
+  carga y descarga masiva de requerimientos y entregas mediante plantilla Excel estructurada.</p>
+
+  <div class="grid2">
+    <div class="card lq">
+      <h4>📥 Exportar plantilla</h4>
+      <p style="font-size:13px;"><code>GET /admin/importacion/exportar-plantilla</code><br>
+      Genera un archivo <code>.xlsx</code> con tres hojas:</p>
+      <ul style="font-size:13px;">
+        <li><strong>REQUERIMIENTOS</strong>: todos los campos editables del requerimiento (incluyendo <em>FECHA REAL ENTREGA DE ESTIMACIONES</em>).</li>
+        <li><strong>ENTREGAS</strong>: entregas existentes cruzadas con su requerimiento.</li>
+        <li><strong>CATALOGOS</strong>: listas de validación (estados, LT, squad, personas, tipos de entrega) para evitar errores en la importación.</li>
+      </ul>
+      <p style="font-size:13px;">Los nombres de persona se normalizan al exportar (<code>" ".join(nombre.split())</code>) para eliminar espacios dobles.</p>
+    </div>
+    <div class="card wm">
+      <h4>📤 Importar datos</h4>
+      <p style="font-size:13px;"><code>POST /admin/importacion/importar</code><br>
+      Acepta la plantilla Excel (posiblemente editada) y ejecuta upsert masivo:</p>
+      <ul style="font-size:13px;">
+        <li>Crea o actualiza requerimientos según <em>COD. DEL REQ</em> + <em>CODIGO DE SOLICITUD DE COTIZACION</em>.</li>
+        <li>Asocia entregas a su requerimiento con normalización de código (elimina sufijos <code>.0</code> de Excel).</li>
+        <li>No crea personas nuevas; solo busca las existentes con regex tolerante a espacios múltiples.</li>
+        <li>Campos calculados (<code>fecha_limite</code>, <code>ans_acta</code>, <code>ans_entrega</code>, <code>porcentaje</code>) se recalculan post-importación.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="ct">Reglas del motor de importación (excel_importer.py)</span>
+    <ul style="margin:4px 0 0;">
+      <li><strong>Clave de requerimiento</strong>: tupla normalizada <code>(cod_req, cod_sc)</code> — se elimina sufijo <code>.0</code> y se pasa a minúsculas.</li>
+      <li><strong>Lookup de encabezados</strong>: el método <code>_valor()</code> busca por nombre exacto y por nombre normalizado (sin tildes, alfanumérico) para tolerar variantes tipográficas.</li>
+      <li><strong>Detección de entregas</strong>: una fila de la hoja ENTREGAS se considera entrega solo si tiene al menos uno de los campos de entrega definidos. El campo <em>ACTA DE TRABAJO</em> fue excluido de ese criterio para evitar falsos positivos.</li>
+      <li><strong>Búsqueda de persona</strong>: regex <code>\s+</code> entre palabras para tolerar espacios dobles en nombres almacenados en BD.</li>
+    </ul>
+  </div>
 </section>
 
 <!-- ============ 12. DESPLIEGUE ============ -->
@@ -481,9 +552,9 @@
   <table>
     <tr><th style="width:34%;">Riesgo</th><th style="width:18%;">Impacto</th><th>Detalle observado</th></tr>
     <tr><td>Configuración AzDO HITSS/EPM no diferenciada en backend</td><td>Alto</td><td>El frontend envía <code>target</code> (HITSS/EPM), pero el router <code>/azdo</code> no separa esa dimensión; puede mezclar configuración entre paneles.</td></tr>
-    <tr><td>Ruta de importación no registrada en router principal</td><td>Medio</td><td>Existe <code>api/app/api/importacion.py</code>, pero no está incluida en <code>api/app/api/router.py</code>, por lo que el endpoint no queda expuesto.</td></tr>
     <tr><td>Dashboard consolidado backend aún parcial</td><td>Medio</td><td><code>/dashboard/consolidado</code> reporta principalmente personas/categorías y mantiene TODO para métricas de negocio extendidas.</td></tr>
     <tr><td>Configuración global sin dependencia explícita de autenticación</td><td>Medio</td><td><code>/configuracion</code> no aplica <code>usuario_actual</code> ni <code>requiere_rol</code>; requiere endurecimiento según política de seguridad del entorno.</td></tr>
+    <tr><td>Campos calculados pueden quedar desfasados</td><td>Bajo</td><td><code>cantidad_entregas</code>, <code>porcentaje</code>, <code>ans_acta</code> y similares son derivados; se recalculan post-importación pero pueden desfasarse ante operaciones directas en BD. Mitigación: los dashboards usan <code>entregas?.length</code> en tiempo real.</td></tr>
   </table>
 </section>
 
@@ -494,20 +565,20 @@
 
   <ol class="steps">
     <li><strong>Separar configuración AzDO por destino</strong> (HITSS/EPM) en backend y persistencia.</li>
-    <li><strong>Decidir el estado de importación Excel</strong>: exponer <code>/importacion</code> en router principal o retirar código/UI no usados.</li>
     <li><strong>Endurecer seguridad de <code>/configuracion</code></strong> con autenticación y control de rol.</li>
     <li><strong>Completar métricas de <code>/dashboard/consolidado</code></strong> para alinear backend y dashboards de negocio.</li>
     <li><strong>Agregar pruebas automatizadas focalizadas</strong> para autenticación, contexto multi-aplicación y modo consolidado.</li>
+    <li><strong>Validar plantilla Excel con listas desplegables</strong> desde la hoja CATALOGOS para reducir errores de digitación al importar.</li>
     <li><strong>Actualizar documentación operativa</strong> (backup MongoDB, monitoreo de scheduler y fallos de sync AzDO).</li>
   </ol>
 </section>
 
 <footer>
   Documento de arquitectura — Integración Sistema Liquidador EPM-HITSS + Workload Manager ·
-  Plataforma unificada multi-aplicación · HITSS, Desarrollos IA · 18 de junio de 2026 ·
-  Versión 2.1.<br>
+  Plataforma unificada multi-aplicación · HITSS, Desarrollos IA · Julio de 2026 ·
+  Versión 2.2.<br>
   Alcance verificado en código: FastAPI + React + MongoDB + modelo multi-aplicación + seguridad JWT +
-  integración Azure DevOps.<br>
+  integración Azure DevOps + módulo importación/exportación Excel masiva.<br>
   Revisión realizada sobre el repositorio: <code>C:\Sistema Integrado</code>.
 </footer>
 

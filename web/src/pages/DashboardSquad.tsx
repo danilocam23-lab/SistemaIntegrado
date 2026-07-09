@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -13,7 +13,8 @@ import {
 import { CONSOLIDADO } from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
-import type { Aplicacion, Capacidad, Configuracion, Festivo, Persona, Requerimiento } from '../types'
+import client from '../api/client'
+import type { Aplicacion, Capacidad, Configuracion, Festivo, Persona, Requerimiento, Squad } from '../types'
 
 // Paleta de colores premium
 const PALETA = {
@@ -86,6 +87,15 @@ export default function DashboardSquad() {
   const { datos: configuraciones, cargando: cargandoConfiguraciones } = useLista<Configuracion>('/configuracion')
   const { activa } = useAplicacion()
   const [mesCapacidad, setMesCapacidad] = useState(mesActual)
+  const [squadsDoc, setSquadsDoc] = useState<Squad[]>([])
+
+  useEffect(() => {
+    client.get<Squad[]>('/squads', { headers: { 'X-Aplicacion': '__todas__' } })
+      .then((r) => setSquadsDoc(r.data))
+      .catch(() => {
+        client.get<Squad[]>('/squads').then((r) => setSquadsDoc(r.data)).catch(() => {})
+      })
+  }, [])
 
   const requerimientos = useMemo(() => {
     if (!activa || activa === CONSOLIDADO) return reqs
@@ -97,24 +107,33 @@ export default function DashboardSquad() {
     return aplicaciones.find((app) => app.codigo === activa)?.nombre ?? activa
   }, [activa, aplicaciones])
 
-  const squadNombrePorCodigo = useMemo(() => {
-    const mapa = new Map<string, string>()
-    for (const app of aplicaciones) mapa.set(app.codigo, app.nombre)
-    return mapa
-  }, [aplicaciones])
+  const resolverNombreSquad = useCallback((id: string | null): string => {
+    if (!id) return 'Sin squad'
+    const valor = String(id)
+    const porDocId = squadsDoc.find((s) => String(s.id) === valor)
+    if (porDocId) return porDocId.nombre
+    const porDocNombre = squadsDoc.find((s) => s.nombre === valor)
+    if (porDocNombre) return porDocNombre.nombre
+    const porAppCodigo = aplicaciones.find((a) => a.codigo === valor)
+    if (porAppCodigo) return porAppCodigo.nombre
+    const porAppNombre = aplicaciones.find((a) => a.nombre === valor)
+    if (porAppNombre) return porAppNombre.nombre
+    return valor
+  }, [aplicaciones, squadsDoc])
 
   const squadCodigoPorNombre = useMemo(() => {
     const mapa = new Map<string, string>()
     for (const app of aplicaciones) mapa.set(app.nombre, app.codigo)
+    for (const squad of squadsDoc) mapa.set(squad.nombre, String(squad.id))
     return mapa
-  }, [aplicaciones])
+  }, [aplicaciones, squadsDoc])
 
   const filas = useMemo<FilaSquad[]>(() => {
     const mapa = new Map<string, FilaSquad>()
     for (const req of requerimientos) {
       const squadId = req.solicitud?.squad_id ?? null
       const key = squadId ?? '__sin_squad__'
-      const squad = squadId ? (squadNombrePorCodigo.get(squadId) ?? squadId) : 'Sin squad'
+      const squad = resolverNombreSquad(squadId)
       const actual = mapa.get(key) ?? {
         squadId,
         squad,
@@ -128,7 +147,7 @@ export default function DashboardSquad() {
       }
       actual.reqs += 1
       actual.horas += Number(req.total_horas_estimadas ?? 0)
-      actual.entregas += Number(req.cantidad_entregas ?? 0)
+      actual.entregas += req.entregas?.length ?? 0
       if (req.ans_acta) {
         actual.ansActaTotal += 1
         if (req.ans_acta === 'CUMPLE') actual.ansActaCumple += 1
@@ -141,7 +160,7 @@ export default function DashboardSquad() {
       mapa.set(key, actual)
     }
     return Array.from(mapa.values()).sort((a, b) => b.reqs - a.reqs || b.horas - a.horas)
-  }, [requerimientos, squadNombrePorCodigo])
+  }, [requerimientos, resolverNombreSquad])
 
   const horasMesDefault = useMemo(() => {
     const config = configuraciones.find((item) => item.clave === 'horas_mes_default')
@@ -178,7 +197,7 @@ export default function DashboardSquad() {
     for (const persona of personas) {
       if (!persona.activo || persona.rol_operativo === 'LT_EPM') continue
       const squadsNormalizados = (persona.squads ?? []).map((squad) => squadCodigoPorNombre.get(squad) ?? squad)
-      const squadActivaNombre = activa && activa !== CONSOLIDADO ? (squadNombrePorCodigo.get(activa) ?? activa) : ''
+      const squadActivaNombre = activa && activa !== CONSOLIDADO ? resolverNombreSquad(activa) : ''
       const perteneceActiva =
         activa !== CONSOLIDADO &&
         !!activa &&
@@ -193,7 +212,7 @@ export default function DashboardSquad() {
         : squadsNormalizados
 
       for (const squadId of squadsPersona) {
-        const squad = squadNombrePorCodigo.get(squadId) ?? squadId
+        const squad = resolverNombreSquad(squadId)
         const capacidadPersona = capacidadPorPersonaMes.get(persona.id) ?? horasDefaultMes
         const actual = mapa.get(squadId) ?? { squadId, squad, horas: 0, personas: 0 }
         actual.horas += capacidadPersona
@@ -211,7 +230,8 @@ export default function DashboardSquad() {
     mesCapacidad,
     personas,
     squadCodigoPorNombre,
-    squadNombrePorCodigo,
+    resolverNombreSquad,
+    squadsDoc,
   ])
 
   const resumenCapacidad = useMemo(() => {

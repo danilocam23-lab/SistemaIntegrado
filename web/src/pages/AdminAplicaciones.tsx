@@ -5,8 +5,9 @@ import { useAuth } from '../context/AuthContext'
 import type { Aplicacion } from '../types'
 
 export default function AdminAplicaciones() {
-  const { usuario } = useAuth()
-  const esSuperadmin = usuario?.rol === 'superadmin'
+  const { usuario, tienePermiso } = useAuth()
+  const puedeCrear = tienePermiso('aplicaciones.crear')
+  const puedeEditar = tienePermiso('aplicaciones.editar')
   const [apps, setApps] = useState<Aplicacion[]>([])
   const [codigo, setCodigo] = useState('')
   const [nombre, setNombre] = useState('')
@@ -15,8 +16,9 @@ export default function AdminAplicaciones() {
   function cargar(): void {
     void client.get<Aplicacion[]>('/aplicaciones').then((r) => {
       const todas = r.data
+      const adminSinSquads = usuario?.rol === 'admin_app' && (usuario.aplicaciones_codigos?.length ?? 0) === 0
       // admin_app solo ve sus propios squads
-      if (esSuperadmin) {
+      if (tienePermiso('*') || usuario?.rol === 'superadmin' || adminSinSquads) {
         setApps(todas)
       } else {
         setApps(todas.filter((a) => usuario?.aplicaciones_codigos.includes(a.codigo)))
@@ -51,7 +53,7 @@ export default function AdminAplicaciones() {
     <div>
       <h1 className="mb-4 text-xl font-bold text-marca-osc">Administración de squads</h1>
 
-      {esSuperadmin && (
+      {puedeCrear && (
         <form
           onSubmit={crear}
           className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4"
@@ -101,6 +103,7 @@ export default function AdminAplicaciones() {
               <td className="p-2 text-center">
                 <button
                   onClick={() => alternarEstado(app)}
+                  disabled={!puedeEditar}
                   className="text-marca hover:underline"
                 >
                   {app.activa ? 'Desactivar' : 'Activar'}
@@ -110,7 +113,7 @@ export default function AdminAplicaciones() {
           ))}
         </tbody>
       </table>
-      {esSuperadmin && (
+      {puedeCrear && (
         <p className="mt-3 text-xs text-slate-400">
           Al crear un squad se provisiona su estructura base (categorías, estados,
           configuración) sin copiar datos de negocio.
