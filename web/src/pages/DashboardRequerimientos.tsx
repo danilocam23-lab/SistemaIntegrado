@@ -1,20 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { PieLabelRenderProps } from 'recharts'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  PieChart, Pie, Cell, Legend,
+  Legend,
   LineChart, Line,
 } from 'recharts'
 import { useLista } from '../api/hooks'
 import client from '../api/client'
 import { ESTADOS_REQUERIMIENTO } from '../constantes'
 import type { Persona, Requerimiento } from '../types'
-
-const COLORES = [
-  '#2563eb', '#16a34a', '#ea580c', '#8b5cf6', '#e11d48',
-  '#0891b2', '#ca8a04', '#64748b', '#d946ef', '#059669',
-  '#dc2626', '#6366f1',
-]
 
 const COLORES_KPI = {
   total:    { bg: 'bg-blue-50',   text: 'text-blue-600',   border: 'border-blue-200',   icon: '📋' },
@@ -58,6 +51,7 @@ export default function DashboardRequerimientos() {
   const [ansInicioTrabajoData, setAnsInicioTrabajoData] = useState({ total: 0, cumple: 0 })
   const [ansTendencia, setAnsTendencia] = useState<Array<{ mes: string; oportunidadTotal: number; oportunidadCumple: number; oportunidadNoCumple: number; cumplimientoTotal: number; cumplimientoCumple: number; cumplimientoNoCumple: number; inicioTotal: number; inicioCumple: number; inicioNoCumple: number }>>([])
   const [woPorLt, setWoPorLt] = useState<Record<string, number>>({})
+  const [woPorMes, setWoPorMes] = useState<Array<{ mes: string; wo: number }>>([])
 
   useEffect(() => {
     client
@@ -65,6 +59,7 @@ export default function DashboardRequerimientos() {
       .then((r) => {
         const workOrderIDs = new Set<string>()
         const woPorLtMap: Record<string, Set<string>> = {}
+        const woPorMesMap: Record<string, Set<string>> = {}
         let oportunidadTotal = 0, oportunidadCumple = 0, oportunidadNoCumple = 0
         let cumplimientoTotal = 0, cumplimientoCumple = 0, cumplimientoNoCumple = 0
         let inicioTotal = 0, inicioCumple = 0, inicioNoCumple = 0
@@ -85,6 +80,10 @@ export default function DashboardRequerimientos() {
           
           const fechaFin = reg.datos?.['Fecha_Fin_Real']
           const mes = fechaFin ? fechaFin.substring(0, 7) : 'Sin fecha'
+          if (!woPorMesMap[mes]) woPorMesMap[mes] = new Set<string>()
+          if (reg.datos?.['Work Order ID']) {
+            woPorMesMap[mes].add(reg.datos['Work Order ID'])
+          }
           if (!tendenciaMap[mes]) tendenciaMap[mes] = { 
             oportunidadTotal: 0, oportunidadCumple: 0, oportunidadNoCumple: 0,
             cumplimientoTotal: 0, cumplimientoCumple: 0, cumplimientoNoCumple: 0,
@@ -130,6 +129,7 @@ export default function DashboardRequerimientos() {
 
         setWorkOrderIDCount(workOrderIDs.size)
         setWoPorLt(Object.fromEntries(Object.entries(woPorLtMap).map(([k, v]) => [k, v.size])))
+        setWoPorMes(Object.entries(woPorMesMap).sort(([a], [b]) => a.localeCompare(b)).map(([mes, ids]) => ({ mes, wo: ids.size })))
         setAnsOportunidadData({ total: oportunidadTotal, cumple: oportunidadCumple })
         setAnsCumplimientoData({ total: cumplimientoTotal, cumple: cumplimientoCumple })
         setAnsInicioTrabajoData({ total: inicioTotal, cumple: inicioCumple })
@@ -138,6 +138,7 @@ export default function DashboardRequerimientos() {
       .catch(() => {
         setWorkOrderIDCount(0)
         setWoPorLt({})
+        setWoPorMes([])
         setAnsOportunidadData({ total: 0, cumple: 0 })
         setAnsCumplimientoData({ total: 0, cumple: 0 })
         setAnsInicioTrabajoData({ total: 0, cumple: 0 })
@@ -214,16 +215,6 @@ export default function DashboardRequerimientos() {
       return { id, nombre, nombreKey: normalizarTexto(nombre), email: p?.email ?? '', reqs: conteo[id] ?? 0 }
     }).sort((a, b) => b.reqs - a.reqs)
   }, [reqs, personas])
-
-  // ─── Por tipo de costo (pie) ────────────────────────────
-  const porTipoCosto = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const r of reqs) {
-      const tipo = r.solicitud?.tipo_costo ?? 'Sin tipo'
-      map[tipo] = (map[tipo] ?? 0) + 1
-    }
-    return Object.entries(map).map(([name, value]) => ({ name, value }))
-  }, [reqs])
 
   // ─── Tendencia mensual (entregas por mes) ───────────────
   const tendencia = useMemo(() => {
@@ -345,23 +336,8 @@ export default function DashboardRequerimientos() {
         </div>
       </div>
 
-      {/* ═══ Row 2: Estado + Mes + Equipo ═══ */}
+      {/* ═══ Row 2: Mes + Equipo ═══ */}
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* Requerimientos por estado */}
-        <Panel titulo="Requerimientos por estado">
-          {porEstado.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={porEstado} layout="vertical" margin={{ left: 10, right: 16, top: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="estado" width={95} tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(v) => [v, 'Requerimientos']} />
-                <Bar dataKey="cantidad" fill="#2563eb" radius={[0, 4, 4, 0]} barSize={16} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
-
         {/* Requerimientos por mes */}
         <Panel titulo="Requerimientos por mes">
           {porMes.length === 0 ? <Empty /> : (
@@ -372,6 +348,21 @@ export default function DashboardRequerimientos() {
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => [v, 'Requerimientos']} />
                 <Bar dataKey="cantidad" fill="#16a34a" radius={[4, 4, 0, 0]} barSize={28} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
+
+        {/* WO por mes */}
+        <Panel titulo="WO por mes">
+          {woPorMes.length === 0 ? <Empty /> : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={woPorMes} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v) => [v, 'WO']} />
+                <Bar dataKey="wo" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={28} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -403,29 +394,8 @@ export default function DashboardRequerimientos() {
         </Panel>
       </div>
 
-      {/* ═══ Row 3: Tipo costo + Tendencia ═══ */}
+      {/* ═══ Row 3+4: Tendencia y ANS ═══ */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Tipo de costo (Pie) */}
-        <Panel titulo="Por tipo de costo">
-          {porTipoCosto.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={porTipoCosto} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                  outerRadius={90} innerRadius={50} paddingAngle={2}
-                  label={(props: PieLabelRenderProps) => `${props.name ?? ''} ${(((props.percent as number) ?? 0) * 100).toFixed(0)}%`}
-                  labelLine={false} fontSize={11}>
-                  {porTipoCosto.map((_, i) => (
-                    <Cell key={i} fill={COLORES[i % COLORES.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => [v, 'Requerimientos']} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
-
-        {/* Tendencia entregas */}
         <Panel titulo="Tendencia de entregas">
           {tendencia.length === 0 ? <Empty /> : (
             <ResponsiveContainer width="100%" height={260}>
@@ -442,11 +412,7 @@ export default function DashboardRequerimientos() {
             </ResponsiveContainer>
           )}
         </Panel>
-      </div>
 
-      {/* ═══ Row 4: ANS Tendencia ═══ */}
-      <div className="flex w-full flex-col gap-4">
-        {/* ANS Oportunidad Tendencia */}
         <Panel titulo="ANS Oportunidad - Cumplimiento">
           {ansTendencia.length === 0 ? <Empty /> : (
             <ResponsiveContainer width="100%" height={260}>
@@ -464,7 +430,6 @@ export default function DashboardRequerimientos() {
           )}
         </Panel>
 
-        {/* ANS Cumplimiento Tendencia */}
         <Panel titulo="ANS Cumplimiento - Cumplimiento">
           {ansTendencia.length === 0 ? <Empty /> : (
             <ResponsiveContainer width="100%" height={260}>
@@ -482,7 +447,6 @@ export default function DashboardRequerimientos() {
           )}
         </Panel>
 
-        {/* ANS Inicio Trabajo Tendencia */}
         <Panel titulo="ANS Inicio Trabajo - Cumplimiento">
           {ansTendencia.length === 0 ? <Empty /> : (
             <ResponsiveContainer width="100%" height={260}>

@@ -304,10 +304,16 @@ class SoporteSolicitudesFabricaService:
             raise ValueError("No se encontró columna 'LT HITSS' + 'Squad' ni 'Líder y Squad' en la hoja.")
 
         squads = await Squad.find({"aplicacion_id": {"$in": codigos}}).to_list()
-        personas = await Persona.find({"aplicacion_id": {"$in": codigos}}).to_list()
+
+        # Los líderes técnicos pueden estar registrados en cualquier aplicación del sistema,
+        # no solo en las del contexto actual. Se busca en todas las aplicaciones para evitar
+        # falsos negativos cuando el mismo LT trabaja en múltiples squads/apps.
+        todas_personas = await Persona.find({}).to_list()
 
         squad_por_nombre = {_norm_txt(s.nombre): s for s in squads if s.nombre}
-        lideres = [p for p in personas if _norm_txt(p.rol_operativo) == "lt_hitss"]
+
+        # Comparación flexible: acepta "LT_HITSS", "LT HITSS", "lt hitss", etc.
+        lideres = [p for p in todas_personas if _header_key(p.rol_operativo) == "lthitss"]
         lideres_por_nombre = {_norm_txt(p.nombre): p for p in lideres if p.nombre}
 
         validos: list[dict] = []
