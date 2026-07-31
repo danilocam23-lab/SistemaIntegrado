@@ -25,6 +25,7 @@ import DashboardSquad from './pages/DashboardSquad'
 import AdminEndpoints from './pages/AdminEndpoints'
 import Importacion from './pages/Importacion'
 import FacturacionGeneral from './pages/FacturacionGeneral'
+import SoporteSolicitudesFabrica from './pages/SoporteSolicitudesFabrica'
 
 export default function App() {
   return (
@@ -73,6 +74,7 @@ export default function App() {
                 element={<RoleRoute permiso="admin.importacion.ver"><Importacion /></RoleRoute>}
               />
               <Route path="facturacion/general" element={<RoleRoute permiso="facturacion.ver"><FacturacionGeneral /></RoleRoute>} />
+              <Route path="soporte/solicitudes-fabrica" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteSolicitudesFabrica /></RoleRoute>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

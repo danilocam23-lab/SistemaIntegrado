@@ -17,6 +17,10 @@ from app.documents.festivo import Festivo
 from app.documents.orden_compra import OrdenCompra
 from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
+from app.documents.soporte_solicitud_fabrica import (
+    SoporteSolicitudFabrica,
+    SoporteSolicitudFabricaSyncLog,
+)
 from app.documents.rol import Rol
 from app.documents.squad import Squad
 from app.documents.tarifa import Tarifa
@@ -40,6 +44,8 @@ ALL_DOCUMENTS = [
     ActaTrabajo,
     OrdenCompra,
     Requerimiento,
+    SoporteSolicitudFabrica,
+    SoporteSolicitudFabricaSyncLog,
     # Operativas — dominio de carga de trabajo (Fase 4)
     Asignacion,
     Capacidad,
@@ -65,6 +71,8 @@ __all__ = [
     "ActaTrabajo",
     "OrdenCompra",
     "Requerimiento",
+    "SoporteSolicitudFabrica",
+    "SoporteSolicitudFabricaSyncLog",
     "Asignacion",
     "Capacidad",
     "Estimacion",

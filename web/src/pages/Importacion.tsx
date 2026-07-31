@@ -143,8 +143,9 @@ export default function Importacion() {
     <div>
       <h1 className="mb-1 text-xl font-bold text-marca-osc">Importar / Exportar datos</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Exporta la plantilla con dos hojas: <b>REQUERIMIENTOS</b> y <b>ENTREGAS</b>. Luego
-        importa el archivo y confirma el resumen de registros nuevos/actualizados.
+        Exporta la plantilla con dos hojas: <b>REQUERIMIENTOS</b> y <b>ENTREGAS</b>.
+        La plantilla no pide APLICACIÓN, TECNOLOGIA ni DIRECCIÓN.
+        Luego importa el archivo y confirma el resumen de registros nuevos/actualizados.
       </p>
 
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">

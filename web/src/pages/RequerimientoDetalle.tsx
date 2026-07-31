@@ -514,9 +514,19 @@ export default function RequerimientoDetalle() {
               className="w-28 rounded border px-3 py-2" />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Fecha comprometida</span>
-            <input value={eFecha} onChange={(e) => setEFecha(e.target.value)} type="date" required
-              className="rounded border px-3 py-2" />
+            <span className="mb-1 block text-slate-600">
+              Fecha comprometida
+              {req?.estado?.toUpperCase() !== 'CONTROL DE CAMBIOS' && (
+                <span className="ml-1 text-red-500">*</span>
+              )}
+            </span>
+            <input
+              value={eFecha}
+              onChange={(e) => setEFecha(e.target.value)}
+              type="date"
+              required={req?.estado?.toUpperCase() !== 'CONTROL DE CAMBIOS'}
+              className="rounded border px-3 py-2"
+            />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Fecha real entrega</span>

@@ -14,7 +14,7 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <header className="flex items-center justify-between border-b bg-white px-6 py-3">
           {mostrarSelector ? (
             <SelectorAplicacion />
@@ -30,7 +30,7 @@ export default function Layout() {
             </button>
           </div>
         </header>
-        <main className="flex-1 p-6">
+        <main className="min-w-0 flex-1 overflow-x-hidden p-6">
           <Outlet />
         </main>
       </div>

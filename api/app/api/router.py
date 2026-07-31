@@ -20,6 +20,7 @@ from app.api import (
     reportes,
     requerimientos,
     roles,
+    soporte,
     squads,
     tarifas,
     usuarios,
@@ -47,6 +48,7 @@ api_router.include_router(estimaciones.router)
 api_router.include_router(configuracion.router)
 api_router.include_router(azdo.router)
 api_router.include_router(importacion.router)
+api_router.include_router(soporte.router)
 # Transversal
 api_router.include_router(bitacora.router)
 api_router.include_router(reportes.router)

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PieLabelRenderProps } from 'recharts'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -6,6 +6,7 @@ import {
   LineChart, Line,
 } from 'recharts'
 import { useLista } from '../api/hooks'
+import client from '../api/client'
 import { ESTADOS_REQUERIMIENTO } from '../constantes'
 import type { Persona, Requerimiento } from '../types'
 
@@ -42,6 +43,88 @@ function abreviarEstado(e: string): string {
 export default function DashboardRequerimientos() {
   const { datos: reqs, cargando } = useLista<Requerimiento>('/requerimientos')
   const { datos: personas } = useLista<Persona>('/personas')
+  const [workOrderIDCount, setWorkOrderIDCount] = useState(0)
+  const [ansOportunidadData, setAnsOportunidadData] = useState({ total: 0, cumple: 0 })
+  const [ansCumplimientoData, setAnsCumplimientoData] = useState({ total: 0, cumple: 0 })
+  const [ansInicioTrabajoData, setAnsInicioTrabajoData] = useState({ total: 0, cumple: 0 })
+  const [ansTendencia, setAnsTendencia] = useState<Array<{ mes: string; oportunidadTotal: number; oportunidadCumple: number; oportunidadNoCumple: number; cumplimientoTotal: number; cumplimientoCumple: number; cumplimientoNoCumple: number; inicioTotal: number; inicioCumple: number; inicioNoCumple: number }>>([])
+
+  useEffect(() => {
+    client
+      .get<{ registros: Array<{ datos: Record<string, string> }> }>('/soporte/solicitudes-fabrica')
+      .then((r) => {
+        const workOrderIDs = new Set<string>()
+        let oportunidadTotal = 0, oportunidadCumple = 0, oportunidadNoCumple = 0
+        let cumplimientoTotal = 0, cumplimientoCumple = 0, cumplimientoNoCumple = 0
+        let inicioTotal = 0, inicioCumple = 0, inicioNoCumple = 0
+        
+        // Para tendencia por mes (Fecha Fin Real)
+        const tendenciaMap: Record<string, { oportunidadTotal: number; oportunidadCumple: number; oportunidadNoCumple: number; cumplimientoTotal: number; cumplimientoCumple: number; cumplimientoNoCumple: number; inicioTotal: number; inicioCumple: number; inicioNoCumple: number }> = {}
+
+        r.data.registros?.forEach((reg) => {
+          if (reg.datos?.['Work Order ID']) {
+            workOrderIDs.add(reg.datos['Work Order ID'])
+          }
+          
+          const fechaFin = reg.datos?.['Fecha_Fin_Real']
+          const mes = fechaFin ? fechaFin.substring(0, 7) : 'Sin fecha'
+          if (!tendenciaMap[mes]) tendenciaMap[mes] = { 
+            oportunidadTotal: 0, oportunidadCumple: 0, oportunidadNoCumple: 0,
+            cumplimientoTotal: 0, cumplimientoCumple: 0, cumplimientoNoCumple: 0,
+            inicioTotal: 0, inicioCumple: 0, inicioNoCumple: 0
+          }
+
+          if (reg.datos?.['Estado_ANS_Oportunidad']) {
+            oportunidadTotal++
+            tendenciaMap[mes].oportunidadTotal++
+            if (reg.datos['Estado_ANS_Oportunidad'].toUpperCase() === 'CUMPLE') {
+              oportunidadCumple++
+              tendenciaMap[mes].oportunidadCumple++
+            } else {
+              oportunidadNoCumple++
+              tendenciaMap[mes].oportunidadNoCumple++
+            }
+          }
+          
+          if (reg.datos?.['Estado_ANS_Cumplimiento']) {
+            cumplimientoTotal++
+            tendenciaMap[mes].cumplimientoTotal++
+            if (reg.datos['Estado_ANS_Cumplimiento'].toUpperCase() === 'CUMPLE') {
+              cumplimientoCumple++
+              tendenciaMap[mes].cumplimientoCumple++
+            } else {
+              cumplimientoNoCumple++
+              tendenciaMap[mes].cumplimientoNoCumple++
+            }
+          }
+          
+          if (reg.datos?.['Estado_ANS_inicio_trabajo']) {
+            inicioTotal++
+            tendenciaMap[mes].inicioTotal++
+            if (reg.datos['Estado_ANS_inicio_trabajo'].toUpperCase() === 'CUMPLE') {
+              inicioCumple++
+              tendenciaMap[mes].inicioCumple++
+            } else {
+              inicioNoCumple++
+              tendenciaMap[mes].inicioNoCumple++
+            }
+          }
+        })
+
+        setWorkOrderIDCount(workOrderIDs.size)
+        setAnsOportunidadData({ total: oportunidadTotal, cumple: oportunidadCumple })
+        setAnsCumplimientoData({ total: cumplimientoTotal, cumple: cumplimientoCumple })
+        setAnsInicioTrabajoData({ total: inicioTotal, cumple: inicioCumple })
+        setAnsTendencia(Object.entries(tendenciaMap).sort(([a], [b]) => a.localeCompare(b)).map(([mes, datos]) => ({ mes, ...datos })))
+      })
+      .catch(() => {
+        setWorkOrderIDCount(0)
+        setAnsOportunidadData({ total: 0, cumple: 0 })
+        setAnsCumplimientoData({ total: 0, cumple: 0 })
+        setAnsInicioTrabajoData({ total: 0, cumple: 0 })
+        setAnsTendencia([])
+      })
+  }, [])
 
   // ─── KPIs ───────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -147,7 +230,7 @@ export default function DashboardRequerimientos() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-marca-osc">Dashboard de Requerimientos</h1>
+      <h1 className="text-xl font-bold text-marca-osc">Dashboard General</h1>
       <p className="text-sm text-slate-500">
         Métricas y estado general de los requerimientos.
       </p>
@@ -174,6 +257,72 @@ export default function DashboardRequerimientos() {
           icon={COLORES_KPI.ansEnt.icon} label="ANS Entregas" value={`${kpis.ansEntPct}%`}
           sub={`${kpis.ansEntCumple} / ${kpis.ansEntTotal} evaluados`}
           color={COLORES_KPI.ansEnt} />
+      </div>
+
+      {/* Work Order ID + ANS Soporte Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Work Order ID Card */}
+        <div className="flex items-center gap-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="text-3xl">📋</div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-blue-600">Work Order ID Distintos</p>
+            <p className="text-2xl font-bold text-blue-900">{workOrderIDCount.toLocaleString('es-CO')}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-blue-500">Órdenes de trabajo</p>
+            <p className="text-sm text-blue-600">en el sistema</p>
+          </div>
+        </div>
+        {/* ANS Oportunidad */}
+        <div className="flex items-center gap-4 rounded-xl border border-green-200 bg-green-50 p-4">
+          <div className="text-3xl">🎯</div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-green-600">ANS Oportunidad</p>
+            <p className="text-2xl font-bold text-green-900">
+              {ansOportunidadData.total > 0 
+                ? Math.round((ansOportunidadData.cumple / ansOportunidadData.total) * 100) 
+                : 0}%
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-green-500">Cumple</p>
+            <p className="text-sm text-green-600">{ansOportunidadData.cumple} / {ansOportunidadData.total}</p>
+          </div>
+        </div>
+
+        {/* ANS Cumplimiento */}
+        <div className="flex items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="text-3xl">✅</div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-600">ANS Cumplimiento</p>
+            <p className="text-2xl font-bold text-amber-900">
+              {ansCumplimientoData.total > 0 
+                ? Math.round((ansCumplimientoData.cumple / ansCumplimientoData.total) * 100) 
+                : 0}%
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-amber-500">Cumple</p>
+            <p className="text-sm text-amber-600">{ansCumplimientoData.cumple} / {ansCumplimientoData.total}</p>
+          </div>
+        </div>
+
+        {/* ANS Inicio Trabajo */}
+        <div className="flex items-center gap-4 rounded-xl border border-purple-200 bg-purple-50 p-4">
+          <div className="text-3xl">🚀</div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-purple-600">ANS Inicio Trabajo</p>
+            <p className="text-2xl font-bold text-purple-900">
+              {ansInicioTrabajoData.total > 0 
+                ? Math.round((ansInicioTrabajoData.cumple / ansInicioTrabajoData.total) * 100) 
+                : 0}%
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-purple-500">Cumple</p>
+            <p className="text-sm text-purple-600">{ansInicioTrabajoData.cumple} / {ansInicioTrabajoData.total}</p>
+          </div>
+        </div>
       </div>
 
       {/* ═══ Row 2: Estado + Mes + Equipo ═══ */}
@@ -269,6 +418,63 @@ export default function DashboardRequerimientos() {
           )}
         </Panel>
       </div>
+
+      {/* ═══ Row 4: ANS Tendencia ═══ */}
+      <div className="flex w-full flex-col gap-4">
+        {/* ANS Oportunidad Tendencia */}
+        <Panel titulo="ANS Oportunidad - Cumplimiento">
+          {ansTendencia.length === 0 ? <Empty /> : (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={ansTendencia} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="oportunidadTotal" stroke="#2563eb" strokeWidth={2} name="Total" dot />
+                <Line type="monotone" dataKey="oportunidadCumple" stroke="#16a34a" strokeWidth={2} name="Cumple" dot />
+                <Line type="monotone" dataKey="oportunidadNoCumple" stroke="#dc2626" strokeWidth={2} name="No cumple" dot />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
+
+        {/* ANS Cumplimiento Tendencia */}
+        <Panel titulo="ANS Cumplimiento - Cumplimiento">
+          {ansTendencia.length === 0 ? <Empty /> : (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={ansTendencia} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="cumplimientoTotal" stroke="#2563eb" strokeWidth={2} name="Total" dot />
+                <Line type="monotone" dataKey="cumplimientoCumple" stroke="#16a34a" strokeWidth={2} name="Cumple" dot />
+                <Line type="monotone" dataKey="cumplimientoNoCumple" stroke="#dc2626" strokeWidth={2} name="No cumple" dot />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
+
+        {/* ANS Inicio Trabajo Tendencia */}
+        <Panel titulo="ANS Inicio Trabajo - Cumplimiento">
+          {ansTendencia.length === 0 ? <Empty /> : (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={ansTendencia} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="inicioTotal" stroke="#2563eb" strokeWidth={2} name="Total" dot />
+                <Line type="monotone" dataKey="inicioCumple" stroke="#16a34a" strokeWidth={2} name="Cumple" dot />
+                <Line type="monotone" dataKey="inicioNoCumple" stroke="#dc2626" strokeWidth={2} name="No cumple" dot />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
+      </div>
     </div>
   )
 }
@@ -293,7 +499,7 @@ function KpiCard({ icon, label, value, sub, color }: {
 
 function Panel({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div className="w-full min-w-0 rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
       <h3 className="mb-4 text-sm font-semibold text-slate-900 uppercase tracking-wide">{titulo}</h3>
       {children}
     </div>

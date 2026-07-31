@@ -311,6 +311,7 @@ export default function EntregasActas() {
               <th className="p-2 text-left">SC</th>
               <th className="p-2 text-left">Squad</th>
               <th className="p-2 text-left">Nombre de acta</th>
+              <th className="p-2 text-left">Aplicación EPM</th>
               <th className="p-2 text-center">N° Entrega</th>
               <th className="p-2 text-right">Horas</th>
               <th className="p-2 text-right">% Avance</th>
@@ -324,12 +325,12 @@ export default function EntregasActas() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={12} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={13} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filasFiltradas.length === 0 && (
               <tr>
-                <td colSpan={12} className="p-4 text-center text-slate-400">Sin entregas.</td>
+                <td colSpan={13} className="p-4 text-center text-slate-400">Sin entregas.</td>
               </tr>
             )}
             {filasFiltradas.map((f, i) => {
@@ -349,6 +350,7 @@ export default function EntregasActas() {
                 <td className="p-2 text-slate-600">{f.sc || '—'}</td>
                 <td className="p-2">{f.squad || '—'}</td>
                 <td className="p-2">{f.nombreActa || '—'}</td>
+                <td className="p-2 text-slate-600">{f.nombreActa ? f.nombreActa.split('-')[0].trim() : '—'}</td>
                 <td className="p-2 text-center">{f.entregaNum}</td>
                 <td className="p-2 text-right">{f.horas != null ? f.horas : '—'}</td>
                 <td className="p-2 text-right">
@@ -393,7 +395,7 @@ export default function EntregasActas() {
             return (
               <tfoot>
                 <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700">
-                  <td className="p-2" colSpan={4}>Total ({filasFiltradas.length} entregas)</td>
+                  <td className="p-2" colSpan={5}>Total ({filasFiltradas.length} entregas)</td>
                   <td className="p-2 text-center">—</td>
                   <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>
                   <td className="p-2 text-right">{promPct != null ? `${promPct}%` : '—'}</td>

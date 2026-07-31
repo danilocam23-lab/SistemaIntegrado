@@ -1,337 +1,359 @@
-import { useCallback, useMemo, useState } from 'react'
-import { useLista } from '../api/hooks'
+import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
-import type { Configuracion, Requerimiento, Tarifa } from '../types'
+import { useLista } from '../api/hooks'
+import type { Configuracion, Tarifa } from '../types'
 
-const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-]
-
-const MESES_ABREV: Record<string, number> = {
-  ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6,
-  jul: 7, ago: 8, sep: 9, oct: 10, nov: 11, dic: 12,
-  jan: 1, apr: 4, aug: 8, dec: 12,
+interface FilaGeneral {
+  id: string
+  periodo: string
+  valorHora: string
+  horasComprometidas: string
+  totalComprometido: string
+  horasFacturadas: string
+  totalFacturado: string
+  deuda: string
+  observacion: string
 }
 
-/**
- * Convierte `mes_aprobacion` al número de mes (1-12).
- * Después de la normalización del back, el valor es "Enero", "Febrero", etc.
- * También acepta formatos legados: "YYYY-MM", "Enero 2025", "ENE-2025", etc.
- */
-function mesAprobacionANumero(raw: string): number | null {
-  const s = raw.trim()
-  if (!s) return null
-  const norm3 = (txt: string) =>
-    txt.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 3)
-  // Caso normalizado: "Enero", "Febrero", etc. (solo texto)
-  if (/^[A-Za-z\u00C0-\u024F]+$/.test(s)) return MESES_ABREV[norm3(s)] ?? null
-  // Fecha ISO: "YYYY-MM-DD..."
-  const iso = s.match(/^\d{4}-(\d{2})-\d{2}/)
-  if (iso) return parseInt(iso[1], 10)
-  // "YYYY-MM" o "YYYY/MM"
-  const yyyymm = s.match(/^\d{4}[-/](\d{1,2})$/)
-  if (yyyymm) return parseInt(yyyymm[1], 10)
-  // "MM/YYYY" o "MM-YYYY"
-  const mmyyyy = s.match(/^(\d{1,2})[-/]\d{4}$/)
-  if (mmyyyy) return parseInt(mmyyyy[1], 10)
-  // "Enero 2025", "ENE-2025"
-  const textFirst = s.match(/^([A-Za-z\u00C0-\u024F]+)/)
-  if (textFirst) return MESES_ABREV[norm3(textFirst[1])] ?? null
-  return null
+const CLAVE_FILAS = 'facturacion.general.manual_rows'
+
+function crearFila(): FilaGeneral {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    periodo: '',
+    valorHora: '',
+    horasComprometidas: '',
+    totalComprometido: '',
+    horasFacturadas: '',
+    totalFacturado: '',
+    deuda: '',
+    observacion: '',
+  }
 }
 
-function formatearMes(yyyymm: string): string {
-  const [anio, mes] = yyyymm.split('-')
-  const idx = parseInt(mes, 10) - 1
-  return `${MESES[idx] ?? mes} ${anio}`
+function aNumero(valor: string): number {
+  const limpio = valor
+    .replace(/\s/g, '')
+    .replace(/[^\d,.-]/g, '')
+  if (!limpio) return 0
+
+  const esNegativo = limpio.includes('-')
+  const base = limpio.replace(/-/g, '')
+  const tieneComa = base.includes(',')
+  const tienePunto = base.includes('.')
+  let normalizado = base
+
+  if (tieneComa && tienePunto) {
+    // es-CO típico: 1.234,56
+    normalizado = base.replace(/\./g, '').replace(',', '.')
+  } else if (tieneComa) {
+    // 1234,56
+    normalizado = base.replace(',', '.')
+  } else if (tienePunto) {
+    const partes = base.split('.')
+    if (partes.length > 2) {
+      // 1.234.567
+      normalizado = partes.join('')
+    } else {
+      const [izq, der] = partes
+      // Si parece separador de miles (1.000 / 12.345), quita el punto.
+      if (der.length === 3) normalizado = `${izq}${der}`
+    }
+  }
+
+  const n = Number(normalizado)
+  if (!Number.isFinite(n)) return 0
+  return esNegativo ? -n : n
 }
 
-function formatCOP(valor: number): string {
-  return valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
+function formatoCOP(valor: number): string {
+  return valor.toLocaleString('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  })
+}
+
+function formatoNumero(valor: number): string {
+  return valor.toLocaleString('es-CO', { maximumFractionDigits: 2 })
 }
 
 export default function FacturacionGeneral() {
-  const { datos: requerimientos, cargando, error } = useLista<Requerimiento>('/requerimientos')
-  const { datos: tarifas, cargando: cargandoTarifas } = useLista<Tarifa>('/tarifas')
-  const { datos: configuraciones, recargar: recargarConfig } = useLista<Configuracion>('/configuracion')
+  const { datos: configuraciones, cargando, error, recargar } = useLista<Configuracion>('/configuracion')
+  const { datos: tarifas } = useLista<Tarifa>('/tarifas')
+  const [filas, setFilas] = useState<FilaGeneral[]>([])
+  const [inicializado, setInicializado] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [mensaje, setMensaje] = useState<'ok' | 'error' | ''>('')
 
-  // Observaciones: mapa yyyymm → texto guardado en BD
-  const obsGuardadas = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const c of configuraciones) {
-      if (c.clave.startsWith('facturacion.obs.')) {
-        m.set(c.clave.slice('facturacion.obs.'.length), c.valor)
-      }
-    }
-    return m
-  }, [configuraciones])
-
-  // Estado local de edición: yyyymm → texto en curso
-  const [obsLocal, setObsLocal] = useState<Record<string, string>>({})
-  const [guardando, setGuardando] = useState<Record<string, boolean>>({})
-  const [obsMsg, setObsMsg] = useState<Record<string, string>>({})
-
-  const textoObs = useCallback(
-    (yyyymm: string) => obsLocal[yyyymm] ?? obsGuardadas.get(yyyymm) ?? '',
-    [obsLocal, obsGuardadas],
+  const configFilas = useMemo(
+    () => configuraciones.find((c) => c.clave === CLAVE_FILAS),
+    [configuraciones],
   )
 
-  const guardarObs = useCallback(async (yyyymm: string) => {
-    const texto = obsLocal[yyyymm] ?? obsGuardadas.get(yyyymm) ?? ''
-    setGuardando((g) => ({ ...g, [yyyymm]: true }))
-    setObsMsg((m) => ({ ...m, [yyyymm]: '' }))
+  const valorHoraAutomatico = useMemo(() => {
+    const cfg = configuraciones.find((c) => c.clave === 'facturacion.valor_hora')
+    if (cfg?.valor) {
+      const n = Number(cfg.valor.replace(',', '.'))
+      if (Number.isFinite(n)) return n
+    }
+    const anioActual = new Date().getFullYear()
+    const tarifaAnioActual = tarifas.find((t) => t.anio === anioActual)
+    if (tarifaAnioActual) return Number(tarifaAnioActual.valor_hora)
+    const ordenadas = [...tarifas].sort((a, b) => b.anio - a.anio)
+    if (ordenadas.length > 0) return Number(ordenadas[0].valor_hora)
+    return null
+  }, [configuraciones, tarifas])
+
+  const valorHoraAutomaticoTexto = useMemo(
+    () => (valorHoraAutomatico != null ? String(valorHoraAutomatico) : ''),
+    [valorHoraAutomatico],
+  )
+
+  useEffect(() => {
+    if (inicializado || cargando) return
+    if (!configFilas?.valor) {
+      setFilas([crearFila()])
+      setInicializado(true)
+      return
+    }
     try {
-      await client.put(`/configuracion/facturacion.obs.${yyyymm}`, {
-        valor: texto,
+      const parsed = JSON.parse(configFilas.valor) as FilaGeneral[]
+      setFilas(Array.isArray(parsed) && parsed.length > 0 ? parsed : [crearFila()])
+    } catch {
+      setFilas([crearFila()])
+    } finally {
+      setInicializado(true)
+    }
+  }, [configFilas, inicializado])
+
+  function actualizar(id: string, campo: keyof FilaGeneral, valor: string): void {
+    setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, [campo]: valor } : f)))
+  }
+
+  function agregarFila(): void {
+    setFilas((prev) => [...prev, crearFila()])
+  }
+
+  function eliminarFila(id: string): void {
+    setFilas((prev) => {
+      const next = prev.filter((f) => f.id !== id)
+      return next.length > 0 ? next : [crearFila()]
+    })
+  }
+
+  async function guardarCambios(): Promise<void> {
+    setGuardando(true)
+    setMensaje('')
+    try {
+      const filasParaGuardar = filas.map((f) => {
+        const totalComprometidoNum = aNumero(valorHoraAutomaticoTexto) * aNumero(f.horasComprometidas)
+        const totalFacturadoNum = aNumero(valorHoraAutomaticoTexto) * aNumero(f.horasFacturadas)
+        return {
+          ...f,
+          valorHora: valorHoraAutomaticoTexto,
+          totalComprometido: totalComprometidoNum.toString(),
+          totalFacturado: totalFacturadoNum.toString(),
+          deuda: f.deuda,
+        }
+      })
+      await client.put(`/configuracion/${CLAVE_FILAS}`, {
+        valor: JSON.stringify(filasParaGuardar),
         grupo: 'facturacion',
       })
-      recargarConfig()
-      setObsMsg((m) => ({ ...m, [yyyymm]: 'ok' }))
-      setTimeout(() => setObsMsg((m) => ({ ...m, [yyyymm]: '' })), 2000)
+      await recargar()
+      setMensaje('ok')
+      setTimeout(() => setMensaje(''), 2000)
     } catch {
-      setObsMsg((m) => ({ ...m, [yyyymm]: 'error' }))
+      setMensaje('error')
     } finally {
-      setGuardando((g) => ({ ...g, [yyyymm]: false }))
+      setGuardando(false)
     }
-  }, [obsLocal, obsGuardadas, recargarConfig])
+  }
 
-  /** Mapa año → valor_hora (primera tarifa encontrada por año) */
-  const tarifaPorAnio = useMemo(() => {
-    const mapa = new Map<number, number>()
-    for (const t of tarifas) {
-      if (!mapa.has(t.anio)) mapa.set(t.anio, Number(t.valor_hora))
-    }
-    return mapa
-  }, [tarifas])
+  const totales = useMemo(() => {
+    const valorHora = aNumero(valorHoraAutomaticoTexto)
+    let horasComprometidas = 0
+    let totalComprometido = 0
+    let horasFacturadas = 0
+    let totalFacturado = 0
+    let deuda = 0
 
-  /** Mapa tarifaId → valor_hora para resolución precisa por requerimiento */
-  const tarifaPorId = useMemo(() => {
-    const mapa = new Map<string, number>()
-    for (const t of tarifas) mapa.set(t.id, Number(t.valor_hora))
-    return mapa
-  }, [tarifas])
-
-  const { comprometido, facturado, mesesUnion, sinParsear } = useMemo(() => {
-    const comp = new Map<string, { horas: number; total: number }>()
-    const fact = new Map<string, { horas: number; total: number }>()
-    const noParseados = new Set<string>()
-
-    for (const req of requerimientos) {
-      const valorHoraReq =
-        (req.solicitud?.tarifa_id ? tarifaPorId.get(req.solicitud.tarifa_id) : undefined) ??
-        (req.solicitud?.anio_tarifa ? tarifaPorAnio.get(req.solicitud.anio_tarifa) : undefined)
-
-      for (const en of req.entregas ?? []) {
-        const horas = en.horas == null ? null : Number(en.horas)
-
-        // ── Comprometido: por fecha_comprometida ──
-        if (en.fecha_comprometida && horas != null) {
-          const yyyymm = en.fecha_comprometida.slice(0, 7)
-          const anio = parseInt(yyyymm.slice(0, 4), 10)
-          const vh = valorHoraReq ?? tarifaPorAnio.get(anio) ?? 0
-          const prev = comp.get(yyyymm) ?? { horas: 0, total: 0 }
-          comp.set(yyyymm, { horas: prev.horas + horas, total: prev.total + horas * vh })
-        }
-
-        // ── Facturado: por mes_aprobacion (año derivado de fecha_comprometida o anio_tarifa) ──
-        if (en.mes_aprobacion && horas != null) {
-          const mesNum = mesAprobacionANumero(en.mes_aprobacion)
-          if (mesNum) {
-            // Año: prioridad → fecha_comprometida → anio_tarifa → null
-            const anioBase =
-              en.fecha_comprometida
-                ? parseInt(en.fecha_comprometida.slice(0, 4), 10)
-                : req.solicitud?.anio_tarifa ?? null
-            if (anioBase) {
-              const yyyymm = `${anioBase}-${String(mesNum).padStart(2, '0')}`
-              const vh = valorHoraReq ?? tarifaPorAnio.get(anioBase) ?? 0
-              const prev = fact.get(yyyymm) ?? { horas: 0, total: 0 }
-              fact.set(yyyymm, { horas: prev.horas + horas, total: prev.total + horas * vh })
-            }
-          } else {
-            noParseados.add(en.mes_aprobacion)
-          }
-        }
-      }
+    for (const f of filas) {
+      const hc = aNumero(f.horasComprometidas)
+      const hf = aNumero(f.horasFacturadas)
+      horasComprometidas += hc
+      horasFacturadas += hf
+      totalComprometido += valorHora * hc
+      totalFacturado += valorHora * hf
+      deuda += aNumero(f.deuda)
     }
 
-    const todos = new Set([...comp.keys(), ...fact.keys()])
-    const orden = Array.from(todos).sort((a, b) => a.localeCompare(b))
-
-    return { comprometido: comp, facturado: fact, mesesUnion: orden, sinParsear: Array.from(noParseados) }
-  }, [requerimientos, tarifaPorId, tarifaPorAnio])
-
-  const filas = useMemo(() =>
-    mesesUnion.map((yyyymm) => {
-      const anio = parseInt(yyyymm.slice(0, 4), 10)
-      const valorHora = tarifaPorAnio.get(anio) ?? null
-      const c = comprometido.get(yyyymm) ?? { horas: 0, total: 0 }
-      const f = facturado.get(yyyymm) ?? { horas: 0, total: 0 }
-      return { yyyymm, valorHora, ...c, horasFacturadas: f.horas, totalFacturado: f.total }
-    }), [mesesUnion, comprometido, facturado, tarifaPorAnio])
-
-  const totales = useMemo(() =>
-    filas.reduce((s, f) => ({
-      horas: s.horas + f.horas,
-      total: s.total + f.total,
-      horasFacturadas: s.horasFacturadas + f.horasFacturadas,
-      totalFacturado: s.totalFacturado + f.totalFacturado,
-    }), { horas: 0, total: 0, horasFacturadas: 0, totalFacturado: 0 }),
-    [filas])
-
-  const estaCargando = cargando || cargandoTarifas
+    return {
+      horasComprometidas,
+      totalComprometido,
+      horasFacturadas,
+      totalFacturado,
+      deuda,
+    }
+  }, [filas, valorHoraAutomaticoTexto])
 
   return (
     <div className="space-y-4 p-6">
-      <div>
-        <h1 className="text-xl font-bold text-marca-osc">Facturación — General</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Resumen mensual de horas comprometidas y facturadas con su valor total.
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-marca-osc">Facturación — General</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Tabla manual: sin funciones automáticas en horas. El valor hora viene automático de configuración.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={agregarFila}
+            className="rounded border border-marca px-3 py-1.5 text-sm text-marca hover:bg-marca/5"
+          >
+            Agregar fila
+          </button>
+          <button
+            onClick={() => void guardarCambios()}
+            disabled={guardando || !inicializado}
+            className="rounded bg-marca px-3 py-1.5 text-sm text-white hover:bg-marca-osc disabled:opacity-60"
+          >
+            {guardando ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>
-      )}
+      {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
+      {mensaje === 'ok' && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">Cambios guardados.</div>}
+      {mensaje === 'error' && <div className="rounded bg-red-50 p-2 text-sm text-red-700">Error al guardar.</div>}
 
       <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[1200px] text-sm">
           <thead className="bg-marca-osc text-white">
             <tr>
-              <th className="p-3 text-left" rowSpan={2}>Mes</th>
-              <th className="p-3 text-right" rowSpan={2}>Valor hora</th>
-              <th className="p-2 text-center border-b border-white/30" colSpan={2}>Comprometido</th>
-              <th className="p-2 text-center border-b border-white/30" colSpan={2}>Facturado</th>
-              <th className="p-3 text-right" rowSpan={2}>Deuda</th>
-              <th className="p-3 text-left" rowSpan={2}>Observaciones</th>
-            </tr>
-            <tr>
-              <th className="p-3 text-right border-l border-white/20">Horas</th>
-              <th className="p-3 text-right">Total</th>
-              <th className="p-3 text-right border-l border-white/20">Horas</th>
-              <th className="p-3 text-right">Total</th>
+              <th className="p-2 text-left">Periodo (15 a 15)</th>
+              <th className="p-2 text-right">Valor hora</th>
+              <th className="p-2 text-right">Horas comprometidas</th>
+              <th className="p-2 text-right">Total comprometido</th>
+              <th className="p-2 text-right">Horas facturadas</th>
+              <th className="p-2 text-right">Total facturado</th>
+              <th className="p-2 text-right">Deuda</th>
+              <th className="p-2 text-left">Observaciones</th>
+              <th className="p-2" />
             </tr>
           </thead>
           <tbody>
-            {estaCargando && (
+            {(cargando || !inicializado) && (
               <tr>
-                <td colSpan={8} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={9} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
-            {!estaCargando && filas.length === 0 && (
-              <tr>
-                <td colSpan={8} className="p-4 text-center text-slate-400">Sin datos.</td>
+            {!cargando && inicializado && filas.map((f) => (
+              <tr key={f.id} className="border-t align-top">
+                {(() => {
+                  const totalComprometidoNum = aNumero(valorHoraAutomaticoTexto) * aNumero(f.horasComprometidas)
+                  const totalFacturadoNum = aNumero(valorHoraAutomaticoTexto) * aNumero(f.horasFacturadas)
+                  return (
+                    <>
+                <td className="p-2">
+                  <input
+                    value={f.periodo}
+                    onChange={(e) => actualizar(f.id, 'periodo', e.target.value)}
+                    placeholder="Enero - Febrero"
+                    className="w-44 rounded border border-slate-200 px-2 py-1"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    value={valorHoraAutomaticoTexto ? formatoCOP(aNumero(valorHoraAutomaticoTexto)) : ''}
+                    readOnly
+                    className="w-32 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-right text-slate-600"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    value={f.horasComprometidas}
+                    onChange={(e) => actualizar(f.id, 'horasComprometidas', e.target.value)}
+                    className="w-32 rounded border border-slate-200 px-2 py-1 text-right"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    value={formatoCOP(totalComprometidoNum)}
+                    readOnly
+                    className="w-36 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-right text-slate-600"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    value={f.horasFacturadas}
+                    onChange={(e) => actualizar(f.id, 'horasFacturadas', e.target.value)}
+                    className="w-32 rounded border border-slate-200 px-2 py-1 text-right"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    value={formatoCOP(totalFacturadoNum)}
+                    readOnly
+                    className="w-36 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-right text-slate-600"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    value={f.deuda}
+                    onChange={(e) => actualizar(f.id, 'deuda', e.target.value)}
+                    onBlur={(e) => {
+                      const n = aNumero(e.target.value)
+                      if (e.target.value.trim() === '') return
+                      actualizar(f.id, 'deuda', formatoCOP(n))
+                    }}
+                    className={`w-32 rounded border border-slate-200 px-2 py-1 text-right ${
+                      aNumero(f.deuda) < 0 ? 'text-emerald-600' : aNumero(f.deuda) > 0 ? 'text-red-600' : 'text-slate-600'
+                    }`}
+                  />
+                </td>
+                <td className="p-2 min-w-[260px]">
+                  <textarea
+                    rows={2}
+                    value={f.observacion}
+                    onChange={(e) => actualizar(f.id, 'observacion', e.target.value)}
+                    className="w-full resize-none rounded border border-slate-200 px-2 py-1"
+                  />
+                </td>
+                <td className="p-2 text-center">
+                  <button
+                    onClick={() => eliminarFila(f.id)}
+                    className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                  >
+                    Quitar
+                  </button>
+                </td>
+                    </>
+                  )
+                })()}
               </tr>
-            )}
-            {filas.map((f) => {
-              const deuda = f.total - f.totalFacturado
-              const msg = obsMsg[f.yyyymm]
-              return (
-                <tr key={f.yyyymm} className="border-t hover:bg-slate-50 align-top">
-                  <td className="p-3 font-medium text-slate-700 whitespace-nowrap">{formatearMes(f.yyyymm)}</td>
-                  <td className="p-3 text-right tabular-nums text-slate-500 text-xs whitespace-nowrap">
-                    {f.valorHora != null ? formatCOP(f.valorHora) : <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="p-3 text-right tabular-nums text-slate-800 border-l border-slate-100 whitespace-nowrap">
-                    {f.horas > 0 ? f.horas.toLocaleString('es-CO') : <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="p-3 text-right tabular-nums font-semibold text-slate-800 whitespace-nowrap">
-                    {f.total > 0 ? formatCOP(f.total) : <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="p-3 text-right tabular-nums text-slate-800 border-l border-slate-100 whitespace-nowrap">
-                    {f.horasFacturadas > 0 ? f.horasFacturadas.toLocaleString('es-CO') : <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="p-3 text-right tabular-nums font-semibold text-emerald-700 whitespace-nowrap">
-                    {f.totalFacturado > 0 ? formatCOP(f.totalFacturado) : <span className="text-slate-300">—</span>}
-                  </td>
-                  {/* ── DEUDA ── */}
-                  <td className="p-3 text-right tabular-nums font-bold whitespace-nowrap border-l border-slate-100">
-                    {deuda !== 0 ? (
-                      <span className={deuda > 0 ? 'text-red-600' : 'text-emerald-600'}>
-                        {formatCOP(Math.abs(deuda))}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
-                  </td>
-                  {/* ── OBSERVACIONES ── */}
-                  <td className="p-2 border-l border-slate-100 min-w-[220px]">
-                    <div className="flex flex-col gap-1">
-                      <textarea
-                        rows={2}
-                        value={textoObs(f.yyyymm)}
-                        onChange={(e) =>
-                          setObsLocal((prev) => ({ ...prev, [f.yyyymm]: e.target.value }))
-                        }
-                        placeholder="Agregar observación…"
-                        className="w-full resize-none rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-marca focus:outline-none"
-                      />
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => void guardarObs(f.yyyymm)}
-                          disabled={guardando[f.yyyymm]}
-                          className="rounded bg-marca px-3 py-0.5 text-xs font-medium text-white hover:bg-marca-osc disabled:opacity-50"
-                        >
-                          {guardando[f.yyyymm] ? 'Guardando…' : 'Guardar'}
-                        </button>
-                        {msg === 'ok' && <span className="text-xs text-emerald-600">✓ Guardado</span>}
-                        {msg === 'error' && <span className="text-xs text-red-500">Error al guardar</span>}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
+            ))}
           </tbody>
-          {!estaCargando && filas.length > 0 && (
+          {!cargando && inicializado && filas.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700">
-                <td className="p-3">Total ({filas.length} meses)</td>
-                <td className="p-3" />
-                <td className="p-3 text-right tabular-nums border-l border-slate-200">
-                  {totales.horas.toLocaleString('es-CO')}
+                <td className="p-2">Total</td>
+                <td className="p-2 text-right">—</td>
+                <td className="p-2 text-right">{formatoNumero(totales.horasComprometidas)}</td>
+                <td className="p-2 text-right">{formatoCOP(totales.totalComprometido)}</td>
+                <td className="p-2 text-right">{formatoNumero(totales.horasFacturadas)}</td>
+                <td className="p-2 text-right">{formatoCOP(totales.totalFacturado)}</td>
+                <td className={`p-2 text-right ${totales.deuda < 0 ? 'text-emerald-700' : totales.deuda > 0 ? 'text-red-700' : ''}`}>
+                  {formatoCOP(Math.abs(totales.deuda))}
                 </td>
-                <td className="p-3 text-right tabular-nums text-marca-osc">
-                  {formatCOP(totales.total)}
-                </td>
-                <td className="p-3 text-right tabular-nums border-l border-slate-200">
-                  {totales.horasFacturadas.toLocaleString('es-CO')}
-                </td>
-                <td className="p-3 text-right tabular-nums text-emerald-700">
-                  {formatCOP(totales.totalFacturado)}
-                </td>
-                <td className="p-3 text-right tabular-nums font-bold border-l border-slate-200">
-                  {(() => {
-                    const deudaTotal = totales.total - totales.totalFacturado
-                    return deudaTotal !== 0
-                      ? <span className={deudaTotal > 0 ? 'text-red-600' : 'text-emerald-600'}>{formatCOP(Math.abs(deudaTotal))}</span>
-                      : <span className="text-slate-300">—</span>
-                  })()}
-                </td>
-                <td className="p-3" />
+                <td className="p-2" />
+                <td className="p-2" />
               </tr>
             </tfoot>
           )}
         </table>
       </div>
-
-      {/* Diagnóstico: valores de mes_aprobacion que no se pudieron parsear */}
-      {!estaCargando && sinParsear.length > 0 && (
-        <details className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-          <summary className="cursor-pointer font-semibold">
-            ⚠ {sinParsear.length} formato(s) de "Mes de aprobación" no reconocido(s) — no aparecen en Facturado
-          </summary>
-          <ul className="mt-2 space-y-0.5 pl-4">
-            {sinParsear.map((v) => (
-              <li key={v} className="font-mono">{v}</li>
-            ))}
-          </ul>
-          <p className="mt-2 text-amber-600">
-            Formatos soportados: "Enero", "ENE-2025", "2025-01", "01/2025", "2025-01-15".
-          </p>
-        </details>
-      )}
     </div>
   )
 }

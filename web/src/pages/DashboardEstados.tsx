@@ -54,7 +54,6 @@ export default function DashboardEstados() {
   const { datos: reqs, cargando } = useLista<Requerimiento>('/requerimientos')
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
   const { activa } = useAplicacion()
-
   const requerimientos = useMemo(() => {
     if (!activa || activa === CONSOLIDADO) return reqs
     return reqs.filter((req) => req.aplicacion_id === activa || req.solicitud?.squad_id === activa)

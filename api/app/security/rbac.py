@@ -39,6 +39,8 @@ PERMISOS_CATALOGO: list[str] = [
     "admin.endpoints.ver",
     "admin.configuracion.ver",
     "admin.configuracion.editar",
+    "soporte.solicitudes_fabrica.ver",
+    "soporte.solicitudes_fabrica.actualizar",
     PERM_ADMIN_ACCESO,
     PERM_CONSOLIDADO_VER,
 ]
@@ -82,6 +84,8 @@ ROLES_BASE: list[dict] = [
             "admin.roles.ver",
             "admin.importacion.ver",
             "admin.importacion.ejecutar",
+            "soporte.solicitudes_fabrica.ver",
+            "soporte.solicitudes_fabrica.actualizar",
             PERM_ADMIN_ACCESO,
             PERM_CONSOLIDADO_VER,
         ],
@@ -108,6 +112,8 @@ ROLES_BASE: list[dict] = [
             "roadmap.ver",
             "azure_devops.ver",
             "estimaciones.ver",
+            "soporte.solicitudes_fabrica.ver",
+            "soporte.solicitudes_fabrica.actualizar",
         ],
     },
     {
@@ -128,6 +134,7 @@ ROLES_BASE: list[dict] = [
             "roadmap.ver",
             "azure_devops.ver",
             "estimaciones.ver",
+            "soporte.solicitudes_fabrica.ver",
         ],
     },
 ]

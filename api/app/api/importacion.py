@@ -10,11 +10,8 @@ from openpyxl.utils.cell import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from app.documents.acta_trabajo import ActaTrabajo
 from app.documents.aplicacion import Aplicacion
-from app.documents.aplicativo import Aplicativo
 from app.documents.enums import EstadoEntrega, EstadoRequerimiento
-from app.documents.orden_compra import OrdenCompra
 from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
 from app.documents.squad import Squad
@@ -37,7 +34,7 @@ async def importar_excel(
     """Importa el Excel 'BITÁCORA GENERAL' a la aplicación activa.
 
     Cada fila es un requerimiento + una entrega; los catálogos (personas,
-    squads, aplicativos, tarifas, actas, órdenes) se crean si no existen.
+    squads, tarifas) se crean si no existen.
     """
     nombre = (archivo.filename or "").lower()
     if not nombre.endswith((".xlsx", ".xlsm")):
@@ -73,20 +70,11 @@ async def exportar_plantilla(
 ):
     """Exporta plantilla con hojas separadas: REQUERIMIENTOS y ENTREGAS."""
     reqs = await Requerimiento.find(ctx.filtro()).sort("codigo_req").to_list()
-    aplicativos = {
-        str(doc.id): doc for doc in await Aplicativo.find(ctx.filtro()).to_list()
-    }
     squads = {
         str(doc.id): doc for doc in await Squad.find(ctx.filtro()).to_list()
     }
     personas = {
         str(doc.id): doc for doc in await Persona.find(ctx.filtro()).to_list()
-    }
-    actas = {
-        str(doc.id): doc for doc in await ActaTrabajo.find(ctx.filtro()).to_list()
-    }
-    ordenes = {
-        str(doc.id): doc for doc in await OrdenCompra.find(ctx.filtro()).to_list()
     }
     tarifas_q = {
         "$or": [
@@ -97,8 +85,6 @@ async def exportar_plantilla(
     tarifas_lista = await Tarifa.find(tarifas_q).to_list()
     tarifas = {str(doc.id): doc for doc in tarifas_lista}
     apps = await Aplicacion.find({"codigo": {"$in": ctx.codigos}}).to_list()
-    apps_por_codigo = {a.codigo: a for a in apps}
-    aplicativos_por_nombre = {a.nombre.strip().lower(): a for a in aplicativos.values() if a.nombre}
     squads_por_nombre = {s.nombre.strip().lower(): s for s in squads.values() if s.nombre}
     personas_por_nombre = {p.nombre.strip().lower(): p for p in personas.values() if p.nombre}
     tarifas_por_anio_tecnologia = {
@@ -116,14 +102,11 @@ async def exportar_plantilla(
         "NOMBRE DEL REQUERIMIENTO",
         "ESTADO DE REQUERIMIENTOS",
         "FECHA Y HORA DE SOLICITUD",
-        "DIRECCIÓN",
-        "APLICACIÓN",
         "Squad",
         "LT HITSS",
         "LT EPM",
         "SCRUM",
         "TIPO DE COSTO",
-        "TECNOLOGIA",
         "TOTAL HORAS ESTIMADAS",
         "FECHA REAL ENTREGA DE ESTIMACIONES",
         "ACTA DE TRABAJO",
@@ -169,7 +152,6 @@ async def exportar_plantilla(
 
     for req in reqs:
         sol = req.solicitud
-        aplicativo = _resolver_catalogo(sol.aplicativo_id, aplicativos, aplicativos_por_nombre)
         squad = _resolver_catalogo(sol.squad_id, squads, squads_por_nombre)
         lt_hitss = _resolver_catalogo(sol.lt_hitss_id, personas, personas_por_nombre)
         lt_epm = _resolver_catalogo(sol.lt_epm_id, personas, personas_por_nombre)
@@ -179,11 +161,6 @@ async def exportar_plantilla(
             tarifa = tarifas_por_anio_tecnologia.get(
                 (sol.anio_tarifa or 0, (sol.tecnologia or "").strip().lower())
             )
-        squad_texto = (
-            squad.nombre
-            if squad
-            else (apps_por_codigo.get(sol.squad_id or "").nombre if apps_por_codigo.get(sol.squad_id or "") else (sol.squad_id or None))
-        )
         hoja_req.append(
             [
                 sol.codigo_sc,
@@ -191,14 +168,11 @@ async def exportar_plantilla(
                 req.nombre,
                 req.estado,
                 req.fecha_solicitud_acta,
-                _nombre_direccion_aplicativo(aplicativo),
-                aplicativo.nombre if aplicativo else (sol.aplicativo_id or None),
-                squad_texto,
+                squad.nombre if squad else (sol.squad_id or None),
                 " ".join(lt_hitss.nombre.split()) if lt_hitss else (sol.lt_hitss_id or None),
                 " ".join(lt_epm.nombre.split()) if lt_epm else (sol.lt_epm_id or None),
                 " ".join(scrum.nombre.split()) if scrum else (sol.scrum_id or None),
                 sol.tipo_costo,
-                sol.tecnologia or (tarifa.ramificacion if tarifa else None),
                 req.total_horas_estimadas,
                 req.fecha_real_entrega_estimacion,
                 req.acta_trabajo,
@@ -233,11 +207,8 @@ async def exportar_plantilla(
         hoja_ent=hoja_ent,
         headers_ent=headers_ent,
         apps=apps,
-        aplicativos=aplicativos,
         squads=squads,
         personas=personas,
-        actas=actas,
-        ordenes=ordenes,
     )
 
     contenido = BytesIO()
@@ -309,24 +280,6 @@ def _resolver_catalogo(
     return por_texto.get(valor.strip().lower())
 
 
-def _nombre_direccion_aplicativo(aplicativo) -> str | None:
-    if aplicativo is None:
-        return None
-    direccion = getattr(aplicativo, "direccion", None)
-    if direccion is None:
-        return None
-    if isinstance(direccion, str):
-        return direccion.strip() or None
-    nombre = getattr(direccion, "nombre", None)
-    if isinstance(nombre, str):
-        return nombre.strip() or None
-    if isinstance(direccion, dict):
-        valor = direccion.get("nombre")
-        if isinstance(valor, str):
-            return valor.strip() or None
-    return None
-
-
 def _marcar_requeridas(hoja, headers: list[str], requeridas: set[str]) -> None:
     color_requerida = PatternFill("solid", fgColor="FEE2E2")
     color_opcional = PatternFill("solid", fgColor="F1F5F9")
@@ -367,7 +320,7 @@ def _crear_hoja_instrucciones(libro) -> None:
     )
     ws.append(
         [
-            "Para campos tipo lista (estados, LT, Squad, aplicación, garantía, mes), "
+            "Para campos tipo lista (estados, garantía, mes), "
             "use el desplegable."
         ]
     )
@@ -388,11 +341,8 @@ def _crear_hoja_catalogos(
     hoja_ent,
     headers_ent: list[str],
     apps: list,
-    aplicativos: dict,
     squads: dict,
     personas: dict,
-    actas: dict,
-    ordenes: dict,
 ) -> None:
     ws = libro.create_sheet("CATALOGOS")
     columnas = [
@@ -421,7 +371,6 @@ def _crear_hoja_catalogos(
         ("LT_EPM", sorted({p.nombre for p in personas.values() if getattr(p, "rol_operativo", "") == "LT_EPM"})),
         ("SCRUMS", sorted({p.nombre for p in personas.values() if getattr(p, "rol_operativo", "") == "SCRUM"})),
         ("SQUADS", sorted({s.nombre for s in squads.values()} | {a.nombre for a in apps if a.nombre})),
-        ("APLICACIONES", sorted({a.nombre for a in aplicativos.values()})),
     ]
 
     for col_idx, (titulo, valores) in enumerate(columnas, start=1):
@@ -449,7 +398,6 @@ def _crear_hoja_catalogos(
         "LT_EPM": "LISTA_LT_EPM",
         "SCRUMS": "LISTA_SCRUMS",
         "SQUADS": "LISTA_SQUADS",
-        "APLICACIONES": "LISTA_APLICACIONES",
     }
     for clave, nombre_rango in nombres.items():
         _definir_nombre(libro, nombre_rango, rangos[clave])
@@ -461,7 +409,6 @@ def _crear_hoja_catalogos(
         "LT EPM": "LISTA_LT_EPM",
         "SCRUM": "LISTA_SCRUMS",
         "Squad": "LISTA_SQUADS",
-        "APLICACIÓN": "LISTA_APLICACIONES",
     }
     por_columna_ent = {
         "ESTADO ENTREGAS": "LISTA_ESTADOS_ENT",

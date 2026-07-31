@@ -664,6 +664,7 @@ export default function Requerimientos() {
               <th className="p-2 text-left">SC</th>
               <th className="p-2 text-left">Squad</th>
               <th className="p-2 text-left">Nombre de acta</th>
+              <th className="p-2 text-left">Aplicación EPM</th>
               <th className="p-2 text-left">Estado</th>
               <th className="p-2 text-left">Líder técnico</th>
               <th className="p-2 text-left">Scrum</th>
@@ -711,6 +712,9 @@ export default function Requerimientos() {
                       {req.solicitud?.squad_id ? (squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id)) : '—'}
                     </td>
                     <td className="p-2">{renderCelda(req, 'nombre', req.nombre ?? '')}</td>
+                    <td className="p-2 text-xs text-slate-600">
+                      {req.nombre ? req.nombre.split('-')[0].trim() : '—'}
+                    </td>
                     <td className="p-2">{renderCelda(req, 'estado', req.estado, 'select')}</td>
                     <td className="p-2">{renderCelda(req, 'lt_hitss_id', nombrePersona(req.solicitud?.lt_hitss_id ?? null), 'select-persona', 'LT_HITSS')}</td>
                     <td className="p-2">{renderCelda(req, 'scrum_id', nombrePersona(req.solicitud?.scrum_id ?? null), 'select-persona', 'SCRUM')}</td>
