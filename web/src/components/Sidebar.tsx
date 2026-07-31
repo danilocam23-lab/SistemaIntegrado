@@ -48,6 +48,7 @@ const GRUPOS: Grupo[] = [
     titulo: 'Soporte',
     items: [
       { to: '/soporte/solicitudes-fabrica', label: 'Solicitudes Fábrica', permiso: 'soporte.solicitudes_fabrica.ver' },
+      { to: '/soporte/detalle-ans', label: 'Detalle ANS', permiso: 'soporte.solicitudes_fabrica.ver' },
     ],
   },
   {

@@ -26,6 +26,7 @@ import AdminEndpoints from './pages/AdminEndpoints'
 import Importacion from './pages/Importacion'
 import FacturacionGeneral from './pages/FacturacionGeneral'
 import SoporteSolicitudesFabrica from './pages/SoporteSolicitudesFabrica'
+import SoporteDetalleANS from './pages/SoporteDetalleANS'
 
 export default function App() {
   return (
@@ -75,6 +76,7 @@ export default function App() {
               />
               <Route path="facturacion/general" element={<RoleRoute permiso="facturacion.ver"><FacturacionGeneral /></RoleRoute>} />
               <Route path="soporte/solicitudes-fabrica" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteSolicitudesFabrica /></RoleRoute>} />
+              <Route path="soporte/detalle-ans" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteDetalleANS /></RoleRoute>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

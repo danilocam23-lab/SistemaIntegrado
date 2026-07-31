@@ -40,6 +40,15 @@ function abreviarEstado(e: string): string {
     .replace('REQUERIMIENTO REEMPLAZADO', 'Reemplazado')
 }
 
+function normalizarTexto(v: string): string {
+  return v
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+}
+
 export default function DashboardRequerimientos() {
   const { datos: reqs, cargando } = useLista<Requerimiento>('/requerimientos')
   const { datos: personas } = useLista<Persona>('/personas')
@@ -48,12 +57,14 @@ export default function DashboardRequerimientos() {
   const [ansCumplimientoData, setAnsCumplimientoData] = useState({ total: 0, cumple: 0 })
   const [ansInicioTrabajoData, setAnsInicioTrabajoData] = useState({ total: 0, cumple: 0 })
   const [ansTendencia, setAnsTendencia] = useState<Array<{ mes: string; oportunidadTotal: number; oportunidadCumple: number; oportunidadNoCumple: number; cumplimientoTotal: number; cumplimientoCumple: number; cumplimientoNoCumple: number; inicioTotal: number; inicioCumple: number; inicioNoCumple: number }>>([])
+  const [woPorLt, setWoPorLt] = useState<Record<string, number>>({})
 
   useEffect(() => {
     client
-      .get<{ registros: Array<{ datos: Record<string, string> }> }>('/soporte/solicitudes-fabrica')
+      .get<{ registros: Array<{ lider?: string; datos: Record<string, string> }> }>('/soporte/solicitudes-fabrica')
       .then((r) => {
         const workOrderIDs = new Set<string>()
+        const woPorLtMap: Record<string, Set<string>> = {}
         let oportunidadTotal = 0, oportunidadCumple = 0, oportunidadNoCumple = 0
         let cumplimientoTotal = 0, cumplimientoCumple = 0, cumplimientoNoCumple = 0
         let inicioTotal = 0, inicioCumple = 0, inicioNoCumple = 0
@@ -64,6 +75,12 @@ export default function DashboardRequerimientos() {
         r.data.registros?.forEach((reg) => {
           if (reg.datos?.['Work Order ID']) {
             workOrderIDs.add(reg.datos['Work Order ID'])
+          }
+          const liderSoporte = reg.lider ?? reg.datos?.['Lider'] ?? reg.datos?.['LT HITSS'] ?? ''
+          if (liderSoporte && reg.datos?.['Work Order ID']) {
+            const liderKey = normalizarTexto(liderSoporte)
+            if (!woPorLtMap[liderKey]) woPorLtMap[liderKey] = new Set<string>()
+            woPorLtMap[liderKey].add(reg.datos['Work Order ID'])
           }
           
           const fechaFin = reg.datos?.['Fecha_Fin_Real']
@@ -112,6 +129,7 @@ export default function DashboardRequerimientos() {
         })
 
         setWorkOrderIDCount(workOrderIDs.size)
+        setWoPorLt(Object.fromEntries(Object.entries(woPorLtMap).map(([k, v]) => [k, v.size])))
         setAnsOportunidadData({ total: oportunidadTotal, cumple: oportunidadCumple })
         setAnsCumplimientoData({ total: cumplimientoTotal, cumple: cumplimientoCumple })
         setAnsInicioTrabajoData({ total: inicioTotal, cumple: inicioCumple })
@@ -119,6 +137,7 @@ export default function DashboardRequerimientos() {
       })
       .catch(() => {
         setWorkOrderIDCount(0)
+        setWoPorLt({})
         setAnsOportunidadData({ total: 0, cumple: 0 })
         setAnsCumplimientoData({ total: 0, cumple: 0 })
         setAnsInicioTrabajoData({ total: 0, cumple: 0 })
@@ -191,7 +210,8 @@ export default function DashboardRequerimientos() {
     }
     return Array.from(ids).map((id) => {
       const p = personas.find((x) => x.id === id)
-      return { id, nombre: p?.nombre ?? id, email: p?.email ?? '', reqs: conteo[id] ?? 0 }
+      const nombre = p?.nombre ?? id
+      return { id, nombre, nombreKey: normalizarTexto(nombre), email: p?.email ?? '', reqs: conteo[id] ?? 0 }
     }).sort((a, b) => b.reqs - a.reqs)
   }, [reqs, personas])
 
@@ -369,9 +389,14 @@ export default function DashboardRequerimientos() {
                   <div className="truncate text-sm font-medium">{m.nombre}</div>
                   <div className="truncate text-xs text-slate-400">{m.email || '—'}</div>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                  {m.reqs}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                    Req: {m.reqs}
+                  </span>
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                    WO: {woPorLt[m.nombreKey] ?? 0}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
