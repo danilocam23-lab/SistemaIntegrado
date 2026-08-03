@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLista } from '../api/hooks'
 import type { Asignacion, Categoria, Persona, Requerimiento } from '../types'
 
@@ -28,13 +28,6 @@ interface ReqConFechas {
   fin: Date
 }
 
-interface FilaEntrega {
-  label: string
-  estado: string | null
-  inicio: Date
-  fin: Date
-}
-
 interface GrupoCat {
   categoria: string
   color: string
@@ -49,14 +42,16 @@ interface GrupoPersona {
   conFechas: number
 }
 
+const SIN_ASIGNAR_ID = '__sin_asignar__'
+
 /* ─── colores para barras ─── */
 const COLORS_REQ = [
-  'bg-[#2dd4bf]', // teal
-  'bg-[#a78bfa]', // violet
-  'bg-[#fb923c]', // orange
-  'bg-[#60a5fa]', // blue
-  'bg-[#f472b6]', // pink
-  'bg-[#34d399]', // emerald
+  'bg-[#1d4ed8]', // blue
+  'bg-[#0f766e]', // teal
+  'bg-[#7c3aed]', // violet
+  'bg-[#b45309]', // amber
+  'bg-[#be185d]', // rose
+  'bg-[#0f172a]', // slate
 ]
 function colorReq(idx: number) {
   return COLORS_REQ[idx % COLORS_REQ.length]
@@ -68,9 +63,35 @@ export default function Roadmap() {
   const { datos: categorias } = useLista<Categoria>('/categorias')
   const { datos: asignaciones } = useLista<Asignacion>('/asignaciones')
 
-  const [mostrarEntregas, setMostrarEntregas] = useState(true)
   const [filtroPersona, setFiltroPersona] = useState('__todos__')
+  const [modoAgrupacion, setModoAgrupacion] = useState<'usuario' | 'plano'>('usuario')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [mesesActivos, setMesesActivos] = useState<Set<string>>(new Set())
+  const [estadosActivos, setEstadosActivos] = useState<Set<string>>(new Set())
+
+  const personaSinAsignar = useMemo<Persona>(() => ({
+    id: SIN_ASIGNAR_ID,
+    nombre: 'Sin asignar',
+    email: null,
+    rol_operativo: 'SIN ASIGNAR',
+    activo: true,
+    squads: [],
+    es_lider_tecnico: false,
+    permite_sobrecarga: false,
+    usuario_id: null,
+  }), [])
+
+  const personaSinAgrupacion = useMemo<Persona>(() => ({
+    id: '__sin_agrupacion__',
+    nombre: 'Todos los requerimientos',
+    email: null,
+    rol_operativo: 'SIN AGRUPACIÓN',
+    activo: true,
+    squads: [],
+    es_lider_tecnico: false,
+    permite_sobrecarga: false,
+    usuario_id: null,
+  }), [])
 
   const catMap = useMemo(() => {
     const m: Record<string, Categoria> = {}
@@ -78,35 +99,116 @@ export default function Roadmap() {
     return m
   }, [categorias])
 
+  const estadosRequerimiento = useMemo(() => {
+    const set = new Set<string>()
+    requerimientos.forEach((req) => {
+      if (req.estado) set.add(req.estado)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
+  }, [requerimientos])
+
   /* Rango de meses en el timeline */
   const { meses, mesInicio } = useMemo(() => {
     const ahora = new Date()
     // Mostrar desde 2 meses antes hasta 10 meses después
     const desde = new Date(ahora.getFullYear(), ahora.getMonth() - 2, 1)
+    const ultimoMes = requerimientos.reduce((max, req) => {
+      const candidatos: Array<Date | null> = [
+        parseFecha(req.fecha_solicitud_acta),
+        parseFecha(req.fecha_inicio),
+        parseFecha(req.fecha_fin),
+        ...(req.entregas ?? []).map((en) => parseFecha(en.fecha_comprometida)),
+      ]
+      let maxReq: Date | null = null
+      for (const d of candidatos) {
+        if (!d) continue
+        if (!maxReq || d.getTime() > maxReq.getTime()) maxReq = d
+      }
+      if (!max || (maxReq && maxReq.getTime() > max.getTime())) return maxReq ?? max
+      return max
+    }, null as Date | null)
+
+    const hastaBase = ultimoMes
+      ? new Date(ultimoMes.getFullYear(), ultimoMes.getMonth(), 1)
+      : new Date(desde.getFullYear(), desde.getMonth() + 13, 1)
+
     const lista: { key: string; label: string; date: Date }[] = []
-    for (let i = 0; i < 14; i++) {
+    const totalMeses = Math.max(1, (hastaBase.getFullYear() - desde.getFullYear()) * 12 + (hastaBase.getMonth() - desde.getMonth()) + 1)
+    for (let i = 0; i < totalMeses; i++) {
       const d = new Date(desde.getFullYear(), desde.getMonth() + i, 1)
       lista.push({ key: mesKey(d), label: `${nombreMes(d.getMonth())} ${String(d.getFullYear()).slice(-2)}`, date: d })
     }
     return { meses: lista, mesInicio: desde }
-  }, [])
+  }, [requerimientos])
 
-  const mesFin = useMemo(() => {
-    const last = meses[meses.length - 1].date
-    return new Date(last.getFullYear(), last.getMonth() + 1, 0) // último día del último mes
-  }, [meses])
+  const mesesVisibles = useMemo(() => {
+    return meses.filter((m) => mesesActivos.has(m.key))
+  }, [meses, mesesActivos])
+
+  const mesInicioVisible = useMemo(() => {
+    return mesesVisibles.length > 0 ? mesesVisibles[0].date : mesInicio
+  }, [mesesVisibles, mesInicio])
+
+  const mesFinVisible = useMemo(() => {
+    if (mesesVisibles.length === 0) return mesInicio
+    const last = mesesVisibles[mesesVisibles.length - 1].date
+    return new Date(last.getFullYear(), last.getMonth() + 1, 0)
+  }, [mesesVisibles, mesInicio])
 
   /* calcular posición % de una fecha dentro del rango */
-  const totalMs = mesFin.getTime() - mesInicio.getTime()
+  const totalMs = Math.max(1, mesFinVisible.getTime() - mesInicioVisible.getTime())
   function posicionPct(d: Date): number {
-    const ms = d.getTime() - mesInicio.getTime()
+    const ms = d.getTime() - mesInicioVisible.getTime()
     return Math.max(0, Math.min(100, (ms / totalMs) * 100))
+  }
+
+  const mesKeySet = useMemo(() => new Set(meses.map((m) => m.key)), [meses])
+
+  const reqMatchesEstado = (req: Requerimiento): boolean => {
+    if (estadosActivos.size === 0) return true
+    return estadosActivos.has(req.estado)
+  }
+
+  useEffect(() => {
+    setMesesActivos((prev) => {
+      if (meses.length === 0) return prev
+      const next = new Set<string>()
+      prev.forEach((k) => {
+        if (mesKeySet.has(k)) next.add(k)
+      })
+      if (next.size === 0) {
+        meses.forEach((m) => next.add(m.key))
+      }
+      return next
+    })
+  }, [meses, mesKeySet])
+
+  useEffect(() => {
+    if (estadosRequerimiento.length === 0) return
+    setEstadosActivos((prev) => {
+      const next = new Set<string>()
+      prev.forEach((estado) => {
+        if (estadosRequerimiento.includes(estado)) next.add(estado)
+      })
+      if (next.size === 0) {
+        estadosRequerimiento.forEach((estado) => next.add(estado))
+      }
+      return next
+    })
+  }, [estadosRequerimiento])
+
+  const reqMatchesMeses = (req: Requerimiento): boolean => {
+    const fechas = [
+      parseFecha(req.fecha_solicitud_acta),
+      parseFecha(req.fecha_inicio),
+      parseFecha(req.fecha_fin),
+      ...(req.entregas ?? []).map((en) => parseFecha(en.fecha_comprometida)),
+    ].filter((d): d is Date => d !== null)
+    return fechas.some((d) => mesesActivos.has(mesKey(d)))
   }
 
   /* Agrupar requerimientos por persona → categoría */
   const grupos = useMemo<GrupoPersona[]>(() => {
-    const personaFiltrada = filtroPersona === '__todos__' ? null : filtroPersona
-
     // Map persona_id → asignaciones
     const asigPorPersona: Record<string, Asignacion[]> = {}
     asignaciones.forEach((a) => {
@@ -114,16 +216,86 @@ export default function Roadmap() {
       asigPorPersona[a.persona_id].push(a)
     })
 
+    const construirCategorias = (reqs: ReqConFechas[], asigs: Asignacion[], mostrarPct: boolean): GrupoCat[] => {
+      const catGroups: Record<string, { reqs: ReqConFechas[]; pct: number }> = {}
+      reqs.forEach((r) => {
+        const catId = r.req.categoria_id ?? '__sin_cat__'
+        if (!catGroups[catId]) {
+          const asig = asigs.find((a) => a.categoria_id === catId)
+          catGroups[catId] = { reqs: [], pct: mostrarPct ? (asig?.total_porcentaje ?? 0) : 0 }
+        }
+        catGroups[catId].reqs.push(r)
+      })
+
+      return Object.entries(catGroups).map(([catId, g]) => {
+        const cat = catMap[catId]
+        return {
+          categoria: cat?.nombre ?? 'Sin categoría',
+          color: cat?.color ?? '#94a3b8',
+          porcentaje: g.pct,
+          reqs: g.reqs.sort((a, b) => a.inicio.getTime() - b.inicio.getTime()),
+        }
+      })
+    }
+
+    if (modoAgrupacion === 'plano') {
+      const reqsPlano: ReqConFechas[] = []
+      requerimientos.forEach((req) => {
+        if (!reqMatchesEstado(req)) return
+        if (!reqMatchesMeses(req)) return
+        const inicio = parseFecha(req.fecha_solicitud_acta ?? req.fecha_inicio)
+        if (!inicio) return
+
+        const fechasComprometidas = (req.entregas ?? [])
+          .map((en) => parseFecha(en.fecha_comprometida))
+          .filter((d): d is Date => d !== null)
+          .sort((a, b) => a.getTime() - b.getTime())
+        const fin = fechasComprometidas.length > 0
+          ? fechasComprometidas[fechasComprometidas.length - 1]
+          : inicio
+
+        reqsPlano.push({ req, inicio, fin })
+      })
+
+      if (reqsPlano.length === 0) return []
+
+      return [{
+        persona: personaSinAgrupacion,
+        categorias: construirCategorias(reqsPlano, [], false).sort((a, b) => a.categoria.localeCompare(b.categoria)),
+        totalProy: reqsPlano.length,
+        conFechas: reqsPlano.length,
+      }]
+    }
+
+    const personaFiltrada = filtroPersona === '__todos__' ? null : filtroPersona
+
     // Map para agrupar requerimientos por persona
     const reqPorPersona: Record<string, ReqConFechas[]> = {}
     requerimientos.forEach((req) => {
-      const inicio = parseFecha(req.fecha_inicio)
-      const fin = parseFecha(req.fecha_fin)
-      if (!inicio || !fin) return // solo reqs con fechas
+      if (!reqMatchesEstado(req)) return
+      if (!reqMatchesMeses(req)) return
+      const inicio = parseFecha(req.fecha_solicitud_acta ?? req.fecha_inicio)
+      if (!inicio) return
+
+      const fechasComprometidas = (req.entregas ?? [])
+        .map((en) => parseFecha(en.fecha_comprometida))
+        .filter((d): d is Date => d !== null)
+        .sort((a, b) => a.getTime() - b.getTime())
+      const fin = fechasComprometidas.length > 0
+        ? fechasComprometidas[fechasComprometidas.length - 1]
+        : inicio
+
       const devs = req.developers_asignados ?? []
-      if (devs.length === 0) return
+      if (devs.length === 0) {
+        if (personaFiltrada && personaFiltrada !== SIN_ASIGNAR_ID) return
+        if (!reqMatchesMeses(req)) return
+        if (!reqPorPersona[SIN_ASIGNAR_ID]) reqPorPersona[SIN_ASIGNAR_ID] = []
+        reqPorPersona[SIN_ASIGNAR_ID].push({ req, inicio, fin })
+        return
+      }
       devs.forEach((pid) => {
         if (personaFiltrada && pid !== personaFiltrada) return
+        if (!reqMatchesMeses(req)) return
         if (!reqPorPersona[pid]) reqPorPersona[pid] = []
         reqPorPersona[pid].push({ req, inicio, fin })
       })
@@ -136,27 +308,7 @@ export default function Roadmap() {
       .map((persona) => {
         const reqs = reqPorPersona[persona.id] ?? []
         const asigs = asigPorPersona[persona.id] ?? []
-
-        // agrupar por categoría
-        const catGroups: Record<string, { reqs: ReqConFechas[]; pct: number }> = {}
-        reqs.forEach((r) => {
-          const catId = r.req.categoria_id ?? '__sin_cat__'
-          if (!catGroups[catId]) {
-            const asig = asigs.find((a) => a.categoria_id === catId)
-            catGroups[catId] = { reqs: [], pct: asig?.total_porcentaje ?? 0 }
-          }
-          catGroups[catId].reqs.push(r)
-        })
-
-        const catList: GrupoCat[] = Object.entries(catGroups).map(([catId, g]) => {
-          const cat = catMap[catId]
-          return {
-            categoria: cat?.nombre ?? 'Sin categoría',
-            color: cat?.color ?? '#94a3b8',
-            porcentaje: g.pct,
-            reqs: g.reqs.sort((a, b) => a.inicio.getTime() - b.inicio.getTime()),
-          }
-        })
+        const catList: GrupoCat[] = construirCategorias(reqs, asigs, true)
 
         return {
           persona,
@@ -165,9 +317,17 @@ export default function Roadmap() {
           conFechas: reqs.length,
         }
       })
+      .concat(reqPorPersona[SIN_ASIGNAR_ID]?.length
+        ? [{
+            persona: personaSinAsignar,
+            categorias: construirCategorias(reqPorPersona[SIN_ASIGNAR_ID] ?? [], [], false).sort((a, b) => a.categoria.localeCompare(b.categoria)),
+            totalProy: (reqPorPersona[SIN_ASIGNAR_ID] ?? []).length,
+            conFechas: (reqPorPersona[SIN_ASIGNAR_ID] ?? []).length,
+          } as GrupoPersona]
+        : [])
       .filter((g) => g.totalProy > 0)
       .sort((a, b) => a.persona.nombre.localeCompare(b.persona.nombre))
-  }, [requerimientos, personas, categorias, asignaciones, filtroPersona, catMap])
+  }, [requerimientos, personas, categorias, asignaciones, filtroPersona, catMap, personaSinAsignar, personaSinAgrupacion, modoAgrupacion, mesesActivos, reqMatchesMeses])
 
   const toggleCollapse = (id: string) =>
     setCollapsed((prev) => {
@@ -193,61 +353,176 @@ export default function Roadmap() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-marca-osc">Roadmap del Equipo</h1>
-            <p className="text-xs text-slate-400">Línea de tiempo de proyectos y entregas</p>
+            <p className="text-xs text-zinc-500">Línea de tiempo de proyectos y entregas</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {/* Toggle entregas */}
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-            <span>Entregas</span>
-            <button
-              type="button"
-              onClick={() => setMostrarEntregas(!mostrarEntregas)}
-              className={`relative h-6 w-11 rounded-full transition-colors ${mostrarEntregas ? 'bg-marca' : 'bg-slate-300'}`}
-            >
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${mostrarEntregas ? 'left-[22px]' : 'left-0.5'}`} />
-            </button>
-          </label>
-          {/* Filtro persona */}
           <select
-            value={filtroPersona}
-            onChange={(e) => setFiltroPersona(e.target.value)}
+            value={modoAgrupacion}
+            onChange={(e) => setModoAgrupacion(e.target.value as 'usuario' | 'plano')}
             className="rounded border px-3 py-1.5 text-sm"
           >
-            <option value="__todos__">Todos los desarrolladores</option>
-            {personas.filter((p) => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre)).map((p) => (
-              <option key={p.id} value={p.id}>{p.nombre}</option>
-            ))}
+            <option value="usuario">Por usuario asignado</option>
+            <option value="plano">Sin agrupar por usuario</option>
           </select>
+
+          {modoAgrupacion === 'usuario' && (
+            <select
+              value={filtroPersona}
+              onChange={(e) => setFiltroPersona(e.target.value)}
+              className="rounded border px-3 py-1.5 text-sm"
+            >
+              <option value="__todos__">Todos los desarrolladores</option>
+              <option value={SIN_ASIGNAR_ID}>Sin asignar</option>
+              {personas.filter((p) => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre)).map((p) => (
+                <option key={p.id} value={p.id}>{p.nombre}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
+      <div className="border-l border-r border-b border-zinc-200 bg-white px-4 py-3">
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 shadow-sm hover:bg-zinc-50">
+            <div className="flex items-center gap-2">
+              <span>Estados del requerimiento</span>
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700">
+                {estadosActivos.size === 0 ? 'sin filtro' : `${estadosActivos.size} seleccionados`}
+              </span>
+            </div>
+            <svg className="h-4 w-4 text-zinc-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
+            </svg>
+          </summary>
+
+          <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-medium text-zinc-600">Selecciona uno o varios estados</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEstadosActivos(new Set(estadosRequerimiento))}
+                  className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-white"
+                >
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEstadosActivos(new Set())}
+                  className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-white"
+                >
+                  Limpiar
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-56 overflow-auto rounded-md border border-zinc-200 bg-white p-2">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {estadosRequerimiento.map((estado) => {
+                  const checked = estadosActivos.has(estado)
+                  return (
+                    <label
+                      key={estado}
+                      className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs transition-colors ${
+                        checked ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setEstadosActivos((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(estado)) next.delete(estado)
+                            else next.add(estado)
+                            return next
+                          })
+                        }}
+                      />
+                      <span className="truncate">{estado}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div className="flex flex-wrap gap-2 border-l border-r border-b border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-700">
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-2 font-semibold text-zinc-900">Meses:</span>
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700">
+              {mesesActivos.size === 0 ? 'sin filtro' : `${mesesActivos.size} seleccionados`}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMesesActivos(new Set(meses.map((m) => m.key)))}
+              className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              onClick={() => setMesesActivos(new Set())}
+              className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+        {meses.map((m) => {
+          const checked = mesesActivos.has(m.key)
+          return (
+            <label key={m.key} className="flex cursor-pointer items-center gap-1 rounded border border-zinc-300 px-2 py-1 bg-white">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => {
+                  setMesesActivos((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(m.key)) next.delete(m.key)
+                    else next.add(m.key)
+                    return next
+                  })
+                }}
+              />
+              <span>{m.label}</span>
+            </label>
+          )
+        })}
+      </div>
+
       {/* Timeline */}
-      <div className="overflow-x-auto border rounded-b-xl bg-white">
+      <div className="overflow-x-auto border rounded-b-xl border-zinc-200 bg-white">
         <div className="min-w-[1200px]">
           {/* Encabezado de meses */}
-          <div className="flex border-b bg-slate-50 text-[11px] font-medium text-slate-500 sticky top-0 z-10">
+          <div className="flex border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-700 sticky top-0 z-10">
             <div className="w-[220px] min-w-[220px] px-3 py-2 font-semibold uppercase tracking-wider">
               Recurso / Proyecto
             </div>
             <div className="relative flex flex-1">
-              {meses.map((m) => (
+              {mesesVisibles.map((m) => (
                 <div
                   key={m.key}
-                  className={`flex-1 border-l px-2 py-2 text-center ${m.key === hoyKey ? 'bg-marca/5 font-bold text-marca' : ''}`}
+                  className={`flex-1 border-l border-zinc-200 px-2 py-2 text-center ${m.key === hoyKey ? 'bg-zinc-100 font-bold text-zinc-900' : ''}`}
                 >
                   {m.label}
                 </div>
               ))}
             </div>
-            <div className="w-[120px] min-w-[120px] border-l px-2 py-2 text-center font-semibold uppercase tracking-wider">
-              Inicio / Fin
+            <div className="w-[150px] min-w-[150px] border-l border-zinc-200 px-2 py-2 text-center font-semibold uppercase tracking-wider">
+              <span className="text-[10px] text-zinc-600">Inicio / Fin</span>
             </div>
           </div>
 
           {/* Filas de datos */}
           {grupos.length === 0 && (
-            <div className="p-8 text-center text-slate-400">
+            <div className="p-8 text-center text-zinc-500">
               No hay requerimientos con fechas y desarrolladores asignados.
             </div>
           )}
@@ -264,166 +539,97 @@ export default function Roadmap() {
               <div key={grupo.persona.id}>
                 {/* Fila de persona */}
                 <div
-                  className="flex cursor-pointer items-center border-b bg-slate-50/50 hover:bg-slate-100/50"
+                  className="flex cursor-pointer items-center border-b border-zinc-200 bg-white hover:bg-zinc-50"
                   onClick={() => toggleCollapse(grupo.persona.id)}
                 >
-                  <div className="flex w-[220px] min-w-[220px] items-center gap-2 px-3 py-2">
+                  <div className="flex w-[220px] min-w-[220px] items-center gap-2 px-3 py-1.5">
                     <svg xmlns="http://www.w3.org/2000/svg"
-                      className={`h-3.5 w-3.5 text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                      className={`h-3.5 w-3.5 text-zinc-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
                       fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-marca text-[10px] font-bold text-white">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-700 text-[10px] font-bold text-white">
                       {initials}
                     </div>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-slate-800">{grupo.persona.nombre}</div>
-                      <div className="truncate text-[10px] text-slate-400">{grupo.persona.rol_operativo}</div>
+                      <div className="truncate text-sm font-semibold text-slate-900">{grupo.persona.nombre}</div>
+                      <div className="truncate text-[10px] text-zinc-500">{grupo.persona.rol_operativo}</div>
                     </div>
                   </div>
-                  <div className="flex flex-1 items-center px-2 py-2 text-xs text-slate-500">
+                  <div className="flex flex-1 items-center px-2 py-1.5 text-xs text-zinc-600">
                     {grupo.totalProy} proy · {grupo.conFechas} con fechas
-                    <span className="ml-2 inline-block h-2 w-2 rounded-full bg-emerald-400" />
+                    <span className="ml-2 inline-block h-2 w-2 rounded-full bg-emerald-500" />
                   </div>
-                  <div className="w-[120px] min-w-[120px]" />
+                  <div className="w-[150px] min-w-[150px]" />
                 </div>
 
                 {/* Categorías y requerimientos */}
                 {!isCollapsed && grupo.categorias.map((catGrp) => (
                   <div key={catGrp.categoria}>
                     {/* Fila de categoría */}
-                    <div className="flex border-b border-dashed">
+                    <div className="flex border-b border-dashed border-zinc-200 bg-white">
                       <div className="flex w-[220px] min-w-[220px] items-center gap-2 px-6 py-1.5">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: catGrp.color }} />
-                        <span className="text-xs font-semibold text-slate-700">{catGrp.categoria}</span>
-                        {catGrp.porcentaje > 0 && (
-                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                        <span className="text-xs font-semibold text-zinc-800">{catGrp.categoria}</span>
+                        {modoAgrupacion === 'usuario' && catGrp.porcentaje > 0 && (
+                          <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[9px] font-bold text-zinc-700">
                             {catGrp.porcentaje}%
                           </span>
                         )}
                       </div>
                       <div className="flex-1" />
-                      <div className="w-[120px] min-w-[120px]" />
+                      <div className="w-[150px] min-w-[150px]" />
                     </div>
 
                     {/* Filas de requerimiento */}
                     {catGrp.reqs.map((r) => {
                       const ci = globalColorIdx++
-                      const left = posicionPct(r.inicio)
-                      const right = posicionPct(r.fin)
+                      const left = posicionPct(r.inicio < mesInicioVisible ? mesInicioVisible : r.inicio)
+                      const right = posicionPct(r.fin > mesFinVisible ? mesFinVisible : r.fin)
                       const width = Math.max(right - left, 1)
                       const label = `${r.req.codigo_req} – ${r.req.nombre ?? ''}`
-
-                      // Entregas de este req
-                      const entregas: FilaEntrega[] = (r.req.entregas ?? [])
-                        .filter((en) => {
-                          const eI = parseFecha(en.fecha_comprometida)
-                          return eI !== null
-                        })
-                        .map((en) => {
-                          const eI = parseFecha(en.fecha_comprometida)!
-                          const eF = parseFecha(en.fecha_recepcion) ?? new Date(eI.getTime() + 14 * 86400000) // +14 días default
-                          return {
-                            label: `Sprint ${en.numero} - ${r.req.codigo_req.slice(0, 8)}...`,
-                            estado: en.estado,
-                            inicio: eI,
-                            fin: eF > eI ? eF : new Date(eI.getTime() + 14 * 86400000),
-                          }
-                        })
 
                       return (
                         <div key={r.req.id}>
                           {/* Barra del requerimiento */}
                           <div className="flex border-b">
-                            <div className="flex w-[220px] min-w-[220px] items-center gap-1.5 px-6 py-2">
-                              <span className="text-[10px] text-marca">■</span>
-                              <span className="truncate text-xs text-slate-600" title={label}>
+                            <div className="flex w-[220px] min-w-[220px] items-center gap-1.5 px-6 py-1.5">
+                              <span className="text-[10px] text-zinc-400">■</span>
+                              <span className="truncate text-xs text-zinc-800" title={label}>
                                 {r.req.codigo_req.length > 14 ? r.req.codigo_req.slice(0, 14) + '...' : r.req.codigo_req}
                               </span>
-                              <span className={`ml-1 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
-                                r.req.estado === 'Activo' || r.req.estado === 'En Ejecución' ? 'bg-emerald-100 text-emerald-700' :
-                                r.req.estado === 'Finalizado' || r.req.estado === 'Cerrado' ? 'bg-slate-200 text-slate-600' :
-                                r.req.estado === 'Inactivo' || r.req.estado === 'Suspendido' ? 'bg-amber-100 text-amber-700' :
-                                'bg-blue-100 text-blue-700'
-                              }`}>
-                                {r.req.estado}
-                              </span>
                             </div>
-                            <div className="relative flex-1 py-2">
+                            <div className="relative flex-1 py-1.5">
                               {/* Líneas divisorias de meses */}
-                              {meses.map((m, i) => (
+                              {mesesVisibles.map((m, i) => (
                                 <div
                                   key={m.key}
-                                  className="absolute top-0 bottom-0 border-l border-slate-100"
-                                  style={{ left: `${(i / meses.length) * 100}%` }}
+                                  className="absolute top-0 bottom-0 border-l border-zinc-200"
+                                  style={{ left: `${(i / mesesVisibles.length) * 100}%` }}
                                 />
                               ))}
                               {/* Barra del req */}
                               <div
-                                className={`absolute top-1.5 bottom-1.5 rounded-md ${colorReq(ci)} flex items-center overflow-hidden shadow-sm`}
+                                className={`absolute top-2 bottom-2 rounded-full ${colorReq(ci)} flex items-center overflow-hidden shadow-sm border border-white/60`}
                                 style={{ left: `${left}%`, width: `${width}%`, minWidth: '2px' }}
                                 title={`${label}\n${fmtCorta(r.inicio)} → ${fmtCorta(r.fin)}`}
                               >
-                                <span className="truncate px-2 text-[10px] font-semibold text-white drop-shadow">
+                                <span className="truncate px-2 text-[9px] font-semibold text-white drop-shadow">
                                   {label}
                                 </span>
                               </div>
                             </div>
-                            <div className="flex w-[120px] min-w-[120px] flex-col items-end justify-center border-l px-2 text-[10px] text-slate-500">
-                              <span>📅 {fmtCorta(r.inicio)}</span>
-                              <span>📅 {fmtCorta(r.fin)}</span>
+                            <div className="flex w-[150px] min-w-[150px] flex-col justify-center border-l border-zinc-200 px-2 py-1.5 text-[10px] text-zinc-700">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-zinc-600">Ini</span>
+                                <span className="truncate font-medium text-zinc-800">{fmtCorta(r.inicio)}</span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2">
+                                <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-zinc-600">Fin</span>
+                                <span className="truncate font-medium text-zinc-800">{fmtCorta(r.fin)}</span>
+                              </div>
                             </div>
                           </div>
-
-                          {/* Entregas (sprints) */}
-                          {mostrarEntregas && entregas.map((en, ei) => {
-                            const eLeft = posicionPct(en.inicio)
-                            const eRight = posicionPct(en.fin)
-                            const eWidth = Math.max(eRight - eLeft, 0.8)
-                            return (
-                              <div key={ei} className="flex border-b border-dashed border-slate-100">
-                                <div className="flex w-[220px] min-w-[220px] items-center gap-1.5 px-8 py-1">
-                                  <span className="text-[9px] text-slate-400">↳</span>
-                                  <span className="truncate text-[10px] text-slate-500">
-                                    Entrega {entregas[ei].label.split(' ')[1]}
-                                  </span>
-                                  <span className={`rounded-full px-1.5 py-0.5 text-[8px] font-semibold ${
-                                    en.estado === 'Aprobada' || en.estado === 'Finalizado' ? 'bg-emerald-100 text-emerald-700' :
-                                    en.estado === 'Activo' || en.estado === 'En revisión' ? 'bg-cyan-100 text-cyan-700' :
-                                    en.estado === 'Rechazada' ? 'bg-red-100 text-red-700' :
-                                    'bg-slate-100 text-slate-500'
-                                  }`}>
-                                    {en.estado ?? '—'}
-                                  </span>
-                                </div>
-                                <div className="relative flex-1 py-1">
-                                  {meses.map((m, i) => (
-                                    <div
-                                      key={m.key}
-                                      className="absolute top-0 bottom-0 border-l border-slate-100"
-                                      style={{ left: `${(i / meses.length) * 100}%` }}
-                                    />
-                                  ))}
-                                  {/* Barra con patrón rayado */}
-                                  <div
-                                    className="absolute top-0.5 bottom-0.5 rounded"
-                                    style={{
-                                      left: `${eLeft}%`,
-                                      width: `${eWidth}%`,
-                                      minWidth: '2px',
-                                      background: `repeating-linear-gradient(135deg, rgba(45,212,191,0.3), rgba(45,212,191,0.3) 4px, rgba(45,212,191,0.15) 4px, rgba(45,212,191,0.15) 8px)`,
-                                      border: '1px solid rgba(45,212,191,0.4)',
-                                    }}
-                                    title={`Entrega ${entregas[ei].label.split(' ')[1]}: ${fmtCorta(en.inicio)} → ${fmtCorta(en.fin)}`}
-                                  />
-                                </div>
-                                <div className="flex w-[120px] min-w-[120px] flex-col items-end justify-center border-l px-2 text-[9px] text-slate-400">
-                                  <span>{fmtCorta(en.inicio)}</span>
-                                  <span>{fmtCorta(en.fin)}</span>
-                                </div>
-                              </div>
-                            )
-                          })}
                         </div>
                       )
                     })}
