@@ -40,12 +40,16 @@ function normalizarTexto(v: string): string {
   return v.trim().toLowerCase()
 }
 
+const MESES_LABELS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
 export default function SoporteDetalleANS() {
   const [cargando, setCargando] = useState(true)
   const [aviso, setAviso] = useState('')
   const [registros, setRegistros] = useState<RegistroSoporte[]>([])
   const [filtroWo, setFiltroWo] = useState('')
   const [filtroAssignedTo, setFiltroAssignedTo] = useState('')
+  const [anosActivos, setAnosActivos] = useState<Set<string>>(new Set())
+  const [mesesActivos, setMesesActivos] = useState<Set<string>>(new Set())
   const [abiertas, setAbiertas] = useState({
     oportunidad: false,
     cumplimiento: false,
@@ -62,13 +66,31 @@ export default function SoporteDetalleANS() {
       .finally(() => setCargando(false))
   }, [])
 
+  // ─── Años disponibles desde Fecha_Fin_Real ─────────────
+  const anosDisponibles = useMemo(() => {
+    const s = new Set<string>()
+    registros.forEach((r) => {
+      const fecha = r.datos?.['Fecha_Fin_Real']
+      if (fecha && fecha.length >= 4) s.add(fecha.substring(0, 4))
+    })
+    return Array.from(s).sort()
+  }, [registros])
+
   const registrosBaseFiltrados = useMemo(() => {
     const wo = normalizarTexto(filtroWo)
     return registros.filter((r) => {
       if (wo && !normalizarTexto(r.datos?.['Work Order ID'] ?? '').includes(wo)) return false
+      // Filtro por año/mes (Fecha_Fin_Real)
+      if (anosActivos.size > 0 || mesesActivos.size > 0) {
+        const fecha = r.datos?.['Fecha_Fin_Real'] ?? ''
+        const ano = fecha.substring(0, 4)
+        const mm  = String(Number(fecha.substring(5, 7)))
+        if (anosActivos.size > 0 && !anosActivos.has(ano)) return false
+        if (mesesActivos.size > 0 && !mesesActivos.has(mm)) return false
+      }
       return true
     })
-  }, [registros, filtroWo])
+  }, [registros, filtroWo, anosActivos, mesesActivos])
 
   const assignedToOpciones = useMemo(() => {
     const unicos = new Set<string>()
@@ -137,6 +159,8 @@ export default function SoporteDetalleANS() {
     [registrosFiltrados],
   )
 
+  const hayFiltroFecha = anosActivos.size > 0 || mesesActivos.size > 0
+
   if (cargando) return <div className="p-6 text-slate-500">Cargando detalle ANS…</div>
 
   return (
@@ -146,36 +170,114 @@ export default function SoporteDetalleANS() {
 
       {aviso && <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{aviso}</div>}
 
-      <div className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-2">
-        <div>
-          <label className="text-sm font-medium text-slate-700" htmlFor="filtro-wo-ans">
-            Filtrar por Work Order ID
-          </label>
-          <input
-            id="filtro-wo-ans"
-            className="mt-2 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
-            placeholder="Buscar Work Order ID…"
-            value={filtroWo}
-            onChange={(e) => setFiltroWo(e.target.value)}
-          />
+      {/* ─── Filtros ─── */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+        {/* Work Order ID + Assigned To */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="text-sm font-medium text-slate-700" htmlFor="filtro-wo-ans">
+              Filtrar por Work Order ID
+            </label>
+            <input
+              id="filtro-wo-ans"
+              className="mt-2 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
+              placeholder="Buscar Work Order ID…"
+              value={filtroWo}
+              onChange={(e) => setFiltroWo(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700" htmlFor="filtro-assigned-ans">
+              Filtrar por Assigned To
+            </label>
+            <select
+              id="filtro-assigned-ans"
+              className="mt-2 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
+              value={filtroAssignedTo}
+              onChange={(e) => setFiltroAssignedTo(e.target.value)}
+            >
+              <option value="">Todos</option>
+              {assignedToOpciones.map((persona) => (
+                <option key={persona} value={persona}>{persona}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div>
-          <label className="text-sm font-medium text-slate-700" htmlFor="filtro-assigned-ans">
-            Filtrar por Assigned To
-          </label>
-          <select
-            id="filtro-assigned-ans"
-            className="mt-2 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
-            value={filtroAssignedTo}
-            onChange={(e) => setFiltroAssignedTo(e.target.value)}
-          >
-            <option value="">Todos</option>
-            {assignedToOpciones.map((persona) => (
-              <option key={persona} value={persona}>
-                {persona}
-              </option>
-            ))}
-          </select>
+
+        {/* Filtros Año / Mes por Fecha_Fin_Real */}
+        <div className="border-t border-slate-100 pt-3">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            📅 Filtrar por Fecha Fin Real
+          </p>
+          <div className="flex flex-wrap items-start gap-3">
+            {/* Año */}
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:border-slate-300 transition-colors">
+                <span>📅 Año</span>
+                {anosActivos.size > 0 && (
+                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">{anosActivos.size}</span>
+                )}
+                <svg className="h-3.5 w-3.5 text-slate-400 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
+                </svg>
+              </summary>
+              <div className="absolute z-20 mt-1 min-w-[160px] rounded-lg border border-slate-200 bg-white p-2.5 shadow-lg">
+                <div className="flex justify-end gap-3 mb-2">
+                  <button type="button" onClick={() => setAnosActivos(new Set(anosDisponibles))} className="text-[10px] font-semibold text-blue-600 hover:underline">Todos</button>
+                  <button type="button" onClick={() => setAnosActivos(new Set())} className="text-[10px] font-semibold text-slate-400 hover:underline">Limpiar</button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {anosDisponibles.map((ano) => {
+                    const checked = anosActivos.has(ano)
+                    return (
+                      <label key={ano} className={`flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-[11px] font-semibold transition-colors ${checked ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                        <input type="checkbox" checked={checked} onChange={() => setAnosActivos((p) => { const n = new Set(p); n.has(ano) ? n.delete(ano) : n.add(ano); return n })} />
+                        {ano}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            </details>
+
+            {/* Mes */}
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:border-slate-300 transition-colors">
+                <span>🗓️ Mes</span>
+                {mesesActivos.size > 0 && (
+                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">{mesesActivos.size}</span>
+                )}
+                <svg className="h-3.5 w-3.5 text-slate-400 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
+                </svg>
+              </summary>
+              <div className="absolute z-20 mt-1 min-w-[200px] rounded-lg border border-slate-200 bg-white p-2.5 shadow-lg">
+                <div className="flex justify-end gap-3 mb-2">
+                  <button type="button" onClick={() => setMesesActivos(new Set(['1','2','3','4','5','6','7','8','9','10','11','12']))} className="text-[10px] font-semibold text-blue-600 hover:underline">Todos</button>
+                  <button type="button" onClick={() => setMesesActivos(new Set())} className="text-[10px] font-semibold text-slate-400 hover:underline">Limpiar</button>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {MESES_LABELS.map((label, idx) => {
+                    const k = String(idx + 1)
+                    const checked = mesesActivos.has(k)
+                    return (
+                      <label key={k} className={`flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-[11px] font-semibold transition-colors ${checked ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                        <input type="checkbox" checked={checked} onChange={() => setMesesActivos((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n })} />
+                        {label}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            </details>
+
+            {hayFiltroFecha && (
+              <button type="button" onClick={() => { setAnosActivos(new Set()); setMesesActivos(new Set()) }}
+                className="rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                ✕ Limpiar fechas
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
