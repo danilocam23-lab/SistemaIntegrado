@@ -41,6 +41,10 @@ function colorEstado(estado: string): string {
   return PALETA.morado
 }
 
+function estadoNormalizado(estado: string): string {
+  return estado.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
 function esActivo(estado: string): boolean {
   const normalized = estado.toUpperCase()
   return !normalized.includes('CANCELADO') && !normalized.includes('REEMPLAZADO')
@@ -94,6 +98,76 @@ export default function DashboardEstados() {
       }))
       .sort((a, b) => b.cantidad - a.cantidad || b.horas - a.horas)
   }, [requerimientos])
+
+  const porEstadoEntregas = useMemo(() => {
+    const mapa = new Map<string, { estado: string; cantidad: number; horas: number; garantias: number }>()
+    for (const req of requerimientos) {
+      for (const entrega of req.entregas ?? []) {
+        const estado = entrega.estado?.trim() || 'Sin estado'
+        const actual = mapa.get(estado) ?? { estado, cantidad: 0, horas: 0, garantias: 0 }
+        actual.cantidad += 1
+        actual.horas += Number(entrega.horas ?? 0)
+        actual.garantias += entrega.garantia ? 1 : 0
+        mapa.set(estado, actual)
+      }
+    }
+    const total = requerimientos.reduce((sum, req) => sum + (req.entregas?.length ?? 0), 0) || 1
+    return Array.from(mapa.values())
+      .map((fila) => ({
+        ...fila,
+        porcentaje: (fila.cantidad / total) * 100,
+        color: colorEstado(fila.estado),
+      }))
+      .sort((a, b) => b.cantidad - a.cantidad || b.horas - a.horas)
+  }, [requerimientos])
+
+  const porEstadoEntregasAprobacion = useMemo(() => {
+    const filas = porEstadoEntregas.filter((fila) => {
+      const estado = estadoNormalizado(fila.estado)
+      return estado === 'APROBADA' || estado === 'EN ESPERA DE APROBACION'
+    })
+    const total = filas.reduce((sum, fila) => sum + fila.cantidad, 0) || 1
+    return filas.map((fila) => ({
+      ...fila,
+      porcentaje: (fila.cantidad / total) * 100,
+    }))
+  }, [porEstadoEntregas])
+
+  const totalesEntregasAprobacion = useMemo(() => (
+    porEstadoEntregasAprobacion.reduce(
+      (acc, fila) => {
+        acc.cantidad += fila.cantidad
+        acc.horas += fila.horas
+        acc.garantias += fila.garantias
+        return acc
+      },
+      { cantidad: 0, horas: 0, garantias: 0 },
+    )
+  ), [porEstadoEntregasAprobacion])
+
+
+  const totalesEstados = useMemo(() => {
+    return porEstado.reduce(
+      (acc, fila) => {
+        acc.cantidad += fila.cantidad
+        acc.horas += fila.horas
+        return acc
+      },
+      { cantidad: 0, horas: 0 }
+    )
+  }, [porEstado])
+
+  const totalesEntregas = useMemo(() => {
+    return porEstadoEntregas.reduce(
+      (acc, fila) => {
+        acc.cantidad += fila.cantidad
+        acc.horas += fila.horas
+        acc.garantias += fila.garantias
+        return acc
+      },
+      { cantidad: 0, horas: 0, garantias: 0 }
+    )
+  }, [porEstadoEntregas])
 
   const porMes = useMemo(() => {
     const mapa = new Map<string, number>()
@@ -183,24 +257,23 @@ export default function DashboardEstados() {
         </div>
 
         {/* Charts Section */}
-        <div className="space-y-6">
-          {/* Table Section */}
-          <ChartCardPremium 
-            titulo="Análisis por Estado" 
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Tabla de estados de requerimientos */}
+          <ChartCardPremium
+            titulo="Análisis por Estado de Requerimientos"
             descripcion="Distribución de requerimientos y métricas por estado"
           >
             {porEstado.length === 0 ? (
               <EmptyState />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-hidden">
+                <table className="w-full table-fixed text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/50">
-                      <th className="px-6 py-4 text-left font-semibold text-slate-900">Estado</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">Cantidad</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">% del total</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">Horas</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">Entregas</th>
+                      <th className="px-3 py-3 text-left font-semibold text-slate-900">Estado</th>
+                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Cantidad</th>
+                      <th className="px-3 py-3 text-center font-semibold text-slate-900">% del total</th>
+                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Horas</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -209,21 +282,21 @@ export default function DashboardEstados() {
                         key={fila.estado}
                         className="hover:bg-blue-50/40 transition-colors duration-200 group"
                       >
-                        <td className="px-6 py-4 font-semibold text-slate-900 group-hover:text-blue-700">
+                        <td className="px-3 py-3 font-semibold text-slate-900 group-hover:text-blue-700 break-words">
                           <div className="flex items-center gap-3">
-                            <div 
-                              className="h-3 w-3 rounded-full" 
+                            <div
+                              className="h-3 w-3 rounded-full"
                               style={{ backgroundColor: fila.color }}
                             />
                             {fila.estado}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-3 py-3 text-center">
                           <Badge variant="blue" value={fila.cantidad} />
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-3 py-3 text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <div className="w-16">
+                            <div className="w-12">
                               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                                 <div
                                   className="h-full rounded-full transition-all duration-300"
@@ -231,104 +304,247 @@ export default function DashboardEstados() {
                                 />
                               </div>
                             </div>
-                            <span className="text-sm font-medium text-slate-600 w-10 text-right">
+                            <span className="w-10 text-right text-sm font-medium text-slate-600">
                               {fila.porcentaje.toFixed(1)}%
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-3 py-3 text-center">
                           <Badge variant="amber" value={`${fmtNumero(fila.horas)}h`} />
-                        </td>
-                        <td className="px-6 py-4 text-center text-slate-700 font-medium">
-                          {fmtNumero(fila.entregas)}
                         </td>
                       </tr>
                     ))}
+                    <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
+                      <td className="px-3 py-3 text-slate-900">Total</td>
+                      <td className="px-3 py-3 text-center">
+                        <Badge variant="blue" value={totalesEstados.cantidad} />
+                      </td>
+                      <td className="px-3 py-3 text-center text-slate-700">100.0%</td>
+                      <td className="px-3 py-3 text-center">
+                        <Badge variant="amber" value={`${fmtNumero(totalesEstados.horas)}h`} />
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
             )}
           </ChartCardPremium>
 
-          {/* Dos gráficos lado a lado */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Requerimientos por estado */}
+          <div className="space-y-6">
+            {/* Tabla de estados de entregas */}
             <ChartCardPremium
-              titulo="Requerimientos por Estado"
-              descripcion="Cantidad de requerimientos agrupados por estado"
+              titulo="Análisis por Estado de Entregas"
+              descripcion="Distribución y métricas de las entregas por estado"
             >
-              {porEstado.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <ResponsiveContainer width="100%" height={320}>
-                  <BarChart data={porEstado} layout="vertical" margin={{ left: 140, right: 60, top: 20, bottom: 20 }}>
-                    <defs>
-                      <linearGradient id="gradientEstados" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor={PALETA.azul_brillante} stopOpacity={0.8} />
-                        <stop offset="100%" stopColor={PALETA.azul_primario} stopOpacity={1} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                    <YAxis
-                      type="category"
-                      dataKey="estado"
-                      width={130}
-                      tick={{ fontSize: 12, fill: PALETA.texto_sec }}
-                    />
-                    <Tooltip content={<TooltipPersonalizado />} />
-                    <Bar dataKey="cantidad" radius={[0, 12, 12, 0]} barSize={28}>
-                      <LabelList
-                        dataKey="cantidad"
-                        position="right"
-                        formatter={(valor: unknown) => String(Number(valor ?? 0))}
-                        fill={PALETA.texto}
-                        fontSize={12}
-                        fontWeight={600}
-                      />
-                      {porEstado.map((fila) => (
-                        <Cell key={`estado-${fila.estado}`} fill={fila.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
+            {porEstadoEntregas.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div className="overflow-hidden">
+                <table className="w-full table-fixed text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/50">
+                      <th className="px-3 py-3 text-left font-semibold text-slate-900">Estado</th>
+                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Entregas</th>
+                      <th className="px-3 py-3 text-center font-semibold text-slate-900">% del total</th>
+                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Horas</th>
+                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Garantías</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {porEstadoEntregas.map((fila) => (
+                      <tr
+                        key={fila.estado}
+                        className="hover:bg-blue-50/40 transition-colors duration-200 group"
+                      >
+                        <td className="px-3 py-3 font-semibold text-slate-900 group-hover:text-blue-700 break-words">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="h-3 w-3 rounded-full"
+                              style={{ backgroundColor: fila.color }}
+                            />
+                            {fila.estado}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <Badge variant="blue" value={fila.cantidad} />
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-12">
+                              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                                <div
+                                  className="h-full rounded-full transition-all duration-300"
+                                  style={{ width: `${fila.porcentaje}%`, backgroundColor: fila.color }}
+                                />
+                              </div>
+                            </div>
+                            <span className="w-10 text-right text-sm font-medium text-slate-600">
+                              {fila.porcentaje.toFixed(1)}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <Badge variant="amber" value={`${fmtNumero(fila.horas)}h`} />
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <Badge variant="green" value={fila.garantias} />
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
+                      <td className="px-3 py-3 text-slate-900">Total</td>
+                      <td className="px-3 py-3 text-center">
+                        <Badge variant="blue" value={totalesEntregas.cantidad} />
+                      </td>
+                      <td className="px-3 py-3 text-center text-slate-700">100.0%</td>
+                      <td className="px-3 py-3 text-center">
+                        <Badge variant="amber" value={`${fmtNumero(totalesEntregas.horas)}h`} />
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <Badge variant="green" value={totalesEntregas.garantias} />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
             </ChartCardPremium>
 
-            {/* Evolución mensual */}
             <ChartCardPremium
-              titulo="Evolución Mensual"
-              descripcion="Tendencia de requerimientos en el tiempo"
+              titulo="Entregas aprobadas y en espera de aprobación"
+              descripcion="Distribución de entregas con estos estados"
             >
-              {porMes.length === 0 ? (
+              {porEstadoEntregasAprobacion.length === 0 ? (
                 <EmptyState />
               ) : (
-                <ResponsiveContainer width="100%" height={320}>
-                  <LineChart data={porMes} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
-                    <defs>
-                      <linearGradient id="colorCantidad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={PALETA.azul_primario} stopOpacity={0.8} />
-                        <stop offset="100%" stopColor={PALETA.azul_primario} stopOpacity={0.1} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} vertical={false} />
-                    <XAxis dataKey="mes" tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                    <Tooltip content={<TooltipPersonalizado />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="cantidad" 
-                      stroke={PALETA.azul_primario} 
-                      strokeWidth={3}
-                      dot={{ r: 5, fill: PALETA.azul_primario }}
-                      activeDot={{ r: 7 }}
-                      name="Requerimientos"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="overflow-hidden">
+                  <table className="w-full table-fixed text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/50">
+                        <th className="px-3 py-3 text-left font-semibold text-slate-900">Estado</th>
+                        <th className="px-3 py-3 text-center font-semibold text-slate-900">Entregas</th>
+                        <th className="px-3 py-3 text-center font-semibold text-slate-900">% del total</th>
+                        <th className="px-3 py-3 text-center font-semibold text-slate-900">Horas</th>
+                        <th className="px-3 py-3 text-center font-semibold text-slate-900">Garantías</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {porEstadoEntregasAprobacion.map((fila) => (
+                        <tr key={fila.estado} className="hover:bg-blue-50/40 transition-colors duration-200 group">
+                          <td className="px-3 py-3 font-semibold text-slate-900 group-hover:text-blue-700 break-words">
+                            <div className="flex items-center gap-3">
+                              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: fila.color }} />
+                              {fila.estado}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-center"><Badge variant="blue" value={fila.cantidad} /></td>
+                          <td className="px-3 py-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="w-12">
+                                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${fila.porcentaje}%`, backgroundColor: fila.color }} />
+                                </div>
+                              </div>
+                              <span className="w-10 text-right text-sm font-medium text-slate-600">{fila.porcentaje.toFixed(1)}%</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-center"><Badge variant="amber" value={`${fmtNumero(fila.horas)}h`} /></td>
+                          <td className="px-3 py-3 text-center"><Badge variant="green" value={fila.garantias} /></td>
+                        </tr>
+                      ))}
+                      <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
+                        <td className="px-3 py-3 text-slate-900">Total</td>
+                        <td className="px-3 py-3 text-center"><Badge variant="blue" value={totalesEntregasAprobacion.cantidad} /></td>
+                        <td className="px-3 py-3 text-center text-slate-700">100.0%</td>
+                        <td className="px-3 py-3 text-center"><Badge variant="amber" value={`${fmtNumero(totalesEntregasAprobacion.horas)}h`} /></td>
+                        <td className="px-3 py-3 text-center"><Badge variant="green" value={totalesEntregasAprobacion.garantias} /></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               )}
             </ChartCardPremium>
           </div>
+        </div>
+
+        {/* Dos gráficos lado a lado */}
+        <div className="grid gap-6 lg:grid-cols-2 mt-6">
+          {/* Requerimientos por estado */}
+          <ChartCardPremium
+            titulo="Requerimientos por Estado"
+            descripcion="Cantidad de requerimientos agrupados por estado"
+          >
+            {porEstado.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={porEstado} layout="vertical" margin={{ left: 140, right: 60, top: 20, bottom: 20 }}>
+                  <defs>
+                    <linearGradient id="gradientEstados" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={PALETA.azul_brillante} stopOpacity={0.8} />
+                      <stop offset="100%" stopColor={PALETA.azul_primario} stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
+                  <YAxis
+                    type="category"
+                    dataKey="estado"
+                    width={130}
+                    tick={{ fontSize: 12, fill: PALETA.texto_sec }}
+                  />
+                  <Tooltip content={<TooltipPersonalizado />} />
+                  <Bar dataKey="cantidad" radius={[0, 12, 12, 0]} barSize={28}>
+                    <LabelList
+                      dataKey="cantidad"
+                      position="right"
+                      formatter={(valor: unknown) => String(Number(valor ?? 0))}
+                      fill={PALETA.texto}
+                      fontSize={12}
+                      fontWeight={600}
+                    />
+                    {porEstado.map((fila) => (
+                      <Cell key={`estado-${fila.estado}`} fill={fila.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCardPremium>
+
+          {/* Evolución mensual */}
+          <ChartCardPremium
+            titulo="Evolución Mensual"
+            descripcion="Tendencia de requerimientos en el tiempo"
+          >
+            {porMes.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={porMes} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
+                  <defs>
+                    <linearGradient id="colorCantidad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={PALETA.azul_primario} stopOpacity={0.8} />
+                      <stop offset="100%" stopColor={PALETA.azul_primario} stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} vertical={false} />
+                  <XAxis dataKey="mes" tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
+                  <Tooltip content={<TooltipPersonalizado />} />
+                  <Line
+                    type="monotone"
+                    dataKey="cantidad"
+                    stroke={PALETA.azul_primario}
+                    strokeWidth={3}
+                    dot={{ r: 5, fill: PALETA.azul_primario }}
+                    activeDot={{ r: 7 }}
+                    name="Requerimientos"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCardPremium>
         </div>
       </div>
     </div>
@@ -406,7 +622,7 @@ function ChartCardPremium({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-300">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md">
       <div className="mb-6">
         <h3 className="text-lg font-bold text-slate-900">{titulo}</h3>
         {descripcion && <p className="text-sm text-slate-500 mt-1">{descripcion}</p>}

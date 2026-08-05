@@ -22,9 +22,10 @@ const GRUPOS: Grupo[] = [
     ],
   },
   {
-    titulo: 'Liquidación',
+    titulo: 'Requerimientos y entregas',
     items: [
       { to: '/requerimientos', label: 'Requerimientos' },
+      { to: '/requerimientos/detalle-ans', label: 'Detalle ANS' },
       { to: '/entregas-actas', label: 'Entregas de Actas', permiso: 'entregas_actas.ver' },
     ],
   },

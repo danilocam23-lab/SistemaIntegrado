@@ -20,6 +20,7 @@ import AzureDevOps from './pages/AzureDevOps'
 import Configuracion from './pages/Configuracion'
 import Cifras from './pages/Cifras'
 import EntregasActas from './pages/EntregasActas'
+import RequerimientosDetalleANS from './pages/RequerimientosDetalleANS'
 import DashboardEstados from './pages/DashboardEstados'
 import DashboardSquad from './pages/DashboardSquad'
 import AdminEndpoints from './pages/AdminEndpoints'
@@ -48,6 +49,7 @@ export default function App() {
               <Route path="dashboard-estados" element={<RoleRoute permiso="dashboard.estados.ver"><DashboardEstados /></RoleRoute>} />
               <Route path="dashboard-squad" element={<RoleRoute permiso="dashboard.squad.ver"><DashboardSquad /></RoleRoute>} />
               <Route path="requerimientos" element={<Requerimientos />} />
+              <Route path="requerimientos/detalle-ans" element={<RequerimientosDetalleANS />} />
               <Route path="requerimientos/nuevo" element={<RequerimientoNuevo />} />
               <Route path="requerimientos/:reqId" element={<RequerimientoDetalle />} />
               <Route path="entregas-actas" element={<EntregasActas />} />

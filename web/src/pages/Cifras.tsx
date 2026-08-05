@@ -257,7 +257,7 @@ export default function Cifras() {
           </ChartCardPremium>
         </div>
 
-        {/* Liquidación Section */}
+        {/* Requerimientos y entregas Section */}
         {liq && (
           <div className="mt-8 space-y-6">
             {/* KPI Cards */}
