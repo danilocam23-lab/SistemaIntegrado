@@ -61,7 +61,7 @@ export default function DashboardRequerimientos() {
 
   useEffect(() => {
     client
-      .get<{ registros: Array<{ lider?: string; datos: Record<string, string> }> }>('/soporte/solicitudes-fabrica')
+      .get<{ registros: Array<{ lider?: string; Work_Order_ID?: string; Fecha_Fin_Real?: string; Estado_ANS_Oportunidad?: string; Estado_ANS_Cumplimiento?: string; Estado_ANS_inicio_trabajo?: string }> }>('/soporte/solicitudes-fabrica/resumen')
       .then((r) => {
         const workOrderIDs = new Set<string>()
         const woPorLtMap: Record<string, Set<string>> = {}
@@ -74,21 +74,21 @@ export default function DashboardRequerimientos() {
         const tendenciaMap: Record<string, { oportunidadTotal: number; oportunidadCumple: number; oportunidadNoCumple: number; cumplimientoTotal: number; cumplimientoCumple: number; cumplimientoNoCumple: number; inicioTotal: number; inicioCumple: number; inicioNoCumple: number }> = {}
 
         r.data.registros?.forEach((reg) => {
-          if (reg.datos?.['Work Order ID']) {
-            workOrderIDs.add(reg.datos['Work Order ID'])
+          if (reg.Work_Order_ID) {
+            workOrderIDs.add(reg.Work_Order_ID)
           }
-          const liderSoporte = reg.lider ?? reg.datos?.['Lider'] ?? reg.datos?.['LT HITSS'] ?? ''
-          if (liderSoporte && reg.datos?.['Work Order ID']) {
+          const liderSoporte = reg.lider ?? ''
+          if (liderSoporte && reg.Work_Order_ID) {
             const liderKey = normalizarTexto(liderSoporte)
             if (!woPorLtMap[liderKey]) woPorLtMap[liderKey] = new Set<string>()
-            woPorLtMap[liderKey].add(reg.datos['Work Order ID'])
+            woPorLtMap[liderKey].add(reg.Work_Order_ID)
           }
           
-          const fechaFin = reg.datos?.['Fecha_Fin_Real']
+          const fechaFin = reg.Fecha_Fin_Real
           const mes = fechaFin ? fechaFin.substring(0, 7) : 'Sin fecha'
           if (!woPorMesMap[mes]) woPorMesMap[mes] = new Set<string>()
-          if (reg.datos?.['Work Order ID']) {
-            woPorMesMap[mes].add(reg.datos['Work Order ID'])
+          if (reg.Work_Order_ID) {
+            woPorMesMap[mes].add(reg.Work_Order_ID)
           }
           if (!tendenciaMap[mes]) tendenciaMap[mes] = { 
             oportunidadTotal: 0, oportunidadCumple: 0, oportunidadNoCumple: 0,
@@ -96,10 +96,10 @@ export default function DashboardRequerimientos() {
             inicioTotal: 0, inicioCumple: 0, inicioNoCumple: 0
           }
 
-          if (reg.datos?.['Estado_ANS_Oportunidad']) {
+          if (reg.Estado_ANS_Oportunidad) {
             oportunidadTotal++
             tendenciaMap[mes].oportunidadTotal++
-            if (reg.datos['Estado_ANS_Oportunidad'].toUpperCase() === 'CUMPLE') {
+            if (reg.Estado_ANS_Oportunidad.toUpperCase() === 'CUMPLE') {
               oportunidadCumple++
               tendenciaMap[mes].oportunidadCumple++
             } else {
@@ -108,10 +108,10 @@ export default function DashboardRequerimientos() {
             }
           }
           
-          if (reg.datos?.['Estado_ANS_Cumplimiento']) {
+          if (reg.Estado_ANS_Cumplimiento) {
             cumplimientoTotal++
             tendenciaMap[mes].cumplimientoTotal++
-            if (reg.datos['Estado_ANS_Cumplimiento'].toUpperCase() === 'CUMPLE') {
+            if (reg.Estado_ANS_Cumplimiento.toUpperCase() === 'CUMPLE') {
               cumplimientoCumple++
               tendenciaMap[mes].cumplimientoCumple++
             } else {
@@ -120,10 +120,10 @@ export default function DashboardRequerimientos() {
             }
           }
           
-          if (reg.datos?.['Estado_ANS_inicio_trabajo']) {
+          if (reg.Estado_ANS_inicio_trabajo) {
             inicioTotal++
             tendenciaMap[mes].inicioTotal++
-            if (reg.datos['Estado_ANS_inicio_trabajo'].toUpperCase() === 'CUMPLE') {
+            if (reg.Estado_ANS_inicio_trabajo.toUpperCase() === 'CUMPLE') {
               inicioCumple++
               tendenciaMap[mes].inicioCumple++
             } else {

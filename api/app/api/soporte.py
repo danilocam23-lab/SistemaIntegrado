@@ -17,6 +17,15 @@ async def listar(
     return await SoporteSolicitudesFabricaService.listar(ctx)
 
 
+@router.get("/resumen")
+async def resumen(
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
+) -> dict:
+    """Resumen ligero: solo campos clave por registro, sin datos completos."""
+    return await SoporteSolicitudesFabricaService.resumen(ctx)
+
+
 @router.post("/previsualizar")
 async def previsualizar(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),

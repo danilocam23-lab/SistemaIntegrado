@@ -5,6 +5,7 @@ import csv
 import io
 import logging
 import re
+import time
 import unicodedata
 from datetime import datetime, timezone
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urlparse, urlunparse
@@ -161,6 +162,20 @@ def _extraer_lider_squad(row_por_key: dict[str, str]) -> tuple[str | None, str |
     if len(partes) == 2:
         return (partes[0].strip() or None, partes[1].strip() or None)
     return (None, None)
+
+
+# ── Caché en memoria para listar() ──────────────────────────────────
+_CACHE_TTL = 300  # 5 minutos
+_cache_listar: dict[str, tuple[float, dict]] = {}
+
+
+def _cache_key(codigos: list[str]) -> str:
+    return ",".join(sorted(codigos))
+
+
+def _cache_invalidar() -> None:
+    """Limpia toda la caché (llamar tras sincronizar)."""
+    _cache_listar.clear()
 
 
 class SoporteSolicitudesFabricaService:
@@ -414,6 +429,12 @@ class SoporteSolicitudesFabricaService:
 
     @staticmethod
     async def listar(ctx: ContextoAplicacion) -> dict:
+        key = _cache_key(ctx.codigos)
+        ahora = time.monotonic()
+        cached = _cache_listar.get(key)
+        if cached and (ahora - cached[0]) < _CACHE_TTL:
+            return cached[1]
+
         registros = await SoporteSolicitudesFabricaRepository.listar(ctx.codigos)
         registros_payload = []
         for r in registros:
@@ -450,11 +471,41 @@ class SoporteSolicitudesFabricaService:
                 vistos.add(h)
                 headers.append(h)
 
-        return {
+        resultado = {
             "total": len(registros_payload),
             "ultima_actualizacion": (log.finalizado_en or log.iniciado_en) if log else None,
             "headers": headers,
             "registros": registros_payload,
+        }
+
+        _cache_listar[key] = (time.monotonic(), resultado)
+        return resultado
+
+    @staticmethod
+    async def resumen(ctx: ContextoAplicacion) -> dict:
+        """Devuelve solo campos clave por registro (sin datos completos)."""
+        completo = await SoporteSolicitudesFabricaService.listar(ctx)
+        resumidos = []
+        for r in completo.get("registros", []):
+            datos = r.get("datos") or {}
+            resumidos.append({
+                "id": r.get("id"),
+                "lider": r.get("lider"),
+                "squad": r.get("squad"),
+                "Work_Order_ID": datos.get("Work Order ID", ""),
+                "Fecha_Fin_Real": datos.get("Fecha_Fin_Real", ""),
+                "Horas_Estimadas": datos.get("Horas_Estimadas", ""),
+                "Horas_Reales": datos.get("Horas_Reales", ""),
+                "Status_WO": datos.get("Status WO", ""),
+                "Assigned_To": datos.get("Assigned To", ""),
+                "Estado_ANS_Oportunidad": datos.get("Estado_ANS_Oportunidad", ""),
+                "Estado_ANS_Cumplimiento": datos.get("Estado_ANS_Cumplimiento", ""),
+                "Estado_ANS_inicio_trabajo": datos.get("Estado_ANS_inicio_trabajo", ""),
+            })
+        return {
+            "total": completo.get("total", 0),
+            "ultima_actualizacion": completo.get("ultima_actualizacion"),
+            "registros": resumidos,
         }
 
     @staticmethod
@@ -500,6 +551,7 @@ class SoporteSolicitudesFabricaService:
                     filas_por_aplicacion[app].append(fila)
 
             creados = await SoporteSolicitudesFabricaRepository.reemplazar_por_aplicacion(filas_por_aplicacion)
+            _cache_invalidar()
             fin = datetime.now(timezone.utc)
             duracion_ms = int((fin - inicio).total_seconds() * 1000)
             log_app_id = "__todas__" if ctx.modo_consolidado else ctx.codigo

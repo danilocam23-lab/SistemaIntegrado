@@ -16,9 +16,8 @@ const GRUPOS: Grupo[] = [
     titulo: 'Dashboard',
     items: [
       { to: '/dashboard', label: 'Dashboard', permiso: 'dashboard.ver' },
-      { to: '/cifras', label: 'Cifras y ANS', permiso: 'cifras.ver' },
       { to: '/dashboard-estados', label: 'Estados', permiso: 'dashboard.estados.ver' },
-      { to: '/dashboard-squad', label: 'Squad', permiso: 'dashboard.squad.ver' },
+      { to: '/dashboard-backlog', label: 'Backlog', permiso: 'dashboard.squad.ver' },
     ],
   },
   {
@@ -43,6 +42,7 @@ const GRUPOS: Grupo[] = [
     titulo: 'Facturación',
     items: [
       { to: '/facturacion/general', label: 'General', permiso: 'facturacion.ver' },
+      { to: '/facturacion/valores-proyecto', label: 'Valores de proyecto', permiso: 'facturacion.ver' },
     ],
   },
   {

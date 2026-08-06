@@ -3,8 +3,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   LabelList,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -31,7 +31,7 @@ const PALETA = {
   texto_sec: '#64748B',
 }
 
-const COLORES = ['#2563eb', '#7c3aed', '#16a34a', '#f59e0b', '#dc2626', '#0891b2', '#06b6d4', '#8b5cf6']
+const MESES_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 interface FilaSquad {
   squadId: string | null
@@ -45,8 +45,31 @@ interface FilaSquad {
   ansEntregaTotal: number
 }
 
+interface RegistroSoporteResumen {
+  id: string
+  Work_Order_ID: string
+  Fecha_Fin_Real: string
+  Horas_Estimadas: string
+  Horas_Reales: string
+}
+
+interface ResumenSoporteResponse {
+  registros: RegistroSoporteResumen[]
+}
+
 function fmtNumero(valor: number): string {
   return valor.toLocaleString('es-CO', { maximumFractionDigits: 1 })
+}
+
+function numero(valor: string | number | null | undefined): number {
+  if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0
+  const texto = (valor ?? '').trim().replace(/\s/g, '')
+  if (!texto) return 0
+  const normalizado = texto.includes(',')
+    ? texto.replace(/\./g, '').replace(',', '.')
+    : texto
+  const resultado = Number(normalizado)
+  return Number.isFinite(resultado) ? resultado : 0
 }
 
 
@@ -57,6 +80,13 @@ function mesActual(): string {
 
 function fechaKey(fechaIso: string): string {
   return fechaIso.slice(0, 10)
+}
+
+function formatearPeriodo(periodo: string): string {
+  const [anio, mes] = periodo.split('-')
+  const indiceMes = Number(mes) - 1
+  const etiquetaMes = MESES_LABELS[indiceMes] ?? mes
+  return anio && mes ? `${etiquetaMes} ${anio}` : periodo
 }
 
 function contarDiasHabiles(mes: string, festivosMes: Set<string>): number {
@@ -79,6 +109,10 @@ function contarDiasHabiles(mes: string, festivosMes: Set<string>): number {
 }
 
 export default function DashboardSquad() {
+  const mesInicial = mesActual()
+  const anoInicial = mesInicial.slice(0, 4)
+  const mesInicialNumero = String(Number(mesInicial.slice(5, 7)))
+
   const { datos: reqs, cargando } = useLista<Requerimiento>('/requerimientos')
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
   const { datos: personas, cargando: cargandoPersonas } = useLista<Persona>('/personas')
@@ -86,8 +120,10 @@ export default function DashboardSquad() {
   const { datos: festivos, cargando: cargandoFestivos } = useLista<Festivo>('/festivos')
   const { datos: configuraciones, cargando: cargandoConfiguraciones } = useLista<Configuracion>('/configuracion')
   const { activa } = useAplicacion()
-  const [mesCapacidad, setMesCapacidad] = useState(mesActual)
+  const [anosCapacidadActivos, setAnosCapacidadActivos] = useState<Set<string>>(() => new Set([anoInicial]))
+  const [mesesCapacidadActivos, setMesesCapacidadActivos] = useState<Set<string>>(() => new Set([mesInicialNumero]))
   const [squadsDoc, setSquadsDoc] = useState<Squad[]>([])
+  const [soporteResumen, setSoporteResumen] = useState<RegistroSoporteResumen[]>([])
 
   useEffect(() => {
     client.get<Squad[]>('/squads', { headers: { 'X-Aplicacion': '__todas__' } })
@@ -95,6 +131,13 @@ export default function DashboardSquad() {
       .catch(() => {
         client.get<Squad[]>('/squads').then((r) => setSquadsDoc(r.data)).catch(() => {})
       })
+  }, [])
+
+  useEffect(() => {
+    client
+      .get<ResumenSoporteResponse>('/soporte/solicitudes-fabrica/resumen')
+      .then((r) => setSoporteResumen(r.data.registros ?? []))
+      .catch(() => setSoporteResumen([]))
   }, [])
 
   const requerimientos = useMemo(() => {
@@ -168,56 +211,81 @@ export default function DashboardSquad() {
     return Number.isFinite(valor) && valor > 0 ? valor : 180
   }, [configuraciones])
 
-  const festivosMesSeleccionado = useMemo(() => {
+  const anosCapacidadDisponibles = useMemo(() => {
     const set = new Set<string>()
-    for (const festivo of festivos) {
-      const key = fechaKey(festivo.fecha)
-      if (key.slice(0, 7) === mesCapacidad) set.add(key)
+    for (const capacidad of capacidades) {
+      if (capacidad.mes && capacidad.mes.length >= 4) set.add(capacidad.mes.slice(0, 4))
     }
-    return set
-  }, [festivos, mesCapacidad])
+    return Array.from(set).sort((a, b) => b.localeCompare(a))
+  }, [capacidades])
+
+  const periodosCapacidadSeleccionados = useMemo(() => {
+    const anos = anosCapacidadActivos.size > 0
+      ? Array.from(anosCapacidadActivos)
+      : (anosCapacidadDisponibles.length > 0 ? anosCapacidadDisponibles : [anoInicial])
+    const meses = mesesCapacidadActivos.size > 0
+      ? Array.from(mesesCapacidadActivos)
+      : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+    const periodos = anos.flatMap((ano) => meses.map((mes) => `${ano}-${mes.padStart(2, '0')}`))
+    return Array.from(new Set(periodos)).sort()
+  }, [anosCapacidadActivos, anosCapacidadDisponibles, anoInicial, mesesCapacidadActivos])
+
+  const festivosPorMes = useMemo(() => {
+    const mapa = new Map<string, Set<string>>()
+    for (const festivo of festivos) {
+      const keyMes = fechaKey(festivo.fecha).slice(0, 7)
+      const keyDia = fechaKey(festivo.fecha)
+      if (!mapa.has(keyMes)) mapa.set(keyMes, new Set<string>())
+      mapa.get(keyMes)?.add(keyDia)
+    }
+    return mapa
+  }, [festivos])
 
   const capacidadPorPersonaMes = useMemo(() => {
     const mapa = new Map<string, number>()
     for (const capacidad of capacidades) {
-      if (capacidad.scope === 'persona' && capacidad.persona_id && capacidad.mes === mesCapacidad) {
-        mapa.set(capacidad.persona_id, Number(capacidad.horas_disponibles ?? 0))
+      if (capacidad.scope === 'persona' && capacidad.persona_id && capacidad.mes) {
+        mapa.set(`${capacidad.persona_id}|${capacidad.mes}`, Number(capacidad.horas_disponibles ?? 0))
       }
     }
     return mapa
-  }, [capacidades, mesCapacidad])
+  }, [capacidades])
 
   const filasCapacidadSquad = useMemo(() => {
-    const diasLaborables = contarDiasHabiles(mesCapacidad, new Set())
-    const diasHabiles = contarDiasHabiles(mesCapacidad, festivosMesSeleccionado)
-    const factorMes = diasLaborables > 0 ? diasHabiles / diasLaborables : 1
-    const horasDefaultMes = horasMesDefault * factorMes
     const mapa = new Map<string, { squadId: string; squad: string; horas: number; personas: number }>()
 
-    for (const persona of personas) {
-      if (!persona.activo || persona.rol_operativo === 'LT_EPM') continue
-      const squadsNormalizados = (persona.squads ?? []).map((squad) => squadCodigoPorNombre.get(squad) ?? squad)
-      const squadActivaNombre = activa && activa !== CONSOLIDADO ? resolverNombreSquad(activa) : ''
-      const perteneceActiva =
-        activa !== CONSOLIDADO &&
-        !!activa &&
-        (
-          squadsNormalizados.length === 0 ||
-          squadsNormalizados.includes(activa) ||
-          (squadActivaNombre ? (persona.squads ?? []).includes(squadActivaNombre) : false)
-        )
+    for (const periodo of periodosCapacidadSeleccionados) {
+      const festivosMesSeleccionado = festivosPorMes.get(periodo) ?? new Set<string>()
+      const diasLaborables = contarDiasHabiles(periodo, new Set())
+      const diasHabiles = contarDiasHabiles(periodo, festivosMesSeleccionado)
+      const factorMes = diasLaborables > 0 ? diasHabiles / diasLaborables : 1
+      const horasDefaultMes = horasMesDefault * factorMes
 
-      const squadsPersona = activa !== CONSOLIDADO && activa
-        ? (perteneceActiva ? [activa] : [])
-        : squadsNormalizados
+      for (const persona of personas) {
+        if (!persona.activo || persona.rol_operativo === 'LT_EPM') continue
+        const squadsNormalizados = (persona.squads ?? []).map((squad) => squadCodigoPorNombre.get(squad) ?? squad)
+        const squadActivaNombre = activa && activa !== CONSOLIDADO ? resolverNombreSquad(activa) : ''
+        const perteneceActiva =
+          activa !== CONSOLIDADO &&
+          !!activa &&
+          (
+            squadsNormalizados.length === 0 ||
+            squadsNormalizados.includes(activa) ||
+            (squadActivaNombre ? (persona.squads ?? []).includes(squadActivaNombre) : false)
+          )
 
-      for (const squadId of squadsPersona) {
-        const squad = resolverNombreSquad(squadId)
-        const capacidadPersona = capacidadPorPersonaMes.get(persona.id) ?? horasDefaultMes
-        const actual = mapa.get(squadId) ?? { squadId, squad, horas: 0, personas: 0 }
-        actual.horas += capacidadPersona
-        actual.personas += 1
-        mapa.set(squadId, actual)
+        const squadsPersona = activa !== CONSOLIDADO && activa
+          ? (perteneceActiva ? [activa] : [])
+          : squadsNormalizados
+
+        for (const squadId of squadsPersona) {
+          const squad = resolverNombreSquad(squadId)
+          const capacidadPersona = capacidadPorPersonaMes.get(`${persona.id}|${periodo}`) ?? horasDefaultMes
+          const actual = mapa.get(squadId) ?? { squadId, squad, horas: 0, personas: 0 }
+          actual.horas += capacidadPersona
+          actual.personas += 1
+          mapa.set(squadId, actual)
+        }
       }
     }
 
@@ -225,10 +293,10 @@ export default function DashboardSquad() {
   }, [
     activa,
     capacidadPorPersonaMes,
-    festivosMesSeleccionado,
+    festivosPorMes,
     horasMesDefault,
-    mesCapacidad,
     personas,
+    periodosCapacidadSeleccionados,
     squadCodigoPorNombre,
     resolverNombreSquad,
     squadsDoc,
@@ -236,19 +304,126 @@ export default function DashboardSquad() {
 
   const resumenCapacidad = useMemo(() => {
     const totalHoras = filasCapacidadSquad.reduce((sum, fila) => sum + fila.horas, 0)
-    const totalPersonas = filasCapacidadSquad.reduce((sum, fila) => sum + fila.personas, 0)
-    return { totalHoras, totalPersonas }
-  }, [filasCapacidadSquad])
+    const personasDisponibles = new Set<string>()
+    periodosCapacidadSeleccionados.forEach((periodo) => {
+      const festivosMesSeleccionado = festivosPorMes.get(periodo) ?? new Set<string>()
+      const diasLaborables = contarDiasHabiles(periodo, new Set())
+      const diasHabiles = contarDiasHabiles(periodo, festivosMesSeleccionado)
+      const factorMes = diasLaborables > 0 ? diasHabiles / diasLaborables : 1
+      const horasDefaultMes = horasMesDefault * factorMes
+
+      for (const persona of personas) {
+        if (!persona.activo || persona.rol_operativo === 'LT_EPM') continue
+        const squadsNormalizados = (persona.squads ?? []).map((squad) => squadCodigoPorNombre.get(squad) ?? squad)
+        const squadActivaNombre = activa && activa !== CONSOLIDADO ? resolverNombreSquad(activa) : ''
+        const perteneceActiva =
+          activa !== CONSOLIDADO &&
+          !!activa &&
+          (
+            squadsNormalizados.length === 0 ||
+            squadsNormalizados.includes(activa) ||
+            (squadActivaNombre ? (persona.squads ?? []).includes(squadActivaNombre) : false)
+          )
+        const squadsPersona = activa !== CONSOLIDADO && activa
+          ? (perteneceActiva ? [activa] : [])
+          : squadsNormalizados
+        if (squadsPersona.length === 0) continue
+
+        const capacidadPersona = capacidadPorPersonaMes.get(`${persona.id}|${periodo}`) ?? horasDefaultMes
+        if (capacidadPersona > 0) personasDisponibles.add(persona.id)
+      }
+    })
+    const personasUnicas = personas.filter((persona) => persona.activo && persona.rol_operativo !== 'LT_EPM').length
+    return { totalHoras, personasDisponibles: personasDisponibles.size, personasUnicas }
+  }, [
+    activa,
+    capacidadPorPersonaMes,
+    festivosPorMes,
+    horasMesDefault,
+    personas,
+    periodosCapacidadSeleccionados,
+    squadCodigoPorNombre,
+    resolverNombreSquad,
+    filasCapacidadSquad,
+  ])
+
+  const entregasPorMes = useMemo(() => {
+    const periodos = new Set(periodosCapacidadSeleccionados)
+    const mapa = new Map<string, { mes: string; label: string; entregas: number; horas: number; wo: number; woHoras: number; woIds: Set<string> }>()
+
+    for (const registro of soporteResumen) {
+      const fechaWo = registro.Fecha_Fin_Real ?? ''
+      if (fechaWo.length < 7) continue
+      const mesWo = fechaWo.slice(0, 7)
+      if (!periodos.has(mesWo)) continue
+      const actualWo = mapa.get(mesWo) ?? { mes: mesWo, label: formatearPeriodo(mesWo), entregas: 0, horas: 0, wo: 0, woHoras: 0, woIds: new Set<string>() }
+      const claveWo = (registro.Work_Order_ID || registro.id || `${mesWo}-${actualWo.woIds.size + 1}`).trim()
+      if (!actualWo.woIds.has(claveWo)) {
+        actualWo.woIds.add(claveWo)
+        actualWo.wo += 1
+      }
+      actualWo.woHoras += numero(registro.Horas_Reales)
+      mapa.set(mesWo, actualWo)
+    }
+
+    for (const req of requerimientos) {
+      for (const entrega of req.entregas ?? []) {
+        const fecha = entrega.fecha_comprometida ?? entrega.fecha_recepcion ?? ''
+        if (!fecha || fecha.length < 7) continue
+        const mes = fecha.slice(0, 7)
+        if (!periodos.has(mes)) continue
+        const actual = mapa.get(mes) ?? { mes, label: formatearPeriodo(mes), entregas: 0, horas: 0, wo: 0, woHoras: 0, woIds: new Set<string>() }
+        actual.entregas += 1
+        actual.horas += Number(entrega.horas ?? 0)
+        mapa.set(mes, actual)
+      }
+    }
+
+    return Array.from(mapa.values()).map(({ woIds, ...resto }) => resto).sort((a, b) => a.mes.localeCompare(b.mes))
+  }, [periodosCapacidadSeleccionados, requerimientos, soporteResumen])
+
+  const woSoportePorMes = useMemo(() => {
+    const periodos = new Set(periodosCapacidadSeleccionados)
+    const mapa = new Map<string, { mes: string; label: string; wo: number; woHoras: number }>()
+
+    for (const registro of soporteResumen) {
+      const workOrder = registro.Work_Order_ID?.trim()
+      const fechaWo = registro.Fecha_Fin_Real?.trim() ?? ''
+      if (!workOrder || fechaWo.length < 7) continue
+
+      const mes = fechaWo.slice(0, 7)
+      if (!periodos.has(mes)) continue
+      const actual = mapa.get(mes) ?? { mes, label: formatearPeriodo(mes), wo: 0, woHoras: 0 }
+      actual.wo += 1
+      actual.woHoras += numero(registro.Horas_Reales)
+      mapa.set(mes, actual)
+    }
+
+    return Array.from(mapa.values()).sort((a, b) => a.mes.localeCompare(b.mes))
+  }, [periodosCapacidadSeleccionados, soporteResumen])
+
+  const horasEntregasFiltradas = useMemo(() => {
+    const totalHoras = entregasPorMes.reduce((sum, item) => sum + item.horas, 0)
+    const totalEntregas = entregasPorMes.reduce((sum, item) => sum + item.entregas, 0)
+    const promedioHoras = totalEntregas > 0 ? totalHoras / totalEntregas : 0
+    return { totalHoras, totalEntregas, promedioHoras }
+  }, [entregasPorMes])
+
+  const horasWoFiltradas = useMemo(() => {
+    const totalHoras = woSoportePorMes.reduce((sum, item) => sum + item.woHoras, 0)
+    const totalWo = woSoportePorMes.reduce((sum, item) => sum + item.wo, 0)
+    const promedioHoras = totalWo > 0 ? totalHoras / totalWo : 0
+    return { totalHoras, totalWo, promedioHoras }
+  }, [woSoportePorMes])
+
+  const totalHorasEntregasWo = horasEntregasFiltradas.totalHoras + horasWoFiltradas.totalHoras
 
   const kpis = useMemo(() => {
-    const totalHoras = filas.reduce((sum, fila) => sum + fila.horas, 0)
     const top = filas[0]
     return {
       totalSquads: filas.length,
       topNombre: top?.squad ?? '—',
       topCantidad: top?.reqs ?? 0,
-      totalHoras,
-      promedioHoras: requerimientos.length > 0 ? totalHoras / requerimientos.length : 0,
     }
   }, [filas, requerimientos.length])
 
@@ -281,7 +456,7 @@ export default function DashboardSquad() {
                   <span className="text-white font-bold text-lg">📊</span>
                 </div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 via-blue-800 to-slate-900 bg-clip-text text-transparent">
-                  Dashboard Squads
+                  Backlog
                 </h1>
               </div>
               <p className="text-slate-600 text-sm">
@@ -291,18 +466,120 @@ export default function DashboardSquad() {
             </div>
 
             {/* Filter Controls */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div className="relative group">
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                  📅 Mes de Capacidad
-                </label>
-                <input
-                  type="month"
-                  value={mesCapacidad}
-                  onChange={(event) => setMesCapacidad(event.target.value)}
-                  className="px-4 py-2.5 rounded-lg border-2 border-slate-200 bg-white font-semibold text-slate-900 focus:border-blue-500 focus:outline-none transition-colors cursor-pointer hover:border-slate-300"
-                />
-              </div>
+            <div className="flex flex-wrap items-start gap-3">
+              <details className="group relative">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:border-slate-300 transition-colors">
+                  <span>📅 Año</span>
+                  {anosCapacidadActivos.size > 0 && (
+                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                      {anosCapacidadActivos.size}
+                    </span>
+                  )}
+                  <svg className="h-3.5 w-3.5 text-slate-400 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
+                  </svg>
+                </summary>
+                <div className="absolute z-20 mt-1 min-w-[180px] rounded-lg border border-slate-200 bg-white p-2.5 shadow-lg">
+                  <div className="mb-2 flex justify-end gap-3">
+                    <button type="button" onClick={() => setAnosCapacidadActivos(new Set(anosCapacidadDisponibles))} className="text-[10px] font-semibold text-blue-600 hover:underline">
+                      Todos
+                    </button>
+                    <button type="button" onClick={() => setAnosCapacidadActivos(new Set())} className="text-[10px] font-semibold text-slate-400 hover:underline">
+                      Limpiar
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {anosCapacidadDisponibles.map((ano) => {
+                      const checked = anosCapacidadActivos.has(ano)
+                      return (
+                        <label
+                          key={ano}
+                          className={`flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-[11px] font-semibold transition-colors ${
+                            checked ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => setAnosCapacidadActivos((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(ano)) next.delete(ano)
+                              else next.add(ano)
+                              return next
+                            })}
+                          />
+                          {ano}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </details>
+
+              <details className="group relative">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:border-slate-300 transition-colors">
+                  <span>🗓️ Mes</span>
+                  {mesesCapacidadActivos.size > 0 && (
+                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                      {mesesCapacidadActivos.size}
+                    </span>
+                  )}
+                  <svg className="h-3.5 w-3.5 text-slate-400 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
+                  </svg>
+                </summary>
+                <div className="absolute z-20 mt-1 min-w-[220px] rounded-lg border border-slate-200 bg-white p-2.5 shadow-lg">
+                  <div className="mb-2 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMesesCapacidadActivos(new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']))}
+                      className="text-[10px] font-semibold text-blue-600 hover:underline"
+                    >
+                      Todos
+                    </button>
+                    <button type="button" onClick={() => setMesesCapacidadActivos(new Set())} className="text-[10px] font-semibold text-slate-400 hover:underline">
+                      Limpiar
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {MESES_LABELS.map((label, idx) => {
+                      const key = String(idx + 1)
+                      const checked = mesesCapacidadActivos.has(key)
+                      return (
+                        <label
+                          key={key}
+                          className={`flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-[11px] font-semibold transition-colors ${
+                            checked ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => setMesesCapacidadActivos((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(key)) next.delete(key)
+                              else next.add(key)
+                              return next
+                            })}
+                          />
+                          {label}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </details>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAnosCapacidadActivos(new Set([anoInicial]))
+                  setMesesCapacidadActivos(new Set([mesInicialNumero]))
+                }}
+                className="rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Restablecer
+              </button>
             </div>
           </div>
         </div>
@@ -311,7 +588,7 @@ export default function DashboardSquad() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* KPI Grid - Premium Design */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-6 mb-8">
           <KpiCardPremium
             icon="📊"
             label="Squads Activos"
@@ -322,33 +599,134 @@ export default function DashboardSquad() {
           />
           <KpiCardPremium
             icon="🏆"
-            label="Squad Principal"
+            label="Backlog Principal"
             value={kpis.topNombre}
             subtext={`${kpis.topCantidad} requerimientos`}
             color="purple"
           />
           <KpiCardPremium
             icon="⏱️"
-            label="Horas Estimadas"
-            value={`${fmtNumero(kpis.totalHoras)}h`}
-            subtext={`Promedio: ${fmtNumero(kpis.promedioHoras)}h`}
+            label="Horas de entregas"
+            value={`${fmtNumero(horasEntregasFiltradas.totalHoras)}h`}
+            subtext={`Promedio: ${fmtNumero(horasEntregasFiltradas.promedioHoras)}h • ${fmtNumero(horasEntregasFiltradas.totalEntregas)} entregas`}
             color="amber"
+          />
+          <KpiCardPremium
+            icon="🧾"
+            label="Horas de WO"
+            value={`${fmtNumero(horasWoFiltradas.totalHoras)}h`}
+            subtext={`Promedio: ${fmtNumero(horasWoFiltradas.promedioHoras)}h • ${fmtNumero(horasWoFiltradas.totalWo)} WO`}
+            color="blue"
+          />
+          <KpiCardPremium
+            icon="Σ"
+            label="Total horas"
+            value={`${fmtNumero(totalHorasEntregasWo)}h`}
+            subtext="Horas de entregas + Horas de WO"
+            color="purple"
           />
           <KpiCardPremium
             icon="👥"
             label="Equipo Disponible"
-            value={resumenCapacidad.totalPersonas}
-            subtext={`${fmtNumero(resumenCapacidad.totalHoras)}h capacidad`}
+            value={resumenCapacidad.personasDisponibles}
+            subtext={`${resumenCapacidad.personasUnicas} personas únicas • sin LT_EPM • ${fmtNumero(resumenCapacidad.totalHoras)}h capacidad`}
             color="green"
           />
         </div>
 
         {/* Charts Section */}
         <div className="space-y-6">
-          {/* Capacidad Mensual - Main Chart */}
+          <ChartCardPremium titulo="Entregas por mes" descripcion="Cantidad de entregas y horas de entregas por periodo seleccionado">
+            {entregasPorMes.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ResponsiveContainer width="100%" height={420}>
+                <BarChart data={entregasPorMes} margin={{ left: 20, right: 40, top: 20, bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: PALETA.texto_sec }}
+                    angle={-20}
+                    textAnchor="end"
+                    height={60}
+                    interval={0}
+                  />
+                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
+                  <Tooltip content={<TooltipPersonalizado />} />
+                  <Legend verticalAlign="top" height={28} />
+                  <Bar yAxisId="left" dataKey="entregas" name="Entregas" fill="#7C3AED" radius={[8, 8, 0, 0]} barSize={16}>
+                    <LabelList
+                      dataKey="entregas"
+                      position="top"
+                      formatter={(valor: unknown) => String(Number(valor ?? 0))}
+                      fill={PALETA.texto}
+                      fontSize={11}
+                      fontWeight={600}
+                    />
+                  </Bar>
+                  <Bar yAxisId="right" dataKey="horas" name="Horas entregas" fill="#2563EB" radius={[8, 8, 0, 0]} barSize={16}>
+                    <LabelList
+                      dataKey="horas"
+                      position="top"
+                      formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
+                      fill={PALETA.texto}
+                      fontSize={11}
+                      fontWeight={600}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCardPremium>
+
+          <ChartCardPremium titulo="WO por mes" descripcion="Eje X: mes · Eje Y: cantidad de WO y suma de horas reales">
+            {woSoportePorMes.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <ResponsiveContainer width="100%" height={420}>
+                <BarChart data={woSoportePorMes} margin={{ left: 20, right: 40, top: 20, bottom: 50 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: PALETA.texto_sec }}
+                    angle={-20}
+                    textAnchor="end"
+                    height={60}
+                    interval={0}
+                  />
+                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
+                  <Tooltip content={<TooltipPersonalizado />} />
+                  <Legend verticalAlign="top" height={28} />
+                  <Bar yAxisId="left" dataKey="wo" name="Cantidad WO" fill="#16A34A" radius={[8, 8, 0, 0]} barSize={18}>
+                    <LabelList
+                      dataKey="wo"
+                      position="top"
+                      formatter={(valor: unknown) => String(Number(valor ?? 0))}
+                      fill={PALETA.texto}
+                      fontSize={11}
+                      fontWeight={600}
+                    />
+                  </Bar>
+                  <Bar yAxisId="right" dataKey="woHoras" name="Horas reales" fill="#F59E0B" radius={[8, 8, 0, 0]} barSize={18}>
+                    <LabelList
+                      dataKey="woHoras"
+                      position="top"
+                      formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
+                      fill={PALETA.texto}
+                      fontSize={11}
+                      fontWeight={600}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCardPremium>
+
           <ChartCardPremium
-            titulo="Capacidad Mensual por Squad"
-            descripcion={`Distribución de horas disponibles · Festivos: ${festivosMesSeleccionado.size}`}
+            titulo="Capacidad por Squad"
+            descripcion={`Distribución de horas disponibles · ${periodosCapacidadSeleccionados.length} periodo(s) · Festivos: ${festivosPorMes.size}`}
           >
             {filasCapacidadSquad.length === 0 ? (
               <EmptyState />
@@ -384,73 +762,6 @@ export default function DashboardSquad() {
               </ResponsiveContainer>
             )}
           </ChartCardPremium>
-
-          {/* Dos gráficos lado a lado */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Requerimientos por Squad */}
-            <ChartCardPremium
-              titulo="Requerimientos por Squad"
-              descripcion="Total de requerimientos asignados"
-            >
-              {filas.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <ResponsiveContainer width="100%" height={320}>
-                  <BarChart data={filas} layout="vertical" margin={{ left: 140, right: 60, top: 20, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                    <YAxis type="category" dataKey="squad" width={130} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                    <Tooltip content={<TooltipPersonalizado />} />
-                    <Bar dataKey="reqs" radius={[0, 12, 12, 0]} barSize={28}>
-                      <LabelList
-                        dataKey="reqs"
-                        position="right"
-                        formatter={(valor: unknown) => String(Number(valor ?? 0))}
-                        fill={PALETA.texto}
-                        fontSize={12}
-                        fontWeight={600}
-                      />
-                      {filas.map((_, index) => (
-                        <Cell key={`req-${index}`} fill={COLORES[index % COLORES.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </ChartCardPremium>
-
-            {/* Horas Estimadas por Squad */}
-            <ChartCardPremium
-              titulo="Horas Estimadas por Squad"
-              descripcion="Carga total de trabajo proyectada"
-            >
-              {filas.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <ResponsiveContainer width="100%" height={320}>
-                  <BarChart data={filas} layout="vertical" margin={{ left: 140, right: 60, top: 20, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                    <YAxis type="category" dataKey="squad" width={130} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                    <Tooltip content={<TooltipPersonalizado />} />
-                    <Bar dataKey="horas" radius={[0, 12, 12, 0]} barSize={28}>
-                      <LabelList
-                        dataKey="horas"
-                        position="right"
-                        formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
-                        fill={PALETA.texto}
-                        fontSize={12}
-                        fontWeight={600}
-                      />
-                      {filas.map((_, index) => (
-                        <Cell key={`hora-${index}`} fill={COLORES[index % COLORES.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </ChartCardPremium>
-          </div>
 
           {/* Table Section */}
           <ChartCardPremium titulo="Detalle Completo por Squad" descripcion="Resumen de métricas y cumplimiento">

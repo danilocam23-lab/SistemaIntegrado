@@ -18,7 +18,6 @@ import Roadmap from './pages/Roadmap'
 import Estimaciones from './pages/Estimaciones'
 import AzureDevOps from './pages/AzureDevOps'
 import Configuracion from './pages/Configuracion'
-import Cifras from './pages/Cifras'
 import EntregasActas from './pages/EntregasActas'
 import RequerimientosDetalleANS from './pages/RequerimientosDetalleANS'
 import DashboardEstados from './pages/DashboardEstados'
@@ -26,6 +25,7 @@ import DashboardSquad from './pages/DashboardSquad'
 import AdminEndpoints from './pages/AdminEndpoints'
 import Importacion from './pages/Importacion'
 import FacturacionGeneral from './pages/FacturacionGeneral'
+import FacturacionValoresProyecto from './pages/FacturacionValoresProyecto'
 import SoporteSolicitudesFabrica from './pages/SoporteSolicitudesFabrica'
 import SoporteDetalleANS from './pages/SoporteDetalleANS'
 
@@ -47,7 +47,8 @@ export default function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<RoleRoute permiso="dashboard.ver"><DashboardRequerimientos /></RoleRoute>} />
               <Route path="dashboard-estados" element={<RoleRoute permiso="dashboard.estados.ver"><DashboardEstados /></RoleRoute>} />
-              <Route path="dashboard-squad" element={<RoleRoute permiso="dashboard.squad.ver"><DashboardSquad /></RoleRoute>} />
+              <Route path="dashboard-backlog" element={<RoleRoute permiso="dashboard.squad.ver"><DashboardSquad /></RoleRoute>} />
+              <Route path="dashboard-squad" element={<Navigate to="/dashboard-backlog" replace />} />
               <Route path="requerimientos" element={<Requerimientos />} />
               <Route path="requerimientos/detalle-ans" element={<RequerimientosDetalleANS />} />
               <Route path="requerimientos/nuevo" element={<RequerimientoNuevo />} />
@@ -62,7 +63,6 @@ export default function App() {
               <Route path="estimaciones" element={<Estimaciones />} />
               <Route path="azure-devops" element={<AzureDevOps />} />
               <Route path="configuracion" element={<RoleRoute permiso="admin.configuracion.ver"><Configuracion /></RoleRoute>} />
-              <Route path="cifras" element={<RoleRoute permiso="cifras.ver"><Cifras /></RoleRoute>} />
               <Route
                 path="admin/aplicaciones"
                 element={<RoleRoute permiso="aplicaciones.ver"><AdminAplicaciones /></RoleRoute>}
@@ -77,6 +77,7 @@ export default function App() {
                 element={<RoleRoute permiso="admin.importacion.ver"><Importacion /></RoleRoute>}
               />
               <Route path="facturacion/general" element={<RoleRoute permiso="facturacion.ver"><FacturacionGeneral /></RoleRoute>} />
+              <Route path="facturacion/valores-proyecto" element={<RoleRoute permiso="facturacion.ver"><FacturacionValoresProyecto /></RoleRoute>} />
               <Route path="soporte/solicitudes-fabrica" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteSolicitudesFabrica /></RoleRoute>} />
               <Route path="soporte/detalle-ans" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteDetalleANS /></RoleRoute>} />
             </Route>
