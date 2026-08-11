@@ -16,6 +16,7 @@ from app.api import (
     estimaciones,
     festivos,
     importacion,
+    integracion,
     personas,
     reportes,
     requerimientos,
@@ -53,6 +54,8 @@ api_router.include_router(soporte.router)
 api_router.include_router(bitacora.router)
 api_router.include_router(reportes.router)
 api_router.include_router(cifras.router)
+# Integración externa (Power Automate, etc.)
+api_router.include_router(integracion.router)
 
 
 @api_router.get("/health", tags=["health"])

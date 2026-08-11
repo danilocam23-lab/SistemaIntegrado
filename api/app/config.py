@@ -1,11 +1,18 @@
 """Configuración de la aplicación, leída de variables de entorno / archivo .env."""
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+API_DIR = Path(__file__).resolve().parent.parent
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=API_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     app_name: str = "Sistema Integrado HITSS"
     app_root_path: str = ""
@@ -26,6 +33,9 @@ class Settings(BaseSettings):
     superadmin_nombre: str = "Administrador"
     superadmin_email: str = "admin@hitss.com"
     superadmin_password: str = "Admin123*"
+
+    # Integración externa (Power Automate, etc.)
+    api_key: str = ""
 
     # Aplicación inicial
     aplicacion_inicial_codigo: str = "epm-hitss"
