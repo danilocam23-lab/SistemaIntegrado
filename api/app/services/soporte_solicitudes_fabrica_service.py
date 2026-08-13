@@ -17,6 +17,7 @@ from app.documents.configuracion import Configuracion
 from app.documents.persona import Persona
 from app.documents.soporte_solicitud_fabrica import (
     ErrorValidacionSoporte,
+    SoporteSolicitudFabrica,
     SoporteSolicitudFabricaSyncLog,
 )
 from app.documents.squad import Squad
@@ -586,26 +587,71 @@ class SoporteSolicitudesFabricaService:
         }
 
     @staticmethod
-    async def datos_ans(ctx: ContextoAplicacion) -> dict:
-        """Devuelve solo campos relevantes para Detalle ANS (payload ~80% menor)."""
-        _ANS_FIELDS = (
-            "Work Order ID", "Fecha_Fin_Real", "Assigned To", "Status WO",
-            "Estado_ANS_Oportunidad", "Estado_ANS_Cumplimiento", "Estado_ANS_inicio_trabajo",
-            "Se_levanto_ANS_Oportunidad", "Observaciones_ANS_Oportunidad",
-            "Se_levanto_ANS_Cumplimiento", "Observaciones_ANS_Cumplimiento",
-            "Se_levanto_ANS_inicio_trabajo", "Observaciones_ANS_inicio_trabajo",
-        )
-        completo = await SoporteSolicitudesFabricaService.listar(ctx)
+    async def datos_ans(
+        ctx: ContextoAplicacion,
+        filtro_wo: str | None = None,
+        filtro_assigned: str | None = None,
+        filtro_ano: str | None = None,
+        filtro_mes: str | None = None,
+    ) -> dict:
+        """Consulta directa MongoDB con proyección — solo campos ANS."""
+        import re as _re
+
+        query: dict = {"aplicacion_id": {"$in": ctx.codigos}}
+        if filtro_wo:
+            query["datos.Work Order ID"] = {"$regex": _re.escape(filtro_wo), "$options": "i"}
+        if filtro_assigned:
+            query["datos.Assigned To"] = {"$regex": f"^{_re.escape(filtro_assigned)}$", "$options": "i"}
+        if filtro_ano and filtro_mes:
+            mes_pad = filtro_mes.zfill(2)
+            query["datos.Fecha_Fin_Real"] = {"$regex": f"^{_re.escape(filtro_ano)}-{mes_pad}"}
+        elif filtro_ano:
+            query["datos.Fecha_Fin_Real"] = {"$regex": f"^{_re.escape(filtro_ano)}"}
+        elif filtro_mes:
+            mes_pad = filtro_mes.zfill(2)
+            query["datos.Fecha_Fin_Real"] = {"$regex": f"^\\d{{4}}-{mes_pad}"}
+
+        projection = {
+            "_id": 1, "lider": 1, "squad": 1,
+            "datos.Work Order ID": 1, "datos.Fecha_Fin_Real": 1,
+            "datos.Assigned To": 1, "datos.Status WO": 1,
+            "datos.Estado_ANS_Oportunidad": 1, "datos.Estado_ANS_Cumplimiento": 1,
+            "datos.Estado_ANS_inicio_trabajo": 1,
+            "datos.Se_levanto_ANS_Oportunidad": 1, "datos.Observaciones_ANS_Oportunidad": 1,
+            "datos.Se_levanto_ANS_Cumplimiento": 1, "datos.Observaciones_ANS_Cumplimiento": 1,
+            "datos.Se_levanto_ANS_inicio_trabajo": 1, "datos.Observaciones_ANS_inicio_trabajo": 1,
+        }
+
+        pipeline = [
+            {"$match": query},
+            {"$project": projection},
+        ]
+        resultados = await SoporteSolicitudFabrica.aggregate(pipeline).to_list()
+
         registros_ans = []
-        for r in completo.get("registros", []):
-            datos = r.get("datos") or {}
+        for doc in resultados:
+            datos = doc.get("datos") or {}
             registros_ans.append({
-                "id": r.get("id"),
-                "lider": r.get("lider"),
-                "squad": r.get("squad"),
-                "datos": {k: datos.get(k, "") for k in _ANS_FIELDS},
+                "id": str(doc["_id"]),
+                "lider": doc.get("lider", ""),
+                "squad": doc.get("squad", ""),
+                "datos": {
+                    "Work Order ID": datos.get("Work Order ID", ""),
+                    "Fecha_Fin_Real": datos.get("Fecha_Fin_Real", ""),
+                    "Assigned To": datos.get("Assigned To", ""),
+                    "Status WO": datos.get("Status WO", ""),
+                    "Estado_ANS_Oportunidad": datos.get("Estado_ANS_Oportunidad", ""),
+                    "Estado_ANS_Cumplimiento": datos.get("Estado_ANS_Cumplimiento", ""),
+                    "Estado_ANS_inicio_trabajo": datos.get("Estado_ANS_inicio_trabajo", ""),
+                    "Se_levanto_ANS_Oportunidad": datos.get("Se_levanto_ANS_Oportunidad", ""),
+                    "Observaciones_ANS_Oportunidad": datos.get("Observaciones_ANS_Oportunidad", ""),
+                    "Se_levanto_ANS_Cumplimiento": datos.get("Se_levanto_ANS_Cumplimiento", ""),
+                    "Observaciones_ANS_Cumplimiento": datos.get("Observaciones_ANS_Cumplimiento", ""),
+                    "Se_levanto_ANS_inicio_trabajo": datos.get("Se_levanto_ANS_inicio_trabajo", ""),
+                    "Observaciones_ANS_inicio_trabajo": datos.get("Observaciones_ANS_inicio_trabajo", ""),
+                },
             })
-        return {"registros": registros_ans}
+        return {"total": len(registros_ans), "registros": registros_ans}
 
     @staticmethod
     async def actualizar_detalle_ans(

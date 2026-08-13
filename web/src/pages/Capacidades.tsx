@@ -1,9 +1,11 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Capacidad, Persona } from '../types'
+
+const ROLES_EXCLUIDOS_CAPACIDAD_PERSONA = ['LT_EPM']
 
 export default function Capacidades() {
   const { datos, error, recargar } = useLista<Capacidad>('/capacidades')
@@ -18,8 +20,31 @@ export default function Capacidades() {
   const [editValue, setEditValue] = useState('')
   const cancelarBlurRef = useRef(false)
 
+  const personasPorId = useMemo(() => {
+    const map = new Map<string, Persona>()
+    for (const persona of personas) map.set(persona.id, persona)
+    return map
+  }, [personas])
+
+  const personasDisponibles = useMemo(
+    () => personas
+      .filter((p) => p.rol_operativo && !ROLES_EXCLUIDOS_CAPACIDAD_PERSONA.includes(p.rol_operativo))
+      .slice()
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    [personas],
+  )
+
+  const capacidadesPersona = useMemo(
+    () => datos.filter((capacidad) => {
+      if (capacidad.scope !== 'persona' || !capacidad.persona_id) return false
+      const persona = personasPorId.get(capacidad.persona_id)
+      return Boolean(persona && !ROLES_EXCLUIDOS_CAPACIDAD_PERSONA.includes(persona.rol_operativo))
+    }),
+    [datos, personasPorId],
+  )
+
   const nombrePersona = (id: string | null): string =>
-    (id && personas.find((p) => p.id === id)?.nombre) || '—'
+    (id && personasPorId.get(id)?.nombre) || '—'
 
   function iniciarEdicion(id: string, campo: string, valorActual: string) {
     if (!puedeEditarCapacidades) return
@@ -88,7 +113,7 @@ export default function Capacidades() {
           <select value={personaId} onChange={(e) => setPersonaId(e.target.value)} required
             className="rounded border px-3 py-2">
             <option value="">— Seleccionar —</option>
-            {personas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            {personasDisponibles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </label>
         <label className="text-sm">
@@ -119,7 +144,7 @@ export default function Capacidades() {
           </tr>
         </thead>
         <tbody>
-          {datos.map((c) => (
+          {capacidadesPersona.map((c) => (
             <tr key={c.id} className="border-t">
               <td className="p-2">{nombrePersona(c.persona_id)}</td>
               <td className="p-2">{c.mes}</td>
@@ -164,7 +189,7 @@ export default function Capacidades() {
               </td>
             </tr>
           ))}
-          {datos.length === 0 && (
+          {capacidadesPersona.length === 0 && (
             <tr><td colSpan={4} className="p-4 text-center text-slate-400">Sin capacidades.</td></tr>
           )}
         </tbody>

@@ -18,6 +18,8 @@ class Persona(DocumentoOperativo):
     es_lider_tecnico: bool = False
     permite_sobrecarga: bool = False
     usuario_id: str | None = None
+    valor_persona: float = 0
+    valor_perifericos: float = 0
 
     class Settings:
         name = "personas"

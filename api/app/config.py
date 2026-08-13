@@ -5,12 +5,24 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 API_DIR = Path(__file__).resolve().parent.parent
+ENV_FILE = API_DIR / ".env"
+
+
+def _leer_env_file(clave: str) -> str:
+    if not ENV_FILE.exists():
+        return ""
+    prefijo = f"{clave}="
+    for linea in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        if linea.startswith(prefijo):
+            return linea[len(prefijo):].strip().strip('"').strip("'")
+    return ""
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=API_DIR / ".env",
+        env_file=ENV_FILE,
         env_file_encoding="utf-8",
+        env_ignore_empty=True,
         extra="ignore",
     )
 
@@ -36,6 +48,7 @@ class Settings(BaseSettings):
 
     # Integración externa (Power Automate, etc.)
     api_key: str = ""
+    api_key_requerimientos: str = ""
 
     # Aplicación inicial
     aplicacion_inicial_codigo: str = "epm-hitss"
@@ -48,4 +61,9 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    if not settings.api_key:
+        settings.api_key = _leer_env_file("API_KEY")
+    if not settings.api_key_requerimientos:
+        settings.api_key_requerimientos = _leer_env_file("API_KEY_REQUERIMIENTOS")
+    return settings

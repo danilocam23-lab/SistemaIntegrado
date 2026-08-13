@@ -9,6 +9,7 @@ from app.documents.asignacion import Asignacion
 from app.documents.azdo import AzdoWorkItem
 from app.documents.capacidad import Capacidad
 from app.documents.persona import Persona
+from app.documents.squad import Squad
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
 from app.security.deps import es_superadmin, requiere_permiso, usuario_actual
@@ -148,38 +149,41 @@ async def deduplicar_personas(
         for perdedor in perdedores:
             pid = str(perdedor.id)
 
-            # Redirigir referencias en requerimientos en TODAS las apps
-            reqs = await Requerimiento.find({
-                "$or": [
-                    {"solicitud.lt_hitss_id": pid},
-                    {"solicitud.lt_epm_id": pid},
-                    {"solicitud.scrum_id": pid},
-                ],
-            }).to_list()
-            for req in reqs:
-                cambio = False
-                if req.solicitud.lt_hitss_id == pid:
-                    req.solicitud.lt_hitss_id = gid
-                    cambio = True
-                if req.solicitud.lt_epm_id == pid:
-                    req.solicitud.lt_epm_id = gid
-                    cambio = True
-                if req.solicitud.scrum_id == pid:
-                    req.solicitud.scrum_id = gid
-                    cambio = True
-                if cambio:
-                    await req.save()
-                    refs_actualizadas += 1
+            # Redirigir referencias sin rehidratar documentos completos; algunos
+            # registros históricos pueden tener esquemas parciales.
+            for campo in ("solicitud.lt_hitss_id", "solicitud.lt_epm_id", "solicitud.scrum_id"):
+                resultado = await Requerimiento.get_pymongo_collection().update_many(
+                    {campo: pid}, {"$set": {campo: gid}}
+                )
+                refs_actualizadas += resultado.modified_count
+
+            desarrolladores = await Requerimiento.get_pymongo_collection().update_many(
+                {"developers_asignados": pid}, {"$addToSet": {"developers_asignados": gid}}
+            )
+            await Requerimiento.get_pymongo_collection().update_many(
+                {"developers_asignados": pid}, {"$pull": {"developers_asignados": pid}}
+            )
+            refs_actualizadas += desarrolladores.modified_count
+
+            squads = await Squad.get_pymongo_collection().update_many(
+                {"lt_hitss_id": pid}, {"$set": {"lt_hitss_id": gid}}
+            )
+            refs_actualizadas += squads.modified_count
 
             # Redirigir asignaciones, capacidades y work items (no eliminar, reasignar)
-            await Asignacion.get_motor_collection().update_many(
+            asignaciones = await Asignacion.get_pymongo_collection().update_many(
                 {"persona_id": pid}, {"$set": {"persona_id": gid}}
             )
-            await Capacidad.get_motor_collection().update_many(
+            capacidades = await Capacidad.get_pymongo_collection().update_many(
                 {"persona_id": pid}, {"$set": {"persona_id": gid}}
             )
-            await AzdoWorkItem.get_motor_collection().update_many(
+            work_items = await AzdoWorkItem.get_pymongo_collection().update_many(
                 {"persona_id": pid}, {"$set": {"persona_id": gid}}
+            )
+            refs_actualizadas += (
+                asignaciones.modified_count
+                + capacidades.modified_count
+                + work_items.modified_count
             )
 
             await perdedor.delete()
@@ -266,9 +270,28 @@ async def eliminar(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     _: Usuario = Depends(requiere_permiso("personas.eliminar")),
 ) -> None:
+    from app.documents.requerimiento import Requerimiento
+
     persona = await Persona.get(persona_id)
     if persona is None or persona.aplicacion_id not in ctx.codigos:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
+
+    referencias_requerimientos = await Requerimiento.get_pymongo_collection().count_documents({
+        "$or": [
+            {"solicitud.lt_hitss_id": persona_id},
+            {"solicitud.lt_epm_id": persona_id},
+            {"solicitud.scrum_id": persona_id},
+            {"developers_asignados": persona_id},
+        ],
+    })
+    referencias_squads = await Squad.get_pymongo_collection().count_documents({"lt_hitss_id": persona_id})
+    if referencias_requerimientos or referencias_squads:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "No se puede eliminar la persona porque está referenciada en requerimientos o squads. "
+            "Reasigna esas referencias o usa la fusión de duplicados.",
+        )
+
     # Cascade: eliminar registros relacionados antes de borrar la persona
     await Asignacion.find(Asignacion.persona_id == persona_id).delete()
     await Capacidad.find(

@@ -28,7 +28,8 @@ export function AplicacionProvider({ children }: { children: ReactNode }) {
     const { data } = await client.get<Aplicacion[]>('/aplicaciones')
     setAplicaciones(data)
     const guardada = localStorage.getItem(APP_KEY)
-    const valida = guardada === CONSOLIDADO || data.some((a) => a.codigo === guardada)
+    const puedeVerConsolidado = usuario?.permisos.includes('*') || usuario?.permisos.includes('consolidado.ver') || data.length > 1
+    const valida = (guardada === CONSOLIDADO && puedeVerConsolidado) || data.some((a) => a.codigo === guardada)
     if (!valida && data[0]) setActiva(data[0].codigo)
   }
 

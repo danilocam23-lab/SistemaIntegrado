@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guía Power Automate — Sistema Integrado HITSS</title>
+  <style>
+    :root {
+      --marca: #1e3a5f;
+      --marca-light: #e8eef5;
+      --verde: #16a34a;
+      --rojo: #dc2626;
+      --naranja: #ea580c;
+      --gris: #64748b;
+      --bg: #f8fafc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: #1e293b;
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: var(--marca);
+      font-size: 1.8rem;
+      border-bottom: 3px solid var(--marca);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    h2 {
+      color: var(--marca);
+      font-size: 1.3rem;
+      margin: 2rem 0 0.8rem;
+      padding-left: 0.5rem;
+      border-left: 4px solid var(--marca);
+    }
+    h3 {
+      color: #334155;
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.5rem;
+    }
+    p, li { margin-bottom: 0.5rem; }
+    ul, ol { padding-left: 1.5rem; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .badge-get { background: #dcfce7; color: var(--verde); }
+    .badge-post { background: #fef3c7; color: var(--naranja); }
+
+    .endpoint-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1.2rem 1.5rem;
+      margin: 1rem 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .endpoint-url {
+      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+      font-size: 0.95rem;
+      background: var(--marca-light);
+      padding: 6px 12px;
+      border-radius: 6px;
+      display: inline-block;
+      margin: 0.3rem 0;
+      word-break: break-all;
+    }
+
+    .step {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1.2rem 1.5rem;
+      margin: 0.8rem 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      position: relative;
+      padding-left: 3.5rem;
+    }
+    .step-number {
+      position: absolute;
+      left: 1rem;
+      top: 1.2rem;
+      width: 2rem;
+      height: 2rem;
+      background: var(--marca);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .step h3 { margin-top: 0; }
+
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem 1.2rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      margin: 0.8rem 0;
+    }
+    pre .key { color: #7dd3fc; }
+    pre .str { color: #86efac; }
+    pre .num { color: #fbbf24; }
+    pre .null { color: #94a3b8; }
+    pre .comment { color: #64748b; font-style: italic; }
+
+    code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.8rem 0;
+      font-size: 0.85rem;
+    }
+    th {
+      background: var(--marca);
+      color: white;
+      text-align: left;
+      padding: 8px 12px;
+    }
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    tr:nth-child(even) td { background: #f8fafc; }
+
+    .tip {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 0.8rem 1rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    .tip strong { color: #1d4ed8; }
+
+    .warning {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 0.8rem 1rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    .warning strong { color: #92400e; }
+
+    .screenshot-placeholder {
+      background: #f1f5f9;
+      border: 2px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 2rem;
+      text-align: center;
+      color: var(--gris);
+      font-size: 0.85rem;
+      margin: 0.8rem 0;
+    }
+
+    .toc {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .toc h3 { margin-bottom: 0.5rem; }
+    .toc a { color: var(--marca); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .toc ol { margin-bottom: 0; }
+
+    .flow-diagram {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1.5rem;
+      text-align: center;
+      margin: 1rem 0;
+    }
+    .flow-arrow { color: var(--marca); font-size: 1.5rem; margin: 0 0.5rem; }
+    .flow-box {
+      display: inline-block;
+      background: var(--marca-light);
+      border: 1px solid #93c5fd;
+      border-radius: 8px;
+      padding: 0.4rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+      color: var(--gris);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🔌 Guía de Integración — Power Automate</h1>
+<p>
+  Esta guía explica paso a paso cómo consumir los endpoints de integración del
+  <strong>Sistema Integrado HITSS</strong> desde <strong>Microsoft Power Automate</strong>.
+</p>
+
+<!-- Tabla de contenido -->
+<div class="toc">
+  <h3>📋 Contenido</h3>
+  <ol>
+    <li><a href="#resumen">Resumen de endpoints disponibles</a></li>
+    <li><a href="#auth">Autenticación (API Key)</a></li>
+    <li><a href="#endpoint1">Endpoint 1: Entregas aplanadas</a></li>
+    <li><a href="#endpoint2">Endpoint 2: Health check</a></li>
+    <li><a href="#pa-entregas">Power Automate: Consumir entregas paso a paso</a></li>
+    <li><a href="#pa-health">Power Automate: Health check paso a paso</a></li>
+    <li><a href="#errores">Manejo de errores</a></li>
+    <li><a href="#faq">Preguntas frecuentes</a></li>
+  </ol>
+</div>
+
+<!-- ====================================================================== -->
+<h2 id="resumen">1. Resumen de endpoints disponibles</h2>
+
+<div class="endpoint-card">
+  <span class="badge badge-get">GET</span>
+  <span class="endpoint-url">/api/integracion/entregas</span>
+  <p>Devuelve un array plano donde <strong>cada objeto es una entrega pendiente</strong> de un requerimiento
+     en estado <code>ESTIMACION APROBADA ENTREGA PENDIENTE</code>, con fecha comprometida del mes actual hacia atrás.
+     Requerimientos sin entregas pendientes en ese rango se omiten.</p>
+  <table>
+    <tr><th>Parámetro</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr>
+    <tr><td><code>aplicacion</code></td><td>string (query)</td><td>No</td><td>Código de squad. Si se omite, devuelve todas las aplicaciones.</td></tr>
+  </table>
+</div>
+
+<div class="endpoint-card">
+  <span class="badge badge-get">GET</span>
+  <span class="endpoint-url">/api/health</span>
+  <p>Verifica que el servidor esté activo. <strong>No requiere autenticación.</strong></p>
+</div>
+
+<!-- ====================================================================== -->
+<h2 id="auth">2. Autenticación (API Key)</h2>
+
+<p>
+  El endpoint de entregas usa autenticación por <strong>API Key</strong>.
+  Se envía como header HTTP en cada petición:
+</p>
+
+<pre>
+<span class="key">Header:</span>  <span class="str">X-API-Key</span>: <span class="str">&lt;tu_clave_configurada&gt;</span>
+
+<span class="comment">-- Ejemplo real:</span>
+<span class="key">X-API-Key:</span> <span class="str">si-powerautomate-2026-cambia-esta-clave</span>
+</pre>
+
+<div class="warning">
+  <strong>⚠️ Importante:</strong> La API Key se configura en el archivo <code>.env</code> del servidor
+  con la variable <code>API_KEY</code>. Cámbiala antes de usar en producción.
+</div>
+
+<div class="tip">
+  <strong>💡 Tip:</strong> El endpoint <code>/api/health</code> NO requiere API Key.
+  Úsalo para verificar conectividad antes de configurar la autenticación.
+</div>
+
+<!-- ====================================================================== -->
+<h2 id="endpoint1">3. Endpoint 1: Entregas aplanadas</h2>
+
+<h3>URL completa</h3>
+<pre>
+<span class="key">GET</span> <span class="str">https://reportescolombia.hitss.com/SistemaIntegrado/api/integracion/entregas</span>
+<span class="comment">-- Devuelve solo requerimientos en estado ESTIMACION APROBADA ENTREGA PENDIENTE
+-- y entregas en estado Pendiente/PENDIENTE con fecha comprometida del mes actual hacia atrás.</span>
+<span class="comment">-- Con filtro por aplicación:</span>
+<span class="key">GET</span> <span class="str">https://reportescolombia.hitss.com/SistemaIntegrado/api/integracion/entregas?aplicacion=epm-hitss</span>
+</pre>
+
+<h3>Headers requeridos</h3>
+<table>
+  <tr><th>Header</th><th>Valor</th></tr>
+  <tr><td><code>X-API-Key</code></td><td>La clave configurada en <code>.env</code></td></tr>
+</table>
+
+<h3>Campos de la respuesta</h3>
+<table>
+  <tr><th>Campo JSON</th><th>Equivalente Excel</th><th>Tipo</th><th>Descripción</th></tr>
+  <tr><td><code>codigo</code></td><td>CODIGO</td><td>string</td><td>Código de la solicitud de cotización</td></tr>
+  <tr><td><code>cod_del_req</code></td><td>COD. DEL REQ</td><td>string</td><td>Código del requerimiento</td></tr>
+  <tr><td><code>aplicacion</code></td><td>APLICACIÓN</td><td>string</td><td>Código del squad/aplicación</td></tr>
+  <tr><td><code>lt_hitss</code></td><td>LT HITSS</td><td>string | null</td><td>Nombre del líder técnico HITSS</td></tr>
+  <tr><td><code>fecha_comprometida_entregas_dllo</code></td><td>FECHA COMPROMETIDA DE ENTREGAS DLLO</td><td>datetime | null</td><td>Fecha comprometida de esta entrega</td></tr>
+  <tr><td><code>dias_transcurridos</code></td><td>DÍAS TRANSCURRIDOS</td><td>int | null</td><td>Días frente a la fecha comprometida. Positivo si está dentro de plazo, negativo si está vencida.</td></tr>
+  <tr><td><code>cant_entregas</code></td><td>CANT. DE ENTREGAS</td><td>int</td><td>Número de la entrega a realizar dentro del requerimiento</td></tr>
+  <tr><td><code>horas_a_entregar</code></td><td>HORAS A ENTREGAR</td><td>float | null</td><td>Horas de esta entrega específica</td></tr>
+  <tr><td><code>tipo_de_costo</code></td><td>TIPO DE COSTO</td><td>string | null</td><td>TYM o FIJO</td></tr>
+</table>
+
+<h3>Ejemplo de respuesta (dummy)</h3>
+<pre>
+[
+  {
+    <span class="key">"codigo"</span>: <span class="str">"10849"</span>,
+    <span class="key">"cod_del_req"</span>: <span class="str">"MT-GTI-0319-2026"</span>,
+    <span class="key">"aplicacion"</span>: <span class="str">"epm-hitss"</span>,
+    <span class="key">"lt_hitss"</span>: <span class="str">"Julio Ricardo Muñoz Bermudez"</span>,
+    <span class="key">"fecha_comprometida_entregas_dllo"</span>: <span class="str">"2026-03-30T00:00:00"</span>,
+    <span class="key">"dias_transcurridos"</span>: <span class="num">-133</span>,
+    <span class="key">"cant_entregas"</span>: <span class="num">2</span>,
+    <span class="key">"horas_a_entregar"</span>: <span class="num">63.0</span>,
+    <span class="key">"tipo_de_costo"</span>: <span class="str">"TYM"</span>
+  },
+  {
+    <span class="key">"codigo"</span>: <span class="str">"10849"</span>,
+    <span class="key">"cod_del_req"</span>: <span class="str">"MT-GTI-0319-2026"</span>,
+    <span class="key">"aplicacion"</span>: <span class="str">"epm-hitss"</span>,
+    <span class="key">"lt_hitss"</span>: <span class="str">"Julio Ricardo Muñoz Bermudez"</span>,
+    <span class="key">"fecha_comprometida_entregas_dllo"</span>: <span class="str">"2026-05-14T00:00:00"</span>,
+    <span class="key">"dias_transcurridos"</span>: <span class="num">-78</span>,
+    <span class="key">"cant_entregas"</span>: <span class="num">2</span>,
+    <span class="key">"horas_a_entregar"</span>: <span class="num">118.0</span>,
+    <span class="key">"tipo_de_costo"</span>: <span class="str">"TYM"</span>
+  },
+  {
+    <span class="key">"codigo"</span>: <span class="str">"10886"</span>,
+    <span class="key">"cod_del_req"</span>: <span class="str">"MGT-GTI-0502"</span>,
+    <span class="key">"aplicacion"</span>: <span class="str">"epm-hitss"</span>,
+    <span class="key">"lt_hitss"</span>: <span class="str">"Ana María López García"</span>,
+    <span class="key">"fecha_comprometida_entregas_dllo"</span>: <span class="str">"2026-04-22T00:00:00"</span>,
+    <span class="key">"dias_transcurridos"</span>: <span class="num">-100</span>,
+    <span class="key">"cant_entregas"</span>: <span class="num">1</span>,
+    <span class="key">"horas_a_entregar"</span>: <span class="num">90.0</span>,
+    <span class="key">"tipo_de_costo"</span>: <span class="str">"FIJO"</span>
+  },
+  {
+    <span class="key">"codigo"</span>: <span class="str">"11023"</span>,
+    <span class="key">"cod_del_req"</span>: <span class="str">"RN-COM-2001"</span>,
+    <span class="key">"aplicacion"</span>: <span class="str">"epm-hitss"</span>,
+    <span class="key">"lt_hitss"</span>: <span class="null">null</span>,
+    <span class="key">"fecha_comprometida_entregas_dllo"</span>: <span class="null">null</span>,
+    <span class="key">"dias_transcurridos"</span>: <span class="null">null</span>,
+    <span class="key">"cant_entregas"</span>: <span class="num">3</span>,
+    <span class="key">"horas_a_entregar"</span>: <span class="num">200.0</span>,
+    <span class="key">"tipo_de_costo"</span>: <span class="str">"TYM"</span>
+  }
+]
+</pre>
+
+<div class="tip">
+  <strong>💡 Nota:</strong> Si un requerimiento tiene 3 entregas, aparecen 3 objetos con el
+  mismo <code>codigo</code> y <code>cod_del_req</code>, pero con diferentes
+  <code>fecha_comprometida_entregas_dllo</code> y <code>horas_a_entregar</code>.
+</div>
+
+<!-- ====================================================================== -->
+<h2 id="endpoint2">4. Endpoint 2: Health check</h2>
+
+<h3>URL completa</h3>
+<pre>
+<span class="key">GET</span> <span class="str">https://reportescolombia.hitss.com/SistemaIntegrado/api/health</span>
+</pre>
+
+<h3>Headers requeridos</h3>
+<p>Ninguno — este endpoint es público.</p>
+
+<h3>Ejemplo de respuesta</h3>
+<pre>
+{
+  <span class="key">"status"</span>: <span class="str">"ok"</span>
+}
+</pre>
+
+<!-- ====================================================================== -->
+<h2 id="pa-entregas">5. Power Automate: Consumir entregas (paso a paso)</h2>
+
+<div class="flow-diagram">
+  <span class="flow-box">⏰ Trigger<br><small>Recurrencia / Manual</small></span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-box">🌐 HTTP<br><small>GET /entregas</small></span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-box">📋 Parse JSON</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-box">🔄 Apply to each</span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-box">📊 Excel / SharePoint<br><small>Agregar fila</small></span>
+</div>
+
+<!-- Paso 1 -->
+<div class="step">
+  <div class="step-number">1</div>
+  <h3>Crear un flujo nuevo</h3>
+  <ol>
+    <li>Abrir <strong>Power Automate</strong> → <strong>Mis flujos</strong> → <strong>+ Nuevo flujo</strong></li>
+    <li>Seleccionar <strong>Flujo de nube programado</strong> (o <strong>Flujo instantáneo</strong> para pruebas)</li>
+    <li>Configurar la recurrencia deseada (ej: cada día a las 8:00 AM)</li>
+  </ol>
+</div>
+
+<!-- Paso 2 -->
+<div class="step">
+  <div class="step-number">2</div>
+  <h3>Agregar acción HTTP</h3>
+  <ol>
+    <li>Buscar la acción <strong>HTTP</strong> (conector premium)</li>
+    <li>Configurar con estos valores:</li>
+  </ol>
+  <table>
+    <tr><th>Campo</th><th>Valor</th></tr>
+    <tr><td><strong>Método</strong></td><td><code>GET</code></td></tr>
+    <tr><td><strong>URI</strong></td><td><code>https://reportescolombia.hitss.com/SistemaIntegrado/api/integracion/entregas</code></td></tr>
+    <tr><td><strong>Headers</strong></td><td><code>X-API-Key</code> = <code>si-powerautomate-2026-cambia-esta-clave</code></td></tr>
+  </table>
+  <p>Esta URI ya filtra automáticamente por requerimientos en estado
+    <code>ESTIMACION APROBADA ENTREGA PENDIENTE</code>, entregas en estado <code>Pendiente</code>
+    y fecha comprometida del mes actual hacia atrás.</p>
+  <div class="tip">
+    <strong>💡 Filtrar por squad:</strong> Para traer solo un squad, agregar <code>?aplicacion=epm-hitss</code> al final de la URI.
+  </div>
+  <div class="screenshot-placeholder">
+    📷 Captura: Configuración de la acción HTTP en Power Automate<br>
+    <small>Método: GET | URI: https://... | Headers: X-API-Key</small>
+  </div>
+</div>
+
+<!-- Paso 3 -->
+<div class="step">
+  <div class="step-number">3</div>
+  <h3>Agregar acción «Analizar o Parse JSON»</h3>
+  <ol>
+    <li>Buscar la acción <strong>Analizar JSON</strong> (Parse JSON)</li>
+    <li>En <strong>Contenido</strong>, seleccionar <code>body</code> de la acción HTTP anterior</li>
+    <li>En <strong>Esquema</strong>, pegar el siguiente esquema:</li>
+  </ol>
+<pre>
+{
+  <span class="key">"type"</span>: <span class="str">"array"</span>,
+  <span class="key">"items"</span>: {
+    <span class="key">"type"</span>: <span class="str">"object"</span>,
+    <span class="key">"properties"</span>: {
+      <span class="key">"codigo"</span>:                            { <span class="key">"type"</span>: <span class="str">"string"</span> },
+      <span class="key">"cod_del_req"</span>:                       { <span class="key">"type"</span>: <span class="str">"string"</span> },
+      <span class="key">"aplicacion"</span>:                        { <span class="key">"type"</span>: <span class="str">"string"</span> },
+      <span class="key">"lt_hitss"</span>:                          { <span class="key">"type"</span>: [<span class="str">"string"</span>, <span class="str">"null"</span>] },
+      <span class="key">"fecha_comprometida_entregas_dllo"</span>:   { <span class="key">"type"</span>: [<span class="str">"string"</span>, <span class="str">"null"</span>] },
+      <span class="key">"dias_transcurridos"</span>:                { <span class="key">"type"</span>: [<span class="str">"integer"</span>, <span class="str">"null"</span>] },
+      <span class="key">"cant_entregas"</span>:                     { <span class="key">"type"</span>: <span class="str">"integer"</span> },
+      <span class="key">"horas_a_entregar"</span>:                  { <span class="key">"type"</span>: [<span class="str">"number"</span>, <span class="str">"null"</span>] },
+      <span class="key">"tipo_de_costo"</span>:                     { <span class="key">"type"</span>: [<span class="str">"string"</span>, <span class="str">"null"</span>] }
+    }
+  }
+}
+</pre>
+  <div class="screenshot-placeholder">
+    📷 Captura: Parse JSON con el esquema pegado y body como contenido
+  </div>
+</div>
+
+<!-- Paso 4 -->
+<div class="step">
+  <div class="step-number">4</div>
+  <h3>Agregar «Aplicar a cada uno» (Apply to each)</h3>
+  <ol>
+    <li>Buscar <strong>Aplicar a cada uno</strong></li>
+    <li>En <strong>Seleccionar una salida</strong>, elegir <code>body</code> del Parse JSON</li>
+    <li>Dentro del bucle, agregar la acción destino (ver ejemplos abajo)</li>
+  </ol>
+</div>
+
+<!-- Paso 5a -->
+<div class="step">
+  <div class="step-number">5a</div>
+  <h3>Opción A: Guardar en Excel Online</h3>
+  <ol>
+    <li>Dentro del «Aplicar a cada uno», agregar <strong>Excel Online → Agregar una fila a una tabla</strong></li>
+    <li>Seleccionar el archivo Excel de SharePoint/OneDrive (crear previamente con las columnas)</li>
+    <li>Mapear cada campo:</li>
+  </ol>
+  <table>
+    <tr><th>Columna Excel</th><th>Campo dinámico</th></tr>
+    <tr><td>CODIGO</td><td><code>codigo</code></td></tr>
+    <tr><td>COD. DEL REQ</td><td><code>cod_del_req</code></td></tr>
+    <tr><td>APLICACIÓN</td><td><code>aplicacion</code></td></tr>
+    <tr><td>LT HITSS</td><td><code>lt_hitss</code></td></tr>
+    <tr><td>FECHA COMPROMETIDA</td><td><code>fecha_comprometida_entregas_dllo</code></td></tr>
+    <tr><td>DÍAS TRANSCURRIDOS</td><td><code>dias_transcurridos</code></td></tr>
+    <tr><td>CANT. ENTREGAS</td><td><code>cant_entregas</code></td></tr>
+    <tr><td>HORAS</td><td><code>horas_a_entregar</code></td></tr>
+    <tr><td>TIPO DE COSTO</td><td><code>tipo_de_costo</code></td></tr>
+  </table>
+</div>
+
+<!-- Paso 5b -->
+<div class="step">
+  <div class="step-number">5b</div>
+  <h3>Opción B: Guardar en SharePoint List</h3>
+  <ol>
+    <li>Dentro del «Aplicar a cada uno», agregar <strong>SharePoint → Crear elemento</strong></li>
+    <li>Seleccionar el sitio y la lista destino</li>
+    <li>Mapear los mismos campos dinámicos del Parse JSON a las columnas de la lista</li>
+  </ol>
+</div>
+
+<!-- ====================================================================== -->
+<h2 id="pa-health">6. Power Automate: Health check (paso a paso)</h2>
+
+<div class="flow-diagram">
+  <span class="flow-box">⏰ Trigger<br><small>Recurrencia</small></span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-box">🌐 HTTP<br><small>GET /health</small></span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-box">❓ Condición<br><small>status == ok?</small></span>
+  <span class="flow-arrow">→</span>
+  <span class="flow-box">📧 Email / Teams<br><small>Notificar si falla</small></span>
+</div>
+
+<!-- Paso 1 -->
+<div class="step">
+  <div class="step-number">1</div>
+  <h3>Crear flujo programado</h3>
+  <p>Recurrencia: cada 15 minutos (o cada hora, según necesidad)</p>
+</div>
+
+<!-- Paso 2 -->
+<div class="step">
+  <div class="step-number">2</div>
+  <h3>Agregar acción HTTP</h3>
+  <table>
+    <tr><th>Campo</th><th>Valor</th></tr>
+    <tr><td><strong>Método</strong></td><td><code>GET</code></td></tr>
+    <tr><td><strong>URI</strong></td><td><code>https://reportescolombia.hitss.com/SistemaIntegrado/api/health</code></td></tr>
+  </table>
+  <p><em>No se necesitan headers de autenticación.</em></p>
+</div>
+
+<!-- Paso 3 -->
+<div class="step">
+  <div class="step-number">3</div>
+  <h3>Agregar acción Parse JSON</h3>
+  <p>Contenido: <code>body</code> del HTTP. Esquema:</p>
+<pre>
+{
+  <span class="key">"type"</span>: <span class="str">"object"</span>,
+  <span class="key">"properties"</span>: {
+    <span class="key">"status"</span>: { <span class="key">"type"</span>: <span class="str">"string"</span> }
+  }
+}
+</pre>
+</div>
+
+<!-- Paso 4 -->
+<div class="step">
+  <div class="step-number">4</div>
+  <h3>Agregar condición</h3>
+  <p>Si <code>status</code> <strong>es diferente de</strong> <code>ok</code> → enviar alerta por Teams/Email.</p>
+  <div class="tip">
+    <strong>💡 Tip:</strong> También puedes verificar el <code>Status code</code> del HTTP.
+    Si es diferente de <code>200</code>, el servidor está caído.
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<h2 id="errores">7. Manejo de errores</h2>
+
+<table>
+  <tr><th>Código HTTP</th><th>Significado</th><th>Qué hacer</th></tr>
+  <tr>
+    <td><code>200</code></td>
+    <td>✅ Éxito</td>
+    <td>Procesar el JSON normalmente</td>
+  </tr>
+  <tr>
+    <td><code>401</code></td>
+    <td>❌ API Key inválida</td>
+    <td>Verificar que el header <code>X-API-Key</code> coincida con el valor en <code>.env</code></td>
+  </tr>
+  <tr>
+    <td><code>503</code></td>
+    <td>⚙️ API Key no configurada</td>
+    <td>El administrador debe agregar <code>API_KEY=...</code> en el archivo <code>.env</code> del servidor</td>
+  </tr>
+  <tr>
+    <td><code>500</code></td>
+    <td>💥 Error del servidor</td>
+    <td>Revisar los logs del servidor; reintentar después</td>
+  </tr>
+</table>
+
+<div class="tip">
+  <strong>💡 Buena práctica:</strong> En Power Automate, activa «Configurar ejecución posterior» en la
+  acción HTTP y agrega un paso de notificación si falla (es tiempo de espera agotado o error).
+</div>
+
+<!-- ====================================================================== -->
+<h2 id="faq">8. Preguntas frecuentes</h2>
+
+<div class="endpoint-card">
+  <h3>¿Puedo probar el endpoint desde el navegador?</h3>
+  <p>No directamente, porque requiere el header <code>X-API-Key</code>. Usa
+  <strong>Postman</strong>, <strong>curl</strong>, o la documentación interactiva de FastAPI
+  en <code>https://tu-servidor/docs</code>.</p>
+  <pre><span class="comment"># Ejemplo con curl:</span>
+curl -H <span class="str">"X-API-Key: si-powerautomate-2026-cambia-esta-clave"</span> \
+       <span class="str">"https://reportescolombia.hitss.com/SistemaIntegrado/api/integracion/entregas"</span></pre>
+</div>
+
+<div class="endpoint-card">
+  <h3>¿Cómo filtro por un squad específico?</h3>
+  <p>Agrega el parámetro <code>?aplicacion=CODIGO</code> a la URL:</p>
+  <pre><span class="str">https://reportescolombia.hitss.com/SistemaIntegrado/api/integracion/entregas?aplicacion=epm-hitss</span></pre>
+</div>
+
+<div class="endpoint-card">
+  <h3>¿Qué pasa si un requerimiento no tiene entregas?</h3>
+  <p>Se omite completamente de la respuesta. Solo aparecen requerimientos con al menos una entrega.</p>
+</div>
+
+<div class="endpoint-card">
+  <h3>¿Por qué <code>lt_hitss</code> puede ser <code>null</code>?</h3>
+  <p>Si el requerimiento no tiene un líder técnico HITSS asignado, o si la persona fue eliminada
+  de la base de datos, el campo devuelve <code>null</code>.</p>
+</div>
+
+<div class="endpoint-card">
+  <h3>¿Puedo usar la acción HTTP sin conector premium?</h3>
+  <p>No. La acción HTTP requiere licencia <strong>Power Automate Premium</strong> (o per-flow).
+  Alternativa: crear un <strong>Custom Connector</strong> si tu organización tiene uno disponible.</p>
+</div>
+
+<div class="endpoint-card">
+  <h3>¿Cómo cambio la API Key?</h3>
+  <p>Edita el archivo <code>.env</code> del servidor, cambia el valor de <code>API_KEY</code>,
+  y reinicia el servidor. Actualiza el header en Power Automate.</p>
+</div>
+
+<footer>
+  Sistema Integrado HITSS — Documentación de integración Power Automate<br>
+  Generado: agosto 2026
+</footer>
+
+</body>
+</html>

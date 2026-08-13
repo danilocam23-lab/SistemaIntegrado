@@ -1,3 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  @media (max-width: 640px) {
+    main form > label,
+    main form fieldset > label {
+      width: 100%;
+    }
+
+    main form input:not([type='checkbox']):not([type='radio']),
+    main form select,
+    main form textarea {
+      width: 100%;
+    }
+
+    main table {
+      width: max-content;
+      min-width: 720px;
+    }
+
+    main th,
+    main td {
+      white-space: nowrap;
+    }
+  }
+}

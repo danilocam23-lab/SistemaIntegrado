@@ -244,6 +244,8 @@ async def transicion(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Cambia el estado del requerimiento validando la máquina de estados."""
+    if not await tiene_permiso(usuario, "requerimientos.editar"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para editar requerimientos")
     req = await _buscar(ctx, codigo_req)
     anterior = req.estado
     req.estado = datos.nuevo_estado
@@ -267,6 +269,8 @@ async def guardar_entrega(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Agrega o reemplaza una entrega (por número) en el requerimiento."""
+    if not await tiene_permiso(usuario, "requerimientos.editar"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para editar requerimientos")
     req = await _buscar(ctx, codigo_req)
     entrega_anterior = next((e for e in req.entregas if e.numero == datos.numero), None)
     payload_entrega = datos.model_dump()
@@ -336,6 +340,8 @@ async def eliminar_entrega(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Elimina una entrega del requerimiento por su número."""
+    if not await tiene_permiso(usuario, "requerimientos.editar"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para editar requerimientos")
     req = await _buscar(ctx, codigo_req)
     antes = len(req.entregas)
     req.entregas = [e for e in req.entregas if e.numero != numero]

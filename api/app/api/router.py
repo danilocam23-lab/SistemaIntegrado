@@ -15,6 +15,7 @@ from app.api import (
     dashboard,
     estimaciones,
     festivos,
+    garantias_wo,
     importacion,
     integracion,
     personas,
@@ -50,6 +51,7 @@ api_router.include_router(configuracion.router)
 api_router.include_router(azdo.router)
 api_router.include_router(importacion.router)
 api_router.include_router(soporte.router)
+api_router.include_router(garantias_wo.router)
 # Transversal
 api_router.include_router(bitacora.router)
 api_router.include_router(reportes.router)
@@ -61,3 +63,5 @@ api_router.include_router(integracion.router)
 @api_router.get("/health", tags=["health"])
 async def health() -> dict:
     return {"status": "ok"}
+
+# reload trigger

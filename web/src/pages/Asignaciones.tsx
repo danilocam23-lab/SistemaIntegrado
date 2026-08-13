@@ -80,9 +80,14 @@ export default function Asignaciones() {
   const [edicionInlineValor, setEdicionInlineValor] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<string>('__todos__')
   const [filtroPersona, setFiltroPersona] = useState<string>('__todos__')
+  const [busquedaPersona, setBusquedaPersona] = useState('')
+  const [vistaActiva, setVistaActiva] = useState<'actas' | 'personas'>('actas')
   const reqBoxRef = useRef<HTMLDivElement | null>(null)
   const autoFixedRef = useRef(false)
   const modoEdicion = editandoAsig !== null
+
+  // WOs de soporte para vista por personas
+  const [woPorPersona, setWoPorPersona] = useState<{ id: string; wo_id: string; assigned_to: string; status: string; priority: string; created_date: string; descripcion: string }[]>([])
 
   useEffect(() => {
     client
@@ -90,6 +95,13 @@ export default function Asignaciones() {
       .then((r) => setCapacidades(r.data))
       .catch(() => {})
   }, [mesSel])
+
+  useEffect(() => {
+    client
+      .get<typeof woPorPersona>('/soporte/solicitudes-fabrica/wo-por-persona')
+      .then((r) => setWoPorPersona(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     function cerrarDropdown(event: MouseEvent) {
@@ -279,6 +291,52 @@ export default function Asignaciones() {
     
     return resultado
   }, [gruposReq, filtroEstado, filtroPersona])
+
+  // ─── Vista por personas: agrupa asignaciones por persona_id ───
+  // Mapa de WOs por persona (matching por nombre)
+  const wosPorPersonaMap = useMemo(() => {
+    const map = new Map<string, typeof woPorPersona>()
+    if (!personas.length || !woPorPersona.length) return map
+    for (const wo of woPorPersona) {
+      const nombreWo = wo.assigned_to.toLowerCase().trim()
+      const persona = personas.find((p) => p.nombre.toLowerCase().trim() === nombreWo)
+      if (persona) {
+        if (!map.has(persona.id)) map.set(persona.id, [])
+        map.get(persona.id)!.push(wo)
+      }
+    }
+    return map
+  }, [personas, woPorPersona])
+
+  const gruposPorPersona = useMemo(() => {
+    const map = new Map<string, { persona: Persona; reqs: { reqId: string | null; reqLabel: string; reqEstado: string | null; asig: AsignacionItem; horasCarga: number }[] }>()
+    for (const grupo of gruposFiltrados) {
+      for (const item of grupo.items) {
+        const pid = item.asig.persona_id
+        if (!map.has(pid)) {
+          const persona = personaPorId.get(pid)
+          if (!persona) continue
+          map.set(pid, { persona, reqs: [] })
+        }
+        map.get(pid)!.reqs.push({ reqId: grupo.reqId, reqLabel: grupo.reqLabel, reqEstado: grupo.reqEstado, ...item })
+      }
+    }
+    // Incluir personas que tienen WOs pero no asignaciones
+    for (const [pid] of wosPorPersonaMap) {
+      if (!map.has(pid)) {
+        const persona = personaPorId.get(pid)
+        if (persona) map.set(pid, { persona, reqs: [] })
+      }
+    }
+    let resultado = Array.from(map.values()).sort((a, b) => a.persona.nombre.localeCompare(b.persona.nombre, 'es'))
+    if (busquedaPersona.trim()) {
+      const q = busquedaPersona.toLowerCase().trim()
+      resultado = resultado.filter((g) => g.persona.nombre.toLowerCase().includes(q))
+    }
+    return resultado
+  }, [gruposFiltrados, personaPorId, busquedaPersona, wosPorPersonaMap])
+
+  const [personasExpandidas, setPersonasExpandidas] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setGruposExpandidos(new Set(gruposReq.map((grupo) => grupo.reqId)))
@@ -651,7 +709,7 @@ export default function Asignaciones() {
             )}
           </label>
 
-          <div ref={reqBoxRef} className="relative min-w-[320px] flex-1 text-sm">
+          <div ref={reqBoxRef} className="relative min-w-0 flex-1 basis-full text-sm sm:min-w-[320px]">
             <span className="mb-1 block text-slate-600">
               Requerimiento <span className="text-slate-400">(opcional)</span>
             </span>
@@ -721,7 +779,19 @@ export default function Asignaciones() {
         <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{aviso || error}</div>
       )}
 
-      <div className="mb-4 flex items-center gap-6">
+      {/* Tabs */}
+      <div className="mb-4 flex items-center gap-1 rounded-lg border bg-slate-100 p-1 w-fit">
+        <button type="button" onClick={() => setVistaActiva('actas')}
+          className={`rounded-md px-4 py-1.5 text-sm font-semibold transition-colors ${vistaActiva === 'actas' ? 'bg-white text-marca shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+          Por Actas / Requerimientos
+        </button>
+        <button type="button" onClick={() => setVistaActiva('personas')}
+          className={`rounded-md px-4 py-1.5 text-sm font-semibold transition-colors ${vistaActiva === 'personas' ? 'bg-white text-marca shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+          Por Personas
+        </button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-6">
         <div className="flex items-center gap-3">
           <label className="text-sm text-slate-600">Filtrar por estado del requerimiento:</label>
           <select
@@ -747,7 +817,14 @@ export default function Asignaciones() {
         </div>
         
         <div className="flex items-center gap-3">
-          <label className="text-sm text-slate-600">Filtrar por persona:</label>
+          <label className="text-sm text-slate-600">Buscar persona:</label>
+          <input
+            type="text"
+            value={busquedaPersona}
+            onChange={(e) => setBusquedaPersona(e.target.value)}
+            placeholder="Nombre de la persona…"
+            className="rounded border px-3 py-1.5 text-sm w-56"
+          />
           <select
             value={filtroPersona}
             onChange={(e) => setFiltroPersona(e.target.value)}
@@ -762,10 +839,10 @@ export default function Asignaciones() {
                 <option key={persona.id} value={persona.id}>{persona.nombre}</option>
               ))}
           </select>
-          {filtroPersona !== '__todos__' && (
+          {(filtroPersona !== '__todos__' || busquedaPersona) && (
             <button
               type="button"
-              onClick={() => setFiltroPersona('__todos__')}
+              onClick={() => { setFiltroPersona('__todos__'); setBusquedaPersona('') }}
               className="text-xs text-slate-400 hover:text-red-500"
             >
               Limpiar ✕
@@ -774,6 +851,7 @@ export default function Asignaciones() {
         </div>
       </div>
 
+      {vistaActiva === 'actas' && (
       <div className="space-y-4">
         {gruposFiltrados.map((grupo) => {
           const expandido = gruposExpandidos.has(grupo.reqId)
@@ -922,6 +1000,103 @@ export default function Asignaciones() {
           </div>
         )}
       </div>
+      )}
+
+      {vistaActiva === 'personas' && (
+      <div className="space-y-4">
+        {gruposPorPersona.map((gp) => {
+          const expandida = personasExpandidas.has(gp.persona.id)
+          const totalHoras = gp.reqs.reduce((s, r) => s + r.horasCarga, 0)
+          return (
+            <section key={gp.persona.id} className="overflow-hidden rounded-xl border bg-white">
+              <div className="flex items-center justify-between gap-3 bg-marca-osc px-4 py-3 text-white">
+                <button
+                  type="button"
+                  onClick={() => setPersonasExpandidas((prev) => {
+                    const n = new Set(prev)
+                    if (n.has(gp.persona.id)) n.delete(gp.persona.id); else n.add(gp.persona.id)
+                    return n
+                  })}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                >
+                  <span className="text-sm">{expandida ? '▼' : '▶'}</span>
+                  <span className="truncate text-sm font-semibold">{gp.persona.nombre}</span>
+                  <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-xs">{gp.reqs.length} asignaciones</span>
+                  <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-xs">{totalHoras.toFixed(0)}h carga</span>
+                  {(wosPorPersonaMap.get(gp.persona.id)?.length ?? 0) > 0 && (
+                    <span className="shrink-0 rounded-full bg-emerald-400/30 px-2 py-0.5 text-xs">{wosPorPersonaMap.get(gp.persona.id)!.length} WO</span>
+                  )}
+                </button>
+              </div>
+              {expandida && (
+                <div className="space-y-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-600">
+                        <tr>
+                          <th className="px-3 py-2">Requerimiento</th>
+                          <th className="px-3 py-2">Estado</th>
+                          <th className="px-3 py-2">Categoría</th>
+                          <th className="px-3 py-2 text-right">%</th>
+                          <th className="px-3 py-2 text-right">Horas carga</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gp.reqs.map((r, idx) => (
+                          <tr key={idx} className="border-t">
+                            <td className="px-3 py-2 font-medium">{r.reqLabel}</td>
+                            <td className="px-3 py-2">
+                              {r.reqEstado && <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeEstadoClass(r.reqEstado)}`}>{r.reqEstado}</span>}
+                            </td>
+                            <td className="px-3 py-2">{categoriaPorId.get(r.asig.categoria_id)?.nombre ?? '—'}</td>
+                            <td className="px-3 py-2 text-right">{r.asig.total_porcentaje}%</td>
+                            <td className="px-3 py-2 text-right font-mono">{r.horasCarga.toFixed(1)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {(wosPorPersonaMap.get(gp.persona.id)?.length ?? 0) > 0 && (
+                    <div className="border-t bg-emerald-50/50 px-3 py-2">
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Solicitudes Soporte WO ({wosPorPersonaMap.get(gp.persona.id)!.length})</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="text-emerald-700">
+                            <tr>
+                              <th className="px-2 py-1">WO ID</th>
+                              <th className="px-2 py-1">Estado</th>
+                              <th className="px-2 py-1">Prioridad</th>
+                              <th className="px-2 py-1">Fecha</th>
+                              <th className="px-2 py-1">Descripción</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {wosPorPersonaMap.get(gp.persona.id)!.map((wo) => (
+                              <tr key={wo.id} className="border-t border-emerald-100">
+                                <td className="px-2 py-1 font-mono font-medium">{wo.wo_id}</td>
+                                <td className="px-2 py-1">{wo.status}</td>
+                                <td className="px-2 py-1">{wo.priority}</td>
+                                <td className="px-2 py-1">{wo.created_date}</td>
+                                <td className="px-2 py-1 max-w-[200px] truncate">{wo.descripcion}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          )
+        })}
+        {gruposPorPersona.length === 0 && (
+          <div className="rounded-xl border bg-white p-6 text-center text-sm text-slate-400">
+            Sin asignaciones para mostrar.
+          </div>
+        )}
+      </div>
+      )}
     </div>
   )
 }

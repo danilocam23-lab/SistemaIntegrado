@@ -86,6 +86,7 @@ class EntregaIn(BaseModel):
     mes_aprobacion: str | None = None
     ans_entrega: AnsResultado | None = None
     garantia: bool = False
+    numero_garantia: int | None = None
     acta_trabajo_id: str | None = None
     orden_compra_id: str | None = None
     facturacion: FacturacionIn | None = None

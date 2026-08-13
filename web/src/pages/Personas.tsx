@@ -35,6 +35,7 @@ export default function Personas() {
   const puedeCrearPersonas = tienePermiso('personas.crear')
   const puedeEditarPersonas = tienePermiso('personas.editar')
   const puedeEliminarPersonas = tienePermiso('personas.eliminar')
+  const esGerente = tienePermiso('personas.ver_valores')
   const [roles, setRoles] = useState<string[]>(ROLES_DEFAULT)
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
@@ -44,6 +45,8 @@ export default function Personas() {
   const [rol, setRol] = useState('DEV')
   const [squadsSelec, setSquadsSelec] = useState<string[]>([])
   const [activo, setActivo] = useState(true)
+  const [valorPersona, setValorPersona] = useState(0)
+  const [valorPerifericos, setValorPerifericos] = useState(0)
   const [aviso, setAviso] = useState('')
   const [aplicacionId, setAplicacionId] = useState('')
 
@@ -100,6 +103,8 @@ export default function Personas() {
     setSquadsSelec([])
     setRol(roles[0] ?? 'DEV')
     setActivo(true)
+    setValorPersona(0)
+    setValorPerifericos(0)
     setAviso('')
     setAplicacionId('')  // se deriva automáticamente del squad seleccionado
     setModalAbierto(true)
@@ -112,6 +117,8 @@ export default function Personas() {
     setRol(persona.rol_operativo)
     setSquadsSelec(persona.squads ?? [])
     setActivo(persona.activo)
+    setValorPersona(persona.valor_persona ?? 0)
+    setValorPerifericos(persona.valor_perifericos ?? 0)
     setAviso('')
     setModalAbierto(true)
   }
@@ -169,6 +176,8 @@ export default function Personas() {
       rol_operativo: rol,
       squads: squadsSelec,
       activo,
+      valor_persona: valorPersona,
+      valor_perifericos: valorPerifericos,
     }
     if (!editando) {
       if (!aplicacionIdEfectivo) {
@@ -341,14 +350,16 @@ export default function Personas() {
               </button>
               {!collapsed && (
                 <table className="w-full table-fixed text-sm">
-                  <thead className="bg-slate-50 text-slate-600">
+                  <thead className="bg-slate-50 text-slate-600 text-xs">
                     <tr>
-                      <th className="w-[30%] p-2 text-left">Nombre</th>
-                      <th className="w-[25%] p-2 text-left">Correo</th>
-                      <th className="w-[15%] p-2 text-left">Squad</th>
-                      <th className="w-[10%] p-2 text-center">Activo</th>
-                      <th className="w-[20%] p-2 text-center">Acciones</th>
-                    </tr>
+                     <th className="p-2 text-left">Nombre</th>
+                     <th className="p-2 text-left">Correo</th>
+                     <th className="p-2 text-left">Squad</th>
+                     {esGerente && <th className="p-2 text-right whitespace-nowrap">Valor persona</th>}
+                     {esGerente && <th className="p-2 text-right whitespace-nowrap">Valor periféricos</th>}
+                     <th className="p-2 text-center">Activo</th>
+                     <th className="p-2 text-center">Acciones</th>
+                   </tr>
                   </thead>
                   <tbody>
                     {personas.map((p) => (
@@ -356,6 +367,8 @@ export default function Personas() {
                         <td className="p-2 truncate">{p.nombre}</td>
                         <td className="p-2 truncate">{p.email ?? '—'}</td>
                         <td className="p-2 truncate">{(p.squads ?? []).join(', ') || '—'}</td>
+                        {esGerente && <td className="p-2 text-right font-mono text-xs">${(p.valor_persona ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
+                        {esGerente && <td className="p-2 text-right font-mono text-xs">${(p.valor_perifericos ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
                         <td className="p-2 text-center">
                           {p.activo
                             ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Sí</span>
@@ -465,6 +478,22 @@ export default function Personas() {
               {roles.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </label>
+          {esGerente && (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-sm">
+                <span className="mb-1 block text-slate-600">Valor de la persona ($)</span>
+                <input type="number" min={0} step={0.01} value={valorPersona}
+                  onChange={(e) => setValorPersona(Number(e.target.value))}
+                  className="w-full rounded border px-3 py-2" placeholder="0.00" />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-slate-600">Valor de periféricos ($)</span>
+                <input type="number" min={0} step={0.01} value={valorPerifericos}
+                  onChange={(e) => setValorPerifericos(Number(e.target.value))}
+                  className="w-full rounded border px-3 py-2" placeholder="0.00" />
+              </label>
+            </div>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
             <span className="text-slate-600">Activo</span>

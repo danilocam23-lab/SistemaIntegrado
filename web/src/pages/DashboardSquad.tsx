@@ -50,6 +50,7 @@ interface RegistroSoporteResumen {
   Work_Order_ID: string
   Fecha_Fin_Real: string
   Horas_Estimadas: string
+  Horas_Aprobadas: string
   Horas_Reales: string
 }
 
@@ -89,6 +90,49 @@ function formatearPeriodo(periodo: string): string {
   return anio && mes ? `${etiquetaMes} ${anio}` : periodo
 }
 
+function mesDesdeFecha(valor: string | null | undefined): string | null {
+  const texto = (valor ?? '').trim()
+  if (!texto) return null
+
+  const iso = texto.match(/^(\d{4})[-/](\d{1,2})/)
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}`
+
+  const dmy = texto.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/)
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}`
+
+  const fecha = new Date(texto)
+  if (Number.isNaN(fecha.getTime())) return null
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
+}
+
+function mesDesdeEntrega(req: Requerimiento, entrega: Requerimiento['entregas'][number]): string | null {
+  return (
+    mesDesdeFecha(entrega.fecha_recepcion) ??
+    mesDesdeFecha(entrega.fecha_comprometida) ??
+    mesDesdeFecha(entrega.fecha_aprobacion) ??
+    mesDesdeFecha(entrega.fecha_cargue) ??
+    mesDesdeFecha(entrega.fecha_ejecucion) ??
+    mesDesdeFecha(req.fecha_inicio) ??
+    mesDesdeFecha(req.fecha_solicitud_acta) ??
+    mesDesdeFecha(req.solicitud?.fecha_solicitud)
+  )
+}
+
+function alternarFiltroPeriodo(prev: Set<string>, valor: string, valorInicial: string): Set<string> {
+  const next = new Set(prev)
+  if (next.has(valor)) {
+    next.delete(valor)
+    return next
+  }
+
+  if (next.size === 1 && next.has(valorInicial) && valor !== valorInicial) {
+    return new Set([valor])
+  }
+
+  next.add(valor)
+  return next
+}
+
 function contarDiasHabiles(mes: string, festivosMes: Set<string>): number {
   const [anioTxt, mesTxt] = mes.split('-')
   const anio = Number(anioTxt)
@@ -124,6 +168,8 @@ export default function DashboardSquad() {
   const [mesesCapacidadActivos, setMesesCapacidadActivos] = useState<Set<string>>(() => new Set([mesInicialNumero]))
   const [squadsDoc, setSquadsDoc] = useState<Squad[]>([])
   const [soporteResumen, setSoporteResumen] = useState<RegistroSoporteResumen[]>([])
+  const [mostrarDetalleWo, setMostrarDetalleWo] = useState(false)
+  const [busquedaDetalleWo, setBusquedaDetalleWo] = useState('')
 
   useEffect(() => {
     client.get<Squad[]>('/squads', { headers: { 'X-Aplicacion': '__todas__' } })
@@ -216,8 +262,18 @@ export default function DashboardSquad() {
     for (const capacidad of capacidades) {
       if (capacidad.mes && capacidad.mes.length >= 4) set.add(capacidad.mes.slice(0, 4))
     }
+    for (const registro of soporteResumen) {
+      const mes = mesDesdeFecha(registro.Fecha_Fin_Real)
+      if (mes) set.add(mes.slice(0, 4))
+    }
+    for (const req of requerimientos) {
+      for (const entrega of req.entregas ?? []) {
+        const mes = mesDesdeEntrega(req, entrega)
+        if (mes) set.add(mes.slice(0, 4))
+      }
+    }
     return Array.from(set).sort((a, b) => b.localeCompare(a))
-  }, [capacidades])
+  }, [capacidades, requerimientos, soporteResumen])
 
   const periodosCapacidadSeleccionados = useMemo(() => {
     const anos = anosCapacidadActivos.size > 0
@@ -349,58 +405,80 @@ export default function DashboardSquad() {
 
   const entregasPorMes = useMemo(() => {
     const periodos = new Set(periodosCapacidadSeleccionados)
-    const mapa = new Map<string, { mes: string; label: string; entregas: number; horas: number; wo: number; woHoras: number; woIds: Set<string> }>()
-
-    for (const registro of soporteResumen) {
-      const fechaWo = registro.Fecha_Fin_Real ?? ''
-      if (fechaWo.length < 7) continue
-      const mesWo = fechaWo.slice(0, 7)
-      if (!periodos.has(mesWo)) continue
-      const actualWo = mapa.get(mesWo) ?? { mes: mesWo, label: formatearPeriodo(mesWo), entregas: 0, horas: 0, wo: 0, woHoras: 0, woIds: new Set<string>() }
-      const claveWo = (registro.Work_Order_ID || registro.id || `${mesWo}-${actualWo.woIds.size + 1}`).trim()
-      if (!actualWo.woIds.has(claveWo)) {
-        actualWo.woIds.add(claveWo)
-        actualWo.wo += 1
-      }
-      actualWo.woHoras += numero(registro.Horas_Reales)
-      mapa.set(mesWo, actualWo)
-    }
+    const mapa = new Map<string, { mes: string; label: string; entregas: number; horas: number }>()
 
     for (const req of requerimientos) {
       for (const entrega of req.entregas ?? []) {
-        const fecha = entrega.fecha_comprometida ?? entrega.fecha_recepcion ?? ''
-        if (!fecha || fecha.length < 7) continue
-        const mes = fecha.slice(0, 7)
+        const mes = mesDesdeEntrega(req, entrega)
+        if (!mes) continue
         if (!periodos.has(mes)) continue
-        const actual = mapa.get(mes) ?? { mes, label: formatearPeriodo(mes), entregas: 0, horas: 0, wo: 0, woHoras: 0, woIds: new Set<string>() }
+        const actual = mapa.get(mes) ?? { mes, label: formatearPeriodo(mes), entregas: 0, horas: 0 }
         actual.entregas += 1
         actual.horas += Number(entrega.horas ?? 0)
         mapa.set(mes, actual)
       }
     }
 
-    return Array.from(mapa.values()).map(({ woIds, ...resto }) => resto).sort((a, b) => a.mes.localeCompare(b.mes))
-  }, [periodosCapacidadSeleccionados, requerimientos, soporteResumen])
+    return Array.from(mapa.values()).sort((a, b) => a.mes.localeCompare(b.mes))
+  }, [periodosCapacidadSeleccionados, requerimientos])
 
   const woSoportePorMes = useMemo(() => {
     const periodos = new Set(periodosCapacidadSeleccionados)
-    const mapa = new Map<string, { mes: string; label: string; wo: number; woHoras: number }>()
+    const mapa = new Map<string, { mes: string; label: string; horasPorWo: Map<string, number> }>()
 
     for (const registro of soporteResumen) {
       const workOrder = registro.Work_Order_ID?.trim()
-      const fechaWo = registro.Fecha_Fin_Real?.trim() ?? ''
-      if (!workOrder || fechaWo.length < 7) continue
+      const mes = mesDesdeFecha(registro.Fecha_Fin_Real)
+      if (!workOrder || !mes) continue
 
-      const mes = fechaWo.slice(0, 7)
       if (!periodos.has(mes)) continue
-      const actual = mapa.get(mes) ?? { mes, label: formatearPeriodo(mes), wo: 0, woHoras: 0 }
-      actual.wo += 1
-      actual.woHoras += numero(registro.Horas_Reales)
+      const actual = mapa.get(mes) ?? { mes, label: formatearPeriodo(mes), horasPorWo: new Map<string, number>() }
+      const horasAprobadas = numero(registro.Horas_Aprobadas)
+      actual.horasPorWo.set(workOrder, Math.max(actual.horasPorWo.get(workOrder) ?? 0, horasAprobadas))
       mapa.set(mes, actual)
     }
 
-    return Array.from(mapa.values()).sort((a, b) => a.mes.localeCompare(b.mes))
+    return Array.from(mapa.values())
+      .map(({ horasPorWo, ...resto }) => ({
+        ...resto,
+        wo: horasPorWo.size,
+        woHoras: Array.from(horasPorWo.values()).reduce((sum, horas) => sum + horas, 0),
+      }))
+      .sort((a, b) => a.mes.localeCompare(b.mes))
   }, [periodosCapacidadSeleccionados, soporteResumen])
+
+  const detalleWoSoporte = useMemo(() => {
+    const periodos = new Set(periodosCapacidadSeleccionados)
+    const mapa = new Map<string, { mes: string; label: string; workOrder: string; horasAprobadas: number }>()
+
+    for (const registro of soporteResumen) {
+      const workOrder = registro.Work_Order_ID?.trim()
+      const mes = mesDesdeFecha(registro.Fecha_Fin_Real)
+      if (!workOrder || !mes) continue
+
+      if (!periodos.has(mes)) continue
+
+      const clave = `${mes}|${workOrder}`
+      const horasAprobadas = numero(registro.Horas_Aprobadas)
+      const actual = mapa.get(clave)
+      mapa.set(clave, {
+        mes,
+        label: formatearPeriodo(mes),
+        workOrder,
+        horasAprobadas: Math.max(actual?.horasAprobadas ?? 0, horasAprobadas),
+      })
+    }
+
+    return Array.from(mapa.values()).sort((a, b) => (
+      a.mes.localeCompare(b.mes) || a.workOrder.localeCompare(b.workOrder)
+    ))
+  }, [periodosCapacidadSeleccionados, soporteResumen])
+
+  const detalleWoSoporteFiltrado = useMemo(() => {
+    const busqueda = busquedaDetalleWo.trim().toLowerCase()
+    if (!busqueda) return detalleWoSoporte
+    return detalleWoSoporte.filter((fila) => fila.workOrder.toLowerCase().includes(busqueda))
+  }, [busquedaDetalleWo, detalleWoSoporte])
 
   const horasEntregasFiltradas = useMemo(() => {
     const totalHoras = entregasPorMes.reduce((sum, item) => sum + item.horas, 0)
@@ -502,10 +580,7 @@ export default function DashboardSquad() {
                             type="checkbox"
                             checked={checked}
                             onChange={() => setAnosCapacidadActivos((prev) => {
-                              const next = new Set(prev)
-                              if (next.has(ano)) next.delete(ano)
-                              else next.add(ano)
-                              return next
+                              return alternarFiltroPeriodo(prev, ano, anoInicial)
                             })}
                           />
                           {ano}
@@ -556,10 +631,7 @@ export default function DashboardSquad() {
                             type="checkbox"
                             checked={checked}
                             onChange={() => setMesesCapacidadActivos((prev) => {
-                              const next = new Set(prev)
-                              if (next.has(key)) next.delete(key)
-                              else next.add(key)
-                              return next
+                              return alternarFiltroPeriodo(prev, key, mesInicialNumero)
                             })}
                           />
                           {label}
@@ -588,7 +660,7 @@ export default function DashboardSquad() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* KPI Grid - Premium Design */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-6 mb-8">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 mb-8">
           <KpiCardPremium
             icon="📊"
             label="Squads Activos"
@@ -613,7 +685,7 @@ export default function DashboardSquad() {
           />
           <KpiCardPremium
             icon="🧾"
-            label="Horas de WO"
+            label="Horas aprobadas WO"
             value={`${fmtNumero(horasWoFiltradas.totalHoras)}h`}
             subtext={`Promedio: ${fmtNumero(horasWoFiltradas.promedioHoras)}h • ${fmtNumero(horasWoFiltradas.totalWo)} WO`}
             color="blue"
@@ -622,7 +694,7 @@ export default function DashboardSquad() {
             icon="Σ"
             label="Total horas"
             value={`${fmtNumero(totalHorasEntregasWo)}h`}
-            subtext="Horas de entregas + Horas de WO"
+            subtext="Horas de entregas + horas aprobadas WO"
             color="purple"
           />
           <KpiCardPremium
@@ -640,8 +712,8 @@ export default function DashboardSquad() {
             {entregasPorMes.length === 0 ? (
               <EmptyState />
             ) : (
-              <ResponsiveContainer width="100%" height={420}>
-                <BarChart data={entregasPorMes} margin={{ left: 20, right: 40, top: 20, bottom: 40 }}>
+              <ResponsiveContainer width="100%" height={460}>
+                <BarChart data={entregasPorMes} margin={{ left: 20, right: 40, top: 60, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} />
                   <XAxis
                     dataKey="label"
@@ -654,7 +726,7 @@ export default function DashboardSquad() {
                   <YAxis yAxisId="left" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
                   <Tooltip content={<TooltipPersonalizado />} />
-                  <Legend verticalAlign="top" height={28} />
+                  <Legend verticalAlign="top" height={36} wrapperStyle={{ top: 0 }} />
                   <Bar yAxisId="left" dataKey="entregas" name="Entregas" fill="#7C3AED" radius={[8, 8, 0, 0]} barSize={16}>
                     <LabelList
                       dataKey="entregas"
@@ -680,12 +752,29 @@ export default function DashboardSquad() {
             )}
           </ChartCardPremium>
 
-          <ChartCardPremium titulo="WO por mes" descripcion="Eje X: mes · Eje Y: cantidad de WO y suma de horas reales">
+          <ChartCardPremium
+            titulo="WO por mes"
+            descripcion="Eje X: mes · Eje Y: cantidad de WO y suma de Horas_Aprobadas"
+            action={
+              detalleWoSoporte.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBusquedaDetalleWo('')
+                    setMostrarDetalleWo(true)
+                  }}
+                  className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                >
+                  Ver detalle
+                </button>
+              ) : null
+            }
+          >
             {woSoportePorMes.length === 0 ? (
               <EmptyState />
             ) : (
-              <ResponsiveContainer width="100%" height={420}>
-                <BarChart data={woSoportePorMes} margin={{ left: 20, right: 40, top: 20, bottom: 50 }}>
+              <ResponsiveContainer width="100%" height={460}>
+                <BarChart data={woSoportePorMes} margin={{ left: 20, right: 40, top: 60, bottom: 50 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} />
                   <XAxis
                     dataKey="label"
@@ -698,7 +787,7 @@ export default function DashboardSquad() {
                   <YAxis yAxisId="left" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
                   <Tooltip content={<TooltipPersonalizado />} />
-                  <Legend verticalAlign="top" height={28} />
+                  <Legend verticalAlign="top" height={36} wrapperStyle={{ top: 0 }} />
                   <Bar yAxisId="left" dataKey="wo" name="Cantidad WO" fill="#16A34A" radius={[8, 8, 0, 0]} barSize={18}>
                     <LabelList
                       dataKey="wo"
@@ -709,7 +798,7 @@ export default function DashboardSquad() {
                       fontWeight={600}
                     />
                   </Bar>
-                  <Bar yAxisId="right" dataKey="woHoras" name="Horas reales" fill="#F59E0B" radius={[8, 8, 0, 0]} barSize={18}>
+                  <Bar yAxisId="right" dataKey="woHoras" name="Horas aprobadas" fill="#F59E0B" radius={[8, 8, 0, 0]} barSize={18}>
                     <LabelList
                       dataKey="woHoras"
                       position="top"
@@ -809,6 +898,78 @@ export default function DashboardSquad() {
           </ChartCardPremium>
         </div>
       </div>
+
+      {mostrarDetalleWo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Detalle WO por mes</h2>
+                <p className="mt-1 text-sm text-slate-500">WO individuales y Horas_Aprobadas por periodo seleccionado.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarDetalleWo(false)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Cerrar detalle WO por mes"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="border-b border-slate-100 px-6 py-4">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor="buscar-wo-detalle">
+                Buscar por WO
+              </label>
+              <input
+                id="buscar-wo-detalle"
+                type="search"
+                value={busquedaDetalleWo}
+                onChange={(event) => setBusquedaDetalleWo(event.target.value)}
+                placeholder="Ej: WO12345"
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <div className="max-h-[62vh] overflow-auto p-6">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Mes</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Work Order ID</th>
+                    <th className="px-4 py-3 text-right font-semibold text-slate-900">Horas aprobadas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {detalleWoSoporteFiltrado.map((fila) => (
+                    <tr key={`${fila.mes}-${fila.workOrder}`} className="hover:bg-blue-50/40">
+                      <td className="px-4 py-3 font-medium text-slate-800">{fila.label}</td>
+                      <td className="px-4 py-3 font-semibold text-green-700">{fila.workOrder}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-amber-700">{fmtNumero(fila.horasAprobadas)}h</td>
+                    </tr>
+                  ))}
+                  {detalleWoSoporteFiltrado.length === 0 && (
+                    <tr>
+                      <td className="px-4 py-8 text-center text-sm text-slate-400" colSpan={3}>
+                        No se encontraron WO con esa búsqueda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold text-slate-900">
+                    <td className="px-4 py-3">Total</td>
+                    <td className="px-4 py-3">{fmtNumero(detalleWoSoporteFiltrado.length)} WO</td>
+                    <td className="px-4 py-3 text-right">
+                      {fmtNumero(detalleWoSoporteFiltrado.reduce((sum, fila) => sum + fila.horasAprobadas, 0))}h
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -858,23 +1019,23 @@ function KpiCardPremium({
   const theme = colors[color]
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-300">
+    <div className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-300">
       <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
 
-      <div className="relative p-6">
+      <div className="relative p-5 2xl:p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className={`text-4xl p-3 rounded-xl ${theme.light}`}>{icon}</div>
+          <div className={`shrink-0 text-3xl 2xl:text-4xl p-3 rounded-xl ${theme.light}`}>{icon}</div>
           {trend && (
-            <div className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
+            <div className="shrink-0 text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
               {trend}
             </div>
           )}
         </div>
 
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <div className="text-sm font-medium text-slate-600 uppercase tracking-wider">{label}</div>
-          <div className={`text-3xl font-bold ${theme.text}`}>{value}</div>
-          {subtext && <div className="text-xs text-slate-500 mt-2">{subtext}</div>}
+          <div className={`break-words text-2xl font-bold ${theme.text} 2xl:text-3xl`}>{value}</div>
+          {subtext && <div className="mt-2 break-words text-xs text-slate-500">{subtext}</div>}
         </div>
       </div>
     </div>
@@ -884,17 +1045,22 @@ function KpiCardPremium({
 function ChartCardPremium({
   titulo,
   descripcion,
+  action,
   children,
 }: {
   titulo: string
   descripcion?: string
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-300">
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-slate-900">{titulo}</h3>
-        {descripcion && <p className="text-sm text-slate-500 mt-1">{descripcion}</p>}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">{titulo}</h3>
+          {descripcion && <p className="text-sm text-slate-500 mt-1">{descripcion}</p>}
+        </div>
+        {action}
       </div>
       <div className="relative">{children}</div>
     </div>

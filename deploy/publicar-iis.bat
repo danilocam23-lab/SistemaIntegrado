@@ -72,6 +72,29 @@ if exist "%SOURCE_DIR%\scripts" xcopy /E /I /Y /Q "%SOURCE_DIR%\scripts" "%PUBLI
 
 if exist "%PUBLISH_DIR%\api\.env" (
     echo         [OK] .env conservado
+    REM -- Agregar variables nuevas que falten en el .env de produccion --
+    set "ENV_UPDATED=0"
+    if exist "%SOURCE_DIR%\api\.env" (
+        for /f "usebackq tokens=1 delims==" %%k in ("%SOURCE_DIR%\api\.env") do (
+            set "VARNAME=%%k"
+            if not "!VARNAME:~0,1!"=="#" if not "!VARNAME!"=="" (
+                findstr /b /c:"!VARNAME!=" "%PUBLISH_DIR%\api\.env" >nul 2>&1
+                if !errorlevel! neq 0 (
+                    for /f "usebackq tokens=1,* delims==" %%a in ("%SOURCE_DIR%\api\.env") do (
+                        if "%%a"=="!VARNAME!" (
+                            echo.>>"%PUBLISH_DIR%\api\.env"
+                            echo %%a=%%b>>"%PUBLISH_DIR%\api\.env"
+                            echo         [+] Variable agregada: !VARNAME!
+                            set "ENV_UPDATED=1"
+                        )
+                    )
+                )
+            )
+        )
+    )
+    if "!ENV_UPDATED!"=="0" (
+        echo         Sin variables nuevas
+    )
 ) else if exist "%SOURCE_DIR%\api\.env" (
     copy /Y "%SOURCE_DIR%\api\.env" "%PUBLISH_DIR%\api\.env" >nul
 ) else (
@@ -197,6 +220,7 @@ echo   RECUERDA:
 echo    - El servicio de MongoDB debe estar corriendo (ver MONGO_URL en api\.env).
 echo    - El superadmin y la aplicacion inicial se crean al primer arranque.
 echo    - Credenciales iniciales: ver SUPERADMIN_EMAIL / SUPERADMIN_PASSWORD en .env
+echo    - Power Automate: revisa API_KEY en api\.env para integracion externa.
 echo  ============================================================
 echo.
 start "" "http://!HOST!/%APP_NAME%"

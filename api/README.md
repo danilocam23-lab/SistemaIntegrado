@@ -36,6 +36,26 @@ Toda petición a recursos operativos exige la cabecera `X-Aplicacion` con el có
 aplicación. Los roles `superadmin` y `admin_app` pueden enviar `X-Aplicacion: __todas__`
 para activar el modo consolidado (solo lectura).
 
+## Endpoints administrativos
+
+- `GET /api/health`: disponibilidad de la API.
+- `GET /api/requerimientos/{codigo_req}/diagnostico`: diagnóstico por código REQ o SC.
+- `POST /api/requerimientos/{codigo_req}/reasignar-aplicacion?nueva_aplicacion={codigo}`:
+  reasigna un requerimiento a otra aplicación desde modo consolidado.
+
+## Azure DevOps HITSS/EPM
+
+Los endpoints de `/api/azdo` aceptan `target=hitss|epm` para separar configuración,
+prueba de conexión, descubrimiento de campos y sincronización:
+
+- `GET /api/azdo/config?target=hitss|epm`
+- `PUT /api/azdo/config` con `target` en el cuerpo.
+- `GET /api/azdo/test?target=hitss|epm`
+- `GET /api/azdo/campos-requeridos?target=hitss|epm`
+- `POST /api/azdo/sync` con `azdo_project`, `iteration_path` y `target`.
+
+El inventario completo se consulta en la vista frontend **Administración de Endpoints**.
+
 ## Pendiente
 
 Portar el dominio del Liquidador y del Workload Manager (ver el documento de arquitectura,

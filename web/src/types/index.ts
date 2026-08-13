@@ -75,6 +75,7 @@ export interface Entrega {
   mes_aprobacion: string | null
   ans_entrega: string | null
   garantia: boolean
+  numero_garantia: number | null
 }
 
 export interface Requerimiento {
@@ -155,6 +156,8 @@ export interface Persona {
   es_lider_tecnico?: boolean
   permite_sobrecarga?: boolean
   usuario_id?: string | null
+  valor_persona?: number
+  valor_perifericos?: number
 }
 
 export interface Categoria {

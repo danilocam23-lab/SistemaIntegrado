@@ -28,6 +28,7 @@ import FacturacionGeneral from './pages/FacturacionGeneral'
 import FacturacionValoresProyecto from './pages/FacturacionValoresProyecto'
 import SoporteSolicitudesFabrica from './pages/SoporteSolicitudesFabrica'
 import SoporteDetalleANS from './pages/SoporteDetalleANS'
+import SoporteGarantiasWO from './pages/SoporteGarantiasWO'
 
 export default function App() {
   return (
@@ -49,19 +50,19 @@ export default function App() {
               <Route path="dashboard-estados" element={<RoleRoute permiso="dashboard.estados.ver"><DashboardEstados /></RoleRoute>} />
               <Route path="dashboard-backlog" element={<RoleRoute permiso="dashboard.squad.ver"><DashboardSquad /></RoleRoute>} />
               <Route path="dashboard-squad" element={<Navigate to="/dashboard-backlog" replace />} />
-              <Route path="requerimientos" element={<Requerimientos />} />
-              <Route path="requerimientos/detalle-ans" element={<RequerimientosDetalleANS />} />
-              <Route path="requerimientos/nuevo" element={<RequerimientoNuevo />} />
-              <Route path="requerimientos/:reqId" element={<RequerimientoDetalle />} />
-              <Route path="entregas-actas" element={<EntregasActas />} />
+              <Route path="requerimientos" element={<RoleRoute permiso="requerimientos.ver"><Requerimientos /></RoleRoute>} />
+              <Route path="requerimientos/detalle-ans" element={<RoleRoute permiso="requerimientos.ver"><RequerimientosDetalleANS /></RoleRoute>} />
+              <Route path="requerimientos/nuevo" element={<RoleRoute permiso="requerimientos.crear"><RequerimientoNuevo /></RoleRoute>} />
+              <Route path="requerimientos/:reqId" element={<RoleRoute permiso="requerimientos.ver"><RequerimientoDetalle /></RoleRoute>} />
+              <Route path="entregas-actas" element={<RoleRoute permiso="entregas_actas.ver"><EntregasActas /></RoleRoute>} />
               <Route path="tarifas" element={<Navigate to="/configuracion" replace />} />
               <Route path="personas" element={<Personas />} />
               <Route path="categorias" element={<Navigate to="/configuracion" replace />} />
               <Route path="asignaciones" element={<Asignaciones />} />
               <Route path="capacidades" element={<Capacidades />} />
               <Route path="roadmap" element={<Roadmap />} />
-              <Route path="estimaciones" element={<Estimaciones />} />
-              <Route path="azure-devops" element={<AzureDevOps />} />
+              <Route path="estimaciones" element={<RoleRoute permiso="estimaciones.ver"><Estimaciones /></RoleRoute>} />
+              <Route path="azure-devops" element={<RoleRoute permiso="azure_devops.ver"><AzureDevOps /></RoleRoute>} />
               <Route path="configuracion" element={<RoleRoute permiso="admin.configuracion.ver"><Configuracion /></RoleRoute>} />
               <Route
                 path="admin/aplicaciones"
@@ -80,6 +81,7 @@ export default function App() {
               <Route path="facturacion/valores-proyecto" element={<RoleRoute permiso="facturacion.ver"><FacturacionValoresProyecto /></RoleRoute>} />
               <Route path="soporte/solicitudes-fabrica" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteSolicitudesFabrica /></RoleRoute>} />
               <Route path="soporte/detalle-ans" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteDetalleANS /></RoleRoute>} />
+              <Route path="soporte/garantias-wo" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteGarantiasWO /></RoleRoute>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

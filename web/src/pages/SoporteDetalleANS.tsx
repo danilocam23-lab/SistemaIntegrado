@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
@@ -54,10 +54,6 @@ function ordenarPorWorkOrderID(a: RegistroSoporte, b: RegistroSoporte): number {
   return woA.localeCompare(woB, 'es', { numeric: true, sensitivity: 'base' })
 }
 
-function normalizarTexto(v: string): string {
-  return v.trim().toLowerCase()
-}
-
 function seLevantoAns(registro: RegistroSoporte, tipo: AnsTipo): boolean {
   const valor = (registro.datos?.[ANS_DETALLE_CAMPOS[tipo].levantado] ?? '').trim().toUpperCase()
   return valor === 'SI' || valor === 'TRUE' || valor === '1'
@@ -84,15 +80,32 @@ export default function SoporteDetalleANS() {
     cumplimiento: false,
     inicio: false,
   })
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
+  async function cargarANS(wo?: string, assigned?: string, anos?: Set<string>, meses?: Set<string>): Promise<void> {
     setCargando(true)
     setAviso('')
-    client
-      .get<ListadoResponse>('/soporte/solicitudes-fabrica/ans-datos')
-      .then((r) => setRegistros(r.data.registros ?? []))
-      .catch((err) => setAviso(mensajeError(err)))
-      .finally(() => setCargando(false))
+    try {
+      const params = new URLSearchParams()
+      const _wo = wo ?? filtroWo
+      const _assigned = assigned ?? filtroAssignedTo
+      const _anos = anos ?? anosActivos
+      const _meses = meses ?? mesesActivos
+      if (_wo) params.set('filtro_wo', _wo)
+      if (_assigned) params.set('filtro_assigned', _assigned)
+      if (_anos.size === 1) params.set('filtro_ano', [..._anos][0])
+      if (_meses.size === 1) params.set('filtro_mes', [..._meses][0])
+      const { data } = await client.get<ListadoResponse>(`/soporte/solicitudes-fabrica/ans-datos?${params}`)
+      setRegistros(data.registros ?? [])
+    } catch (err) {
+      setAviso(mensajeError(err))
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  useEffect(() => {
+    void cargarANS()
   }, [])
 
   // ─── Años disponibles desde Fecha_Fin_Real ─────────────
@@ -105,38 +118,27 @@ export default function SoporteDetalleANS() {
     return Array.from(s).sort()
   }, [registros])
 
-  const registrosBaseFiltrados = useMemo(() => {
-    const wo = normalizarTexto(filtroWo)
-    return registros.filter((r) => {
-      if (wo && !normalizarTexto(r.datos?.['Work Order ID'] ?? '').includes(wo)) return false
-      // Filtro por año/mes (Fecha_Fin_Real)
-      if (anosActivos.size > 0 || mesesActivos.size > 0) {
-        const fecha = r.datos?.['Fecha_Fin_Real'] ?? ''
-        const ano = fecha.substring(0, 4)
-        const mm  = String(Number(fecha.substring(5, 7)))
-        if (anosActivos.size > 0 && !anosActivos.has(ano)) return false
-        if (mesesActivos.size > 0 && !mesesActivos.has(mm)) return false
-      }
-      return true
-    })
-  }, [registros, filtroWo, anosActivos, mesesActivos])
-
   const assignedToOpciones = useMemo(() => {
     const unicos = new Set<string>()
-    registrosBaseFiltrados.forEach((r) => {
+    registros.forEach((r) => {
       const valor = (r.datos?.['Assigned To'] ?? '').trim()
       if (valor) unicos.add(valor)
     })
     return Array.from(unicos).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
-  }, [registrosBaseFiltrados])
+  }, [registros])
 
+  // Filtrado local solo para año/mes multi-select (servidor ya filtró WO y Assigned)
   const registrosFiltrados = useMemo(() => {
-    const assigned = normalizarTexto(filtroAssignedTo)
-    return registrosBaseFiltrados.filter((r) => {
-      if (assigned && normalizarTexto(r.datos?.['Assigned To'] ?? '') !== assigned) return false
+    if (anosActivos.size === 0 && mesesActivos.size === 0) return registros
+    return registros.filter((r) => {
+      const fecha = r.datos?.['Fecha_Fin_Real'] ?? ''
+      const ano = fecha.substring(0, 4)
+      const mm = String(Number(fecha.substring(5, 7)))
+      if (anosActivos.size > 0 && !anosActivos.has(ano)) return false
+      if (mesesActivos.size > 0 && !mesesActivos.has(mm)) return false
       return true
     })
-  }, [registrosBaseFiltrados, filtroAssignedTo])
+  }, [registros, anosActivos, mesesActivos])
 
   const resumen = useMemo(() => {
     const oportunidad: EstadoResumen = crearResumen()
@@ -216,7 +218,12 @@ export default function SoporteDetalleANS() {
               className="mt-2 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
               placeholder="Buscar Work Order ID…"
               value={filtroWo}
-              onChange={(e) => setFiltroWo(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value
+                setFiltroWo(v)
+                if (debounceRef.current) clearTimeout(debounceRef.current)
+                debounceRef.current = setTimeout(() => void cargarANS(v), 500)
+              }}
             />
           </div>
           <div>
@@ -227,7 +234,11 @@ export default function SoporteDetalleANS() {
               id="filtro-assigned-ans"
               className="mt-2 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-marca focus:ring-2 focus:ring-marca/20"
               value={filtroAssignedTo}
-              onChange={(e) => setFiltroAssignedTo(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value
+                setFiltroAssignedTo(v)
+                void cargarANS(undefined, v)
+              }}
             >
               <option value="">Todos</option>
               {assignedToOpciones.map((persona) => (
@@ -403,6 +414,7 @@ function DetalleTablaANS({
   const [observaciones, setObservaciones] = useState<Record<string, string>>({})
   const [guardandoCheck, setGuardandoCheck] = useState<Set<string>>(new Set())
   const [guardandoObservacion, setGuardandoObservacion] = useState<Set<string>>(new Set())
+  const [visibles, setVisibles] = useState(50)
 
   useEffect(() => {
     setObservaciones((actuales) => {
@@ -507,7 +519,7 @@ function DetalleTablaANS({
                   <td className="p-4 text-center text-slate-400" colSpan={8}>Sin registros</td>
                 </tr>
               ) : (
-                registros.map((r) => {
+                registros.slice(0, visibles).map((r) => {
                   const levantado = seLevantoAns(r, tipo)
                   return (
                     <tr key={r.id} className="border-t">
@@ -559,6 +571,17 @@ function DetalleTablaANS({
               )}
             </tbody>
           </table>
+          {visibles < registros.length && (
+            <div className="flex justify-center border-t p-3">
+              <button
+                type="button"
+                onClick={() => setVisibles((v) => v + 50)}
+                className="rounded bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+              >
+                Mostrar más ({registros.length - visibles} restantes)
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

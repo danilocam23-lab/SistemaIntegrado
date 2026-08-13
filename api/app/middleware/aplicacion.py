@@ -68,10 +68,10 @@ async def contexto_aplicacion(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Falta la cabecera X-Aplicacion")
 
     if x_aplicacion == CONSOLIDADO:
-        if not await tiene_permiso(usuario, PERM_CONSOLIDADO_VER):
+        if not await tiene_permiso(usuario, PERM_CONSOLIDADO_VER) and len(autorizadas) <= 1:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
-                "El modo consolidado solo está disponible para roles de administración",
+                "El modo todos los squads requiere tener más de un squad asignado",
             )
         if not autorizadas:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin aplicaciones autorizadas")

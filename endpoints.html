@@ -3,41 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ultimo cambio de endpoints</title>
+  <title>Documentación de endpoints</title>
 </head>
 <body>
-  <h1>Ultimo cambio de endpoints</h1>
+  <h1>Documentación de endpoints</h1>
   <p>
-    El <strong>ultimo cambio de endpoints</strong> fue el commit
-    <strong>bb55e34</strong> (2026-06-25 10:08), con el mensaje:
-    <em>“Add requerimiento endpoints: reasignar-aplicacion and diagnostico”</em>,
-    en <code>api/app/api/requerimientos.py</code>.
+    La vista <strong>Administración de Endpoints</strong> documenta el inventario completo
+    de rutas FastAPI disponibles bajo <code>/api</code> y mantiene acciones operativas
+    para diagnóstico y reasignación de requerimientos.
   </p>
 
-  <h2>URLs</h2>
-  <h3>Localhost</h3>
+  <h2>Rutas administrativas destacadas</h2>
   <ul>
     <li>
-      <code>POST http://localhost:8000/api/requerimientos/{codigo_req}/reasignar-aplicacion</code>
+      <code>GET /api/requerimientos/{codigo_req}/diagnostico</code>:
+      busca por código REQ o SC y devuelve información de diagnóstico.
     </li>
     <li>
-      <code>GET http://localhost:8000/api/requerimientos/{codigo_req}/diagnostico</code>
+      <code>POST /api/requerimientos/{codigo_req}/reasignar-aplicacion?nueva_aplicacion={codigo}</code>:
+      mueve un requerimiento a otra aplicación.
     </li>
   </ul>
 
-  <h3>Produccion</h3>
+  <h2>Azure DevOps</h2>
+  <p>
+    Los endpoints de <code>/api/azdo</code> soportan <code>target=hitss|epm</code> para
+    mantener configuraciones separadas de HITSS y EPM:
+  </p>
   <ul>
-    <li>
-      <code>POST https://&lt;tu-dominio&gt;/&lt;base&gt;/api/requerimientos/{codigo_req}/reasignar-aplicacion</code>
-    </li>
-    <li>
-      <code>GET https://&lt;tu-dominio&gt;/&lt;base&gt;/api/requerimientos/{codigo_req}/diagnostico</code>
-    </li>
+    <li><code>GET /api/azdo/config?target=hitss</code></li>
+    <li><code>GET /api/azdo/config?target=epm</code></li>
+    <li><code>PUT /api/azdo/config</code> con <code>target</code> en el cuerpo.</li>
+    <li><code>GET /api/azdo/test?target=hitss|epm</code></li>
+    <li><code>GET /api/azdo/campos-requeridos?target=hitss|epm</code></li>
   </ul>
 
   <p>
-    Donde <code>&lt;base&gt;</code> depende de <code>VITE_APP_BASE</code> /
-    <code>APP_ROOT_PATH</code> (ejemplo tipico: <code>/SistemaIntegrado</code>).
+    En producción las URLs conservan el mismo prefijo y dependen de
+    <code>VITE_APP_BASE</code> / <code>APP_ROOT_PATH</code>, por ejemplo:
+    <code>https://&lt;tu-dominio&gt;/SistemaIntegrado/api/health</code>.
   </p>
 </body>
 </html>

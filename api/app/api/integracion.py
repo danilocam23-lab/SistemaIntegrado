@@ -39,6 +39,21 @@ async def _verificar_api_key(
     return x_api_key
 
 
+async def _verificar_api_key_requerimientos(
+    x_api_key: str = Header(..., alias="X-API-Key"),
+) -> str:
+    """Valida la API Key independiente para integración de requerimientos."""
+    settings = get_settings()
+    if not settings.api_key_requerimientos:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "API Key de requerimientos no configurada. Agregue API_KEY_REQUERIMIENTOS en .env",
+        )
+    if x_api_key != settings.api_key_requerimientos:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "API Key inválida")
+    return x_api_key
+
+
 # ── Esquema de respuesta ──────────────────────────────────────────────────────
 
 class EntregaPlana(BaseModel):
@@ -51,6 +66,22 @@ class EntregaPlana(BaseModel):
     dias_transcurridos: int | None = None
     cant_entregas: int = 0
     horas_a_entregar: float | None = None
+    tipo_de_costo: str | None = None
+
+
+class RequerimientoPlano(BaseModel):
+    """Una fila por cada requerimiento (formato plano)."""
+    codigo: str
+    cod_del_req: str
+    aplicacion: str
+    nombre: str | None = None
+    estado_requerimiento: str
+    estado_solicitud: str | None = None
+    lt_hitss: str | None = None
+    fecha_solicitud: datetime | None = None
+    fecha_real_entrega_estimacion: datetime | None = None
+    total_horas_estimadas: float | None = None
+    cant_entregas: int = 0
     tipo_de_costo: str | None = None
 
 
@@ -175,5 +206,71 @@ async def listar_entregas(
                 horas_a_entregar=float(entrega.horas) if entrega.horas is not None else None,
                 tipo_de_costo=tipo_costo,
             ))
+
+    return resultado
+
+
+@router.get(
+    "/requerimientos",
+    response_model=list[RequerimientoPlano],
+    summary="Requerimientos aplanados para Power Automate",
+    description=(
+        "Devuelve un array plano donde cada objeto es **un requerimiento**. "
+        "Autenticación: header `X-API-Key` usando `API_KEY_REQUERIMIENTOS`."
+    ),
+)
+async def listar_requerimientos(
+    aplicacion: str | None = Query(
+        default=None,
+        description="Código de aplicación (squad). Si se omite, devuelve todas.",
+    ),
+    estado: str | None = Query(
+        default=None,
+        description="Estado del requerimiento. Si se omite, devuelve todos.",
+    ),
+    _: str = Depends(_verificar_api_key_requerimientos),
+) -> list[RequerimientoPlano]:
+    filtro: dict = {}
+    if aplicacion:
+        filtro["aplicacion_id"] = aplicacion
+    if estado:
+        filtro["estado"] = estado
+
+    reqs = await Requerimiento.find(filtro).to_list()
+
+    lt_ids_raw = {
+        req.solicitud.lt_hitss_id
+        for req in reqs
+        if req.solicitud.lt_hitss_id
+    }
+    personas_map: dict[str, str] = {}
+    if lt_ids_raw:
+        oids = [oid for v in lt_ids_raw if (oid := _to_oid(v)) is not None]
+        if oids:
+            personas = await Persona.find({"_id": {"$in": oids}}).to_list()
+            for p in personas:
+                personas_map[str(p.id)] = p.nombre
+
+    resultado: list[RequerimientoPlano] = []
+    for req in reqs:
+        sol = req.solicitud
+        resultado.append(RequerimientoPlano(
+            codigo=sol.codigo_sc,
+            cod_del_req=req.codigo_req,
+            aplicacion=req.aplicacion_id,
+            nombre=req.nombre,
+            estado_requerimiento=req.estado,
+            estado_solicitud=sol.estado,
+            lt_hitss=personas_map.get(sol.lt_hitss_id or ""),
+            fecha_solicitud=sol.fecha_solicitud,
+            fecha_real_entrega_estimacion=req.fecha_real_entrega_estimacion,
+            total_horas_estimadas=(
+                float(req.total_horas_estimadas)
+                if req.total_horas_estimadas is not None
+                else None
+            ),
+            cant_entregas=len(req.entregas),
+            tipo_de_costo=sol.tipo_costo.value if sol.tipo_costo else None,
+        ))
 
     return resultado

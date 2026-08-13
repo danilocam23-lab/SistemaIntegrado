@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { useLista } from '../api/hooks'
+import { useAuth } from '../context/AuthContext'
 import type { Configuracion, Tarifa } from '../types'
 
 interface FilaGeneral {
@@ -79,6 +80,8 @@ function formatoNumero(valor: number): string {
 }
 
 export default function FacturacionGeneral() {
+  const { tienePermiso } = useAuth()
+  const puedeEditarFacturacion = tienePermiso('admin.configuracion.editar')
   const { datos: configuraciones, cargando, error, recargar } = useLista<Configuracion>('/configuracion')
   const { datos: tarifas } = useLista<Tarifa>('/tarifas')
   const [filas, setFilas] = useState<FilaGeneral[]>([])
@@ -128,14 +131,17 @@ export default function FacturacionGeneral() {
   }, [configFilas, inicializado])
 
   function actualizar(id: string, campo: keyof FilaGeneral, valor: string): void {
+    if (!puedeEditarFacturacion) return
     setFilas((prev) => prev.map((f) => (f.id === id ? { ...f, [campo]: valor } : f)))
   }
 
   function agregarFila(): void {
+    if (!puedeEditarFacturacion) return
     setFilas((prev) => [...prev, crearFila()])
   }
 
   function eliminarFila(id: string): void {
+    if (!puedeEditarFacturacion) return
     setFilas((prev) => {
       const next = prev.filter((f) => f.id !== id)
       return next.length > 0 ? next : [crearFila()]
@@ -143,6 +149,10 @@ export default function FacturacionGeneral() {
   }
 
   async function guardarCambios(): Promise<void> {
+    if (!puedeEditarFacturacion) {
+      setMensaje('error')
+      return
+    }
     setGuardando(true)
     setMensaje('')
     try {
@@ -199,29 +209,31 @@ export default function FacturacionGeneral() {
   }, [filas, valorHoraAutomaticoTexto])
 
   return (
-    <div className="space-y-4 p-6">
-      <div className="flex items-center justify-between gap-3">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-marca-osc">Facturación — General</h1>
           <p className="mt-1 text-sm text-slate-500">
             Tabla manual: sin funciones automáticas en horas. El valor hora viene automático de configuración.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={agregarFila}
-            className="rounded border border-marca px-3 py-1.5 text-sm text-marca hover:bg-marca/5"
-          >
-            Agregar fila
-          </button>
-          <button
-            onClick={() => void guardarCambios()}
-            disabled={guardando || !inicializado}
-            className="rounded bg-marca px-3 py-1.5 text-sm text-white hover:bg-marca-osc disabled:opacity-60"
-          >
-            {guardando ? 'Guardando…' : 'Guardar cambios'}
-          </button>
-        </div>
+        {puedeEditarFacturacion && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={agregarFila}
+              className="rounded border border-marca px-3 py-1.5 text-sm text-marca hover:bg-marca/5"
+            >
+              Agregar fila
+            </button>
+            <button
+              onClick={() => void guardarCambios()}
+              disabled={guardando || !inicializado}
+              className="rounded bg-marca px-3 py-1.5 text-sm text-white hover:bg-marca-osc disabled:opacity-60"
+            >
+              {guardando ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+          </div>
+        )}
       </div>
 
       {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
@@ -260,8 +272,9 @@ export default function FacturacionGeneral() {
                   <input
                     value={f.periodo}
                     onChange={(e) => actualizar(f.id, 'periodo', e.target.value)}
+                    readOnly={!puedeEditarFacturacion}
                     placeholder="Enero - Febrero"
-                    className="w-44 rounded border border-slate-200 px-2 py-1"
+                    className="w-44 rounded border border-slate-200 px-2 py-1 read-only:bg-slate-50 read-only:text-slate-600"
                   />
                 </td>
                 <td className="p-2">
@@ -275,7 +288,8 @@ export default function FacturacionGeneral() {
                   <input
                     value={f.horasComprometidas}
                     onChange={(e) => actualizar(f.id, 'horasComprometidas', e.target.value)}
-                    className="w-32 rounded border border-slate-200 px-2 py-1 text-right"
+                    readOnly={!puedeEditarFacturacion}
+                    className="w-32 rounded border border-slate-200 px-2 py-1 text-right read-only:bg-slate-50 read-only:text-slate-600"
                   />
                 </td>
                 <td className="p-2">
@@ -289,7 +303,8 @@ export default function FacturacionGeneral() {
                   <input
                     value={f.horasFacturadas}
                     onChange={(e) => actualizar(f.id, 'horasFacturadas', e.target.value)}
-                    className="w-32 rounded border border-slate-200 px-2 py-1 text-right"
+                    readOnly={!puedeEditarFacturacion}
+                    className="w-32 rounded border border-slate-200 px-2 py-1 text-right read-only:bg-slate-50 read-only:text-slate-600"
                   />
                 </td>
                 <td className="p-2">
@@ -308,7 +323,8 @@ export default function FacturacionGeneral() {
                       if (e.target.value.trim() === '') return
                       actualizar(f.id, 'deuda', formatoCOP(n))
                     }}
-                    className={`w-32 rounded border border-slate-200 px-2 py-1 text-right ${
+                    readOnly={!puedeEditarFacturacion}
+                    className={`w-32 rounded border border-slate-200 px-2 py-1 text-right read-only:bg-slate-50 ${
                       aNumero(f.deuda) < 0 ? 'text-emerald-600' : aNumero(f.deuda) > 0 ? 'text-red-600' : 'text-slate-600'
                     }`}
                   />
@@ -318,16 +334,19 @@ export default function FacturacionGeneral() {
                     rows={2}
                     value={f.observacion}
                     onChange={(e) => actualizar(f.id, 'observacion', e.target.value)}
-                    className="w-full resize-none rounded border border-slate-200 px-2 py-1"
+                    readOnly={!puedeEditarFacturacion}
+                    className="w-full resize-none rounded border border-slate-200 px-2 py-1 read-only:bg-slate-50 read-only:text-slate-600"
                   />
                 </td>
                 <td className="p-2 text-center">
-                  <button
-                    onClick={() => eliminarFila(f.id)}
-                    className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                  >
-                    Quitar
-                  </button>
+                  {puedeEditarFacturacion && (
+                    <button
+                      onClick={() => eliminarFila(f.id)}
+                      className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                    >
+                      Quitar
+                    </button>
+                  )}
                 </td>
                     </>
                   )

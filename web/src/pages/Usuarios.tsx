@@ -8,6 +8,55 @@ import type { Aplicacion, Rol, Usuario } from '../types'
 
 type Tab = 'usuarios' | 'roles'
 
+const PERMISOS_INFO: Record<string, { modulo: string; nombre: string; descripcion: string }> = {
+  'dashboard.ver': { modulo: 'Dashboard', nombre: 'Ver Dashboard General', descripcion: 'Permite consultar indicadores generales.' },
+  'dashboard.estados.ver': { modulo: 'Dashboard', nombre: 'Ver Estados', descripcion: 'Permite consultar el dashboard de estados.' },
+  'dashboard.squad.ver': { modulo: 'Dashboard', nombre: 'Ver Backlog', descripcion: 'Permite consultar backlog, capacidad y WO.' },
+  'requerimientos.ver': { modulo: 'Requerimientos y entregas', nombre: 'Ver requerimientos', descripcion: 'Consulta requerimientos, entregas y detalle ANS.' },
+  'requerimientos.crear': { modulo: 'Requerimientos y entregas', nombre: 'Crear requerimientos', descripcion: 'Permite registrar nuevos requerimientos.' },
+  'requerimientos.editar': { modulo: 'Requerimientos y entregas', nombre: 'Editar requerimientos', descripcion: 'Permite actualizar requerimientos, entregas y estimaciones.' },
+  'requerimientos.eliminar': { modulo: 'Requerimientos y entregas', nombre: 'Eliminar requerimientos', descripcion: 'Permite borrar requerimientos.' },
+  'entregas_actas.ver': { modulo: 'Requerimientos y entregas', nombre: 'Ver entregas de actas', descripcion: 'Permite consultar entregas de actas.' },
+  'personas.ver': { modulo: 'Carga de trabajo', nombre: 'Ver personas', descripcion: 'Consulta el equipo registrado.' },
+  'personas.crear': { modulo: 'Carga de trabajo', nombre: 'Crear personas', descripcion: 'Permite registrar personas.' },
+  'personas.editar': { modulo: 'Carga de trabajo', nombre: 'Editar personas', descripcion: 'Permite actualizar personas.' },
+  'personas.eliminar': { modulo: 'Carga de trabajo', nombre: 'Eliminar personas', descripcion: 'Permite eliminar personas.' },
+  'personas.ver_valores': { modulo: 'Carga de trabajo', nombre: 'Ver valores personas', descripcion: 'Ver y editar valor de persona y periféricos.' },
+  'asignaciones.ver': { modulo: 'Carga de trabajo', nombre: 'Ver asignaciones', descripcion: 'Consulta asignaciones de trabajo.' },
+  'asignaciones.editar': { modulo: 'Carga de trabajo', nombre: 'Editar asignaciones', descripcion: 'Permite crear o modificar asignaciones.' },
+  'capacidades.ver': { modulo: 'Carga de trabajo', nombre: 'Ver capacidades', descripcion: 'Consulta capacidad disponible.' },
+  'capacidades.editar': { modulo: 'Carga de trabajo', nombre: 'Editar capacidades', descripcion: 'Permite actualizar capacidades.' },
+  'roadmap.ver': { modulo: 'Carga de trabajo', nombre: 'Ver roadmap y equipo', descripcion: 'Consulta roadmap y equipo.' },
+  'azure_devops.ver': { modulo: 'Azure DevOps', nombre: 'Ver Azure DevOps', descripcion: 'Permite abrir la integración Azure DevOps.' },
+  'azure_devops.editar': { modulo: 'Azure DevOps', nombre: 'Configurar Azure DevOps', descripcion: 'Permite editar conexión, probar y sincronizar.' },
+  'estimaciones.ver': { modulo: 'Estimaciones', nombre: 'Ver estimaciones', descripcion: 'Permite consultar estimaciones.' },
+  'facturacion.ver': { modulo: 'Facturación', nombre: 'Ver facturación', descripcion: 'Permite consultar General y Valores de proyecto.' },
+  'aplicaciones.ver': { modulo: 'Administración', nombre: 'Ver squads', descripcion: 'Consulta la administración de squads.' },
+  'aplicaciones.crear': { modulo: 'Administración', nombre: 'Crear squads', descripcion: 'Permite crear squads.' },
+  'aplicaciones.editar': { modulo: 'Administración', nombre: 'Editar squads', descripcion: 'Permite actualizar squads.' },
+  'admin.usuarios.ver': { modulo: 'Administración', nombre: 'Ver usuarios', descripcion: 'Consulta usuarios y roles.' },
+  'admin.usuarios.crear': { modulo: 'Administración', nombre: 'Crear usuarios', descripcion: 'Permite crear usuarios.' },
+  'admin.usuarios.editar': { modulo: 'Administración', nombre: 'Editar usuarios', descripcion: 'Permite actualizar usuarios.' },
+  'admin.roles.ver': { modulo: 'Administración', nombre: 'Ver roles y permisos', descripcion: 'Consulta roles y catálogo de permisos.' },
+  'admin.roles.crear': { modulo: 'Administración', nombre: 'Crear roles', descripcion: 'Permite crear roles personalizados.' },
+  'admin.roles.editar': { modulo: 'Administración', nombre: 'Editar roles', descripcion: 'Permite modificar permisos de roles.' },
+  'admin.roles.eliminar': { modulo: 'Administración', nombre: 'Eliminar roles', descripcion: 'Permite eliminar roles personalizados.' },
+  'admin.importacion.ver': { modulo: 'Administración', nombre: 'Ver importación/exportación', descripcion: 'Permite abrir importación y exportación.' },
+  'admin.importacion.ejecutar': { modulo: 'Administración', nombre: 'Ejecutar importaciones', descripcion: 'Permite importar datos.' },
+  'admin.endpoints.ver': { modulo: 'Administración', nombre: 'Ver endpoints', descripcion: 'Consulta el catálogo técnico de endpoints.' },
+  'admin.configuracion.ver': { modulo: 'Administración', nombre: 'Ver configuración', descripcion: 'Consulta configuración general.' },
+  'admin.configuracion.editar': { modulo: 'Administración', nombre: 'Editar configuración', descripcion: 'Permite modificar configuración general.' },
+  'soporte.solicitudes_fabrica.ver': { modulo: 'Soporte', nombre: 'Ver soporte', descripcion: 'Consulta solicitudes fábrica y detalle ANS.' },
+  'soporte.solicitudes_fabrica.actualizar': { modulo: 'Soporte', nombre: 'Sincronizar soporte', descripcion: 'Permite cargar y sincronizar solicitudes fábrica.' },
+  'soporte.detalle_ans.editar': { modulo: 'Soporte', nombre: 'Editar detalle ANS', descripcion: 'Permite modificar Se levantó ANS y Observaciones.' },
+  'admin.acceso': { modulo: 'Administración', nombre: 'Acceso administrativo', descripcion: 'Habilita funciones administrativas avanzadas.' },
+  'consolidado.ver': { modulo: 'Consolidado', nombre: 'Ver todos los squads', descripcion: 'Permite usar el selector Todos los squads.' },
+}
+
+function permisoInfo(permiso: string) {
+  return PERMISOS_INFO[permiso] ?? { modulo: 'Otros', nombre: permiso, descripcion: 'Permiso técnico sin descripción configurada.' }
+}
+
 export default function Usuarios() {
   const { usuario: yo, tienePermiso } = useAuth()
   const esSuperadmin = yo?.rol === 'superadmin'
@@ -30,6 +79,11 @@ export default function Usuarios() {
     return apps.filter((a) => yo?.aplicaciones_codigos.includes(a.codigo))
   }, [apps, yo, esSuperadmin, adminSinSquads])
 
+  const appsActivasDisponibles = useMemo(
+    () => appsDisponibles.filter((a) => a.activa),
+    [appsDisponibles],
+  )
+
   const usuariosFiltrados = useMemo(() => {
     if (esSuperadmin || adminSinSquads) return datos
     const misCodigos = new Set(yo?.aplicaciones_codigos ?? [])
@@ -42,11 +96,19 @@ export default function Usuarios() {
     return activos.filter((r) => r.clave !== 'superadmin' && r.clave !== 'admin_app')
   }, [roles, esSuperadmin])
 
+  const catalogoPermisosOrdenado = useMemo(() => {
+    return [...catalogoPermisos].sort((a, b) => {
+      const infoA = permisoInfo(a)
+      const infoB = permisoInfo(b)
+      return infoA.modulo.localeCompare(infoB.modulo, 'es') || infoA.nombre.localeCompare(infoB.nombre, 'es')
+    })
+  }, [catalogoPermisos])
+
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rolId, setRolId] = useState('')
-  const [aplicacion, setAplicacion] = useState('')
+  const [aplicacionesNuevo, setAplicacionesNuevo] = useState<string[]>([])
   const [aviso, setAviso] = useState('')
 
   const [editando, setEditando] = useState<Usuario | null>(null)
@@ -107,12 +169,13 @@ export default function Usuarios() {
         email,
         password,
         rol_id: rolId || null,
-        aplicaciones_codigos: aplicacion ? [aplicacion] : [],
+        aplicaciones_codigos: aplicacionesNuevo,
       })
       setNombre('')
       setEmail('')
       setPassword('')
       setRolId('')
+      setAplicacionesNuevo([])
       recargar()
     } catch (err) {
       setAviso(mensajeError(err))
@@ -136,6 +199,18 @@ export default function Usuarios() {
     recargar()
   }
 
+  async function eliminarAcceso(u: Usuario): Promise<void> {
+    if (!puedeEditarUsuarios || u.id === yo?.id) return
+    if (!window.confirm(`¿Eliminar definitivamente el acceso de ${u.email}? Esta acción borrará el registro del usuario.`)) return
+    setAviso('')
+    try {
+      await client.delete(`/usuarios/${u.id}`)
+      recargar()
+    } catch (err) {
+      setAviso(mensajeError(err))
+    }
+  }
+
   async function resetPassword(u: Usuario): Promise<void> {
     if (!puedeEditarUsuarios) return
     const nueva = window.prompt(`Nueva contraseña para ${u.email}:`)
@@ -148,6 +223,26 @@ export default function Usuarios() {
     setNuevoRolPermisos((prev) => (
       prev.includes(permiso) ? prev.filter((p) => p !== permiso) : [...prev, permiso]
     ))
+  }
+
+  function alternarSquadNuevo(codigo: string): void {
+    setAplicacionesNuevo((prev) => (
+      prev.includes(codigo) ? prev.filter((c) => c !== codigo) : [...prev, codigo]
+    ))
+  }
+
+  function alternarSquadEdicion(codigo: string): void {
+    setEditApps((prev) => (
+      prev.includes(codigo) ? prev.filter((c) => c !== codigo) : [...prev, codigo]
+    ))
+  }
+
+  function nombresSquadsUsuario(u: Usuario): string {
+    if (u.rol === 'superadmin') return '★ Todos'
+    const codigosActivos = appsActivasDisponibles.map((a) => a.codigo)
+    const tieneTodos = codigosActivos.length > 0 && codigosActivos.every((codigo) => u.aplicaciones_codigos.includes(codigo))
+    if (tieneTodos) return '★ Todos'
+    return u.aplicaciones_codigos.map((c) => apps.find((a) => a.codigo === c)?.nombre ?? c).join(', ') || '—'
   }
 
   async function crearRol(e: FormEvent): Promise<void> {
@@ -249,14 +344,35 @@ export default function Usuarios() {
                   {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                 </select>
               </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-slate-600">Squad</span>
-                <select value={aplicacion} onChange={(e) => setAplicacion(e.target.value)}
-                  className="rounded border px-3 py-2">
-                  <option value="">— Ninguna —</option>
-                  {appsDisponibles.map((a) => <option key={a.codigo} value={a.codigo}>{a.nombre}</option>)}
-                </select>
-              </label>
+              <div className="min-w-64 text-sm">
+                <div className="mb-1 flex items-center justify-between gap-3">
+                  <span className="block text-slate-600">Squads</span>
+                  <div className="flex gap-2 text-[11px] font-semibold">
+                    <button type="button" className="text-marca hover:underline" onClick={() => setAplicacionesNuevo(appsActivasDisponibles.map((a) => a.codigo))}>
+                      Todos
+                    </button>
+                    <button type="button" className="text-slate-400 hover:underline" onClick={() => setAplicacionesNuevo([])}>
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-28 overflow-y-auto rounded border px-3 py-2">
+                  <label className="mb-1 flex cursor-pointer items-center gap-2 rounded px-1 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <input
+                      type="checkbox"
+                      checked={appsActivasDisponibles.length > 0 && appsActivasDisponibles.every((a) => aplicacionesNuevo.includes(a.codigo))}
+                      onChange={(e) => setAplicacionesNuevo(e.target.checked ? appsActivasDisponibles.map((a) => a.codigo) : [])}
+                    />
+                    ★ Todos los squads
+                  </label>
+                  {appsActivasDisponibles.map((a) => (
+                    <label key={a.codigo} className="flex cursor-pointer items-center gap-2 rounded px-1 text-sm hover:bg-slate-50">
+                      <input type="checkbox" checked={aplicacionesNuevo.includes(a.codigo)} onChange={() => alternarSquadNuevo(a.codigo)} />
+                      <span>{a.nombre}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
             </form>
           )}
@@ -291,7 +407,7 @@ export default function Usuarios() {
                       {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                     </select>
                   </td>
-                  <td className="p-2">{u.rol === 'superadmin' ? '★ Todos' : (u.aplicaciones_codigos.map((c) => apps.find((a) => a.codigo === c)?.nombre ?? c).join(', ') || '—')}</td>
+                  <td className="p-2">{nombresSquadsUsuario(u)}</td>
                   <td className="p-2 text-center">{u.activo ? 'Sí' : 'No'}</td>
                   <td className="p-2 text-center whitespace-nowrap">
                     <button onClick={() => abrirEditar(u)} disabled={!puedeEditarUsuarios} className="mr-2 text-marca hover:underline text-xs disabled:text-slate-300">
@@ -300,8 +416,16 @@ export default function Usuarios() {
                     <button onClick={() => alternarActivo(u)} disabled={!puedeEditarUsuarios} className={`mr-2 text-xs ${u.activo ? 'text-amber-600 hover:underline' : 'text-emerald-600 hover:underline'} disabled:text-slate-300`}>
                       {u.activo ? 'Desactivar' : 'Activar'}
                     </button>
-                    <button onClick={() => resetPassword(u)} disabled={!puedeEditarUsuarios} className="text-xs text-marca hover:underline disabled:text-slate-300">
+                    <button onClick={() => resetPassword(u)} disabled={!puedeEditarUsuarios} className="mr-2 text-xs text-marca hover:underline disabled:text-slate-300">
                       Resetear clave
+                    </button>
+                    <button
+                      onClick={() => eliminarAcceso(u)}
+                      disabled={!puedeEditarUsuarios || u.id === yo?.id}
+                      className="text-xs text-red-600 hover:underline disabled:text-slate-300"
+                      title={u.id === yo?.id ? 'No puedes eliminar tu propio acceso' : 'Elimina definitivamente el registro del usuario'}
+                    >
+                      Eliminar acceso
                     </button>
                   </td>
                 </tr>
@@ -328,13 +452,20 @@ export default function Usuarios() {
                 <input className="rounded border px-3 py-2 text-sm" placeholder="Nombre" value={nuevoRolNombre} onChange={(e) => setNuevoRolNombre(e.target.value)} required />
                 <input className="rounded border px-3 py-2 text-sm min-w-72" placeholder="Descripción" value={nuevoRolDescripcion} onChange={(e) => setNuevoRolDescripcion(e.target.value)} />
               </div>
-              <div className="max-h-44 overflow-y-auto rounded border p-2 grid grid-cols-2 gap-1">
-                {catalogoPermisos.map((permiso) => (
-                  <label key={permiso} className="flex items-center gap-2 text-xs">
-                    <input type="checkbox" checked={nuevoRolPermisos.includes(permiso)} onChange={() => toggleNuevoPermiso(permiso)} />
-                    <span>{permiso}</span>
-                  </label>
-                ))}
+              <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto rounded border p-2 md:grid-cols-2">
+                {catalogoPermisosOrdenado.map((permiso) => {
+                  const info = permisoInfo(permiso)
+                  return (
+                    <label key={permiso} className="flex cursor-pointer items-start gap-2 rounded border border-slate-100 p-2 text-xs hover:bg-slate-50">
+                      <input type="checkbox" checked={nuevoRolPermisos.includes(permiso)} onChange={() => toggleNuevoPermiso(permiso)} className="mt-1" />
+                      <span>
+                        <span className="block font-semibold text-slate-800">{info.nombre}</span>
+                        <span className="block text-[11px] text-slate-500">{info.modulo} · {info.descripcion}</span>
+                        <span className="block font-mono text-[10px] text-slate-400">{permiso}</span>
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
               <button className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">Crear rol</button>
             </form>
@@ -408,20 +539,33 @@ export default function Usuarios() {
             </select>
           </label>
           <div className="block text-sm">
-            <span className="mb-1 block text-slate-600">Squads</span>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <span className="block text-slate-600">Squads</span>
+              <div className="flex gap-2 text-[11px] font-semibold">
+                <button type="button" className="text-marca hover:underline" onClick={() => setEditApps(appsActivasDisponibles.map((a) => a.codigo))}>
+                  Todos
+                </button>
+                <button type="button" className="text-slate-400 hover:underline" onClick={() => setEditApps([])}>
+                  Limpiar
+                </button>
+              </div>
+            </div>
             <div className="max-h-40 overflow-y-auto rounded border px-3 py-2 space-y-1">
-              {appsDisponibles.filter((a) => a.activa).map((a) => (
+              <label className="flex cursor-pointer items-center gap-2 rounded px-1 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={appsActivasDisponibles.length > 0 && appsActivasDisponibles.every((a) => editApps.includes(a.codigo))}
+                  onChange={(e) => setEditApps(e.target.checked ? appsActivasDisponibles.map((a) => a.codigo) : [])}
+                  className="rounded"
+                />
+                <span>★ Todos los squads</span>
+              </label>
+              {appsActivasDisponibles.map((a) => (
                 <label key={a.codigo} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 rounded px-1">
                   <input
                     type="checkbox"
                     checked={editApps.includes(a.codigo)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setEditApps((prev) => [...prev, a.codigo])
-                      } else {
-                        setEditApps((prev) => prev.filter((c) => c !== a.codigo))
-                      }
-                    }}
+                    onChange={() => alternarSquadEdicion(a.codigo)}
                     className="rounded"
                   />
                   <span>{a.nombre}</span>
@@ -472,23 +616,31 @@ export default function Usuarios() {
               />
               <span>Activo</span>
             </label>
-            <div className="max-h-52 overflow-y-auto rounded border p-2 grid grid-cols-1 gap-1">
-              {catalogoPermisos.map((permiso) => (
-                <label key={permiso} className="flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={rolEditando.permisos.includes(permiso)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setRolEditando({ ...rolEditando, permisos: [...rolEditando.permisos, permiso] })
-                      } else {
-                        setRolEditando({ ...rolEditando, permisos: rolEditando.permisos.filter((p) => p !== permiso) })
-                      }
-                    }}
-                  />
-                  <span>{permiso}</span>
-                </label>
-              ))}
+            <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto rounded border p-2">
+              {catalogoPermisosOrdenado.map((permiso) => {
+                const info = permisoInfo(permiso)
+                return (
+                  <label key={permiso} className="flex cursor-pointer items-start gap-2 rounded border border-slate-100 p-2 text-xs hover:bg-slate-50">
+                    <input
+                      type="checkbox"
+                      checked={rolEditando.permisos.includes(permiso)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setRolEditando({ ...rolEditando, permisos: [...rolEditando.permisos, permiso] })
+                        } else {
+                          setRolEditando({ ...rolEditando, permisos: rolEditando.permisos.filter((p) => p !== permiso) })
+                        }
+                      }}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="block font-semibold text-slate-800">{info.nombre}</span>
+                      <span className="block text-[11px] text-slate-500">{info.modulo} · {info.descripcion}</span>
+                      <span className="block font-mono text-[10px] text-slate-400">{permiso}</span>
+                    </span>
+                  </label>
+                )
+              })}
             </div>
             <div className="flex justify-end gap-2">
               <button

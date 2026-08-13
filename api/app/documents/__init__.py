@@ -14,6 +14,7 @@ from app.documents.categoria import Categoria
 from app.documents.configuracion import Configuracion
 from app.documents.estimacion import Estimacion
 from app.documents.festivo import Festivo
+from app.documents.garantia_wo import GarantiaWO
 from app.documents.orden_compra import OrdenCompra
 from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
@@ -53,6 +54,7 @@ ALL_DOCUMENTS = [
     AzdoWorkItem,
     AzdoSyncLog,
     AzdoConfig,
+    GarantiaWO,
 ]
 
 __all__ = [
@@ -79,4 +81,5 @@ __all__ = [
     "AzdoWorkItem",
     "AzdoSyncLog",
     "AzdoConfig",
+    "GarantiaWO",
 ]

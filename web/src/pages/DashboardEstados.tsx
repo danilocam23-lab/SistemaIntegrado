@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Bar,
   BarChart,
@@ -54,10 +54,23 @@ function fmtNumero(valor: number): string {
   return valor.toLocaleString('es-CO', { maximumFractionDigits: 1 })
 }
 
+interface DetalleGarantia {
+  reqId: string
+  codigoReq: string
+  nombreReq: string
+  estadoEntrega: string
+  numeroEntrega: number
+  horas: number
+  fechaComprometida: string | null
+  fechaRecepcion: string | null
+  observaciones: string | null
+}
+
 export default function DashboardEstados() {
   const { datos: reqs, cargando } = useLista<Requerimiento>('/requerimientos')
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
   const { activa } = useAplicacion()
+  const [detalleGarantias, setDetalleGarantias] = useState<{ titulo: string; filas: DetalleGarantia[] } | null>(null)
   const requerimientos = useMemo(() => {
     if (!activa || activa === CONSOLIDADO) return reqs
     return reqs.filter((req) => req.aplicacion_id === activa || req.solicitud?.squad_id === activa)
@@ -100,14 +113,27 @@ export default function DashboardEstados() {
   }, [requerimientos])
 
   const porEstadoEntregas = useMemo(() => {
-    const mapa = new Map<string, { estado: string; cantidad: number; horas: number; garantias: number }>()
+    const mapa = new Map<string, { estado: string; cantidad: number; horas: number; garantias: number; garantiasDetalle: DetalleGarantia[] }>()
     for (const req of requerimientos) {
       for (const entrega of req.entregas ?? []) {
         const estado = entrega.estado?.trim() || 'Sin estado'
-        const actual = mapa.get(estado) ?? { estado, cantidad: 0, horas: 0, garantias: 0 }
+        const actual = mapa.get(estado) ?? { estado, cantidad: 0, horas: 0, garantias: 0, garantiasDetalle: [] }
         actual.cantidad += 1
         actual.horas += Number(entrega.horas ?? 0)
-        actual.garantias += entrega.garantia ? 1 : 0
+        if (entrega.garantia) {
+          actual.garantias += 1
+          actual.garantiasDetalle.push({
+            reqId: req.id,
+            codigoReq: req.codigo_req,
+            nombreReq: req.nombre ?? '—',
+            estadoEntrega: estado,
+            numeroEntrega: entrega.numero,
+            horas: Number(entrega.horas ?? 0),
+            fechaComprometida: entrega.fecha_comprometida,
+            fechaRecepcion: entrega.fecha_recepcion,
+            observaciones: entrega.observaciones,
+          })
+        }
         mapa.set(estado, actual)
       }
     }
@@ -169,6 +195,11 @@ export default function DashboardEstados() {
     )
   }, [porEstadoEntregas])
 
+  const detalleGarantiasTotal = useMemo(
+    () => porEstadoEntregas.flatMap((fila) => fila.garantiasDetalle),
+    [porEstadoEntregas],
+  )
+
   const porMes = useMemo(() => {
     const mapa = new Map<string, number>()
     for (const req of requerimientos) {
@@ -225,7 +256,7 @@ export default function DashboardEstados() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* KPI Grid - Premium Design */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4 mb-8">
           <KpiCardPremium
             icon="📋"
             label="Total de Requerimientos"
@@ -387,7 +418,13 @@ export default function DashboardEstados() {
                           <Badge variant="amber" value={`${fmtNumero(fila.horas)}h`} />
                         </td>
                         <td className="px-3 py-3 text-center">
-                          <Badge variant="green" value={fila.garantias} />
+                          <GarantiasButton
+                            value={fila.garantias}
+                            onClick={() => setDetalleGarantias({
+                              titulo: `Garantías · ${fila.estado}`,
+                              filas: fila.garantiasDetalle,
+                            })}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -401,7 +438,13 @@ export default function DashboardEstados() {
                         <Badge variant="amber" value={`${fmtNumero(totalesEntregas.horas)}h`} />
                       </td>
                       <td className="px-3 py-3 text-center">
-                        <Badge variant="green" value={totalesEntregas.garantias} />
+                        <GarantiasButton
+                          value={totalesEntregas.garantias}
+                          onClick={() => setDetalleGarantias({
+                            titulo: 'Garantías · Total',
+                            filas: detalleGarantiasTotal,
+                          })}
+                        />
                       </td>
                     </tr>
                   </tbody>
@@ -547,6 +590,64 @@ export default function DashboardEstados() {
           </ChartCardPremium>
         </div>
       </div>
+
+      {detalleGarantias && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">{detalleGarantias.titulo}</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {fmtNumero(detalleGarantias.filas.length)} entrega(s) marcadas como garantía.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetalleGarantias(null)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Cerrar detalle de garantías"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-auto p-6">
+              {detalleGarantias.filas.length === 0 ? (
+                <EmptyState />
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="px-4 py-3 text-left font-semibold text-slate-900">REQ</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-900">Nombre</th>
+                      <th className="px-4 py-3 text-center font-semibold text-slate-900">Entrega</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-900">Estado</th>
+                      <th className="px-4 py-3 text-right font-semibold text-slate-900">Horas</th>
+                      <th className="px-4 py-3 text-center font-semibold text-slate-900">Comprometida</th>
+                      <th className="px-4 py-3 text-center font-semibold text-slate-900">Recepción</th>
+                      <th className="px-4 py-3 text-left font-semibold text-slate-900">Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {detalleGarantias.filas.map((fila) => (
+                      <tr key={`${fila.reqId}-${fila.numeroEntrega}`} className="hover:bg-blue-50/40">
+                        <td className="px-4 py-3 font-mono font-semibold text-blue-700">{fila.codigoReq}</td>
+                        <td className="px-4 py-3 text-slate-700">{fila.nombreReq}</td>
+                        <td className="px-4 py-3 text-center font-semibold text-slate-900">{fila.numeroEntrega}</td>
+                        <td className="px-4 py-3 text-slate-700">{fila.estadoEntrega}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-amber-700">{fmtNumero(fila.horas)}h</td>
+                        <td className="px-4 py-3 text-center text-slate-600">{fila.fechaComprometida?.slice(0, 10) ?? '—'}</td>
+                        <td className="px-4 py-3 text-center text-slate-600">{fila.fechaRecepcion?.slice(0, 10) ?? '—'}</td>
+                        <td className="px-4 py-3 text-slate-600">{fila.observaciones || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -594,18 +695,18 @@ function KpiCardPremium({
   const theme = colors[color]
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-300">
+    <div className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-300">
       <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
 
-      <div className="relative p-6">
+      <div className="relative p-5 xl:p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className={`text-4xl p-3 rounded-xl ${theme.light}`}>{icon}</div>
+          <div className={`shrink-0 text-3xl xl:text-4xl p-3 rounded-xl ${theme.light}`}>{icon}</div>
         </div>
 
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <div className="text-sm font-medium text-slate-600 uppercase tracking-wider">{label}</div>
-          <div className={`text-3xl font-bold ${theme.text}`}>{value}</div>
-          {subtext && <div className="text-xs text-slate-500 mt-2">{subtext}</div>}
+          <div className={`break-words text-2xl font-bold ${theme.text} xl:text-3xl`}>{value}</div>
+          {subtext && <div className="mt-2 break-words text-xs text-slate-500">{subtext}</div>}
         </div>
       </div>
     </div>
@@ -644,6 +745,21 @@ function Badge({ variant, value }: { variant: 'blue' | 'amber' | 'green' | 'red'
     <span className={`inline-flex items-center px-3 py-2 rounded-lg font-semibold text-sm ${variants[variant]}`}>
       {value}
     </span>
+  )
+}
+
+function GarantiasButton({ value, onClick }: { value: number; onClick: () => void }) {
+  if (value <= 0) return <Badge variant="green" value={value} />
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center rounded-lg bg-green-100 px-3 py-2 text-sm font-semibold text-green-700 underline-offset-2 transition-colors hover:bg-green-200 hover:underline focus:outline-none focus:ring-2 focus:ring-green-300"
+      title="Ver detalle de garantías"
+    >
+      {value}
+    </button>
   )
 }
 

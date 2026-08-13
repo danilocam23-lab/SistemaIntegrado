@@ -73,6 +73,7 @@ export default function RequerimientoDetalle() {
   const [eMesAprobacion, setEMesAprobacion] = useState('')
   const [eObservaciones, setEObservaciones] = useState('')
   const [eGarantia, setEGarantia] = useState(false)
+  const [eNumGarantia, setENumGarantia] = useState<number | null>(null)
   const [eEditando, setEEditando] = useState(false)
 
   function cargarEntregaEnFormulario(en: Requerimiento['entregas'][number]): void {
@@ -84,6 +85,7 @@ export default function RequerimientoDetalle() {
     setEMesAprobacion(en.mes_aprobacion ?? '')
     setEObservaciones(en.observaciones ?? '')
     setEGarantia(en.garantia ?? false)
+    setENumGarantia(en.numero_garantia ?? (en.garantia ? 1 : null))
     setEEditando(true)
   }
 
@@ -96,6 +98,7 @@ export default function RequerimientoDetalle() {
     setEMesAprobacion('')
     setEObservaciones('')
     setEGarantia(false)
+    setENumGarantia(null)
     setEEditando(false)
   }
 
@@ -165,6 +168,10 @@ export default function RequerimientoDetalle() {
     e.preventDefault()
     setAviso('')
     setOk('')
+    if (!puedeEditarReq) {
+      setAviso('No tienes permiso para editar requerimientos.')
+      return
+    }
     if (!req) return
     try {
       await client.put(`/requerimientos/${reqId}`, {
@@ -195,6 +202,10 @@ export default function RequerimientoDetalle() {
   async function transicion(nuevoEstado: string): Promise<void> {
     setAviso('')
     setOk('')
+    if (!puedeEditarReq) {
+      setAviso('No tienes permiso para actualizar el estado del requerimiento.')
+      return
+    }
     try {
       await client.post(`/requerimientos/${reqId}/transicion`, { nuevo_estado: nuevoEstado }, writeConfig())
       recargar()
@@ -207,6 +218,10 @@ export default function RequerimientoDetalle() {
     e.preventDefault()
     setAviso('')
     setOk('')
+    if (!puedeEditarReq) {
+      setAviso('No tienes permiso para crear o actualizar entregas.')
+      return
+    }
     try {
       await client.post(`/requerimientos/${reqId}/entregas`, {
         numero: Number(eNumero),
@@ -217,6 +232,7 @@ export default function RequerimientoDetalle() {
         mes_aprobacion: eEstado.toUpperCase() === 'APROBADA' ? (eMesAprobacion || null) : null,
         observaciones: eObservaciones || null,
         garantia: eGarantia,
+        numero_garantia: eGarantia ? (eNumGarantia ?? 1) : null,
       }, writeConfig())
       setENumero('')
       setEHoras('')
@@ -234,6 +250,10 @@ export default function RequerimientoDetalle() {
   async function eliminarEntrega(numero: number): Promise<void> {
     setAviso('')
     setOk('')
+    if (!puedeEditarReq) {
+      setAviso('No tienes permiso para eliminar entregas.')
+      return
+    }
     try {
       await client.delete(`/requerimientos/${reqId}/entregas/${numero}`, writeConfig())
       recargar()
@@ -266,13 +286,17 @@ export default function RequerimientoDetalle() {
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-bold text-marca-osc">{req.codigo_req}</h1>
           {req.nombre && <span className="text-base text-slate-600">— {req.nombre}</span>}
-          <select
-            value={req.estado}
-            onChange={(e) => transicion(e.target.value)}
-            className="rounded border px-2 py-1 text-xs"
-          >
-            {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          {puedeEditarReq ? (
+            <select
+              value={req.estado}
+              onChange={(e) => transicion(e.target.value)}
+              className="rounded border px-2 py-1 text-xs"
+            >
+              {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          ) : (
+            <span className="rounded border bg-slate-50 px-2 py-1 text-xs text-slate-600">{req.estado}</span>
+          )}
         </div>
       </div>
 
@@ -442,7 +466,7 @@ export default function RequerimientoDetalle() {
               <th className="py-1">N°</th><th className="py-1">Horas</th>
               <th className="py-1">% Avance</th><th className="py-1">F. Comprometida</th>
               <th className="py-1">F. Real</th><th className="py-1">Estado</th><th className="py-1">Mes aprobación</th>
-              <th className="py-1">Observaciones</th><th className="py-1">ANS</th><th className="py-1">Garantía</th>
+              <th className="py-1">Observaciones</th><th className="py-1">ANS</th><th className="py-1">Garantía</th><th className="py-1">N° Garantía</th>
               <th className="py-1"></th>
             </tr>
           </thead>
@@ -467,6 +491,7 @@ export default function RequerimientoDetalle() {
                   <td className="py-1">{en.observaciones ?? '—'}</td>
                   <td className={`py-1 font-medium ${ansColor}`}>{ansLabel}</td>
                   <td className="py-1">{en.garantia ? 'Sí' : 'No'}</td>
+                  <td className="py-1">{en.numero_garantia ?? '—'}</td>
                   <td className="py-1">
                     {puedeEditarReq && (
                       <div className="flex gap-2">
@@ -567,9 +592,16 @@ export default function RequerimientoDetalle() {
             />
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={eGarantia} onChange={(e) => setEGarantia(e.target.checked)} />
+            <input type="checkbox" checked={eGarantia} onChange={(e) => { setEGarantia(e.target.checked); if (e.target.checked && !eNumGarantia) setENumGarantia(1) }} />
             <span className="text-slate-600">Garantía</span>
           </label>
+          {eGarantia && (
+            <label className="text-sm">
+              <span className="mb-1 block text-slate-600">N° Garantía</span>
+              <input type="number" min={1} value={eNumGarantia ?? ''} onChange={(e) => setENumGarantia(e.target.value ? Number(e.target.value) : null)}
+                className="w-20 rounded border px-2 py-2" />
+            </label>
+          )}
           <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">
             {eEditando ? 'Guardar cambios' : 'Guardar entrega'}
           </button>

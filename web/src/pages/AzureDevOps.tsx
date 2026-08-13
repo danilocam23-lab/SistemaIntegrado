@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
+import { useAuth } from '../context/AuthContext'
 
 interface Persona {
   id: string
@@ -61,6 +62,8 @@ function PanelAzdo({ titulo, target, personas }: {
   target: 'hitss' | 'epm'
   personas: Persona[]
 }) {
+  const { tienePermiso } = useAuth()
+  const puedeEditar = tienePermiso('azure_devops.editar')
   const [orgUrl, setOrgUrl] = useState('')
   const [pat, setPat] = useState('')
   const [patGuardado, setPatGuardado] = useState(false)
@@ -122,6 +125,10 @@ function PanelAzdo({ titulo, target, personas }: {
   async function guardarConfig(): Promise<void> {
     setAviso('')
     setOk('')
+    if (!puedeEditar) {
+      setAviso('No tienes permiso para editar la configuración de Azure DevOps.')
+      return
+    }
     setGuardando(true)
     try {
       await client.put('/azdo/config', {
@@ -145,6 +152,10 @@ function PanelAzdo({ titulo, target, personas }: {
   }
 
   async function descubrirCampos(): Promise<void> {
+    if (!puedeEditar) {
+      setAviso('No tienes permiso para descubrir campos requeridos.')
+      return
+    }
     setDescubriendo(true)
     setCampos(null)
     try {
@@ -180,6 +191,7 @@ function PanelAzdo({ titulo, target, personas }: {
           <select
             value={scopeUsuarioId ?? ''}
             onChange={(e) => setScopeUsuarioId(e.target.value || null)}
+            disabled={!puedeEditar}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
           >
             <option value="">Ninguno (config global)</option>
@@ -195,6 +207,7 @@ function PanelAzdo({ titulo, target, personas }: {
           <input
             value={orgUrl}
             onChange={(e) => setOrgUrl(e.target.value)}
+            readOnly={!puedeEditar}
             placeholder="https://dev.azure.com/TuOrganizacion"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
           />
@@ -208,6 +221,7 @@ function PanelAzdo({ titulo, target, personas }: {
               type={mostrarPat ? 'text' : 'password'}
               value={pat}
               onChange={(e) => setPat(e.target.value)}
+              readOnly={!puedeEditar}
               placeholder={patGuardado ? '••••••••••••••••••••' : 'Ingresa tu PAT'}
               className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
             />
@@ -247,6 +261,7 @@ function PanelAzdo({ titulo, target, personas }: {
           <input
             value={proyecto}
             onChange={(e) => setProyecto(e.target.value)}
+            readOnly={!puedeEditar}
             placeholder="Nombre del proyecto"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
           />
@@ -258,6 +273,7 @@ function PanelAzdo({ titulo, target, personas }: {
           <select
             value={frecuencia}
             onChange={(e) => setFrecuencia(e.target.value)}
+            disabled={!puedeEditar}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
           >
             {Object.entries(frecuenciaLabel).map(([val, label]) => (
@@ -267,14 +283,16 @@ function PanelAzdo({ titulo, target, personas }: {
         </div>
 
         {/* Guardar */}
-        <button
-          onClick={guardarConfig}
-          disabled={guardando}
-          className="inline-flex items-center gap-2 rounded-lg bg-marca px-4 py-2 text-sm font-medium text-white hover:bg-marca-osc disabled:opacity-50"
-        >
-          <span>💾</span>
-          {guardando ? 'Guardando…' : 'Guardar configuración'}
-        </button>
+        {puedeEditar && (
+          <button
+            onClick={guardarConfig}
+            disabled={guardando}
+            className="inline-flex items-center gap-2 rounded-lg bg-marca px-4 py-2 text-sm font-medium text-white hover:bg-marca-osc disabled:opacity-50"
+          >
+            <span>💾</span>
+            {guardando ? 'Guardando…' : 'Guardar configuración'}
+          </button>
+        )}
       </div>
 
       {/* ── Campos Requeridos ── */}
@@ -287,14 +305,16 @@ function PanelAzdo({ titulo, target, personas }: {
           Campos obligatorios del proyecto con sus tipos y valores por defecto.
         </p>
 
-        <button
-          onClick={descubrirCampos}
-          disabled={descubriendo || !proyecto}
-          className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-        >
-          <span className="text-sm">🔍</span>
-          {descubriendo ? 'Descubriendo…' : 'Descubrir campos'}
-        </button>
+        {puedeEditar && (
+          <button
+            onClick={descubrirCampos}
+            disabled={descubriendo || !proyecto}
+            className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <span className="text-sm">🔍</span>
+            {descubriendo ? 'Descubriendo…' : 'Descubrir campos'}
+          </button>
+        )}
 
         {!proyecto && (
           <p className="text-xs text-amber-600">⚠ Configura un proyecto primero.</p>

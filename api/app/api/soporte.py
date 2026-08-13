@@ -49,11 +49,21 @@ async def resumen(
 
 @router.get("/ans-datos")
 async def ans_datos(
+    filtro_wo: str = "",
+    filtro_assigned: str = "",
+    filtro_ano: str = "",
+    filtro_mes: str = "",
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
 ) -> dict:
-    """Datos ligeros para la vista Detalle ANS (solo campos ANS relevantes)."""
-    return await SoporteSolicitudesFabricaService.datos_ans(ctx)
+    """Datos ligeros para la vista Detalle ANS con filtrado servidor."""
+    return await SoporteSolicitudesFabricaService.datos_ans(
+        ctx,
+        filtro_wo=filtro_wo or None,
+        filtro_assigned=filtro_assigned or None,
+        filtro_ano=filtro_ano or None,
+        filtro_mes=filtro_mes or None,
+    )
 
 
 @router.patch("/{registro_id}/detalle-ans")
@@ -129,7 +139,8 @@ async def wo_por_persona(
     for r in registros:
         d = r.datos or {}
         assigned = d.get("Assigned To", "").strip()
-        if not assigned:
+        status = d.get("Status WO", "").strip()
+        if not assigned or status.lower() == "cerrado":
             continue
         resultado.append({
             "id": str(r.id),

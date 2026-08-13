@@ -15,6 +15,7 @@ class AzdoConfig(DocumentoOperativo):
     - ``"app"`` → configuración global de la aplicación (por defecto)
     - ``"squad"`` → configuración específica de un squad
     - ``"user"`` → configuración específica de un usuario
+    - sufijo ``"_epm"`` → misma jerarquía para el target Azure DevOps EPM
 
     La resolución es jerárquica: user > squad > app.
     """

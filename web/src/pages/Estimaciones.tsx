@@ -2,9 +2,12 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
+import { useAuth } from '../context/AuthContext'
 import type { Estimacion } from '../types'
 
 export default function Estimaciones() {
+  const { tienePermiso } = useAuth()
+  const puedeGestionarEstimaciones = tienePermiso('requerimientos.editar')
   const { datos, error, recargar } = useLista<Estimacion>('/estimaciones')
   const [titulo, setTitulo] = useState('')
   const [cliente, setCliente] = useState('')
@@ -14,12 +17,18 @@ export default function Estimaciones() {
   const [editValue, setEditValue] = useState('')
 
   function iniciarEdicion(id: string, campo: string, valorActual: string) {
+    if (!puedeGestionarEstimaciones) return
     setAviso('')
     setEditCell({ id, campo })
     setEditValue(valorActual)
   }
 
   async function guardarEdicion(estimacion: Estimacion): Promise<void> {
+    if (!puedeGestionarEstimaciones) {
+      setAviso('No tienes permiso para editar estimaciones.')
+      setEditCell(null)
+      return
+    }
     if (!editCell || editCell.id !== estimacion.id) return
     try {
       const filas = (estimacion as Estimacion & { filas?: unknown[] }).filas ?? []
@@ -41,6 +50,10 @@ export default function Estimaciones() {
   async function crear(e: FormEvent): Promise<void> {
     e.preventDefault()
     setAviso('')
+    if (!puedeGestionarEstimaciones) {
+      setAviso('No tienes permiso para crear estimaciones.')
+      return
+    }
     try {
       await client.post('/estimaciones', {
         titulo,
@@ -58,6 +71,10 @@ export default function Estimaciones() {
   }
 
   async function eliminar(es: Estimacion): Promise<void> {
+    if (!puedeGestionarEstimaciones) {
+      setAviso('No tienes permiso para eliminar estimaciones.')
+      return
+    }
     await client.delete(`/estimaciones/${es.id}`)
     recargar()
   }
@@ -70,24 +87,26 @@ export default function Estimaciones() {
         se habilitará con el importador (pendiente).
       </p>
 
-      <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Título</span>
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} required
-            className="rounded border px-3 py-2" />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Cliente</span>
-          <input value={cliente} onChange={(e) => setCliente(e.target.value)}
-            className="rounded border px-3 py-2" />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Iniciativa</span>
-          <input value={iniciativa} onChange={(e) => setIniciativa(e.target.value)}
-            className="rounded border px-3 py-2" />
-        </label>
-        <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
-      </form>
+      {puedeGestionarEstimaciones && (
+        <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Título</span>
+            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} required
+              className="rounded border px-3 py-2" />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Cliente</span>
+            <input value={cliente} onChange={(e) => setCliente(e.target.value)}
+              className="rounded border px-3 py-2" />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Iniciativa</span>
+            <input value={iniciativa} onChange={(e) => setIniciativa(e.target.value)}
+              className="rounded border px-3 py-2" />
+          </label>
+          <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
+        </form>
+      )}
 
       {(aviso || error) && (
         <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
@@ -108,9 +127,9 @@ export default function Estimaciones() {
           {datos.map((es) => (
             <tr key={es.id} className="border-t">
               <td
-                className="p-2 cursor-pointer"
-                title="Doble clic para editar"
-                onDoubleClick={() => iniciarEdicion(es.id, 'titulo', es.titulo ?? '')}
+                className={`p-2 ${puedeGestionarEstimaciones ? 'cursor-pointer' : ''}`}
+                title={puedeGestionarEstimaciones ? 'Doble clic para editar' : undefined}
+                onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'titulo', es.titulo ?? '') : undefined}
               >
                 {editCell?.id === es.id && editCell.campo === 'titulo' ? (
                   <input
@@ -136,9 +155,9 @@ export default function Estimaciones() {
                 )}
               </td>
               <td
-                className="p-2 cursor-pointer"
-                title="Doble clic para editar"
-                onDoubleClick={() => iniciarEdicion(es.id, 'cliente', es.cliente ?? '')}
+                className={`p-2 ${puedeGestionarEstimaciones ? 'cursor-pointer' : ''}`}
+                title={puedeGestionarEstimaciones ? 'Doble clic para editar' : undefined}
+                onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'cliente', es.cliente ?? '') : undefined}
               >
                 {editCell?.id === es.id && editCell.campo === 'cliente' ? (
                   <input
@@ -164,9 +183,9 @@ export default function Estimaciones() {
                 )}
               </td>
               <td
-                className="p-2 cursor-pointer"
-                title="Doble clic para editar"
-                onDoubleClick={() => iniciarEdicion(es.id, 'iniciativa', es.iniciativa ?? '')}
+                className={`p-2 ${puedeGestionarEstimaciones ? 'cursor-pointer' : ''}`}
+                title={puedeGestionarEstimaciones ? 'Doble clic para editar' : undefined}
+                onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'iniciativa', es.iniciativa ?? '') : undefined}
               >
                 {editCell?.id === es.id && editCell.campo === 'iniciativa' ? (
                   <input
@@ -194,9 +213,11 @@ export default function Estimaciones() {
               <td className="p-2 text-right">{es.total_filas}</td>
               <td className="p-2 text-right">{es.total_horas}</td>
               <td className="p-2 text-center">
-                <button onClick={() => eliminar(es)} className="text-red-600 hover:underline">
-                  Eliminar
-                </button>
+                {puedeGestionarEstimaciones && (
+                  <button onClick={() => eliminar(es)} className="text-red-600 hover:underline">
+                    Eliminar
+                  </button>
+                )}
               </td>
             </tr>
           ))}

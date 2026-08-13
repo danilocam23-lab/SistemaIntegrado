@@ -306,6 +306,11 @@ export default function Requerimientos() {
 
   async function guardarCelda(req: Requerimiento): Promise<void> {
     setAviso('')
+    if (!puedeEditar) {
+      setAviso('No tienes permiso para editar requerimientos.')
+      setEditCell(null)
+      return
+    }
     const campo = editCell?.campo
     if (!campo) return
 
@@ -337,6 +342,10 @@ export default function Requerimientos() {
   }
 
   async function eliminar(req: Requerimiento): Promise<void> {
+    if (!puedeEliminar) {
+      setAviso('No tienes permiso para eliminar requerimientos.')
+      return
+    }
     if (!window.confirm(`¿Eliminar el requerimiento ${req.codigo_req}? Esta acción no se puede deshacer.`)) return
     setAviso('')
     try {

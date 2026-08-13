@@ -2,10 +2,11 @@
 
 Los parámetros de configuración son globales: no están segmentados por squad.
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.documents.configuracion import Configuracion
+from app.security.deps import requiere_permiso
 
 router = APIRouter(prefix="/configuracion", tags=["configuracion"])
 
@@ -23,7 +24,11 @@ async def listar():
 
 
 @router.put("/{clave}")
-async def guardar(clave: str, datos: ConfigIn):
+async def guardar(
+    clave: str,
+    datos: ConfigIn,
+    _: object = Depends(requiere_permiso("admin.configuracion.editar")),
+):
     """Crea o actualiza un parámetro de configuración global."""
     config = await Configuracion.find_one(
         Configuracion.aplicacion_id == _APP_GLOBAL,
@@ -47,7 +52,10 @@ async def guardar(clave: str, datos: ConfigIn):
 
 
 @router.delete("/{clave}", status_code=status.HTTP_204_NO_CONTENT)
-async def eliminar(clave: str) -> None:
+async def eliminar(
+    clave: str,
+    _: object = Depends(requiere_permiso("admin.configuracion.editar")),
+) -> None:
     """Elimina un parámetro de configuración."""
     config = await Configuracion.find_one(Configuracion.clave == clave)
     if config is None:

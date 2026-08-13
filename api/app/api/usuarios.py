@@ -119,3 +119,26 @@ async def cambiar_password(
     usuario.password_hash = hash_password(datos.password)
     usuario.marcar_actualizado()
     await usuario.save()
+
+
+@router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar(
+    usuario_id: str,
+    me: Usuario = Depends(requiere_permiso("admin.usuarios.editar")),
+) -> None:
+    """Elimina definitivamente el registro de acceso de un usuario."""
+    usuario = await Usuario.get(usuario_id)
+    if usuario is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
+    if str(usuario.id) == str(me.id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "No puede eliminar su propio acceso")
+    if not await es_superadmin(me):
+        rol = await rol_actual(usuario)
+        clave_rol = rol.clave if rol else (usuario.rol or "viewer")
+        if clave_rol in ("superadmin", "admin_app"):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "No puede eliminar accesos de administración global")
+        if not (await es_admin_app(me) and len(me.aplicaciones_codigos) == 0):
+            mis_apps = set(me.aplicaciones_codigos)
+            if not any(c in mis_apps for c in usuario.aplicaciones_codigos):
+                raise HTTPException(status.HTTP_403_FORBIDDEN, "No puede eliminar accesos fuera de sus squads")
+    await usuario.delete()

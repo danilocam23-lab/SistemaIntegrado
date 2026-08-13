@@ -8,15 +8,28 @@ from app.documents.persona import Persona
 from app.services.azure_devops import AzureDevOpsService
 
 
+def _target_desde_clave(clave: str) -> str:
+    return "epm" if clave.startswith("azdo2_") else "hitss"
+
+
+def _scope_app(target: str) -> str:
+    return "app" if target == "hitss" else f"app_{target}"
+
+
+async def _config_app(aplicacion_id: str, target: str) -> AzdoConfig | None:
+    return await AzdoConfig.find_one(
+        AzdoConfig.aplicacion_id == aplicacion_id,
+        AzdoConfig.scope == _scope_app(target),
+    )
+
+
 async def leer_config_azdo(aplicacion_id: str, clave: str, defecto: str = "") -> str:
     """Lee un parámetro de configuración de Azure DevOps de una aplicación.
 
     Primero busca en AzdoConfig (nueva), luego en Configuracion (legacy).
     """
-    cfg = await AzdoConfig.find_one(
-        AzdoConfig.aplicacion_id == aplicacion_id,
-        AzdoConfig.scope == "app",
-    )
+    target = _target_desde_clave(clave)
+    cfg = await _config_app(aplicacion_id, target)
     if cfg:
         mapa = {
             "azdo_org_url": cfg.org_url,
@@ -25,6 +38,8 @@ async def leer_config_azdo(aplicacion_id: str, clave: str, defecto: str = "") ->
             "azdo_sync_interval": cfg.sync_interval,
             "azdo2_org_url": cfg.org_url,
             "azdo2_pat": cfg.pat,
+            "azdo2_default_project": cfg.default_project,
+            "azdo2_sync_interval": cfg.sync_interval,
         }
         valor = mapa.get(clave)
         if valor:
@@ -45,10 +60,7 @@ async def crear_servicio_azdo(
 
     Primero intenta desde AzdoConfig, luego desde Configuración legacy.
     """
-    cfg = await AzdoConfig.find_one(
-        AzdoConfig.aplicacion_id == aplicacion_id,
-        AzdoConfig.scope == "app",
-    )
+    cfg = await _config_app(aplicacion_id, "epm" if prefijo == "azdo2_" else "hitss")
     if cfg and cfg.org_url and cfg.pat:
         return AzureDevOpsService(cfg.org_url, cfg.pat)
 
@@ -63,15 +75,19 @@ async def crear_servicio_azdo(
 
 
 async def sincronizar_iteracion(
-    aplicacion_id: str, azdo_project: str, iteration_path: str
+    aplicacion_id: str,
+    azdo_project: str,
+    iteration_path: str,
+    target: str = "hitss",
 ) -> dict:
     """Trae los work items de una iteración y los actualiza en la base.
 
     Registra el resultado en ``azdo_sync_log``. Lanza ``ValueError`` si falta
     la configuración (org_url / PAT).
     """
-    org_url = await leer_config_azdo(aplicacion_id, "azdo_org_url")
-    pat = await leer_config_azdo(aplicacion_id, "azdo_pat")
+    prefijo = "azdo2_" if target == "epm" else "azdo_"
+    org_url = await leer_config_azdo(aplicacion_id, f"{prefijo}org_url")
+    pat = await leer_config_azdo(aplicacion_id, f"{prefijo}pat")
     if not org_url or not pat:
         raise ValueError("Falta configurar 'azdo_org_url' o 'azdo_pat' para la aplicación")
 

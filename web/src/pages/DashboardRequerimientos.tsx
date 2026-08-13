@@ -1,37 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  Legend,
+  Legend, LabelList,
   LineChart, Line,
 } from 'recharts'
 import { useLista } from '../api/hooks'
 import client from '../api/client'
-import { ESTADOS_REQUERIMIENTO } from '../constantes'
 import type { Persona, Requerimiento } from '../types'
 
-const COLORES_KPI = {
-  total:    { bg: 'bg-blue-50',   text: 'text-blue-600',   border: 'border-blue-200',   icon: '📋' },
-  horas:    { bg: 'bg-green-50',  text: 'text-green-600',  border: 'border-green-200',  icon: '⏱️' },
-  entregas: { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200', icon: '📦' },
-  ansActa:  { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200', icon: '📝' },
-  ansEnt:   { bg: 'bg-teal-50',   text: 'text-teal-600',   border: 'border-teal-200',   icon: '✅' },
-}
-
-function abreviarEstado(e: string): string {
-  return e
-    .replace('ESTIMACION EN CURSO POR HITSS', 'Est. Curso')
-    .replace('ESTIMACION EN ESPERA DE APROBACION POR EPM', 'Est. Espera')
-    .replace('ESTIMACION APROBADA POR LT', 'Est. Aprob. LT')
-    .replace('ESTIMACION APROBADA ENTREGA PENDIENTE', 'Est. Aprob.')
-    .replace('ENTREGA CARGADA', 'Ent. Cargada')
-    .replace('ENTREGA NO CARGADA', 'Ent. No Carg.')
-    .replace('CONTROL DE CAMBIOS', 'Ctrl. Cambios')
-    .replace('REQUERIMIENTO DEVUELTO A EPM', 'Devuelto')
-    .replace('REQUERIMIENTO SUSPENDIDO POR EPM', 'Suspendido')
-    .replace('REQUERIMIENTO CANCELADO POR EPM', 'Cancel. EPM')
-    .replace('REQUERIMIENTO CANCELADO', 'Cancelado')
-    .replace('REQUERIMIENTO REEMPLAZADO', 'Reemplazado')
-}
 
 function normalizarTexto(v: string): string {
   return v
@@ -40,6 +16,10 @@ function normalizarTexto(v: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ')
+}
+
+function normalizarAns(valor: string | null | undefined): string {
+  return normalizarTexto(valor ?? '').replace(/\s+/g, '_')
 }
 
 export default function DashboardRequerimientos() {
@@ -161,42 +141,46 @@ export default function DashboardRequerimientos() {
 
   // ─── KPIs ───────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const totalHoras = reqs.reduce((s, r) => s + Number(r.total_horas_estimadas ?? 0), 0)
+    const filtroReqActivo = anosReq.size > 0 || mesesReq.size > 0
+    const requerimientosFiltrados = reqs.filter((r) => {
+      if (!filtroReqActivo) return true
+      const fecha = r.fecha_inicio ?? r.fecha_solicitud_acta
+      return !!fecha && pasaFiltroReq(fecha.substring(0, 7))
+    })
+    const totalHoras = requerimientosFiltrados.reduce((s, r) => s + Number(r.total_horas_estimadas ?? 0), 0)
     const allEntregas = reqs.flatMap((r) => r.entregas ?? [])
-    const totalEntregas = allEntregas.length
+    const entregasFiltradas = allEntregas.filter((e) => {
+      if (!filtroReqActivo) return true
+      const fecha = e.fecha_recepcion ?? e.fecha_comprometida
+      return !!fecha && pasaFiltroReq(fecha.substring(0, 7))
+    })
+    const totalEntregas = entregasFiltradas.length
 
-    // ANS Requerimientos: evalúa todos los requerimientos activos
-    const reqsActivos = reqs.filter((r) => {
+    const requerimientosFiltradosAnsActa = reqs.filter((r) => {
+      if (!filtroReqActivo) return true
+      return !!r.fecha_solicitud_acta && pasaFiltroReq(r.fecha_solicitud_acta.substring(0, 7))
+    })
+
+    // ANS Requerimientos: usa el campo ANS Acta y su fecha de solicitud de acta.
+    const reqsActivos = requerimientosFiltradosAnsActa.filter((r) => {
       const normalized = r.estado.toUpperCase()
       return !normalized.includes('CANCELADO') && !normalized.includes('REEMPLAZADO')
     })
-    const requerimentosConAns = reqsActivos.filter((r) => r.ans_acta)
-    const ansReqCumple = requerimentosConAns.filter((r) => r.ans_acta === 'CUMPLE').length
+    const requerimentosConAns = reqsActivos.filter((r) => normalizarAns(r.ans_acta))
+    const ansReqCumple = requerimentosConAns.filter((r) => normalizarAns(r.ans_acta) === 'cumple').length
     const ansReqPct = requerimentosConAns.length > 0 ? parseFloat(((ansReqCumple / requerimentosConAns.length) * 100).toFixed(1)) : 0
 
     // ANS Entregas: campo ans_entrega de cada entrega
-    const conAnsEnt    = allEntregas.filter((e) => e.ans_entrega)
+    const conAnsEnt    = entregasFiltradas.filter((e) => e.ans_entrega)
     const ansEntCumple = conAnsEnt.filter((e) => e.ans_entrega === 'CUMPLE').length
     const ansEntPct    = conAnsEnt.length > 0 ? parseFloat(((ansEntCumple / conAnsEnt.length) * 100).toFixed(1)) : 0
 
     return {
-      total: reqs.length, totalHoras, totalEntregas,
+      total: requerimientosFiltrados.length, totalHoras, totalEntregas, activos: reqsActivos.length,
       ansReqPct, ansReqCumple, ansReqTotal: requerimentosConAns.length,
       ansEntPct, ansEntCumple, ansEntTotal: conAnsEnt.length,
     }
-  }, [reqs])
-
-  // ─── Requerimientos por estado ──────────────────────────
-  const porEstado = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const e of ESTADOS_REQUERIMIENTO) map[e] = 0
-    for (const r of reqs) {
-      map[r.estado] = (map[r.estado] ?? 0) + 1
-    }
-    return Object.entries(map)
-      .filter(([, v]) => v > 0)
-      .map(([estado, cantidad]) => ({ estado: abreviarEstado(estado), cantidad, full: estado }))
-  }, [reqs])
+  }, [reqs, anosReq, mesesReq])
 
   // ─── Requerimientos por mes (fecha_inicio) ──────────────
   const porMes = useMemo(() => {
@@ -246,6 +230,25 @@ export default function DashboardRequerimientos() {
    return Object.entries(map)
      .sort(([a], [b]) => a.localeCompare(b))
      .map(([mes, v]) => ({ mes, ...v }))
+  }, [reqs])
+
+  // ─── Tendencia mensual (ANS requerimientos por mes) ───────────────
+  const tendenciaReqs = useMemo(() => {
+    const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
+    for (const r of reqs) {
+      const ans = normalizarAns(r.ans_acta)
+      if (ans !== 'cumple' && ans !== 'no_cumple') continue
+      const fecha = r.fecha_solicitud_acta ?? r.fecha_inicio
+      if (!fecha) continue
+      const mes = fecha.substring(0, 7)
+      if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
+      map[mes].total++
+      if (ans === 'cumple') map[mes].cumple++
+      else map[mes].noCumple++
+    }
+    return Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([mes, v]) => ({ mes, ...v }))
   }, [reqs])
 
   // ─── Años disponibles por fuente ───────────────────────
@@ -301,6 +304,7 @@ export default function DashboardRequerimientos() {
 
   const porMesFiltrado        = hayFiltroReq ? porMes.filter((d) => pasaFiltroReq(d.mes)) : porMes
   const tendenciaFiltrada     = hayFiltroReq ? tendencia.filter((d) => pasaFiltroReq(d.mes)) : tendencia
+  const tendenciaReqsFiltrada = hayFiltroReq ? tendenciaReqs.filter((d) => pasaFiltroReq(d.mes)) : tendenciaReqs
   const woPorMesFiltrado      = hayFiltroSop ? woPorMes.filter((d) => pasaFiltroSop(d.mes)) : woPorMes
   const ansTendenciaFiltrada  = hayFiltroSop ? ansTendencia.filter((d) => pasaFiltroSop(d.mes)) : ansTendencia
 
@@ -313,299 +317,336 @@ export default function DashboardRequerimientos() {
   const ansInicioShow = hayFiltroSop ? ansInicioFilt : ansInicioTrabajoData
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold text-marca-osc">Dashboard General</h1>
-      <p className="text-sm text-slate-500">
-        Métricas y estado general de los requerimientos.
-      </p>
-
-      {/* ═══ Filtros independientes por fuente ═══ */}
-      <div className="grid gap-3 lg:grid-cols-2">
-
-        {/* ── Filtro Requerimientos (fecha_inicio / fecha_recepcion) ── */}
-        <div className="rounded-xl border-2 border-blue-100 bg-blue-50/50 p-3">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-blue-700">
-            📋 Requerimientos &amp; Entregas — por fecha inicio / recepción
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <FilterDropdown
-              label="Año" emoji="📅"
-              opciones={anosDisponiblesReq}
-              activos={anosReq}
-              setActivos={setAnosReq}
-              color="blue"
-            />
-            <FilterDropdown
-              label="Mes" emoji="🗓️"
-              opciones={MESES_LABELS}
-              activos={mesesReq}
-              setActivos={setMesesReq}
-              esMes
-              color="blue"
-            />
-            {hayFiltroReq && (
-              <button type="button" onClick={() => { setAnosReq(new Set()); setMesesReq(new Set()) }}
-                className="self-start px-3 py-2 rounded-lg border border-blue-200 bg-white text-xs font-semibold text-blue-600 hover:bg-blue-50 whitespace-nowrap">
-                ✕ Limpiar
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Filtro Soporte (Fecha_Fin_Real) ── */}
-        <div className="rounded-xl border-2 border-green-100 bg-green-50/50 p-3">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-green-700">
-            🛠️ Soporte / WO — por Fecha Fin Real
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <FilterDropdown
-              label="Año" emoji="📅"
-              opciones={anosDisponiblesSop}
-              activos={anosSop}
-              setActivos={setAnosSop}
-              color="green"
-            />
-            <FilterDropdown
-              label="Mes" emoji="🗓️"
-              opciones={MESES_LABELS}
-              activos={mesesSop}
-              setActivos={setMesesSop}
-              esMes
-              color="green"
-            />
-            {hayFiltroSop && (
-              <button type="button" onClick={() => { setAnosSop(new Set()); setMesesSop(new Set()) }}
-                className="self-start px-3 py-2 rounded-lg border border-green-200 bg-white text-xs font-semibold text-green-600 hover:bg-green-50 whitespace-nowrap">
-                ✕ Limpiar
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ═══ KPI Cards ═══ */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard
-          icon={COLORES_KPI.total.icon} label="Requerimientos" value={kpis.total}
-          sub={`${porEstado.filter((e) => !e.full.includes('CANCELADO') && !e.full.includes('REEMPLAZADO')).reduce((s, e) => s + e.cantidad, 0)} activos`}
-          color={COLORES_KPI.total} />
-        <KpiCard
-          icon={COLORES_KPI.horas.icon} label="Horas estimadas" value={kpis.totalHoras.toLocaleString()}
-          sub="total acumulado"
-          color={COLORES_KPI.horas} />
-        <KpiCard
-          icon={COLORES_KPI.entregas.icon} label="Entregas" value={kpis.totalEntregas}
-          sub={`de ${reqs.length} requerimientos`}
-          color={COLORES_KPI.entregas} />
-        <KpiCard
-          icon={COLORES_KPI.ansActa.icon} label="ANS Requerimientos" value={`${kpis.ansReqPct}%`}
-          sub={`${kpis.ansReqCumple} / ${kpis.ansReqTotal} evaluados`}
-          color={COLORES_KPI.ansActa} />
-        <KpiCard
-          icon={COLORES_KPI.ansEnt.icon} label="ANS Entregas" value={`${kpis.ansEntPct}%`}
-          sub={`${kpis.ansEntCumple} / ${kpis.ansEntTotal} evaluados`}
-          color={COLORES_KPI.ansEnt} />
-      </div>
-
-      {/* Work Order ID + ANS Soporte Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Work Order ID Card */}
-        <div className="flex items-center gap-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <div className="text-3xl">📋</div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-blue-600">Work Order ID Distintos</p>
-            <p className="text-2xl font-bold text-blue-900">{workOrderIDFiltrado.toLocaleString('es-CO')}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-blue-500">Órdenes de trabajo</p>
-            <p className="text-sm text-blue-600">en el sistema</p>
-          </div>
-        </div>
-        {/* ANS Oportunidad */}
-        <div className="flex items-center gap-4 rounded-xl border border-green-200 bg-green-50 p-4">
-          <div className="text-3xl">🎯</div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-green-600">ANS Oportunidad</p>
-            <p className="text-2xl font-bold text-green-900">
-              {ansOportShow.total > 0
-                ? ((ansOportShow.cumple / ansOportShow.total) * 100).toFixed(1)
-                : '0.0'}%
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100">
+      {/* ═══ Header ejecutivo ═══ */}
+      <header className="sticky top-0 z-30 border-b border-slate-200/60 bg-white/90 backdrop-blur-xl shadow-sm">
+        <div className="mx-auto max-w-[1920px] px-6 py-5">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+              Dashboard General
+            </h1>
+            <p className="text-sm text-slate-500">
+              Vista consolidada de métricas operativas · Requerimientos &amp; Soporte
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-green-500">Cumple</p>
-            <p className="text-sm text-green-600">{ansOportShow.cumple} / {ansOportShow.total}</p>
-          </div>
         </div>
+      </header>
 
-        {/* ANS Cumplimiento */}
-        <div className="flex items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="text-3xl">✅</div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-600">ANS Cumplimiento</p>
-            <p className="text-2xl font-bold text-amber-900">
-              {ansCumplShow.total > 0
-                ? ((ansCumplShow.cumple / ansCumplShow.total) * 100).toFixed(1)
-                : '0.0'}%
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-amber-500">Cumple</p>
-            <p className="text-sm text-amber-600">{ansCumplShow.cumple} / {ansCumplShow.total}</p>
-          </div>
-        </div>
+      {/* ═══ Contenido principal: dos columnas ═══ */}
+      <div className="mx-auto max-w-[1920px] px-6 py-8">
+        <div className="grid gap-8 xl:grid-cols-2">
 
-        {/* ANS Inicio Trabajo */}
-        <div className="flex items-center gap-4 rounded-xl border border-purple-200 bg-purple-50 p-4">
-          <div className="text-3xl">🚀</div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-purple-600">ANS Inicio Trabajo</p>
-            <p className="text-2xl font-bold text-purple-900">
-              {ansInicioShow.total > 0
-                ? ((ansInicioShow.cumple / ansInicioShow.total) * 100).toFixed(1)
-                : '0.0'}%
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-purple-500">Cumple</p>
-            <p className="text-sm text-purple-600">{ansInicioShow.cumple} / {ansInicioShow.total}</p>
-          </div>
-        </div>
-      </div>
+          {/* ════════════════════════════════════════════════════════════════════
+              COLUMNA IZQUIERDA — Requerimientos & Actas
+              ════════════════════════════════════════════════════════════════════ */}
+          <section className="relative flex flex-col gap-6 rounded-3xl border border-blue-200/60 bg-gradient-to-br from-white via-blue-50/30 to-white p-6 shadow-lg shadow-blue-100/40 ring-1 ring-blue-100/30">
+            {/* Accent line */}
+            <div className="absolute inset-x-6 top-0 h-1 rounded-b-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" />
 
-      {/* ═══ Row 2: Mes + Equipo ═══ */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Requerimientos por mes */}
-        <Panel titulo="Requerimientos por mes">
-          {porMesFiltrado.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={porMesFiltrado} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v) => [v, 'Requerimientos']} />
-                <Bar dataKey="cantidad" fill="#16a34a" radius={[4, 4, 0, 0]} barSize={28} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
-
-        {/* WO por mes */}
-        <Panel titulo="WO por mes">
-          {woPorMesFiltrado.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={woPorMesFiltrado} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v) => [v, 'WO']} />
-                <Bar dataKey="wo" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={28} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
-
-        {/* Equipo */}
-        <Panel titulo={`LT HITSS (${equipo.length})`}>
-          <div className="max-h-[260px] space-y-2 overflow-y-auto pr-1">
-            {equipo.length === 0 ? <Empty /> : equipo.map((m) => (
-              <div key={m.id} className="flex items-center gap-3 rounded-lg border px-3 py-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-marca text-sm font-bold text-white">
-                  {m.nombre.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{m.nombre}</div>
-                  <div className="truncate text-xs text-slate-400">{m.email || '—'}</div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                    Req: {m.reqs}
-                  </span>
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                    WO: {woPorLt[m.nombreKey] ?? 0}
-                  </span>
-                </div>
+            {/* Section header */}
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md shadow-blue-200">
+                <span className="text-lg text-white">📋</span>
               </div>
-            ))}
-          </div>
-        </Panel>
-      </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Requerimientos &amp; Actas</h2>
+                <p className="text-xs text-slate-500">Gestión de demanda, entregas y cumplimiento ANS</p>
+              </div>
+            </div>
 
-      {/* ═══ Row 3+4: Tendencia y ANS ═══ */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Panel titulo="Tendencia de entregas">
-          {tendenciaFiltrada.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={tendenciaFiltrada} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="total" stroke="#2563eb" strokeWidth={2} name="Total" dot />
-                <Line type="monotone" dataKey="cumple" stroke="#16a34a" strokeWidth={2} name="Cumple" dot />
-                <Line type="monotone" dataKey="noCumple" stroke="#dc2626" strokeWidth={2} name="No cumple" dot />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
+            {/* Filtro */}
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-blue-600">
+                Filtro por fecha inicio / recepción
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <FilterDropdown
+                  label="Año" emoji="📅"
+                  opciones={anosDisponiblesReq}
+                  activos={anosReq}
+                  setActivos={setAnosReq}
+                  color="blue"
+                />
+                <FilterDropdown
+                  label="Mes" emoji="🗓️"
+                  opciones={MESES_LABELS}
+                  activos={mesesReq}
+                  setActivos={setMesesReq}
+                  esMes
+                  color="blue"
+                />
+                {hayFiltroReq && (
+                  <button type="button" onClick={() => { setAnosReq(new Set()); setMesesReq(new Set()) }}
+                    className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors">
+                    ✕ Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
 
-        <Panel titulo="ANS Oportunidad">
-          {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="oportunidadTotal"    stroke="#2563eb" strokeWidth={2} name="Total"     dot />
-                <Line type="monotone" dataKey="oportunidadCumple"   stroke="#16a34a" strokeWidth={2} name="Cumple"    dot />
-                <Line type="monotone" dataKey="oportunidadNoCumple" stroke="#dc2626" strokeWidth={2} name="No cumple" dot />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
+            {/* KPIs Requerimientos */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricCard accent="blue" icon="📋" label="Requerimientos" value={kpis.total} sub={`${kpis.activos} activos`} />
+              <MetricCard accent="emerald" icon="⏱️" label="Horas estimadas" value={kpis.totalHoras.toLocaleString()} sub="total acumulado" />
+              <MetricCard accent="violet" icon="📦" label="Entregas" value={kpis.totalEntregas} sub={`de ${kpis.total} requerimientos`} />
+              <MetricCard accent="indigo" icon="📝" label="ANS Requerimientos" value={`${kpis.ansReqPct}%`} sub={`${kpis.ansReqCumple} / ${kpis.ansReqTotal}`} />
+              <MetricCard accent="teal" icon="✅" label="ANS Entregas" value={`${kpis.ansEntPct}%`} sub={`${kpis.ansEntCumple} / ${kpis.ansEntTotal}`} />
+            </div>
 
-        <Panel titulo="ANS Cumplimiento">
-          {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="cumplimientoTotal"    stroke="#2563eb" strokeWidth={2} name="Total"     dot />
-                <Line type="monotone" dataKey="cumplimientoCumple"   stroke="#16a34a" strokeWidth={2} name="Cumple"    dot />
-                <Line type="monotone" dataKey="cumplimientoNoCumple" stroke="#dc2626" strokeWidth={2} name="No cumple" dot />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
+            {/* Gráfica: Requerimientos por mes */}
+            <GlassPanel titulo="Requerimientos por mes" icon="📊">
+              {porMesFiltrado.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={porMesFiltrado} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip formatter={(v) => [v, 'Requerimientos']} />
+                    <Bar dataKey="cantidad" fill="url(#gradReq)" radius={[6, 6, 0, 0]} barSize={24}>
+                      <LabelList dataKey="cantidad" position="top" style={{ fontSize: 10, fill: '#475569', fontWeight: 600 }} />
+                    </Bar>
+                    <defs>
+                      <linearGradient id="gradReq" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" />
+                        <stop offset="100%" stopColor="#6366f1" />
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
 
-        <Panel titulo="ANS Inicio Trabajo">
-          {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="inicioTotal"    stroke="#2563eb" strokeWidth={2} name="Total"     dot />
-                <Line type="monotone" dataKey="inicioCumple"   stroke="#16a34a" strokeWidth={2} name="Cumple"    dot />
-                <Line type="monotone" dataKey="inicioNoCumple" stroke="#dc2626" strokeWidth={2} name="No cumple" dot />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
+            {/* Equipo LT HITSS */}
+            <GlassPanel titulo={`Equipo LT HITSS (${equipo.length})`} icon="👥">
+              <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1">
+                {equipo.length === 0 ? <Empty /> : equipo.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white/80 px-4 py-2.5 shadow-sm transition-all hover:shadow-md hover:border-blue-200">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-sm">
+                      {m.nombre.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-slate-800">{m.nombre}</div>
+                      <div className="truncate text-xs text-slate-400">{m.email || '—'}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                        {m.reqs} Req
+                      </span>
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                        {woPorLt[m.nombreKey] ?? 0} WO
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </GlassPanel>
+
+            {/* Gráfica: Tendencia de entregas */}
+            <GlassPanel titulo="Tendencia de entregas" icon="📈">
+              {tendenciaFiltrada.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={tendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendTooltip />} />
+                    <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="cumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="noCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+
+            {/* Gráfica: Tendencia de requerimientos */}
+            <GlassPanel titulo="Tendencia de requerimientos" icon="📋">
+              {tendenciaReqsFiltrada.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={tendenciaReqsFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendTooltip />} />
+                    <Line type="monotone" dataKey="total" stroke="#6366f1" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="cumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="noCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+          </section>
+
+          {/* ════════════════════════════════════════════════════════════════════
+              COLUMNA DERECHA — Soporte & WO
+              ════════════════════════════════════════════════════════════════════ */}
+          <section className="relative flex flex-col gap-6 rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-white via-emerald-50/30 to-white p-6 shadow-lg shadow-emerald-100/40 ring-1 ring-emerald-100/30">
+            {/* Accent line */}
+            <div className="absolute inset-x-6 top-0 h-1 rounded-b-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400" />
+
+            {/* Section header */}
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 shadow-md shadow-emerald-200">
+                <span className="text-lg text-white">🛠️</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Soporte &amp; Work Orders</h2>
+                <p className="text-xs text-slate-500">Operaciones, ANS de soporte y tendencias</p>
+              </div>
+            </div>
+
+            {/* Filtro */}
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600">
+                Filtro por Fecha Fin Real
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <FilterDropdown
+                  label="Año" emoji="📅"
+                  opciones={anosDisponiblesSop}
+                  activos={anosSop}
+                  setActivos={setAnosSop}
+                  color="green"
+                />
+                <FilterDropdown
+                  label="Mes" emoji="🗓️"
+                  opciones={MESES_LABELS}
+                  activos={mesesSop}
+                  setActivos={setMesesSop}
+                  esMes
+                  color="green"
+                />
+                {hayFiltroSop && (
+                  <button type="button" onClick={() => { setAnosSop(new Set()); setMesesSop(new Set()) }}
+                    className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors">
+                    ✕ Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* KPIs Soporte */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricCard accent="emerald" icon="📋" label="Work Orders" value={workOrderIDFiltrado.toLocaleString('es-CO')} sub="Órdenes distintas" />
+              <MetricCard accent="green" icon="🎯" label="ANS Oportunidad"
+                value={`${ansOportShow.total > 0 ? ((ansOportShow.cumple / ansOportShow.total) * 100).toFixed(1) : '0.0'}%`}
+                sub={`${ansOportShow.cumple} / ${ansOportShow.total}`} />
+              <MetricCard accent="amber" icon="✅" label="ANS Cumplimiento"
+                value={`${ansCumplShow.total > 0 ? ((ansCumplShow.cumple / ansCumplShow.total) * 100).toFixed(1) : '0.0'}%`}
+                sub={`${ansCumplShow.cumple} / ${ansCumplShow.total}`} />
+              <MetricCard accent="purple" icon="🚀" label="ANS Inicio Trabajo"
+                value={`${ansInicioShow.total > 0 ? ((ansInicioShow.cumple / ansInicioShow.total) * 100).toFixed(1) : '0.0'}%`}
+                sub={`${ansInicioShow.cumple} / ${ansInicioShow.total}`} />
+            </div>
+
+            {/* Gráfica: WO por mes */}
+            <GlassPanel titulo="Work Orders por mes" icon="📊">
+              {woPorMesFiltrado.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={woPorMesFiltrado} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip formatter={(v) => [v, 'WO']} />
+                    <Bar dataKey="wo" fill="url(#gradWo)" radius={[6, 6, 0, 0]} barSize={24}>
+                      <LabelList dataKey="wo" position="top" style={{ fontSize: 10, fill: '#475569', fontWeight: 600 }} />
+                    </Bar>
+                    <defs>
+                      <linearGradient id="gradWo" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#14b8a6" />
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+
+            {/* Gráfica: ANS Oportunidad */}
+            <GlassPanel titulo="ANS Oportunidad — Tendencia" icon="🎯">
+              {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendTooltip />} />
+                    <Line type="monotone" dataKey="oportunidadTotal" stroke="#3b82f6" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="oportunidadCumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="oportunidadNoCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+
+            {/* Gráfica: ANS Cumplimiento */}
+            <GlassPanel titulo="ANS Cumplimiento — Tendencia" icon="✅">
+              {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendTooltip />} />
+                    <Line type="monotone" dataKey="cumplimientoTotal" stroke="#3b82f6" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="cumplimientoCumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="cumplimientoNoCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+
+            {/* Gráfica: ANS Inicio Trabajo */}
+            <GlassPanel titulo="ANS Inicio Trabajo — Tendencia" icon="🚀">
+              {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendTooltip />} />
+                    <Line type="monotone" dataKey="inicioTotal" stroke="#3b82f6" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="inicioCumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="inicioNoCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+          </section>
+
+        </div>
       </div>
     </div>
   )
 }
 
-/* ─── Componentes auxiliares ─── */
+/* ─── Componentes auxiliares premium ─── */
+
+function TrendTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null
+  const totalEntry = payload.find((p: any) => /total/i.test(p.dataKey))
+  const totalVal = totalEntry?.value ?? 0
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
+      <p className="mb-1 text-xs font-bold text-slate-700">{label}</p>
+      {payload.map((entry: any) => {
+        const isTotal = /total/i.test(entry.dataKey)
+        const pct = !isTotal && totalVal > 0
+          ? ` (${((entry.value / totalVal) * 100).toFixed(1)}%)`
+          : ''
+        return (
+          <p key={entry.dataKey} className="text-xs" style={{ color: entry.stroke }}>
+            {entry.name}: <span className="font-bold">{entry.value}{pct}</span>
+          </p>
+        )
+      })}
+    </div>
+  )
+}
 
 function FilterDropdown({
   label, emoji, opciones, activos, setActivos, esMes = false, color
@@ -618,19 +659,18 @@ function FilterDropdown({
   esMes?: boolean
   color: 'blue' | 'green'
 }) {
-  const ring   = color === 'blue' ? 'border-blue-200 focus-within:border-blue-400' : 'border-green-200 focus-within:border-green-400'
-  const badge  = color === 'blue' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-  const chkOn  = color === 'blue' ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-green-300 bg-green-50 text-green-900'
-  const allBtn = color === 'blue' ? 'text-blue-600' : 'text-green-600'
+  const ring   = color === 'blue' ? 'border-blue-200 focus-within:border-blue-400' : 'border-emerald-200 focus-within:border-emerald-400'
+  const badge  = color === 'blue' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+  const chkOn  = color === 'blue' ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-emerald-300 bg-emerald-50 text-emerald-900'
+  const allBtn = color === 'blue' ? 'text-blue-600' : 'text-emerald-600'
 
-  // Para meses, la key es el número 1-12 como string; para años, es el año string
   const toKey   = (_o: string, i: number) => esMes ? String(i + 1) : _o
   const allKeys = opciones.map((o, i) => toKey(o, i))
   const toggle  = (k: string) => setActivos((prev) => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
 
   return (
-    <details className="group flex-1">
-      <summary className={`flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border-2 ${ring} bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors`}>
+    <details className="group relative">
+      <summary className={`flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl border ${ring} bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:shadow transition-all`}>
         <div className="flex items-center gap-1.5">
           <span>{emoji} {label}</span>
           {activos.size > 0 && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${badge}`}>{activos.size}</span>}
@@ -639,7 +679,7 @@ function FilterDropdown({
           <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
         </svg>
       </summary>
-      <div className="absolute z-20 mt-1 min-w-[180px] rounded-lg border border-slate-200 bg-white p-2.5 shadow-lg">
+      <div className="absolute z-20 mt-2 min-w-[200px] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
         <div className="flex justify-end gap-3 mb-2">
           <button type="button" onClick={() => setActivos(new Set(allKeys))} className={`text-[10px] font-semibold ${allBtn} hover:underline`}>Todos</button>
           <button type="button" onClick={() => setActivos(new Set())} className="text-[10px] font-semibold text-slate-400 hover:underline">Limpiar</button>
@@ -649,8 +689,8 @@ function FilterDropdown({
             const k = toKey(o, i)
             const checked = activos.has(k)
             return (
-              <label key={k} className={`flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-[11px] font-semibold transition-colors ${checked ? chkOn : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
-                <input type="checkbox" checked={checked} onChange={() => toggle(k)} />
+              <label key={k} className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-all ${checked ? chkOn : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                <input type="checkbox" checked={checked} onChange={() => toggle(k)} className="rounded" />
                 {o}
               </label>
             )
@@ -661,31 +701,56 @@ function FilterDropdown({
   )
 }
 
-function KpiCard({ icon, label, value, sub, color }: {
-  icon: string; label: string; value: string | number; sub: string
-  color: { bg: string; text: string; border: string }
+const METRIC_ACCENTS = {
+  blue:    { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', sub: 'text-blue-500' },
+  emerald: { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', sub: 'text-emerald-500' },
+  violet:  { bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-700', sub: 'text-violet-500' },
+  indigo:  { bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-700', sub: 'text-indigo-500' },
+  teal:    { bg: 'bg-teal-50', border: 'border-teal-100', text: 'text-teal-700', sub: 'text-teal-500' },
+  green:   { bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-700', sub: 'text-green-500' },
+  amber:   { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700', sub: 'text-amber-500' },
+  purple:  { bg: 'bg-purple-50', border: 'border-purple-100', text: 'text-purple-700', sub: 'text-purple-500' },
+}
+
+function MetricCard({ accent, icon, label, value, sub }: {
+  accent: keyof typeof METRIC_ACCENTS
+  icon: string
+  label: string
+  value: string | number
+  sub: string
 }) {
+  const theme = METRIC_ACCENTS[accent]
   return (
-    <div className={`flex items-center gap-4 rounded-xl border ${color.border} ${color.bg} p-4`}>
-      <span className="text-3xl">{icon}</span>
-      <div>
-        <div className={`text-2xl font-bold ${color.text}`}>{value}</div>
-        <div className="text-sm font-medium text-slate-700">{label}</div>
-        <div className="text-xs text-slate-500">{sub}</div>
+    <div className={`group relative overflow-hidden rounded-2xl border ${theme.border} ${theme.bg} p-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]`}>
+      <div className="flex items-start gap-3">
+        <span className="shrink-0 text-2xl">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+          <p className={`mt-1 break-words text-xl font-extrabold ${theme.text}`}>{value}</p>
+          <p className={`mt-0.5 text-xs font-medium ${theme.sub}`}>{sub}</p>
+        </div>
       </div>
     </div>
   )
 }
 
-function Panel({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function GlassPanel({ titulo, icon, children }: { titulo: string; icon?: string; children: React.ReactNode }) {
   return (
-    <div className="w-full min-w-0 rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
-      <h3 className="mb-4 text-sm font-semibold text-slate-900 uppercase tracking-wide">{titulo}</h3>
+    <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-sm p-5 shadow-sm transition-all duration-300 hover:shadow-md">
+      <div className="mb-4 flex items-center gap-2">
+        {icon && <span className="text-base">{icon}</span>}
+        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">{titulo}</h3>
+      </div>
       {children}
     </div>
   )
 }
 
 function Empty() {
-  return <p className="py-8 text-center text-sm text-slate-400">Sin datos</p>
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+      <span className="text-4xl opacity-30">📭</span>
+      <p className="mt-2 text-sm font-medium">Sin datos disponibles</p>
+    </div>
+  )
 }

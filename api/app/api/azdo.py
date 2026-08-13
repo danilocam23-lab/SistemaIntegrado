@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.security.deps import requiere_permiso
 from app.services.azdo_sync import sincronizar_iteracion
 from app.services.azure_devops import AzureDevOpsService
 
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/azdo", tags=["azure-devops"])
 class SyncIn(BaseModel):
     azdo_project: str
     iteration_path: str
+    target: str = "hitss"
 
 
 class AzdoConfigIn(BaseModel):
@@ -29,6 +31,7 @@ class AzdoConfigIn(BaseModel):
     sync_interval: str = "manual"
     squad_id: str | None = None
     usuario_id: str | None = None
+    target: str = "hitss"
 
 
 class CampoRequeridoOut(BaseModel):
@@ -40,16 +43,49 @@ class CampoRequeridoOut(BaseModel):
 
 # ── Resolución jerárquica de config ──
 
+_TARGETS_VALIDOS = {"hitss", "epm"}
+
+
+def _normalizar_target(target: str | None) -> str:
+    valor = (target or "hitss").lower().strip()
+    if valor not in _TARGETS_VALIDOS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "target inválido. Valores permitidos: hitss, epm.",
+        )
+    return valor
+
+
+def _scope_base(squad_id: str | None = None, usuario_id: str | None = None) -> str:
+    if usuario_id:
+        return "user"
+    if squad_id:
+        return "squad"
+    return "app"
+
+
+def _scope_config(base: str, target: str) -> str:
+    return base if target == "hitss" else f"{base}_{target}"
+
+
+def _describir_scope(scope: str) -> tuple[str, str]:
+    if scope.endswith("_epm"):
+        return scope.removesuffix("_epm"), "epm"
+    return scope, "hitss"
+
+
 async def _resolver_config(
     aplicacion_id: str,
+    target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
 ) -> AzdoConfig | None:
     """Resuelve la configuración con prioridad: user > squad > app."""
+    target = _normalizar_target(target)
     if usuario_id:
         cfg = await AzdoConfig.find_one(
             AzdoConfig.aplicacion_id == aplicacion_id,
-            AzdoConfig.scope == "user",
+            AzdoConfig.scope == _scope_config("user", target),
             AzdoConfig.usuario_id == usuario_id,
         )
         if cfg and cfg.org_url and cfg.pat:
@@ -58,7 +94,7 @@ async def _resolver_config(
     if squad_id:
         cfg = await AzdoConfig.find_one(
             AzdoConfig.aplicacion_id == aplicacion_id,
-            AzdoConfig.scope == "squad",
+            AzdoConfig.scope == _scope_config("squad", target),
             AzdoConfig.squad_id == squad_id,
         )
         if cfg and cfg.org_url and cfg.pat:
@@ -66,7 +102,7 @@ async def _resolver_config(
 
     return await AzdoConfig.find_one(
         AzdoConfig.aplicacion_id == aplicacion_id,
-        AzdoConfig.scope == "app",
+        AzdoConfig.scope == _scope_config("app", target),
     )
 
 
@@ -83,15 +119,18 @@ async def _crear_servicio_desde_config(cfg: AzdoConfig) -> AzureDevOpsService:
 
 @router.get("/config")
 async def obtener_config(
+    target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ):
-    """Devuelve la config de Azure DevOps (jerárquica: user > squad > app)."""
-    cfg = await _resolver_config(ctx.codigo, squad_id, usuario_id)
+    """Devuelve la config AzDO por target (hitss|epm) y jerarquía user > squad > app."""
+    target = _normalizar_target(target)
+    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
     if not cfg:
         return {
             "scope": "app",
+            "target": target,
             "org_url": "",
             "pat_guardado": False,
             "default_project": "",
@@ -101,7 +140,8 @@ async def obtener_config(
             "learned_fields": None,
         }
     return {
-        "scope": cfg.scope,
+        "scope": _describir_scope(cfg.scope)[0],
+        "target": target,
         "org_url": cfg.org_url,
         "pat_guardado": bool(cfg.pat),
         "default_project": cfg.default_project,
@@ -121,7 +161,8 @@ async def listar_configs(ctx: ContextoAplicacion = Depends(contexto_aplicacion))
     return [
         {
             "id": str(c.id),
-            "scope": c.scope,
+            "scope": _describir_scope(c.scope)[0],
+            "target": _describir_scope(c.scope)[1],
             "org_url": c.org_url,
             "pat_guardado": bool(c.pat),
             "default_project": c.default_project,
@@ -137,14 +178,11 @@ async def listar_configs(ctx: ContextoAplicacion = Depends(contexto_aplicacion))
 async def guardar_config(
     datos: AzdoConfigIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: object = Depends(requiere_permiso("azure_devops.editar")),
 ):
-    """Guarda la config de Azure DevOps. Determina el scope según squad_id/usuario_id."""
-    if datos.usuario_id:
-        scope = "user"
-    elif datos.squad_id:
-        scope = "squad"
-    else:
-        scope = "app"
+    """Guarda la config AzDO para HITSS o EPM según ``target``."""
+    target = _normalizar_target(datos.target)
+    scope = _scope_config(_scope_base(datos.squad_id, datos.usuario_id), target)
 
     cfg = await AzdoConfig.find_one(
         AzdoConfig.aplicacion_id == ctx.codigo,
@@ -176,7 +214,8 @@ async def guardar_config(
 
     return {
         "ok": True,
-        "scope": cfg.scope,
+        "scope": _describir_scope(cfg.scope)[0],
+        "target": target,
         "org_url": cfg.org_url,
         "pat_guardado": bool(cfg.pat),
         "default_project": cfg.default_project,
@@ -185,9 +224,11 @@ async def guardar_config(
 
 @router.delete("/config")
 async def eliminar_config(
+    target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: object = Depends(requiere_permiso("azure_devops.editar")),
 ):
     """Elimina una config de squad o usuario (no permite eliminar la de app)."""
     if not squad_id and not usuario_id:
@@ -195,7 +236,8 @@ async def eliminar_config(
             status.HTTP_400_BAD_REQUEST,
             "Solo se pueden eliminar configs de squad o usuario, no la global.",
         )
-    scope = "user" if usuario_id else "squad"
+    target = _normalizar_target(target)
+    scope = _scope_config("user" if usuario_id else "squad", target)
     cfg = await AzdoConfig.find_one(
         AzdoConfig.aplicacion_id == ctx.codigo,
         AzdoConfig.scope == scope,
@@ -211,12 +253,13 @@ async def eliminar_config(
 
 @router.get("/test")
 async def test_conexion(
+    target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
 ) -> dict:
     """Verifica la conexión con Azure DevOps usando la config resuelta."""
-    cfg = await _resolver_config(ctx.codigo, squad_id, usuario_id)
+    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
     if not cfg or not cfg.org_url or not cfg.pat:
         return {"ok": False, "error": "Falta configurar URL y/o PAT de Azure DevOps."}
     svc = AzureDevOpsService(cfg.org_url, cfg.pat)
@@ -227,9 +270,11 @@ async def test_conexion(
 
 @router.get("/campos-requeridos")
 async def campos_requeridos(
+    target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: object = Depends(requiere_permiso("azure_devops.editar")),
 ) -> dict[str, list[dict]]:
     """Descubre los campos requeridos para Feature, User Story/PBI y Task.
 
@@ -237,7 +282,7 @@ async def campos_requeridos(
     400 para identificar campos obligatorios, y luego devuelve la lista.
     Los resultados se cachean en la config (learned_fields).
     """
-    cfg = await _resolver_config(ctx.codigo, squad_id, usuario_id)
+    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
     if not cfg or not cfg.org_url or not cfg.pat:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -357,11 +402,12 @@ async def campos_requeridos(
 
 @router.get("/proyectos")
 async def proyectos(
+    target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
 ) -> list[dict]:
-    cfg = await _resolver_config(ctx.codigo, squad_id, usuario_id)
+    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     svc = await _crear_servicio_desde_config(cfg)
@@ -374,11 +420,12 @@ async def proyectos(
 @router.get("/iteraciones")
 async def iteraciones(
     proyecto: str,
+    target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
 ) -> list[dict]:
-    cfg = await _resolver_config(ctx.codigo, squad_id, usuario_id)
+    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     svc = await _crear_servicio_desde_config(cfg)
@@ -402,11 +449,15 @@ async def listar_sync_log(ctx: ContextoAplicacion = Depends(contexto_aplicacion)
 
 @router.post("/sync")
 async def sincronizar(
-    datos: SyncIn, ctx: ContextoAplicacion = Depends(contexto_escritura)
+    datos: SyncIn,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: object = Depends(requiere_permiso("azure_devops.editar")),
 ) -> dict:
     """Sincroniza los work items de una iteración de Azure DevOps."""
     try:
-        return await sincronizar_iteracion(ctx.codigo, datos.azdo_project, datos.iteration_path)
+        return await sincronizar_iteracion(
+            ctx.codigo, datos.azdo_project, datos.iteration_path, datos.target
+        )
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     except Exception as exc:  # noqa: BLE001

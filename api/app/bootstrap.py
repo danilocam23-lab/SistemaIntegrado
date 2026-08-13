@@ -11,6 +11,7 @@ from app.security.rbac import ROLES_BASE, normalizar_permisos
 from app.services.provision_aplicacion import provisionar_aplicacion
 
 _log = logging.getLogger("bootstrap")
+ROLES_OBSOLETOS = ("editor", "soporte_ans_editor")
 
 
 async def _asegurar_roles_base() -> dict[str, Rol]:
@@ -30,12 +31,37 @@ async def _asegurar_roles_base() -> dict[str, Rol]:
             esperados = normalizar_permisos(cfg["permisos"])
             actuales = set(rol.permisos)
             faltantes = [p for p in esperados if p not in actuales]
-            if faltantes:
-                rol.permisos = normalizar_permisos([*rol.permisos, *faltantes])
+            removidos = [p for p in ("cifras.ver",) if p in actuales and p not in esperados]
+            if rol.clave == "viewer":
+                removidos.extend(p for p in ("azure_devops.ver", "azure_devops.editar") if p in actuales and p not in esperados)
+            nombre_cambio = rol.nombre != cfg["nombre"]
+            descripcion_cambio = rol.descripcion != cfg["descripcion"]
+            if faltantes or removidos or nombre_cambio or descripcion_cambio:
+                rol.nombre = cfg["nombre"]
+                rol.descripcion = cfg["descripcion"]
+                rol.permisos = normalizar_permisos([p for p in rol.permisos if p not in removidos] + faltantes)
                 rol.marcar_actualizado()
                 await rol.save()
         roles[rol.clave] = rol
     return roles
+
+
+async def _eliminar_roles_obsoletos(roles: dict[str, Rol]) -> None:
+    rol_viewer = roles.get(RolUsuario.VIEWER.value)
+    for clave in ROLES_OBSOLETOS:
+        rol = await Rol.find_one(Rol.clave == clave)
+        if rol is None:
+            continue
+        if rol_viewer is not None:
+            usuarios = await Usuario.find({"$or": [{"rol_id": str(rol.id)}, {"rol": clave}]}).to_list()
+            for usuario in usuarios:
+                usuario.rol = rol_viewer.clave
+                usuario.rol_id = str(rol_viewer.id)
+                usuario.permisos = normalizar_permisos(rol_viewer.permisos)
+                usuario.marcar_actualizado()
+                await usuario.save()
+        await rol.delete()
+        _log.info("Rol obsoleto eliminado: %s", clave)
 
 
 async def bootstrap() -> None:
@@ -66,6 +92,7 @@ async def bootstrap() -> None:
     await provisionar_aplicacion(app_inicial.codigo)
 
     roles = await _asegurar_roles_base()
+    await _eliminar_roles_obsoletos(roles)
 
     superadmin = await Usuario.find_one(Usuario.rol == RolUsuario.SUPERADMIN)
     if superadmin is None:

@@ -26,8 +26,8 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100">
-      <form onSubmit={enviar} className="w-80 rounded-xl bg-white p-8 shadow">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+      <form onSubmit={enviar} className="w-full max-w-sm rounded-xl bg-white p-6 shadow sm:p-8">
         <h1 className="text-xl font-bold text-marca-osc">Sistema Integrado</h1>
         <p className="mb-5 text-sm text-slate-500">HITSS — Plataforma unificada</p>
         {error && (

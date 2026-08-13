@@ -207,6 +207,15 @@ export default function Roadmap() {
     return fechas.some((d) => mesesActivos.has(mesKey(d)))
   }
 
+  function personasAsignadasReq(req: Requerimiento): string[] {
+    const ids = new Set<string>()
+    ;(req.developers_asignados ?? []).forEach((id) => {
+      if (id) ids.add(id)
+    })
+    if (req.solicitud?.lt_hitss_id) ids.add(req.solicitud.lt_hitss_id)
+    return Array.from(ids)
+  }
+
   /* Agrupar requerimientos por persona → categoría */
   const grupos = useMemo<GrupoPersona[]>(() => {
     // Map persona_id → asignaciones
@@ -285,7 +294,7 @@ export default function Roadmap() {
         ? fechasComprometidas[fechasComprometidas.length - 1]
         : inicio
 
-      const devs = req.developers_asignados ?? []
+      const devs = personasAsignadasReq(req)
       if (devs.length === 0) {
         if (personaFiltrada && personaFiltrada !== SIN_ASIGNAR_ID) return
         if (!reqMatchesMeses(req)) return
