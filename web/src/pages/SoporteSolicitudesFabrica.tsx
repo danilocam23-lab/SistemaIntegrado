@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
+import { useAuth } from '../context/AuthContext'
 
 interface RegistroSoporte {
   id: string
@@ -13,8 +14,11 @@ interface RegistroSoporte {
   sincronizado_en: string | null
 }
 
-interface ListadoResponse {
+interface ListadoPaginadoResponse {
   total: number
+  pagina: number
+  tamanio: number
+  total_paginas: number
   ultima_actualizacion: string | null
   headers: string[]
   registros: RegistroSoporte[]
@@ -162,10 +166,12 @@ const FilaRegistro = memo(function FilaRegistro({ registro: r, headers, onVerDes
 })
 
 export default function SoporteSolicitudesFabrica() {
+  const { tienePermiso } = useAuth()
+  const puedeActualizar = tienePermiso('soporte.solicitudes_fabrica.actualizar')
   const [cargando, setCargando] = useState(true)
   const [actualizando, setActualizando] = useState(false)
   const [sincronizando, setSincronizando] = useState(false)
-  const [data, setData] = useState<ListadoResponse | null>(null)
+  const [data, setData] = useState<ListadoPaginadoResponse | null>(null)
   const [preview, setPreview] = useState<PreviewResponse | null>(null)
   const [resultadoSync, setResultadoSync] = useState<SyncResponse | null>(null)
   const [aviso, setAviso] = useState('')
@@ -175,13 +181,20 @@ export default function SoporteSolicitudesFabrica() {
   const [descripcionSeleccionada, setDescripcionSeleccionada] = useState<string | null>(null)
   const [taskSeleccionada, setTaskSeleccionada] = useState<{ datos: Record<string, string>; campos: string[]; titulo: string } | null>(null)
   const [filtroWorkOrderID, setFiltroWorkOrderID] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const [tamanio] = useState(100)
+  const filtroTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  async function cargar(): Promise<void> {
+  async function cargar(pag?: number, filtro?: string): Promise<void> {
     setCargando(true)
     setAviso('')
     try {
-      const { data } = await client.get<ListadoResponse>('/soporte/solicitudes-fabrica')
-      setData(data)
+      const p = pag ?? pagina
+      const f = filtro ?? filtroWorkOrderID
+      const params = new URLSearchParams({ pagina: String(p), tamanio: String(tamanio) })
+      if (f) params.set('filtro_wo', f)
+      const { data: resp } = await client.get<ListadoPaginadoResponse>(`/soporte/solicitudes-fabrica/pagina?${params}`)
+      setData(resp)
     } catch (err) {
       setAviso(mensajeError(err))
     } finally {
@@ -190,10 +203,28 @@ export default function SoporteSolicitudesFabrica() {
   }
 
   useEffect(() => {
-    void cargar()
+    void cargar(1)
   }, [])
 
+  function onFiltroChange(valor: string): void {
+    setFiltroWorkOrderID(valor)
+    if (filtroTimeoutRef.current) clearTimeout(filtroTimeoutRef.current)
+    filtroTimeoutRef.current = setTimeout(() => {
+      setPagina(1)
+      void cargar(1, valor)
+    }, 400)
+  }
+
+  function irPagina(p: number): void {
+    setPagina(p)
+    void cargar(p)
+  }
+
   async function previsualizar(archivo: File): Promise<void> {
+    if (!puedeActualizar) {
+      setAviso('No tienes permiso para actualizar solicitudes de fábrica.')
+      return
+    }
     setActualizando(true)
     setAviso('')
     setResultadoSync(null)
@@ -211,6 +242,10 @@ export default function SoporteSolicitudesFabrica() {
   }
 
   async function confirmarSincronizacion(): Promise<void> {
+    if (!puedeActualizar) {
+      setAviso('No tienes permiso para sincronizar solicitudes de fábrica.')
+      return
+    }
     if (!archivoExcel) {
       setAviso('Debe cargar el archivo Excel para sincronizar.')
       return
@@ -272,10 +307,12 @@ export default function SoporteSolicitudesFabrica() {
   )
 
   function abrirSelectorArchivo(): void {
+    if (!puedeActualizar) return
     inputArchivoRef.current?.click()
   }
 
   function onArchivoSeleccionado(file: File | null): void {
+    if (!puedeActualizar) return
     if (!file) return
     setArchivoExcel(file)
     void previsualizar(file)
@@ -289,16 +326,7 @@ export default function SoporteSolicitudesFabrica() {
     setTaskSeleccionada({ datos, campos, titulo })
   }, [])
 
-  const registrosFiltrados = useMemo(() => {
-    if (!data?.registros) return []
-    return data.registros.filter((r) => {
-      if (filtroWorkOrderID) {
-        const workOrderID = r.datos?.['Work Order ID'] ?? ''
-        if (!workOrderID.toLowerCase().includes(filtroWorkOrderID.toLowerCase())) return false
-      }
-      return true
-    })
-  }, [data?.registros, filtroWorkOrderID])
+  const registrosFiltrados = data?.registros ?? []
 
   return (
     <div className="min-w-0 w-full space-y-4 overflow-x-hidden">
@@ -306,23 +334,29 @@ export default function SoporteSolicitudesFabrica() {
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold text-marca-osc">Soporte — Solicitudes Fábrica</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Cargue el archivo Excel para validar y sincronizar, aplicando la regla Líder y Squad.
+            {puedeActualizar
+              ? 'Cargue el archivo Excel para validar y sincronizar, aplicando la regla Líder y Squad.'
+              : 'Consulta de solicitudes fábrica en modo solo lectura.'}
           </p>
         </div>
-        <input
-          ref={inputArchivoRef}
-          type="file"
-          accept=".xlsx,.xlsm"
-          className="hidden"
-          onChange={(e) => onArchivoSeleccionado(e.target.files?.[0] ?? null)}
-        />
-        <button
-          onClick={abrirSelectorArchivo}
-          disabled={actualizando || sincronizando}
-          className="shrink-0 whitespace-nowrap rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
-        >
-          {actualizando ? 'Cargando…' : 'Actualizar (cargar Excel)'}
-        </button>
+        {puedeActualizar && (
+          <>
+            <input
+              ref={inputArchivoRef}
+              type="file"
+              accept=".xlsx,.xlsm"
+              className="hidden"
+              onChange={(e) => onArchivoSeleccionado(e.target.files?.[0] ?? null)}
+            />
+            <button
+              onClick={abrirSelectorArchivo}
+              disabled={actualizando || sincronizando}
+              className="shrink-0 whitespace-nowrap rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+            >
+              {actualizando ? 'Cargando…' : 'Actualizar (cargar Excel)'}
+            </button>
+          </>
+        )}
       </div>
 
       {aviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
@@ -378,23 +412,60 @@ export default function SoporteSolicitudesFabrica() {
           <input
             type="text"
             value={filtroWorkOrderID}
-            onChange={(e) => setFiltroWorkOrderID(e.target.value)}
+            onChange={(e) => onFiltroChange(e.target.value)}
             placeholder="Buscar Work Order ID…"
             className="rounded border px-3 py-2 text-sm w-64"
           />
         </label>
         {filtroWorkOrderID && (
           <button
-            onClick={() => setFiltroWorkOrderID('')}
+            onClick={() => { setFiltroWorkOrderID(''); setPagina(1); void cargar(1, '') }}
             className="text-xs text-red-500 hover:underline self-end pb-2"
           >
             Limpiar filtro
           </button>
         )}
         <span className="ml-auto text-xs text-slate-400 self-end pb-2">
-          {registrosFiltrados.length} de {data?.registros.length ?? 0} registros
+          Página {data?.pagina ?? 1} de {data?.total_paginas ?? 1} — {data?.total ?? 0} registros totales
         </span>
       </div>
+
+      {/* Controles de paginación */}
+      {data && data.total_paginas > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => irPagina(1)}
+            disabled={pagina <= 1}
+            className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+          >
+            «
+          </button>
+          <button
+            onClick={() => irPagina(pagina - 1)}
+            disabled={pagina <= 1}
+            className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+          >
+            ‹ Anterior
+          </button>
+          <span className="text-sm font-medium text-slate-700">
+            {pagina} / {data.total_paginas}
+          </span>
+          <button
+            onClick={() => irPagina(pagina + 1)}
+            disabled={pagina >= data.total_paginas}
+            className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+          >
+            Siguiente ›
+          </button>
+          <button
+            onClick={() => irPagina(data.total_paginas)}
+            disabled={pagina >= data.total_paginas}
+            className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+          >
+            »
+          </button>
+        </div>
+      )}
 
       <div className="w-full max-w-full max-h-[65vh] overflow-x-auto overflow-y-auto rounded-xl border bg-white">
         <table className="min-w-max text-sm">
@@ -485,13 +556,15 @@ export default function SoporteSolicitudesFabrica() {
               >
                 Cancelar
               </button>
-              <button
-                onClick={() => void confirmarSincronizacion()}
-                disabled={sincronizando}
-                className="rounded bg-marca px-3 py-1.5 text-sm text-white hover:bg-marca-osc disabled:opacity-60"
-              >
-                {sincronizando ? 'Sincronizando…' : 'Confirmar'}
-              </button>
+              {puedeActualizar && (
+                <button
+                  onClick={() => void confirmarSincronizacion()}
+                  disabled={sincronizando}
+                  className="rounded bg-marca px-3 py-1.5 text-sm text-white hover:bg-marca-osc disabled:opacity-60"
+                >
+                  {sincronizando ? 'Sincronizando…' : 'Confirmar'}
+                </button>
+              )}
             </div>
           </div>
         )}

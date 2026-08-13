@@ -168,6 +168,21 @@ def _extraer_lider_squad(row_por_key: dict[str, str]) -> tuple[str | None, str |
 _CACHE_TTL = 300  # 5 minutos
 _cache_listar: dict[str, tuple[float, dict]] = {}
 
+ANS_DETALLE_CAMPOS = {
+    "oportunidad": {
+        "levantado": "Se_levanto_ANS_Oportunidad",
+        "observaciones": "Observaciones_ANS_Oportunidad",
+    },
+    "cumplimiento": {
+        "levantado": "Se_levanto_ANS_Cumplimiento",
+        "observaciones": "Observaciones_ANS_Cumplimiento",
+    },
+    "inicio": {
+        "levantado": "Se_levanto_ANS_inicio_trabajo",
+        "observaciones": "Observaciones_ANS_inicio_trabajo",
+    },
+}
+
 
 def _cache_key(codigos: list[str]) -> str:
     return ",".join(sorted(codigos))
@@ -482,6 +497,67 @@ class SoporteSolicitudesFabricaService:
         return resultado
 
     @staticmethod
+    async def listar_paginado(
+        ctx: ContextoAplicacion,
+        pagina: int = 1,
+        tamanio: int = 100,
+        filtro_wo: str | None = None,
+    ) -> dict:
+        """Devuelve registros con paginación servidor para carga rápida."""
+        from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabricaSyncLog
+
+        registros, total = await SoporteSolicitudesFabricaRepository.listar_paginado(
+            ctx.codigos, pagina=pagina, tamanio=tamanio, filtro_wo=filtro_wo
+        )
+
+        registros_payload = [
+            {
+                "id": str(r.id),
+                "aplicacion_id": r.aplicacion_id,
+                "fila_origen": r.fila_origen,
+                "lider": r.lider,
+                "squad": r.squad,
+                "datos": r.datos,
+                "sincronizado_en": r.sincronizado_en,
+            }
+            for r in registros
+        ]
+
+        log = await SoporteSolicitudFabricaSyncLog.find(
+            {"$or": [{"aplicacion_id": {"$in": ctx.codigos}}, {"aplicacion_id": "__todas__"}]}
+        ).sort("-iniciado_en").first_or_none()
+
+        # Headers: usar cache si existe, sino calcular de esta página
+        key = _cache_key(ctx.codigos)
+        cached = _cache_listar.get(key)
+        if cached:
+            headers = cached[1].get("headers", [])
+        else:
+            headers_set: set[str] = set()
+            headers_list: list[str] = []
+            headers_log = _headers_sin_fijos(list(log.headers_excel or COLUMNAS_OBJETIVO)) if log else _headers_sin_fijos(COLUMNAS_OBJETIVO)
+            for h in headers_log:
+                if h not in headers_set:
+                    headers_set.add(h)
+                    headers_list.append(h)
+            for r in registros:
+                for h in _headers_sin_fijos(list((r.datos or {}).keys())):
+                    if h not in headers_set:
+                        headers_set.add(h)
+                        headers_list.append(h)
+            headers = headers_list
+
+        return {
+            "total": total,
+            "pagina": pagina,
+            "tamanio": tamanio,
+            "total_paginas": (total + tamanio - 1) // tamanio,
+            "ultima_actualizacion": (log.finalizado_en or log.iniciado_en) if log else None,
+            "headers": headers,
+            "registros": registros_payload,
+        }
+
+    @staticmethod
     async def resumen(ctx: ContextoAplicacion) -> dict:
         """Devuelve solo campos clave por registro (sin datos completos)."""
         completo = await SoporteSolicitudesFabricaService.listar(ctx)
@@ -495,6 +571,7 @@ class SoporteSolicitudesFabricaService:
                 "Work_Order_ID": datos.get("Work Order ID", ""),
                 "Fecha_Fin_Real": datos.get("Fecha_Fin_Real", ""),
                 "Horas_Estimadas": datos.get("Horas_Estimadas", ""),
+                "Horas_Aprobadas": datos.get("Horas_Aprobadas", ""),
                 "Horas_Reales": datos.get("Horas_Reales", ""),
                 "Status_WO": datos.get("Status WO", ""),
                 "Assigned_To": datos.get("Assigned To", ""),
@@ -506,6 +583,64 @@ class SoporteSolicitudesFabricaService:
             "total": completo.get("total", 0),
             "ultima_actualizacion": completo.get("ultima_actualizacion"),
             "registros": resumidos,
+        }
+
+    @staticmethod
+    async def datos_ans(ctx: ContextoAplicacion) -> dict:
+        """Devuelve solo campos relevantes para Detalle ANS (payload ~80% menor)."""
+        _ANS_FIELDS = (
+            "Work Order ID", "Fecha_Fin_Real", "Assigned To", "Status WO",
+            "Estado_ANS_Oportunidad", "Estado_ANS_Cumplimiento", "Estado_ANS_inicio_trabajo",
+            "Se_levanto_ANS_Oportunidad", "Observaciones_ANS_Oportunidad",
+            "Se_levanto_ANS_Cumplimiento", "Observaciones_ANS_Cumplimiento",
+            "Se_levanto_ANS_inicio_trabajo", "Observaciones_ANS_inicio_trabajo",
+        )
+        completo = await SoporteSolicitudesFabricaService.listar(ctx)
+        registros_ans = []
+        for r in completo.get("registros", []):
+            datos = r.get("datos") or {}
+            registros_ans.append({
+                "id": r.get("id"),
+                "lider": r.get("lider"),
+                "squad": r.get("squad"),
+                "datos": {k: datos.get(k, "") for k in _ANS_FIELDS},
+            })
+        return {"registros": registros_ans}
+
+    @staticmethod
+    async def actualizar_detalle_ans(
+        ctx: ContextoAplicacion,
+        registro_id: str,
+        tipo: str,
+        se_levanto_ans: bool | None = None,
+        observaciones: str | None = None,
+    ) -> dict:
+        campos = ANS_DETALLE_CAMPOS.get(tipo)
+        if campos is None:
+            raise ValueError("Tipo de ANS no válido.")
+
+        registro = await SoporteSolicitudesFabricaRepository.obtener(registro_id, ctx.codigos)
+        if registro is None:
+            raise ValueError("Registro de soporte no encontrado.")
+
+        datos = dict(registro.datos or {})
+        if se_levanto_ans is not None:
+            datos[campos["levantado"]] = "SI" if se_levanto_ans else "NO"
+        if observaciones is not None:
+            datos[campos["observaciones"]] = observaciones.strip()
+
+        registro.datos = datos
+        await SoporteSolicitudesFabricaRepository.guardar(registro)
+        _cache_invalidar()
+
+        return {
+            "id": str(registro.id),
+            "aplicacion_id": registro.aplicacion_id,
+            "fila_origen": registro.fila_origen,
+            "lider": registro.lider,
+            "squad": registro.squad,
+            "datos": registro.datos,
+            "sincronizado_en": registro.sincronizado_en,
         }
 
     @staticmethod
