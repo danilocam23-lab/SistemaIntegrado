@@ -27,21 +27,8 @@ async def _asegurar_roles_base() -> dict[str, Rol]:
                 permisos=normalizar_permisos(cfg["permisos"]),
             ).insert()
             _log.info("Rol base creado: %s", rol.clave)
-        elif rol.es_sistema:
-            esperados = normalizar_permisos(cfg["permisos"])
-            actuales = set(rol.permisos)
-            faltantes = [p for p in esperados if p not in actuales]
-            removidos = [p for p in ("cifras.ver",) if p in actuales and p not in esperados]
-            if rol.clave == "viewer":
-                removidos.extend(p for p in ("azure_devops.ver", "azure_devops.editar") if p in actuales and p not in esperados)
-            nombre_cambio = rol.nombre != cfg["nombre"]
-            descripcion_cambio = rol.descripcion != cfg["descripcion"]
-            if faltantes or removidos or nombre_cambio or descripcion_cambio:
-                rol.nombre = cfg["nombre"]
-                rol.descripcion = cfg["descripcion"]
-                rol.permisos = normalizar_permisos([p for p in rol.permisos if p not in removidos] + faltantes)
-                rol.marcar_actualizado()
-                await rol.save()
+        else:
+            _log.info("Rol base ya existe (sin modificar): %s", rol.clave)
         roles[rol.clave] = rol
     return roles
 
