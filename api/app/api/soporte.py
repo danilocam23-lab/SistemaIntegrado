@@ -140,7 +140,7 @@ async def wo_por_persona(
         d = r.datos or {}
         assigned = d.get("Assigned To", "").strip()
         status = d.get("Status WO", "").strip()
-        if not assigned or status.lower() == "cerrado":
+        if not assigned or status.lower() in ("cerrado", "cancelado", "terminado"):
             continue
         resultado.append({
             "id": str(r.id),
