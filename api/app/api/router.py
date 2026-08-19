@@ -12,6 +12,7 @@ from app.api import (
     categorias,
     cifras,
     configuracion,
+    control_horas,
     dashboard,
     estimaciones,
     festivos,
@@ -52,6 +53,7 @@ api_router.include_router(azdo.router)
 api_router.include_router(importacion.router)
 api_router.include_router(soporte.router)
 api_router.include_router(garantias_wo.router)
+api_router.include_router(control_horas.router)
 # Transversal
 api_router.include_router(bitacora.router)
 api_router.include_router(reportes.router)

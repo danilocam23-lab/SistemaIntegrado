@@ -12,6 +12,7 @@ from app.documents.bitacora import Bitacora
 from app.documents.capacidad import Capacidad
 from app.documents.categoria import Categoria
 from app.documents.configuracion import Configuracion
+from app.documents.control_horas import ControlHoras
 from app.documents.estimacion import Estimacion
 from app.documents.festivo import Festivo
 from app.documents.garantia_wo import GarantiaWO
@@ -55,6 +56,7 @@ ALL_DOCUMENTS = [
     AzdoSyncLog,
     AzdoConfig,
     GarantiaWO,
+    ControlHoras,
 ]
 
 __all__ = [
@@ -82,4 +84,5 @@ __all__ = [
     "AzdoSyncLog",
     "AzdoConfig",
     "GarantiaWO",
+    "ControlHoras",
 ]

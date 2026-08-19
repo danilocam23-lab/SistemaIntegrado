@@ -1,15 +1,24 @@
-import { useMemo, useState } from 'react'
-import { useLista } from '../api/hooks'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import client from '../api/client'
+import { mensajeError, useLista } from '../api/hooks'
 import type { Persona } from '../types'
 
 interface Fila {
-  key: string       // persona_id + squad
+  key: string
   personaId: string
   nombre: string
   rol: string
   squad: string
   tipoContratacion: string
   opcionesLt: string[]
+}
+
+interface ControlHorasGuardado {
+  persona_id: string
+  squad: string
+  lt_hitss: string
+  horas_soporte: number
+  horas_desarrollo: number
 }
 
 export default function ControlHorasFacturable() {
@@ -19,6 +28,30 @@ export default function ControlHorasFacturable() {
   const [eliminadas, setEliminadas] = useState<Set<string>>(new Set())
   const [horasSoporte, setHorasSoporte] = useState<Record<string, number>>({})
   const [horasDesarrollo, setHorasDesarrollo] = useState<Record<string, number>>({})
+  const [guardandoFila, setGuardandoFila] = useState<Set<string>>(new Set())
+  const [guardandoTodos, setGuardandoTodos] = useState(false)
+  const [aviso, setAviso] = useState('')
+  const [avisoOk, setAvisoOk] = useState('')
+
+  // Cargar datos guardados
+  useEffect(() => {
+    client.get<ControlHorasGuardado[]>('/control-horas')
+      .then(({ data }) => {
+        const lt: Record<string, string> = {}
+        const hs: Record<string, number> = {}
+        const hd: Record<string, number> = {}
+        for (const r of data) {
+          const k = `${r.persona_id}_${r.squad}`
+          if (r.lt_hitss) lt[k] = r.lt_hitss
+          if (r.horas_soporte) hs[k] = r.horas_soporte
+          if (r.horas_desarrollo) hd[k] = r.horas_desarrollo
+        }
+        setSeleccionLt((prev) => ({ ...lt, ...prev }))
+        setHorasSoporte((prev) => ({ ...hs, ...prev }))
+        setHorasDesarrollo((prev) => ({ ...hd, ...prev }))
+      })
+      .catch(() => {})
+  }, [personas])
 
   // Todos los LT_HITSS activos
   const ltHitssPersonas = useMemo(
@@ -98,6 +131,45 @@ export default function ControlHorasFacturable() {
     setEliminadas(new Set())
   }
 
+  function datosParaGuardar(fila: Fila) {
+    return {
+      persona_id: fila.personaId,
+      squad: fila.squad,
+      lt_hitss: ltSeleccionado(fila),
+      horas_soporte: horasSoporte[fila.key] ?? 0,
+      horas_desarrollo: horasDesarrollo[fila.key] ?? 0,
+    }
+  }
+
+  async function guardarUno(fila: Fila) {
+    setGuardandoFila((prev) => new Set(prev).add(fila.key))
+    setAviso('')
+    setAvisoOk('')
+    try {
+      await client.put('/control-horas/registro', datosParaGuardar(fila))
+      setAvisoOk(`Guardado: ${fila.nombre} — ${fila.squad}`)
+    } catch (err) {
+      setAviso(mensajeError(err))
+    } finally {
+      setGuardandoFila((prev) => { const n = new Set(prev); n.delete(fila.key); return n })
+    }
+  }
+
+  async function guardarTodos() {
+    setGuardandoTodos(true)
+    setAviso('')
+    setAvisoOk('')
+    try {
+      const registros = filas.map(datosParaGuardar)
+      const { data } = await client.put<{ guardados: number }>('/control-horas/todos', { registros })
+      setAvisoOk(`${data.guardados} registros guardados correctamente`)
+    } catch (err) {
+      setAviso(mensajeError(err))
+    } finally {
+      setGuardandoTodos(false)
+    }
+  }
+
   // Todos los LT_HITSS únicos para el selector global
   const todosLtNombres = useMemo(
     () => ltHitssPersonas.map((p) => p.nombre).sort((a, b) => a.localeCompare(b, 'es')),
@@ -165,6 +237,20 @@ export default function ControlHorasFacturable() {
         </span>
       </div>
 
+      {aviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
+      {avisoOk && <div className="rounded bg-green-50 p-2 text-sm text-green-700">{avisoOk}</div>}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => void guardarTodos()}
+          disabled={guardandoTodos || filas.length === 0}
+          className="rounded bg-marca px-4 py-2 text-sm font-semibold text-white hover:bg-marca-osc disabled:opacity-50"
+        >
+          {guardandoTodos ? 'Guardando…' : `💾 Guardar todos (${filas.length})`}
+        </button>
+      </div>
+
       <div className="w-full max-h-[70vh] overflow-auto rounded-xl border bg-white">
         <table className="min-w-full text-sm">
           <thead className="sticky top-0 z-10 bg-marca-osc text-white">
@@ -177,18 +263,20 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Horas Facturables</th>
               <th className="p-2 text-right">Horas Soporte Proy.</th>
               <th className="p-2 text-right">Horas Desarrollo Proy.</th>
+              <th className="p-2 text-right">Total Horas Fact. Proy.</th>
+              <th className="p-2 w-20"></th>
               <th className="p-2 w-10"></th>
             </tr>
           </thead>
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={9} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={11} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={9} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={11} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -252,6 +340,20 @@ export default function ControlHorasFacturable() {
                       className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
                       min={0}
                     />
+                  </td>
+                  <td className="p-2 text-right font-mono font-semibold text-marca-osc">
+                    {(horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0)}
+                  </td>
+                  <td className="p-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => void guardarUno(f)}
+                      disabled={guardandoFila.has(f.key)}
+                      title="Guardar este registro"
+                      className="rounded bg-marca px-2 py-1 text-xs text-white hover:bg-marca-osc disabled:opacity-50"
+                    >
+                      {guardandoFila.has(f.key) ? '…' : '💾'}
+                    </button>
                   </td>
                   <td className="p-2 text-center">
                     <button
