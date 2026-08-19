@@ -3,17 +3,19 @@ import { useLista } from '../api/hooks'
 import type { Persona } from '../types'
 
 interface Fila {
-  id: string
+  key: string       // persona_id + squad
+  personaId: string
   nombre: string
   rol: string
   squad: string
-  opcionesLt: string[]  // nombres de LT_HITSS disponibles
+  opcionesLt: string[]
 }
 
 export default function ControlHorasFacturable() {
   const { datos: personas, cargando } = useLista<Persona>('/personas')
   const [busqueda, setBusqueda] = useState('')
   const [seleccionLt, setSeleccionLt] = useState<Record<string, string>>({})
+  const [eliminadas, setEliminadas] = useState<Set<string>>(new Set())
 
   // Todos los LT_HITSS activos
   const ltHitssPersonas = useMemo(
@@ -34,34 +36,40 @@ export default function ControlHorasFacturable() {
     return mapa
   }, [ltHitssPersonas])
 
-  // Personas sin LT_EPM, con opciones de LT_HITSS
-  const filas = useMemo<Fila[]>(() => {
-    const q = busqueda.trim().toLowerCase()
-    return personas
-      .filter((p) => p.rol_operativo !== 'LT_EPM' && p.activo)
-      .map((p) => {
-        const opciones = new Set<string>()
-        for (const sq of p.squads) {
-          for (const n of ltHitssPorSquad.get(sq) ?? []) opciones.add(n)
-        }
-        return {
-          id: p.id,
+  // Una fila por squad (duplica personas con 2+ squads)
+  const filasBase = useMemo<Fila[]>(() => {
+    const resultado: Fila[] = []
+    for (const p of personas) {
+      if (p.rol_operativo === 'LT_EPM' || !p.activo) continue
+      const squads = p.squads.length > 0 ? p.squads : ['—']
+      for (const sq of squads) {
+        const opciones = (ltHitssPorSquad.get(sq) ?? []).sort((a, b) => a.localeCompare(b, 'es'))
+        resultado.push({
+          key: `${p.id}_${sq}`,
+          personaId: p.id,
           nombre: p.nombre,
           rol: p.rol_operativo,
-          squad: p.squads.join(', ') || '—',
-          opcionesLt: Array.from(opciones).sort((a, b) => a.localeCompare(b, 'es')),
-        }
-      })
+          squad: sq,
+          opcionesLt: opciones,
+        })
+      }
+    }
+    return resultado.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  }, [personas, ltHitssPorSquad])
+
+  const filas = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    return filasBase
+      .filter((f) => !eliminadas.has(f.key))
       .filter((f) => !q || f.nombre.toLowerCase().includes(q) || f.squad.toLowerCase().includes(q))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-  }, [personas, ltHitssPorSquad, busqueda])
+  }, [filasBase, eliminadas, busqueda])
 
   function ltSeleccionado(fila: Fila): string {
-    return seleccionLt[fila.id] ?? fila.opcionesLt[0] ?? '—'
+    return seleccionLt[fila.key] ?? fila.opcionesLt[0] ?? '—'
   }
 
-  function cambiarLt(id: string, valor: string) {
-    setSeleccionLt((prev) => ({ ...prev, [id]: valor }))
+  function cambiarLt(key: string, valor: string) {
+    setSeleccionLt((prev) => ({ ...prev, [key]: valor }))
   }
 
   function jalarAbajo(desdeIndex: number) {
@@ -72,10 +80,18 @@ export default function ControlHorasFacturable() {
     setSeleccionLt((prev) => {
       const siguiente = { ...prev }
       for (let i = desdeIndex + 1; i < filas.length; i++) {
-        siguiente[filas[i].id] = valor
+        siguiente[filas[i].key] = valor
       }
       return siguiente
     })
+  }
+
+  function eliminarFila(key: string) {
+    setEliminadas((prev) => new Set(prev).add(key))
+  }
+
+  function restaurarTodo() {
+    setEliminadas(new Set())
   }
 
   // Todos los LT_HITSS únicos para el selector global
@@ -88,7 +104,7 @@ export default function ControlHorasFacturable() {
     setSeleccionLt((prev) => {
       const siguiente = { ...prev }
       for (const f of filas) {
-        siguiente[f.id] = valor
+        siguiente[f.key] = valor
       }
       return siguiente
     })
@@ -136,7 +152,12 @@ export default function ControlHorasFacturable() {
         </label>
 
         <span className="ml-auto text-xs text-slate-400 self-end pb-2">
-          {filas.length} personas
+          {filas.length} registros
+          {eliminadas.size > 0 && (
+            <button onClick={restaurarTodo} className="ml-2 text-xs text-blue-600 hover:underline">
+              Restaurar {eliminadas.size} eliminados
+            </button>
+          )}
         </span>
       </div>
 
@@ -148,31 +169,32 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-left">LT HITSS</th>
               <th className="p-2 text-left">Squad</th>
               <th className="p-2 text-left">Rol</th>
+              <th className="p-2 w-10"></th>
             </tr>
           </thead>
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={4} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={5} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-4 text-center text-slate-400">Sin personas.</td>
+                <td colSpan={5} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
               const valor = ltSeleccionado(f)
               const tieneOpciones = f.opcionesLt.length > 1
               return (
-                <tr key={f.id} className="border-t hover:bg-slate-50">
+                <tr key={f.key} className="border-t hover:bg-slate-50">
                   <td className="p-2 font-medium text-slate-800">{f.nombre}</td>
                   <td className="p-2">
                     <div className="flex items-center gap-1">
                       {tieneOpciones ? (
                         <select
                           value={valor}
-                          onChange={(e) => cambiarLt(f.id, e.target.value)}
+                          onChange={(e) => cambiarLt(f.key, e.target.value)}
                           className="rounded border border-slate-300 px-2 py-1 text-sm"
                         >
                           {f.opcionesLt.map((n) => (
@@ -202,6 +224,16 @@ export default function ControlHorasFacturable() {
                     }`}>
                       {f.rol}
                     </span>
+                  </td>
+                  <td className="p-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => eliminarFila(f.key)}
+                      title="Quitar este registro"
+                      className="rounded p-1 text-slate-400 hover:bg-red-100 hover:text-red-600"
+                    >
+                      ✕
+                    </button>
                   </td>
                 </tr>
               )
