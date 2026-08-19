@@ -17,7 +17,8 @@ export default function ControlHorasFacturable() {
   const [busqueda, setBusqueda] = useState('')
   const [seleccionLt, setSeleccionLt] = useState<Record<string, string>>({})
   const [eliminadas, setEliminadas] = useState<Set<string>>(new Set())
-  const [horasFacturables, setHorasFacturables] = useState<Record<string, number>>({})
+  const [horasSoporte, setHorasSoporte] = useState<Record<string, number>>({})
+  const [horasDesarrollo, setHorasDesarrollo] = useState<Record<string, number>>({})
 
   // Todos los LT_HITSS activos
   const ltHitssPersonas = useMemo(
@@ -174,18 +175,20 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-left">Rol</th>
               <th className="p-2 text-left">Tipo Contratación</th>
               <th className="p-2 text-right">Horas Facturables</th>
+              <th className="p-2 text-right">Horas Soporte Proy.</th>
+              <th className="p-2 text-right">Horas Desarrollo Proy.</th>
               <th className="p-2 w-10"></th>
             </tr>
           </thead>
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={7} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={9} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={9} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -231,11 +234,21 @@ export default function ControlHorasFacturable() {
                     </span>
                   </td>
                   <td className="p-2 text-slate-600">{f.tipoContratacion}</td>
+                  <td className="p-2 text-right font-mono text-slate-700">200</td>
                   <td className="p-2">
                     <input
                       type="number"
-                      value={horasFacturables[f.key] ?? 200}
-                      onChange={(e) => setHorasFacturables((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      value={horasSoporte[f.key] ?? 0}
+                      onChange={(e) => setHorasSoporte((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
+                      min={0}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input
+                      type="number"
+                      value={horasDesarrollo[f.key] ?? 0}
+                      onChange={(e) => setHorasDesarrollo((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
                       min={0}
                     />
