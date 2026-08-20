@@ -30,6 +30,7 @@ interface ControlHorasGuardado {
   horas_garantias: number
   horas_reprocesos: number
   otras_novedades_calidad: number
+  observaciones: string
 }
 
 export default function ControlHorasFacturable() {
@@ -50,6 +51,7 @@ export default function ControlHorasFacturable() {
   const [horasGar, setHorasGar] = useState<Record<string, number>>({})
   const [horasRep, setHorasRep] = useState<Record<string, number>>({})
   const [otrasNovCal, setOtrasNovCal] = useState<Record<string, number>>({})
+  const [observaciones, setObservaciones] = useState<Record<string, string>>({})
   const [guardandoFila, setGuardandoFila] = useState<Set<string>>(new Set())
   const [guardandoTodos, setGuardandoTodos] = useState(false)
   const [aviso, setAviso] = useState('')
@@ -73,6 +75,7 @@ export default function ControlHorasFacturable() {
         const hg: Record<string, number> = {}
         const hr: Record<string, number> = {}
         const onc: Record<string, number> = {}
+        const obs: Record<string, string> = {}
         for (const r of data) {
           const k = `${r.persona_id}_${r.squad}`
           if (r.lt_hitss) lt[k] = r.lt_hitss
@@ -89,6 +92,7 @@ export default function ControlHorasFacturable() {
           if (r.horas_garantias) hg[k] = r.horas_garantias
           if (r.horas_reprocesos) hr[k] = r.horas_reprocesos
           if (r.otras_novedades_calidad) onc[k] = r.otras_novedades_calidad
+          if (r.observaciones) obs[k] = r.observaciones
         }
         setSeleccionLt((prev) => ({ ...lt, ...prev }))
         setHorasSoporte((prev) => ({ ...hs, ...prev }))
@@ -104,6 +108,7 @@ export default function ControlHorasFacturable() {
         setHorasGar((prev) => ({ ...hg, ...prev }))
         setHorasRep((prev) => ({ ...hr, ...prev }))
         setOtrasNovCal((prev) => ({ ...onc, ...prev }))
+        setObservaciones((prev) => ({ ...obs, ...prev }))
       })
       .catch(() => {})
   }, [personas])
@@ -204,6 +209,7 @@ export default function ControlHorasFacturable() {
       horas_garantias: horasGar[fila.key] ?? 0,
       horas_reprocesos: horasRep[fila.key] ?? 0,
       otras_novedades_calidad: otrasNovCal[fila.key] ?? 0,
+      observaciones: observaciones[fila.key] ?? '',
     }
   }
 
@@ -348,6 +354,7 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Total Nov. Calidad</th>
               <th className="p-2 text-right">Total Horas Registradas</th>
               <th className="p-2 text-right">Horas Backfill / Refuerzo</th>
+              <th className="p-2 text-left min-w-[200px]">Observaciones / Riesgos</th>
               <th className="p-2 w-20"></th>
               <th className="p-2 w-10"></th>
             </tr>
@@ -355,12 +362,12 @@ export default function ControlHorasFacturable() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={29} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={30} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={29} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={30} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -530,6 +537,14 @@ export default function ControlHorasFacturable() {
                   <td className="p-2 text-right font-mono font-semibold text-orange-600">
                     {(horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)
                       + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
+                  </td>
+                  <td className="p-2">
+                    <textarea
+                      value={observaciones[f.key] ?? ''}
+                      onChange={(e) => setObservaciones((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      className="w-full min-w-[180px] rounded border border-slate-300 px-2 py-1 text-sm"
+                      rows={2}
+                    />
                   </td>
                   <td className="p-2 text-center">
                     <button

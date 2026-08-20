@@ -23,6 +23,7 @@ class ControlHoras(DocumentoOperativo):
     horas_garantias: float = 0
     horas_reprocesos: float = 0
     otras_novedades_calidad: float = 0
+    observaciones: str = ""
 
     class Settings:
         name = "control_horas"
