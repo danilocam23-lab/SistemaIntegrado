@@ -7,6 +7,8 @@ from app.documents.base import DocumentoOperativo
 class ControlHoras(DocumentoOperativo):
     """Registro de horas proyectadas por persona/squad."""
 
+    anio: int = 0
+    mes: int = 0
     persona_id: str
     squad: str
     lt_hitss: str = ""
@@ -29,8 +31,14 @@ class ControlHoras(DocumentoOperativo):
         name = "control_horas"
         indexes = [
             IndexModel(
-                [("aplicacion_id", ASCENDING), ("persona_id", ASCENDING), ("squad", ASCENDING)],
-                name="ix_app_persona_squad",
+                [
+                    ("aplicacion_id", ASCENDING),
+                    ("anio", ASCENDING),
+                    ("mes", ASCENDING),
+                    ("persona_id", ASCENDING),
+                    ("squad", ASCENDING),
+                ],
+                name="ix_app_periodo_persona_squad",
                 unique=True,
             ),
         ]

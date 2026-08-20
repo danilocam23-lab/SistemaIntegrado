@@ -33,8 +33,13 @@ interface ControlHorasGuardado {
   observaciones: string
 }
 
+const _MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
 export default function ControlHorasFacturable() {
   const { datos: personas, cargando } = useLista<Persona>('/personas')
+  const hoy = new Date()
+  const [anio, setAnio] = useState(hoy.getFullYear())
+  const [mes, setMes] = useState(hoy.getMonth() + 1)
   const [busqueda, setBusqueda] = useState('')
   const [seleccionLt, setSeleccionLt] = useState<Record<string, string>>({})
   const [eliminadas, setEliminadas] = useState<Set<string>>(new Set())
@@ -57,9 +62,26 @@ export default function ControlHorasFacturable() {
   const [aviso, setAviso] = useState('')
   const [avisoOk, setAvisoOk] = useState('')
 
-  // Cargar datos guardados
+  // Cargar datos guardados para el período seleccionado
   useEffect(() => {
-    client.get<ControlHorasGuardado[]>('/control-horas')
+    if (!personas.length) return
+    // Limpiar estado al cambiar período
+    setSeleccionLt({})
+    setHorasSoporte({})
+    setHorasDesarrollo({})
+    setHorasSopCerrado({})
+    setHorasDesCerrado({})
+    setHorasVac({})
+    setHorasInc({})
+    setHorasLic({})
+    setHorasPerm({})
+    setOtrasNov({})
+    setHorasErr({})
+    setHorasGar({})
+    setHorasRep({})
+    setOtrasNovCal({})
+    setObservaciones({})
+    client.get<ControlHorasGuardado[]>('/control-horas', { params: { anio, mes } })
       .then(({ data }) => {
         const lt: Record<string, string> = {}
         const hs: Record<string, number> = {}
@@ -94,24 +116,24 @@ export default function ControlHorasFacturable() {
           if (r.otras_novedades_calidad) onc[k] = r.otras_novedades_calidad
           if (r.observaciones) obs[k] = r.observaciones
         }
-        setSeleccionLt((prev) => ({ ...lt, ...prev }))
-        setHorasSoporte((prev) => ({ ...hs, ...prev }))
-        setHorasDesarrollo((prev) => ({ ...hd, ...prev }))
-        setHorasSopCerrado((prev) => ({ ...hsc, ...prev }))
-        setHorasDesCerrado((prev) => ({ ...hdc, ...prev }))
-        setHorasVac((prev) => ({ ...hv, ...prev }))
-        setHorasInc((prev) => ({ ...hi, ...prev }))
-        setHorasLic((prev) => ({ ...hl, ...prev }))
-        setHorasPerm((prev) => ({ ...hp, ...prev }))
-        setOtrasNov((prev) => ({ ...on, ...prev }))
-        setHorasErr((prev) => ({ ...he, ...prev }))
-        setHorasGar((prev) => ({ ...hg, ...prev }))
-        setHorasRep((prev) => ({ ...hr, ...prev }))
-        setOtrasNovCal((prev) => ({ ...onc, ...prev }))
-        setObservaciones((prev) => ({ ...obs, ...prev }))
+        setSeleccionLt((prev) => ({ ...prev, ...lt }))
+        setHorasSoporte((prev) => ({ ...prev, ...hs }))
+        setHorasDesarrollo((prev) => ({ ...prev, ...hd }))
+        setHorasSopCerrado((prev) => ({ ...prev, ...hsc }))
+        setHorasDesCerrado((prev) => ({ ...prev, ...hdc }))
+        setHorasVac((prev) => ({ ...prev, ...hv }))
+        setHorasInc((prev) => ({ ...prev, ...hi }))
+        setHorasLic((prev) => ({ ...prev, ...hl }))
+        setHorasPerm((prev) => ({ ...prev, ...hp }))
+        setOtrasNov((prev) => ({ ...prev, ...on }))
+        setHorasErr((prev) => ({ ...prev, ...he }))
+        setHorasGar((prev) => ({ ...prev, ...hg }))
+        setHorasRep((prev) => ({ ...prev, ...hr }))
+        setOtrasNovCal((prev) => ({ ...prev, ...onc }))
+        setObservaciones((prev) => ({ ...prev, ...obs }))
       })
       .catch(() => {})
-  }, [personas])
+  }, [personas, anio, mes])
 
   // Todos los LT_HITSS activos
   const ltHitssPersonas = useMemo(
@@ -218,7 +240,7 @@ export default function ControlHorasFacturable() {
     setAviso('')
     setAvisoOk('')
     try {
-      await client.put('/control-horas/registro', datosParaGuardar(fila))
+      await client.put('/control-horas/registro', datosParaGuardar(fila), { params: { anio, mes } })
       setAvisoOk(`Guardado: ${fila.nombre} — ${fila.squad}`)
     } catch (err) {
       setAviso(mensajeError(err))
@@ -233,7 +255,7 @@ export default function ControlHorasFacturable() {
     setAvisoOk('')
     try {
       const registros = filas.map(datosParaGuardar)
-      const { data } = await client.put<{ guardados: number }>('/control-horas/todos', { registros })
+      const { data } = await client.put<{ guardados: number }>('/control-horas/todos', { registros }, { params: { anio, mes } })
       setAvisoOk(`${data.guardados} registros guardados correctamente`)
     } catch (err) {
       setAviso(mensajeError(err))
@@ -268,6 +290,24 @@ export default function ControlHorasFacturable() {
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-white p-3">
+        <label className="text-sm">
+          <span className="mb-1 block text-slate-600">Año</span>
+          <select value={anio} onChange={(e) => setAnio(Number(e.target.value))}
+            className="rounded border px-3 py-2 text-sm">
+            {Array.from({ length: 5 }, (_, i) => hoy.getFullYear() - 2 + i).map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          <span className="mb-1 block text-slate-600">Mes</span>
+          <select value={mes} onChange={(e) => setMes(Number(e.target.value))}
+            className="rounded border px-3 py-2 text-sm">
+            {_MESES.map((n, i) => (
+              <option key={i + 1} value={i + 1}>{n}</option>
+            ))}
+          </select>
+        </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Buscar persona o squad</span>
           <input
