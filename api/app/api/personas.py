@@ -5,6 +5,7 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
+from app.documents.aplicacion import Aplicacion
 from app.documents.asignacion import Asignacion
 from app.documents.azdo import AzdoWorkItem
 from app.documents.capacidad import Capacidad
@@ -17,12 +18,14 @@ from app.security.deps import es_superadmin, requiere_permiso, usuario_actual
 router = APIRouter(prefix="/personas", tags=["personas"])
 
 ROLES_PERSONA_DEFAULT = ["DEV", "LT_HITSS", "LT_EPM", "SCRUM", "EPM", "COORD", "LECTOR"]
+TIPOS_CONTRATACION_DEFAULT = ["TERMINO INDEFINIDO", "TERMINO FIJO", "PRESTACION DE SERVICIOS", "OBRA O LABOR"]
 
 
 class PersonaIn(BaseModel):
     nombre: str
     email: str | None = None
     rol_operativo: str = "DEV"
+    tipo_contratacion: str | None = None
     activo: bool = True
     squads: list[str] = []
     es_lider_tecnico: bool = False
@@ -82,6 +85,18 @@ async def obtener_roles():
     return ROLES_PERSONA_DEFAULT
 
 
+@router.get("/tipos-contratacion")
+async def obtener_tipos_contratacion():
+    """Devuelve la lista de tipos de contratación configurados para personas (global)."""
+    from app.documents.configuracion import Configuracion
+    config = await Configuracion.find_one(
+        Configuracion.clave == "tipos_contratacion",
+    )
+    if config and config.valor:
+        return [t.strip() for t in config.valor.split(",") if t.strip()]
+    return TIPOS_CONTRATACION_DEFAULT
+
+
 # ── GET /duplicados ────────────────────────────────────────────────────────────
 @router.get("/duplicados")
 async def listar_duplicados(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> list[dict]:
@@ -138,6 +153,11 @@ async def deduplicar_personas(
             for sq in (p.squads or []):
                 if sq not in squads_union:
                     squads_union.append(sq)
+            # Si el perdedor es de otra app, agregar el nombre de esa app como squad
+            if p.aplicacion_id and p.aplicacion_id != ganador.aplicacion_id:
+                app_doc = await Aplicacion.find_one(Aplicacion.codigo == p.aplicacion_id)
+                if app_doc and app_doc.nombre and app_doc.nombre not in squads_union:
+                    squads_union.append(app_doc.nombre)
             if not ganador.email and p.email:
                 ganador.email = p.email
             if not ganador.usuario_id and p.usuario_id:
@@ -208,10 +228,23 @@ async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return por_id
 
 
+def _persona_visible(persona: Persona, ctx: ContextoAplicacion) -> bool:
+    """Determina si la persona es accesible en el contexto actual: por aplicacion_id
+    propia o porque su lista de squads incluye el nombre de la app/squad activo
+    (igual criterio usado en el listado, para no perder personas cross-app)."""
+    if ctx.modo_consolidado:
+        return persona.aplicacion_id in ctx.codigos
+    if persona.aplicacion_id in ctx.codigos:
+        return True
+    if ctx.nombre_app and ctx.nombre_app in (persona.squads or []):
+        return True
+    return False
+
+
 @router.get("/{persona_id}")
 async def obtener(persona_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     persona = await Persona.get(persona_id)
-    if persona is None or persona.aplicacion_id not in ctx.codigos:
+    if persona is None or not _persona_visible(persona, ctx):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
     return persona
 
@@ -254,11 +287,16 @@ async def actualizar(
     _: Usuario = Depends(requiere_permiso("personas.editar")),
 ):
     persona = await Persona.get(persona_id)
-    if persona is None or persona.aplicacion_id not in ctx.codigos:
+    if persona is None or not _persona_visible(persona, ctx):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
-    # Actualiza solo los campos operativos, preserva aplicacion_id original
+    # Actualiza campos operativos
     for campo, valor in datos.model_dump(exclude={"aplicacion_id"}).items():
         setattr(persona, campo, valor)
+    # Si cambió el squad, actualizar aplicacion_id al código de la primera app que coincida
+    if datos.squads:
+        app_doc = await Aplicacion.find_one({"nombre": datos.squads[0]})
+        if app_doc:
+            persona.aplicacion_id = app_doc.codigo
     persona.marcar_actualizado()
     await persona.save()
     return persona
@@ -273,7 +311,7 @@ async def eliminar(
     from app.documents.requerimiento import Requerimiento
 
     persona = await Persona.get(persona_id)
-    if persona is None or persona.aplicacion_id not in ctx.codigos:
+    if persona is None or not _persona_visible(persona, ctx):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
 
     referencias_requerimientos = await Requerimiento.get_pymongo_collection().count_documents({
