@@ -346,6 +346,7 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Horas Reprocesos</th>
               <th className="p-2 text-right">Otras Nov. Calidad</th>
               <th className="p-2 text-right">Total Nov. Calidad</th>
+              <th className="p-2 text-right">Total Horas Registradas</th>
               <th className="p-2 w-20"></th>
               <th className="p-2 w-10"></th>
             </tr>
@@ -353,12 +354,12 @@ export default function ControlHorasFacturable() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={27} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={28} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={27} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={28} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -519,6 +520,11 @@ export default function ControlHorasFacturable() {
                   </td>
                   <td className="p-2 text-right font-mono font-semibold text-marca-osc">
                     {(horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
+                  </td>
+                  <td className="p-2 text-right font-mono font-bold text-slate-800">
+                    {(horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0)
+                      + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)
+                      + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
                   </td>
                   <td className="p-2 text-center">
                     <button
