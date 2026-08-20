@@ -57,6 +57,7 @@ export default function ControlHorasFacturable() {
   const [horasRep, setHorasRep] = useState<Record<string, number>>({})
   const [otrasNovCal, setOtrasNovCal] = useState<Record<string, number>>({})
   const [observaciones, setObservaciones] = useState<Record<string, string>>({})
+  const [keysConDatos, setKeysConDatos] = useState<Set<string>>(new Set())
   const [guardandoFila, setGuardandoFila] = useState<Set<string>>(new Set())
   const [guardandoTodos, setGuardandoTodos] = useState(false)
   const [aviso, setAviso] = useState('')
@@ -81,6 +82,7 @@ export default function ControlHorasFacturable() {
     setHorasRep({})
     setOtrasNovCal({})
     setObservaciones({})
+    setKeysConDatos(new Set())
     client.get<ControlHorasGuardado[]>('/control-horas', { params: { anio, mes } })
       .then(({ data }) => {
         const lt: Record<string, string> = {}
@@ -98,8 +100,10 @@ export default function ControlHorasFacturable() {
         const hr: Record<string, number> = {}
         const onc: Record<string, number> = {}
         const obs: Record<string, string> = {}
+        const keys = new Set<string>()
         for (const r of data) {
           const k = `${r.persona_id}_${r.squad}`
+          keys.add(k)
           if (r.lt_hitss) lt[k] = r.lt_hitss
           if (r.horas_soporte) hs[k] = r.horas_soporte
           if (r.horas_desarrollo) hd[k] = r.horas_desarrollo
@@ -131,6 +135,7 @@ export default function ControlHorasFacturable() {
         setHorasRep((prev) => ({ ...prev, ...hr }))
         setOtrasNovCal((prev) => ({ ...prev, ...onc }))
         setObservaciones((prev) => ({ ...prev, ...obs }))
+        setKeysConDatos(keys)
       })
       .catch(() => {})
   }, [personas, anio, mes])
@@ -158,9 +163,13 @@ export default function ControlHorasFacturable() {
   const filasBase = useMemo<Fila[]>(() => {
     const resultado: Fila[] = []
     for (const p of personas) {
-      if (p.rol_operativo === 'LT_EPM' || !p.activo) continue
+      if (p.rol_operativo === 'LT_EPM') continue
+      // Inactivos: solo mostrar si tienen datos guardados en este período
+      const esInactivo = !p.activo
       const squads = p.squads.length > 0 ? p.squads : ['—']
       for (const sq of squads) {
+        const key = `${p.id}_${sq}`
+        if (esInactivo && !keysConDatos.has(key)) continue
         const opciones = (ltHitssPorSquad.get(sq) ?? []).sort((a, b) => a.localeCompare(b, 'es'))
         resultado.push({
           key: `${p.id}_${sq}`,
@@ -174,7 +183,7 @@ export default function ControlHorasFacturable() {
       }
     }
     return resultado.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-  }, [personas, ltHitssPorSquad])
+  }, [personas, ltHitssPorSquad, keysConDatos])
 
   const filas = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
