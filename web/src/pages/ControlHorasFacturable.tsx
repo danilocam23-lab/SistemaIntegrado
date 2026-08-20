@@ -280,6 +280,7 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Horas Soporte Cerrado</th>
               <th className="p-2 text-right">Horas Desarrollo Cerrado</th>
               <th className="p-2 text-right">Total Horas Fact. Cerrado</th>
+              <th className="p-2 text-right">% Cumplimiento Fact.</th>
               <th className="p-2 w-20"></th>
               <th className="p-2 w-10"></th>
             </tr>
@@ -287,12 +288,12 @@ export default function ControlHorasFacturable() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={15} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={16} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={15} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={16} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -392,6 +393,17 @@ export default function ControlHorasFacturable() {
                   <td className="p-2 text-right font-mono font-semibold text-marca-osc">
                     {(horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0)}
                   </td>
+                  {(() => {
+                    const totalCerrado = (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0);
+                    const pct = Math.round((totalCerrado / 200) * 100);
+                    return (
+                      <td className={`p-2 text-right font-mono font-semibold ${
+                        pct >= 100 ? 'text-green-600' : pct >= 75 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {pct}%
+                      </td>
+                    );
+                  })()}
                   <td className="p-2 text-center">
                     <button
                       type="button"
