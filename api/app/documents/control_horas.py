@@ -14,6 +14,11 @@ class ControlHoras(DocumentoOperativo):
     horas_desarrollo: float = 0
     horas_soporte_cerrado: float = 0
     horas_desarrollo_cerrado: float = 0
+    horas_vacaciones: float = 0
+    horas_incapacidades: float = 0
+    horas_licencias: float = 0
+    horas_permisos: float = 0
+    otras_novedades: float = 0
 
     class Settings:
         name = "control_horas"

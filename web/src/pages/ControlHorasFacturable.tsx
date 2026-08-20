@@ -21,6 +21,11 @@ interface ControlHorasGuardado {
   horas_desarrollo: number
   horas_soporte_cerrado: number
   horas_desarrollo_cerrado: number
+  horas_vacaciones: number
+  horas_incapacidades: number
+  horas_licencias: number
+  horas_permisos: number
+  otras_novedades: number
 }
 
 export default function ControlHorasFacturable() {
@@ -32,6 +37,11 @@ export default function ControlHorasFacturable() {
   const [horasDesarrollo, setHorasDesarrollo] = useState<Record<string, number>>({})
   const [horasSopCerrado, setHorasSopCerrado] = useState<Record<string, number>>({})
   const [horasDesCerrado, setHorasDesCerrado] = useState<Record<string, number>>({})
+  const [horasVac, setHorasVac] = useState<Record<string, number>>({})
+  const [horasInc, setHorasInc] = useState<Record<string, number>>({})
+  const [horasLic, setHorasLic] = useState<Record<string, number>>({})
+  const [horasPerm, setHorasPerm] = useState<Record<string, number>>({})
+  const [otrasNov, setOtrasNov] = useState<Record<string, number>>({})
   const [guardandoFila, setGuardandoFila] = useState<Set<string>>(new Set())
   const [guardandoTodos, setGuardandoTodos] = useState(false)
   const [aviso, setAviso] = useState('')
@@ -46,6 +56,11 @@ export default function ControlHorasFacturable() {
         const hd: Record<string, number> = {}
         const hsc: Record<string, number> = {}
         const hdc: Record<string, number> = {}
+        const hv: Record<string, number> = {}
+        const hi: Record<string, number> = {}
+        const hl: Record<string, number> = {}
+        const hp: Record<string, number> = {}
+        const on: Record<string, number> = {}
         for (const r of data) {
           const k = `${r.persona_id}_${r.squad}`
           if (r.lt_hitss) lt[k] = r.lt_hitss
@@ -53,12 +68,22 @@ export default function ControlHorasFacturable() {
           if (r.horas_desarrollo) hd[k] = r.horas_desarrollo
           if (r.horas_soporte_cerrado) hsc[k] = r.horas_soporte_cerrado
           if (r.horas_desarrollo_cerrado) hdc[k] = r.horas_desarrollo_cerrado
+          if (r.horas_vacaciones) hv[k] = r.horas_vacaciones
+          if (r.horas_incapacidades) hi[k] = r.horas_incapacidades
+          if (r.horas_licencias) hl[k] = r.horas_licencias
+          if (r.horas_permisos) hp[k] = r.horas_permisos
+          if (r.otras_novedades) on[k] = r.otras_novedades
         }
         setSeleccionLt((prev) => ({ ...lt, ...prev }))
         setHorasSoporte((prev) => ({ ...hs, ...prev }))
         setHorasDesarrollo((prev) => ({ ...hd, ...prev }))
         setHorasSopCerrado((prev) => ({ ...hsc, ...prev }))
         setHorasDesCerrado((prev) => ({ ...hdc, ...prev }))
+        setHorasVac((prev) => ({ ...hv, ...prev }))
+        setHorasInc((prev) => ({ ...hi, ...prev }))
+        setHorasLic((prev) => ({ ...hl, ...prev }))
+        setHorasPerm((prev) => ({ ...hp, ...prev }))
+        setOtrasNov((prev) => ({ ...on, ...prev }))
       })
       .catch(() => {})
   }, [personas])
@@ -150,6 +175,11 @@ export default function ControlHorasFacturable() {
       horas_desarrollo: horasDesarrollo[fila.key] ?? 0,
       horas_soporte_cerrado: horasSopCerrado[fila.key] ?? 0,
       horas_desarrollo_cerrado: horasDesCerrado[fila.key] ?? 0,
+      horas_vacaciones: horasVac[fila.key] ?? 0,
+      horas_incapacidades: horasInc[fila.key] ?? 0,
+      horas_licencias: horasLic[fila.key] ?? 0,
+      horas_permisos: horasPerm[fila.key] ?? 0,
+      otras_novedades: otrasNov[fila.key] ?? 0,
     }
   }
 
@@ -281,6 +311,12 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Horas Desarrollo Cerrado</th>
               <th className="p-2 text-right">Total Horas Fact. Cerrado</th>
               <th className="p-2 text-right">% Cumplimiento Fact.</th>
+              <th className="p-2 text-right">Horas Vacaciones</th>
+              <th className="p-2 text-right">Horas Incapacidades</th>
+              <th className="p-2 text-right">Horas Licencias / Ley</th>
+              <th className="p-2 text-right">Horas Permisos / Cap.</th>
+              <th className="p-2 text-right">Otras Novedades Adm.</th>
+              <th className="p-2 text-right">Total Novedades Adm.</th>
               <th className="p-2 w-20"></th>
               <th className="p-2 w-10"></th>
             </tr>
@@ -288,12 +324,12 @@ export default function ControlHorasFacturable() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={16} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={22} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={16} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={22} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -404,6 +440,34 @@ export default function ControlHorasFacturable() {
                       </td>
                     );
                   })()}
+                  <td className="p-2">
+                    <input type="number" value={horasVac[f.key] ?? 0}
+                      onChange={(e) => setHorasVac((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2">
+                    <input type="number" value={horasInc[f.key] ?? 0}
+                      onChange={(e) => setHorasInc((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2">
+                    <input type="number" value={horasLic[f.key] ?? 0}
+                      onChange={(e) => setHorasLic((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2">
+                    <input type="number" value={horasPerm[f.key] ?? 0}
+                      onChange={(e) => setHorasPerm((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2">
+                    <input type="number" value={otrasNov[f.key] ?? 0}
+                      onChange={(e) => setOtrasNov((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2 text-right font-mono font-semibold text-marca-osc">
+                    {(horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)}
+                  </td>
                   <td className="p-2 text-center">
                     <button
                       type="button"
