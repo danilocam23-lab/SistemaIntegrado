@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Persona } from '../types'
