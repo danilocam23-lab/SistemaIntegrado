@@ -264,6 +264,7 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Horas Soporte Proy.</th>
               <th className="p-2 text-right">Horas Desarrollo Proy.</th>
               <th className="p-2 text-right">Total Horas Fact. Proy.</th>
+              <th className="p-2 text-right">Validación Meta 200</th>
               <th className="p-2 w-20"></th>
               <th className="p-2 w-10"></th>
             </tr>
@@ -271,12 +272,12 @@ export default function ControlHorasFacturable() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={11} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={12} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={11} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={12} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -344,6 +345,17 @@ export default function ControlHorasFacturable() {
                   <td className="p-2 text-right font-mono font-semibold text-marca-osc">
                     {(horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0)}
                   </td>
+                  {(() => {
+                    const total = (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0);
+                    const diff = total - 200;
+                    return (
+                      <td className={`p-2 text-right font-mono font-semibold ${
+                        diff === 0 ? 'text-blue-600' : diff > 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {diff === 0 ? '✓ OK' : diff > 0 ? `+${diff}` : `${diff}`}
+                      </td>
+                    );
+                  })()}
                   <td className="p-2 text-center">
                     <button
                       type="button"
