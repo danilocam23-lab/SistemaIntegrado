@@ -19,6 +19,8 @@ interface ControlHorasGuardado {
   lt_hitss: string
   horas_soporte: number
   horas_desarrollo: number
+  horas_soporte_cerrado: number
+  horas_desarrollo_cerrado: number
 }
 
 export default function ControlHorasFacturable() {
@@ -28,6 +30,8 @@ export default function ControlHorasFacturable() {
   const [eliminadas, setEliminadas] = useState<Set<string>>(new Set())
   const [horasSoporte, setHorasSoporte] = useState<Record<string, number>>({})
   const [horasDesarrollo, setHorasDesarrollo] = useState<Record<string, number>>({})
+  const [horasSopCerrado, setHorasSopCerrado] = useState<Record<string, number>>({})
+  const [horasDesCerrado, setHorasDesCerrado] = useState<Record<string, number>>({})
   const [guardandoFila, setGuardandoFila] = useState<Set<string>>(new Set())
   const [guardandoTodos, setGuardandoTodos] = useState(false)
   const [aviso, setAviso] = useState('')
@@ -40,15 +44,21 @@ export default function ControlHorasFacturable() {
         const lt: Record<string, string> = {}
         const hs: Record<string, number> = {}
         const hd: Record<string, number> = {}
+        const hsc: Record<string, number> = {}
+        const hdc: Record<string, number> = {}
         for (const r of data) {
           const k = `${r.persona_id}_${r.squad}`
           if (r.lt_hitss) lt[k] = r.lt_hitss
           if (r.horas_soporte) hs[k] = r.horas_soporte
           if (r.horas_desarrollo) hd[k] = r.horas_desarrollo
+          if (r.horas_soporte_cerrado) hsc[k] = r.horas_soporte_cerrado
+          if (r.horas_desarrollo_cerrado) hdc[k] = r.horas_desarrollo_cerrado
         }
         setSeleccionLt((prev) => ({ ...lt, ...prev }))
         setHorasSoporte((prev) => ({ ...hs, ...prev }))
         setHorasDesarrollo((prev) => ({ ...hd, ...prev }))
+        setHorasSopCerrado((prev) => ({ ...hsc, ...prev }))
+        setHorasDesCerrado((prev) => ({ ...hdc, ...prev }))
       })
       .catch(() => {})
   }, [personas])
@@ -138,6 +148,8 @@ export default function ControlHorasFacturable() {
       lt_hitss: ltSeleccionado(fila),
       horas_soporte: horasSoporte[fila.key] ?? 0,
       horas_desarrollo: horasDesarrollo[fila.key] ?? 0,
+      horas_soporte_cerrado: horasSopCerrado[fila.key] ?? 0,
+      horas_desarrollo_cerrado: horasDesCerrado[fila.key] ?? 0,
     }
   }
 
@@ -265,6 +277,9 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Horas Desarrollo Proy.</th>
               <th className="p-2 text-right">Total Horas Fact. Proy.</th>
               <th className="p-2 text-right">Validación Meta 200</th>
+              <th className="p-2 text-right">Horas Soporte Cerrado</th>
+              <th className="p-2 text-right">Horas Desarrollo Cerrado</th>
+              <th className="p-2 text-right">Total Horas Fact. Cerrado</th>
               <th className="p-2 w-20"></th>
               <th className="p-2 w-10"></th>
             </tr>
@@ -272,12 +287,12 @@ export default function ControlHorasFacturable() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={12} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={15} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={12} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={15} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -356,6 +371,27 @@ export default function ControlHorasFacturable() {
                       </td>
                     );
                   })()}
+                  <td className="p-2">
+                    <input
+                      type="number"
+                      value={horasSopCerrado[f.key] ?? 0}
+                      onChange={(e) => setHorasSopCerrado((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
+                      min={0}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <input
+                      type="number"
+                      value={horasDesCerrado[f.key] ?? 0}
+                      onChange={(e) => setHorasDesCerrado((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
+                      min={0}
+                    />
+                  </td>
+                  <td className="p-2 text-right font-mono font-semibold text-marca-osc">
+                    {(horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0)}
+                  </td>
                   <td className="p-2 text-center">
                     <button
                       type="button"

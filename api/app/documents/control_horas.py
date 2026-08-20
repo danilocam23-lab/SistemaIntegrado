@@ -12,6 +12,8 @@ class ControlHoras(DocumentoOperativo):
     lt_hitss: str = ""
     horas_soporte: float = 0
     horas_desarrollo: float = 0
+    horas_soporte_cerrado: float = 0
+    horas_desarrollo_cerrado: float = 0
 
     class Settings:
         name = "control_horas"
