@@ -571,6 +571,34 @@ export default function ControlHorasFacturable() {
               )
             })}
           </tbody>
+          <tfoot>
+            <tr className="bg-slate-100 font-bold text-sm sticky bottom-0">
+              <td className="p-2" colSpan={5}>Totales</td>
+              <td className="p-2 text-right font-mono">{filas.length * 200}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasDesarrollo[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0), 0)}</td>
+              <td className="p-2"></td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasDesCerrado[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0), 0)}</td>
+              <td className="p-2"></td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasInc[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasLic[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasPerm[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (otrasNov[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasErr[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasGar[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasRep[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (otrasNovCal[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono font-bold">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0) + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0) + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
+              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0) + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
+              <td className="p-2" colSpan={3}></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
