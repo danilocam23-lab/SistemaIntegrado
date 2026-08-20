@@ -151,6 +151,7 @@ export interface Persona {
   nombre: string
   email: string | null
   rol_operativo: string
+  tipo_contratacion?: string | null
   activo: boolean
   squads: string[]
   es_lider_tecnico?: boolean
@@ -165,6 +166,18 @@ export interface Categoria {
   nombre: string
   color: string
   orden: number
+}
+
+export interface EndpointAdmin {
+  id: string
+  modulo: string
+  metodo: string
+  ruta: string
+  descripcion: string
+  parametros: string
+  cuerpo: string
+  permisos: string
+  activo: boolean
 }
 
 export interface Proyecto {

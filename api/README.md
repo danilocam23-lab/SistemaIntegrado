@@ -56,6 +56,23 @@ prueba de conexión, descubrimiento de campos y sincronización:
 
 El inventario completo se consulta en la vista frontend **Administración de Endpoints**.
 
+## Integración externa (Power Automate) — patrón de API Keys
+
+Cada endpoint bajo `/api/integracion/*` usa su **propia** API Key independiente
+(header `X-API-Key`), nunca reutiliza la de otro endpoint. Al crear uno nuevo:
+
+1. Agregar el campo en `app/config.py` (`Settings`) y su fallback en `get_settings()`
+   (bloque `# Integración externa`).
+2. Agregar la variable a `.env.example` **y también al `.env` real del entorno**
+   (`.env` está en `.gitignore`, por lo que editar solo `.env.example` no habilita
+   la clave en ejecución — hay que generar y pegar un valor real en `.env`).
+3. Crear la función `_verificar_api_key_<nombre>` en `app/api/integracion.py`
+   siguiendo el patrón de `_verificar_api_key_requerimientos`.
+4. Documentar el nuevo endpoint en `ENDPOINTS` y agregar su formulario de prueba
+   en `web/src/pages/AdminEndpoints.tsx` (sección "Probar integración de ...").
+
+Claves actuales: `API_KEY` (entregas), `API_KEY_REQUERIMIENTOS`, `API_KEY_SOLICITUDES`.
+
 ## Pendiente
 
 Portar el dominio del Liquidador y del Workload Manager (ver el documento de arquitectura,

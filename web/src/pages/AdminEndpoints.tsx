@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
-import type { Aplicacion } from '../types'
+import type { Aplicacion, EndpointAdmin } from '../types'
 
 const HEADER_CONSOLIDADO = { headers: { 'X-Aplicacion': '__todas__' } }
 
@@ -142,6 +142,8 @@ const ENDPOINTS: EndpointDoc[] = [
 
   { modulo: 'Integración externa', metodo: 'GET', ruta: '/api/integracion/entregas', descripcion: 'Entregas pendientes para Power Automate. Auth: X-API-Key.', parametros: 'aplicacion opcional' },
   { modulo: 'Integración externa', metodo: 'GET', ruta: '/api/integracion/requerimientos', descripcion: 'Requerimientos para Power Automate. Auth: X-API-Key independiente.', parametros: 'aplicacion y estado opcionales' },
+  { modulo: 'Integración externa', metodo: 'GET', ruta: '/api/integracion/solicitudes', descripcion: 'Fecha y hora de solicitud, Código SC, Código REQ, Squad, Estado, ANS ACTA, fecha real de entrega de estimaciones y horas estimadas. Auth: X-API-Key independiente (API_KEY_SOLICITUDES).', parametros: 'aplicacion opcional' },
+  { modulo: 'Integración externa', metodo: 'GET', ruta: '/api/integracion/solicitudes-entregas', descripcion: 'Entregas aplanadas: Código SC, Código REQ, N° Entrega, Horas, F. Comprometida, F. Real, Estado, Mes de aprobación, ANS (de la entrega), Garantía y N° Garantía (fechas sin hora). Auth: X-API-Key independiente (API_KEY_SOLICITUDES).', parametros: 'aplicacion opcional' },
 ]
 
 const metodoClase: Record<Metodo, string> = {
@@ -185,6 +187,14 @@ async function consultarIntegracion(
 
 export default function AdminEndpoints() {
   const { datos: apps } = useLista<Aplicacion>('/aplicaciones')
+  const { datos: endpointsAdmin, error: errorEndpointsAdmin, recargar: recargarEndpointsAdmin } =
+    useLista<EndpointAdmin>('/admin/endpoints')
+  const [nuevoModulo, setNuevoModulo] = useState('')
+  const [nuevoMetodo, setNuevoMetodo] = useState<Metodo>('GET')
+  const [nuevaRuta, setNuevaRuta] = useState('')
+  const [nuevaDescripcion, setNuevaDescripcion] = useState('')
+  const [avisoEndpointsAdmin, setAvisoEndpointsAdmin] = useState('')
+  const [creandoEndpointAdmin, setCreandoEndpointAdmin] = useState(false)
   const [identificador, setIdentificador] = useState('')
   const [nuevaAplicacion, setNuevaAplicacion] = useState('')
   const [resultado, setResultado] = useState<unknown>(null)
@@ -201,6 +211,10 @@ export default function AdminEndpoints() {
   const [apiKeyRequerimientosIntegracion, setApiKeyRequerimientosIntegracion] = useState('')
   const [aplicacionRequerimientosIntegracion, setAplicacionRequerimientosIntegracion] = useState('')
   const [estadoRequerimientosIntegracion, setEstadoRequerimientosIntegracion] = useState('')
+  const [cargandoSolicitudesIntegracion, setCargandoSolicitudesIntegracion] = useState(false)
+  const [apiKeySolicitudesIntegracion, setApiKeySolicitudesIntegracion] = useState('')
+  const [aplicacionSolicitudesIntegracion, setAplicacionSolicitudesIntegracion] = useState('')
+  const [cargandoSolicitudesEntregasIntegracion, setCargandoSolicitudesEntregasIntegracion] = useState(false)
 
   const modulos = useMemo(() => ['Todos', ...Array.from(new Set(ENDPOINTS.map((e) => e.modulo))).sort()], [])
   const endpointsFiltrados = useMemo(() => {
@@ -312,6 +326,86 @@ export default function AdminEndpoints() {
       setError(err instanceof Error ? err.message : mensajeError(err))
     } finally {
       setCargandoRequerimientosIntegracion(false)
+    }
+  }
+
+  async function probarSolicitudesIntegracion(e: FormEvent): Promise<void> {
+    e.preventDefault()
+    setError('')
+    setOk('')
+    setResultado(null)
+    setCargandoSolicitudesIntegracion(true)
+    try {
+      const params = aplicacionSolicitudesIntegracion ? { aplicacion: aplicacionSolicitudesIntegracion } : undefined
+      const data = await consultarIntegracion(
+        '/integracion/solicitudes',
+        apiKeySolicitudesIntegracion.trim(),
+        params,
+        'API_KEY_SOLICITUDES',
+      )
+      setResultado(data)
+      const total = Array.isArray(data) ? data.length : 0
+      setOk(`Endpoint de solicitudes ejecutado correctamente. Filas recibidas: ${total}.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : mensajeError(err))
+    } finally {
+      setCargandoSolicitudesIntegracion(false)
+    }
+  }
+
+  async function probarSolicitudesEntregasIntegracion(e: FormEvent): Promise<void> {
+    e.preventDefault()
+    setError('')
+    setOk('')
+    setResultado(null)
+    setCargandoSolicitudesEntregasIntegracion(true)
+    try {
+      const params = aplicacionSolicitudesIntegracion ? { aplicacion: aplicacionSolicitudesIntegracion } : undefined
+      const data = await consultarIntegracion(
+        '/integracion/solicitudes-entregas',
+        apiKeySolicitudesIntegracion.trim(),
+        params,
+        'API_KEY_SOLICITUDES',
+      )
+      setResultado(data)
+      const total = Array.isArray(data) ? data.length : 0
+      setOk(`Endpoint de entregas (solicitudes) ejecutado correctamente. Filas recibidas: ${total}.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : mensajeError(err))
+    } finally {
+      setCargandoSolicitudesEntregasIntegracion(false)
+    }
+  }
+
+  async function crearEndpointAdmin(e: FormEvent): Promise<void> {
+    e.preventDefault()
+    setAvisoEndpointsAdmin('')
+    setCreandoEndpointAdmin(true)
+    try {
+      await client.post('/admin/endpoints', {
+        modulo: nuevoModulo.trim(),
+        metodo: nuevoMetodo,
+        ruta: nuevaRuta.trim(),
+        descripcion: nuevaDescripcion.trim(),
+      })
+      setNuevoModulo('')
+      setNuevaRuta('')
+      setNuevaDescripcion('')
+      recargarEndpointsAdmin()
+    } catch (err) {
+      setAvisoEndpointsAdmin(mensajeError(err))
+    } finally {
+      setCreandoEndpointAdmin(false)
+    }
+  }
+
+  async function eliminarEndpointAdmin(endpoint: EndpointAdmin): Promise<void> {
+    setAvisoEndpointsAdmin('')
+    try {
+      await client.delete(`/admin/endpoints/${endpoint.id}`)
+      recargarEndpointsAdmin()
+    } catch (err) {
+      setAvisoEndpointsAdmin(mensajeError(err))
     }
   }
 
@@ -489,6 +583,101 @@ export default function AdminEndpoints() {
         </p>
       </form>
 
+      <form onSubmit={probarSolicitudesIntegracion} className="rounded-xl border bg-white p-4">
+        <div className="mb-3">
+          <h2 className="text-base font-semibold text-marca-osc">Probar integración de solicitudes dashboard</h2>
+          <p className="text-xs text-slate-500">
+            GET /api/integracion/solicitudes — devuelve fecha y hora de solicitud, Código SC y Código REQ.
+            Requiere API_KEY_SOLICITUDES (clave independiente de entregas y requerimientos).
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">X-API-Key solicitudes</span>
+            <input
+              type="password"
+              value={apiKeySolicitudesIntegracion}
+              onChange={(e) => setApiKeySolicitudesIntegracion(e.target.value)}
+              placeholder="Clave configurada en API_KEY_SOLICITUDES"
+              required
+              className="min-w-72 rounded border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Aplicación / squad (opcional)</span>
+            <select
+              value={aplicacionSolicitudesIntegracion}
+              onChange={(e) => setAplicacionSolicitudesIntegracion(e.target.value)}
+              className="min-w-64 rounded border px-3 py-2"
+            >
+              <option value="">Todas</option>
+              {apps.map((a) => (
+                <option key={a.codigo} value={a.codigo}>
+                  {a.nombre} ({a.codigo})
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            disabled={cargandoSolicitudesIntegracion}
+            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+          >
+            {cargandoSolicitudesIntegracion ? 'Probando...' : 'Probar endpoint'}
+          </button>
+        </div>
+        <p className="mt-2 font-mono text-xs text-slate-500">
+          /api/integracion/solicitudes{aplicacionSolicitudesIntegracion ? `?aplicacion=${aplicacionSolicitudesIntegracion}` : ''}
+        </p>
+      </form>
+
+      <form onSubmit={probarSolicitudesEntregasIntegracion} className="rounded-xl border bg-white p-4">
+        <div className="mb-3">
+          <h2 className="text-base font-semibold text-marca-osc">Probar integración de entregas dashboard</h2>
+          <p className="text-xs text-slate-500">
+            GET /api/integracion/solicitudes-entregas — devuelve Código SC, Código REQ, N° Entrega, Horas,
+            F. Comprometida, F. Real, Estado, Mes de aprobación, ANS, Garantía y N° Garantía (fechas sin hora).
+            Usa la misma API_KEY_SOLICITUDES.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">X-API-Key solicitudes</span>
+            <input
+              type="password"
+              value={apiKeySolicitudesIntegracion}
+              onChange={(e) => setApiKeySolicitudesIntegracion(e.target.value)}
+              placeholder="Clave configurada en API_KEY_SOLICITUDES"
+              required
+              className="min-w-72 rounded border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Aplicación / squad (opcional)</span>
+            <select
+              value={aplicacionSolicitudesIntegracion}
+              onChange={(e) => setAplicacionSolicitudesIntegracion(e.target.value)}
+              className="min-w-64 rounded border px-3 py-2"
+            >
+              <option value="">Todas</option>
+              {apps.map((a) => (
+                <option key={a.codigo} value={a.codigo}>
+                  {a.nombre} ({a.codigo})
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            disabled={cargandoSolicitudesEntregasIntegracion}
+            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+          >
+            {cargandoSolicitudesEntregasIntegracion ? 'Probando...' : 'Probar endpoint'}
+          </button>
+        </div>
+        <p className="mt-2 font-mono text-xs text-slate-500">
+          /api/integracion/solicitudes-entregas{aplicacionSolicitudesIntegracion ? `?aplicacion=${aplicacionSolicitudesIntegracion}` : ''}
+        </p>
+      </form>
+
       {ok && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">{ok}</div>}
       {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
 
@@ -498,6 +687,108 @@ export default function AdminEndpoints() {
           {resultado ? JSON.stringify(resultado, null, 2) : 'Sin resultados todavía.'}
         </pre>
       </div>
+
+      <section className="rounded-xl border bg-white p-4">
+        <div className="mb-3">
+          <h2 className="text-base font-semibold text-marca-osc">Catálogo administrable (agente de endpoints)</h2>
+          <p className="text-xs text-slate-500">
+            Prueba en vivo del agente CRUD de <code>/api/admin/endpoints</code>: agrega, lista y elimina entradas
+            reales almacenadas en MongoDB (colección <code>endpoints_admin</code>).
+          </p>
+        </div>
+
+        <form onSubmit={crearEndpointAdmin} className="mb-3 flex flex-wrap items-end gap-3">
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Módulo</span>
+            <input
+              value={nuevoModulo}
+              onChange={(e) => setNuevoModulo(e.target.value)}
+              placeholder="Ej: Endpoints"
+              required
+              className="min-w-40 rounded border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Método</span>
+            <select
+              value={nuevoMetodo}
+              onChange={(e) => setNuevoMetodo(e.target.value as Metodo)}
+              className="rounded border px-3 py-2"
+            >
+              {(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as Metodo[]).map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Ruta</span>
+            <input
+              value={nuevaRuta}
+              onChange={(e) => setNuevaRuta(e.target.value)}
+              placeholder="/api/admin/endpoints"
+              required
+              className="min-w-64 rounded border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Descripción</span>
+            <input
+              value={nuevaDescripcion}
+              onChange={(e) => setNuevaDescripcion(e.target.value)}
+              placeholder="Descripción breve"
+              className="min-w-64 rounded border px-3 py-2"
+            />
+          </label>
+          <button
+            disabled={creandoEndpointAdmin}
+            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+          >
+            {creandoEndpointAdmin ? 'Creando...' : 'Crear endpoint'}
+          </button>
+        </form>
+
+        {(avisoEndpointsAdmin || errorEndpointsAdmin) && (
+          <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">
+            {avisoEndpointsAdmin || errorEndpointsAdmin}
+          </div>
+        )}
+
+        <div className="overflow-auto rounded-lg border">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-slate-50 text-slate-600">
+              <tr>
+                <th className="px-3 py-2">Módulo</th>
+                <th className="px-3 py-2">Método</th>
+                <th className="px-3 py-2">Ruta</th>
+                <th className="px-3 py-2">Descripción</th>
+                <th className="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {endpointsAdmin.map((endpoint) => (
+                <tr key={endpoint.id} className="border-t align-top">
+                  <td className="px-3 py-2 font-medium text-slate-700">{endpoint.modulo}</td>
+                  <td className="px-3 py-2">
+                    <span className={`rounded px-2 py-0.5 font-semibold ${metodoClase[endpoint.metodo as Metodo] ?? ''}`}>
+                      {endpoint.metodo}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">{endpoint.ruta}</td>
+                  <td className="px-3 py-2 text-slate-600">{endpoint.descripcion || '—'}</td>
+                  <td className="px-3 py-2 text-center">
+                    <button onClick={() => eliminarEndpointAdmin(endpoint)} className="text-red-600 hover:underline">
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {endpointsAdmin.length === 0 && (
+                <tr><td colSpan={5} className="p-4 text-center text-slate-400">Sin endpoints registrados en el catálogo.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="rounded-xl border bg-white p-4">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">

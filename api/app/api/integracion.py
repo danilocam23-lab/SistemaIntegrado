@@ -10,9 +10,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.config import get_settings
+from app.documents.aplicacion import Aplicacion
 from app.documents.enums import EstadoEntrega, EstadoRequerimiento
 from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
+from app.documents.squad import Squad
 
 router = APIRouter(prefix="/integracion", tags=["integracion"])
 
@@ -54,6 +56,21 @@ async def _verificar_api_key_requerimientos(
     return x_api_key
 
 
+async def _verificar_api_key_solicitudes(
+    x_api_key: str = Header(..., alias="X-API-Key"),
+) -> str:
+    """Valida la API Key independiente para integración de solicitudes."""
+    settings = get_settings()
+    if not settings.api_key_solicitudes:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "API Key de solicitudes no configurada. Agregue API_KEY_SOLICITUDES en .env",
+        )
+    if x_api_key != settings.api_key_solicitudes:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "API Key inválida")
+    return x_api_key
+
+
 # ── Esquema de respuesta ──────────────────────────────────────────────────────
 
 class EntregaPlana(BaseModel):
@@ -83,6 +100,33 @@ class RequerimientoPlano(BaseModel):
     total_horas_estimadas: float | None = None
     cant_entregas: int = 0
     tipo_de_costo: str | None = None
+
+
+class SolicitudPlana(BaseModel):
+    """Una fila por cada requerimiento con los datos mínimos de su solicitud."""
+    fecha_solicitud: date | None = None
+    codigo_sc: str
+    cod_del_req: str
+    squad: str | None = None
+    estado: str
+    ans_acta: str | None = None
+    fecha_real_entrega_estimacion: datetime | None = None
+    horas_estimadas: float | None = None
+
+
+class EntregaSolicitudPlana(BaseModel):
+    """Una fila por cada entrega de un requerimiento (para el dashboard de solicitudes)."""
+    codigo_sc: str
+    cod_del_req: str
+    numero_entrega: int
+    horas: float | None = None
+    fecha_comprometida: date | None = None
+    fecha_real: date | None = None
+    estado: str | None = None
+    mes_aprobacion: str | None = None
+    ans: str | None = None
+    garantia: bool | None = None
+    numero_garantia: int | None = None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -272,5 +316,106 @@ async def listar_requerimientos(
             cant_entregas=len(req.entregas),
             tipo_de_costo=sol.tipo_costo.value if sol.tipo_costo else None,
         ))
+
+    return resultado
+
+
+@router.get(
+    "/solicitudes",
+    response_model=list[SolicitudPlana],
+    summary="Solicitudes aplanadas para Power Automate",
+    description=(
+        "Devuelve un array plano donde cada objeto es **una solicitud**: fecha y hora "
+        "de solicitud, Código SC, Código REQ, Squad, Estado, ANS ACTA, fecha real de "
+        "entrega de estimaciones y horas estimadas. "
+        "Autenticación: header `X-API-Key` usando `API_KEY_SOLICITUDES`."
+    ),
+)
+async def listar_solicitudes(
+    aplicacion: str | None = Query(
+        default=None,
+        description="Código de aplicación (squad). Si se omite, devuelve todas.",
+    ),
+    _: str = Depends(_verificar_api_key_solicitudes),
+) -> list[SolicitudPlana]:
+    filtro: dict = {}
+    if aplicacion:
+        filtro["aplicacion_id"] = aplicacion
+
+    reqs = await Requerimiento.find(filtro).to_list()
+
+    # Resolver nombre de squad en lote: prioriza el código de Aplicación (fuente
+    # real de squad_id en la mayoría de los casos) y usa la colección Squad como
+    # respaldo para registros importados con _id numérico. Mismo criterio que
+    # usa el frontend (Requerimientos.tsx).
+    squad_ids_raw = {
+        req.solicitud.squad_id for req in reqs if req.solicitud.squad_id
+    }
+    squad_nombre_por_id: dict[str, str] = {}
+    if squad_ids_raw:
+        squads = await Squad.find({"_id": {"$in": [oid for v in squad_ids_raw if (oid := _to_oid(v)) is not None]}}).to_list()
+        for s in squads:
+            squad_nombre_por_id[str(s.id)] = s.nombre
+        aplicaciones = await Aplicacion.find({"codigo": {"$in": list(squad_ids_raw)}}).to_list()
+        for a in aplicaciones:
+            squad_nombre_por_id[a.codigo] = a.nombre
+
+    resultado: list[SolicitudPlana] = []
+    for req in reqs:
+        squad_id = req.solicitud.squad_id
+        resultado.append(SolicitudPlana(
+            fecha_solicitud=req.fecha_solicitud_acta.date() if req.fecha_solicitud_acta else None,
+            codigo_sc=req.solicitud.codigo_sc,
+            cod_del_req=req.codigo_req,
+            squad=squad_nombre_por_id.get(squad_id or "", squad_id),
+            estado=req.estado,
+            ans_acta=req.ans_acta.value if req.ans_acta else None,
+            fecha_real_entrega_estimacion=req.fecha_real_entrega_estimacion,
+            horas_estimadas=float(req.total_horas_estimadas) if req.total_horas_estimadas is not None else None,
+        ))
+
+    return resultado
+
+
+@router.get(
+    "/solicitudes-entregas",
+    response_model=list[EntregaSolicitudPlana],
+    summary="Entregas aplanadas para el dashboard de solicitudes",
+    description=(
+        "Devuelve un array plano donde cada objeto es **una entrega** de un requerimiento: "
+        "Código SC, Código REQ, N° Entrega, Horas, F. Comprometida, F. Real, Estado, Mes "
+        "de aprobación, ANS (de la entrega), Garantía y N° Garantía. Las fechas se devuelven sin hora. "
+        "Autenticación: header `X-API-Key` usando `API_KEY_SOLICITUDES`."
+    ),
+)
+async def listar_solicitudes_entregas(
+    aplicacion: str | None = Query(
+        default=None,
+        description="Código de aplicación (squad). Si se omite, devuelve todas.",
+    ),
+    _: str = Depends(_verificar_api_key_solicitudes),
+) -> list[EntregaSolicitudPlana]:
+    filtro: dict = {}
+    if aplicacion:
+        filtro["aplicacion_id"] = aplicacion
+
+    reqs = await Requerimiento.find(filtro).to_list()
+
+    resultado: list[EntregaSolicitudPlana] = []
+    for req in reqs:
+        for entrega in req.entregas:
+            resultado.append(EntregaSolicitudPlana(
+                codigo_sc=req.solicitud.codigo_sc,
+                cod_del_req=req.codigo_req,
+                numero_entrega=entrega.numero,
+                horas=float(entrega.horas) if entrega.horas is not None else None,
+                fecha_comprometida=entrega.fecha_comprometida.date() if entrega.fecha_comprometida else None,
+                fecha_real=entrega.fecha_recepcion.date() if entrega.fecha_recepcion else None,
+                estado=entrega.estado,
+                mes_aprobacion=entrega.mes_aprobacion,
+                ans=entrega.ans_entrega.value if entrega.ans_entrega else None,
+                garantia=entrega.garantia,
+                numero_garantia=entrega.numero_garantia,
+            ))
 
     return resultado

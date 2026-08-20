@@ -14,6 +14,7 @@ from app.api import (
     configuracion,
     control_horas,
     dashboard,
+    endpoints_admin,
     estimaciones,
     festivos,
     garantias_wo,
@@ -35,6 +36,7 @@ api_router.include_router(auth.router)
 api_router.include_router(aplicaciones.router)
 api_router.include_router(usuarios.router)
 api_router.include_router(roles.router)
+api_router.include_router(endpoints_admin.router)
 api_router.include_router(dashboard.router)
 # Dominio de liquidación
 api_router.include_router(requerimientos.router)

@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     # Integración externa (Power Automate, etc.)
     api_key: str = ""
     api_key_requerimientos: str = ""
+    api_key_solicitudes: str = ""
 
     # Aplicación inicial
     aplicacion_inicial_codigo: str = "epm-hitss"
@@ -66,4 +67,6 @@ def get_settings() -> Settings:
         settings.api_key = _leer_env_file("API_KEY")
     if not settings.api_key_requerimientos:
         settings.api_key_requerimientos = _leer_env_file("API_KEY_REQUERIMIENTOS")
+    if not settings.api_key_solicitudes:
+        settings.api_key_solicitudes = _leer_env_file("API_KEY_SOLICITUDES")
     return settings

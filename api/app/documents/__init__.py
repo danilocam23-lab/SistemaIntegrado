@@ -13,6 +13,7 @@ from app.documents.capacidad import Capacidad
 from app.documents.categoria import Categoria
 from app.documents.configuracion import Configuracion
 from app.documents.control_horas import ControlHoras
+from app.documents.endpoint_admin import EndpointAdmin
 from app.documents.estimacion import Estimacion
 from app.documents.festivo import Festivo
 from app.documents.garantia_wo import GarantiaWO
@@ -57,6 +58,7 @@ ALL_DOCUMENTS = [
     AzdoConfig,
     GarantiaWO,
     ControlHoras,
+    EndpointAdmin,
 ]
 
 __all__ = [
@@ -85,4 +87,5 @@ __all__ = [
     "AzdoConfig",
     "GarantiaWO",
     "ControlHoras",
+    "EndpointAdmin",
 ]
