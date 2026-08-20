@@ -26,6 +26,10 @@ interface ControlHorasGuardado {
   horas_licencias: number
   horas_permisos: number
   otras_novedades: number
+  horas_errores_analista: number
+  horas_garantias: number
+  horas_reprocesos: number
+  otras_novedades_calidad: number
 }
 
 export default function ControlHorasFacturable() {
@@ -42,6 +46,10 @@ export default function ControlHorasFacturable() {
   const [horasLic, setHorasLic] = useState<Record<string, number>>({})
   const [horasPerm, setHorasPerm] = useState<Record<string, number>>({})
   const [otrasNov, setOtrasNov] = useState<Record<string, number>>({})
+  const [horasErr, setHorasErr] = useState<Record<string, number>>({})
+  const [horasGar, setHorasGar] = useState<Record<string, number>>({})
+  const [horasRep, setHorasRep] = useState<Record<string, number>>({})
+  const [otrasNovCal, setOtrasNovCal] = useState<Record<string, number>>({})
   const [guardandoFila, setGuardandoFila] = useState<Set<string>>(new Set())
   const [guardandoTodos, setGuardandoTodos] = useState(false)
   const [aviso, setAviso] = useState('')
@@ -61,6 +69,10 @@ export default function ControlHorasFacturable() {
         const hl: Record<string, number> = {}
         const hp: Record<string, number> = {}
         const on: Record<string, number> = {}
+        const he: Record<string, number> = {}
+        const hg: Record<string, number> = {}
+        const hr: Record<string, number> = {}
+        const onc: Record<string, number> = {}
         for (const r of data) {
           const k = `${r.persona_id}_${r.squad}`
           if (r.lt_hitss) lt[k] = r.lt_hitss
@@ -73,6 +85,10 @@ export default function ControlHorasFacturable() {
           if (r.horas_licencias) hl[k] = r.horas_licencias
           if (r.horas_permisos) hp[k] = r.horas_permisos
           if (r.otras_novedades) on[k] = r.otras_novedades
+          if (r.horas_errores_analista) he[k] = r.horas_errores_analista
+          if (r.horas_garantias) hg[k] = r.horas_garantias
+          if (r.horas_reprocesos) hr[k] = r.horas_reprocesos
+          if (r.otras_novedades_calidad) onc[k] = r.otras_novedades_calidad
         }
         setSeleccionLt((prev) => ({ ...lt, ...prev }))
         setHorasSoporte((prev) => ({ ...hs, ...prev }))
@@ -84,6 +100,10 @@ export default function ControlHorasFacturable() {
         setHorasLic((prev) => ({ ...hl, ...prev }))
         setHorasPerm((prev) => ({ ...hp, ...prev }))
         setOtrasNov((prev) => ({ ...on, ...prev }))
+        setHorasErr((prev) => ({ ...he, ...prev }))
+        setHorasGar((prev) => ({ ...hg, ...prev }))
+        setHorasRep((prev) => ({ ...hr, ...prev }))
+        setOtrasNovCal((prev) => ({ ...onc, ...prev }))
       })
       .catch(() => {})
   }, [personas])
@@ -180,6 +200,10 @@ export default function ControlHorasFacturable() {
       horas_licencias: horasLic[fila.key] ?? 0,
       horas_permisos: horasPerm[fila.key] ?? 0,
       otras_novedades: otrasNov[fila.key] ?? 0,
+      horas_errores_analista: horasErr[fila.key] ?? 0,
+      horas_garantias: horasGar[fila.key] ?? 0,
+      horas_reprocesos: horasRep[fila.key] ?? 0,
+      otras_novedades_calidad: otrasNovCal[fila.key] ?? 0,
     }
   }
 
@@ -317,6 +341,11 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Horas Permisos / Cap.</th>
               <th className="p-2 text-right">Otras Novedades Adm.</th>
               <th className="p-2 text-right">Total Novedades Adm.</th>
+              <th className="p-2 text-right">Horas Errores Analista</th>
+              <th className="p-2 text-right">Horas Garantías</th>
+              <th className="p-2 text-right">Horas Reprocesos</th>
+              <th className="p-2 text-right">Otras Nov. Calidad</th>
+              <th className="p-2 text-right">Total Nov. Calidad</th>
               <th className="p-2 w-20"></th>
               <th className="p-2 w-10"></th>
             </tr>
@@ -324,12 +353,12 @@ export default function ControlHorasFacturable() {
           <tbody>
             {cargando && (
               <tr>
-                <td colSpan={22} className="p-4 text-center text-slate-400">Cargando…</td>
+                <td colSpan={27} className="p-4 text-center text-slate-400">Cargando…</td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={22} className="p-4 text-center text-slate-400">Sin registros.</td>
+                <td colSpan={27} className="p-4 text-center text-slate-400">Sin registros.</td>
               </tr>
             )}
             {!cargando && filas.map((f, idx) => {
@@ -467,6 +496,29 @@ export default function ControlHorasFacturable() {
                   </td>
                   <td className="p-2 text-right font-mono font-semibold text-marca-osc">
                     {(horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)}
+                  </td>
+                  <td className="p-2">
+                    <input type="number" value={horasErr[f.key] ?? 0}
+                      onChange={(e) => setHorasErr((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2">
+                    <input type="number" value={horasGar[f.key] ?? 0}
+                      onChange={(e) => setHorasGar((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2">
+                    <input type="number" value={horasRep[f.key] ?? 0}
+                      onChange={(e) => setHorasRep((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2">
+                    <input type="number" value={otrasNovCal[f.key] ?? 0}
+                      onChange={(e) => setOtrasNovCal((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                  </td>
+                  <td className="p-2 text-right font-mono font-semibold text-marca-osc">
+                    {(horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
                   </td>
                   <td className="p-2 text-center">
                     <button

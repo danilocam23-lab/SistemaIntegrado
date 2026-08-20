@@ -19,6 +19,10 @@ class ControlHoras(DocumentoOperativo):
     horas_licencias: float = 0
     horas_permisos: float = 0
     otras_novedades: float = 0
+    horas_errores_analista: float = 0
+    horas_garantias: float = 0
+    horas_reprocesos: float = 0
+    otras_novedades_calidad: float = 0
 
     class Settings:
         name = "control_horas"
