@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import client from '../api/client'
@@ -29,6 +29,8 @@ export default function RequerimientoNuevo() {
   const [horas, setHoras] = useState('')
   const [fechaSolicitud, setFechaSolicitud] = useState('')
   const [seguimiento, setSeguimiento] = useState('')
+  const [seguimientoEpm, setSeguimientoEpm] = useState('')
+  const [tipificacion, setTipificacion] = useState('')
   const [aplicacionDestino, setAplicacionDestino] = useState('')
   const [aviso, setAviso] = useState('')
 
@@ -36,7 +38,24 @@ export default function RequerimientoNuevo() {
   const ltHitss = personas.filter((p) => p.rol_operativo === 'LT_HITSS')
   const ltEpm = personas.filter((p) => p.rol_operativo === 'LT_EPM')
   const squadNombre = squads.find((s) => s.codigo === squadId)?.nombre
-  const scrums = personas.filter(
+
+  // `personas` (useLista('/personas')) solo trae quienes pertenecen al squad
+  // "ambiente" (el que se está navegando actualmente), no necesariamente al squad
+  // elegido en este formulario. Por eso el listado de Scrum se consulta explícitamente
+  // contra el squad seleccionado (squadId), para que aparezcan personas con varios
+  // squads aunque el squad del nuevo requerimiento sea distinto del squad ambiente.
+  const [personasSquad, setPersonasSquad] = useState<Persona[]>([])
+  useEffect(() => {
+    if (!squadId) {
+      setPersonasSquad([])
+      return
+    }
+    client.get<Persona[]>('/personas', { headers: { 'X-Aplicacion': squadId } })
+      .then((r) => setPersonasSquad(r.data))
+      .catch(() => setPersonasSquad([]))
+  }, [squadId])
+
+  const scrums = (personasSquad.length > 0 ? personasSquad : personas).filter(
     (p) => p.rol_operativo === 'SCRUM' && (!squadNombre || (p.squads ?? []).includes(squadNombre)),
   )
 
@@ -78,6 +97,8 @@ export default function RequerimientoNuevo() {
         total_horas_estimadas: horas ? Number(horas) : null,
         fecha_solicitud_acta: fechaSolicitud || null,
         seguimiento: seguimiento || null,
+        seguimiento_epm: seguimientoEpm || null,
+        tipificacion: tipificacion || null,
       }, config)
       navigate(`/requerimientos/${resp.data.id}`)
     } catch (err) {
@@ -197,9 +218,23 @@ export default function RequerimientoNuevo() {
               type="datetime-local" className="w-full rounded border px-3 py-2" />
           </label>
           <label className="text-sm sm:col-span-2 lg:col-span-3">
-            <span className="mb-1 block text-slate-600">Seguimiento</span>
+            <span className="mb-1 block text-slate-600">Seguimiento Hitss</span>
             <textarea value={seguimiento} onChange={(e) => setSeguimiento(e.target.value)} rows={2}
               className="w-full rounded border px-3 py-2" />
+          </label>
+          <label className="text-sm sm:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
+            <textarea value={seguimientoEpm} onChange={(e) => setSeguimientoEpm(e.target.value)} rows={2}
+              className="w-full rounded border px-3 py-2" />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Tipificación</span>
+            <select value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
+              className="w-full rounded border px-3 py-2">
+              <option value="">— Seleccionar —</option>
+              <option value="HITSS">Hitss</option>
+              <option value="EPM">EPM</option>
+            </select>
           </label>
         </div>
         <p className="mt-2 text-xs text-slate-400">

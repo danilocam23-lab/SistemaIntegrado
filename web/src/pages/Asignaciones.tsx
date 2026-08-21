@@ -280,7 +280,7 @@ export default function Asignaciones() {
       resultado = resultado.filter((g) => g.reqEstado === filtroEstado)
     }
     
-    // Filtrar por persona
+    // Filtrar por persona (dropdown)
     if (filtroPersona !== '__todos__') {
       resultado = resultado.map((g) => ({
         ...g,
@@ -288,9 +288,22 @@ export default function Asignaciones() {
       }))
       resultado = resultado.filter((g) => g.items.length > 0)
     }
+
+    // Filtrar por búsqueda de persona (texto)
+    if (busquedaPersona.trim()) {
+      const q = busquedaPersona.toLowerCase().trim()
+      resultado = resultado.map((g) => ({
+        ...g,
+        items: g.items.filter((item) => {
+          const persona = personaPorId.get(item.asig.persona_id)
+          return persona?.nombre.toLowerCase().includes(q)
+        }),
+      }))
+      resultado = resultado.filter((g) => g.items.length > 0)
+    }
     
     return resultado
-  }, [gruposReq, filtroEstado, filtroPersona])
+  }, [gruposReq, filtroEstado, filtroPersona, busquedaPersona, personaPorId])
 
   // ─── Vista por personas: agrupa asignaciones por persona_id ───
   // Mapa de WOs por persona (matching por nombre)

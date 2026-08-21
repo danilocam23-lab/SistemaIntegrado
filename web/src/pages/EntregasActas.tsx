@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { useLista } from '../api/hooks'
-import type { Aplicacion, Requerimiento, Squad } from '../types'
+import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
 
 const MESES_NOMBRES: Record<string, string> = {
   ene: 'Enero', feb: 'Febrero', mar: 'Marzo', abr: 'Abril', may: 'Mayo', jun: 'Junio',
@@ -43,11 +43,14 @@ interface FilaEntrega {
   estado: string | null
   ansEntrega: string | null
   mesAprobacion: string | null
+  ltEpm: string
+  actaTrabajo: string
 }
 
 export default function EntregasActas() {
   const { datos: requerimientos, error, cargando, recargar } = useLista<Requerimiento>('/requerimientos')
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
+  const { datos: personas } = useLista<Persona>('/personas')
   const [squadsCol, setSquadsCol] = useState<Squad[]>([])
   const [filtroTexto, setFiltroTexto] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -84,11 +87,20 @@ export default function EntregasActas() {
     return m
   }, [squadsCol, aplicaciones])
 
+  const personaPorId = useMemo(() => {
+    const m = new Map<string, string>()
+    personas.forEach((p) => m.set(String(p.id), p.nombre))
+    return m
+  }, [personas])
+
   const filas = useMemo<FilaEntrega[]>(() => {
     const resultado: FilaEntrega[] = []
     for (const req of requerimientos) {
       const squadNombre = req.solicitud?.squad_id
         ? (squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id))
+        : ''
+      const ltEpmNombre = req.solicitud?.lt_epm_id
+        ? (personaPorId.get(String(req.solicitud.lt_epm_id)) ?? String(req.solicitud.lt_epm_id))
         : ''
       for (const en of req.entregas ?? []) {
         const porcentaje =
@@ -111,11 +123,13 @@ export default function EntregasActas() {
           estado: en.estado ?? null,
           ansEntrega: en.ans_entrega ?? null,
           mesAprobacion: en.mes_aprobacion ? normalizarMes(en.mes_aprobacion) : null,
+          ltEpm: ltEpmNombre,
+          actaTrabajo: req.acta_trabajo ?? '',
         })
       }
     }
     return resultado
-  }, [requerimientos, squadPorId])
+  }, [requerimientos, squadPorId, personaPorId])
 
   const filasFiltradas = useMemo(() => {
     return filas
@@ -129,7 +143,8 @@ export default function EntregasActas() {
           if (
             !f.codigoReq.toLowerCase().includes(t) &&
             !f.sc.toLowerCase().includes(t) &&
-            !f.nombreActa.toLowerCase().includes(t)
+            !f.nombreActa.toLowerCase().includes(t) &&
+            !f.actaTrabajo.toLowerCase().includes(t)
           )
             return false
         }
@@ -232,7 +247,7 @@ export default function EntregasActas() {
           <input
             value={filtroTexto}
             onChange={(e) => setFiltroTexto(e.target.value)}
-            placeholder="REQ, SC o acta…"
+            placeholder="REQ, SC, acta o acta de trabajo…"
             className="rounded border px-3 py-2 text-sm w-48"
           />
         </label>
@@ -311,7 +326,7 @@ export default function EntregasActas() {
               <th className="p-2 text-left">SC</th>
               <th className="p-2 text-left">Squad</th>
               <th className="p-2 text-left">Nombre de acta</th>
-              <th className="p-2 text-left">Aplicación EPM</th>
+              <th className="p-2 text-left">LT_EPM</th>
               <th className="p-2 text-center">N° Entrega</th>
               <th className="p-2 text-right">Horas</th>
               <th className="p-2 text-right">% Avance</th>
@@ -350,7 +365,7 @@ export default function EntregasActas() {
                 <td className="p-2 text-slate-600">{f.sc || '—'}</td>
                 <td className="p-2">{f.squad || '—'}</td>
                 <td className="p-2">{f.nombreActa || '—'}</td>
-                <td className="p-2 text-slate-600">{f.nombreActa ? f.nombreActa.split('-')[0].trim() : '—'}</td>
+                <td className="p-2 text-slate-600">{f.ltEpm || '—'}</td>
                 <td className="p-2 text-center">{f.entregaNum}</td>
                 <td className="p-2 text-right">{f.horas != null ? f.horas : '—'}</td>
                 <td className="p-2 text-right">

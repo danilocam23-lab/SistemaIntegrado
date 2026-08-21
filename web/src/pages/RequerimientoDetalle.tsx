@@ -28,6 +28,7 @@ export default function RequerimientoDetalle() {
   const { tienePermiso } = useAuth()
   const { modoConsolidado } = useAplicacion()
   const puedeEditarReq = tienePermiso('requerimientos.editar')
+  const puedeEditarTipificacion = puedeEditarReq || tienePermiso('requerimientos.tipificacion.editar')
   const puedeEliminarBitacora = tienePermiso('admin.roles.editar')
   const { datos: personas } = useLista<Persona>('/personas')
   const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
@@ -61,6 +62,8 @@ export default function RequerimientoDetalle() {
   const [fechaSolicitudActa, setFechaSolicitudActa] = useState('')
   const [fechaRealEntregaEst, setFechaRealEntregaEst] = useState('')
   const [seguimiento, setSeguimiento] = useState('')
+  const [seguimientoEpm, setSeguimientoEpm] = useState('')
+  const [tipificacion, setTipificacion] = useState('')
   const [motivoCierre, setMotivoCierre] = useState('')
   const [actaTrabajo, setActaTrabajo] = useState('')
 
@@ -72,9 +75,45 @@ export default function RequerimientoDetalle() {
   const [eEstado, setEEstado] = useState(ESTADOS_ENTREGA[0])
   const [eMesAprobacion, setEMesAprobacion] = useState('')
   const [eObservaciones, setEObservaciones] = useState('')
+  const [eObservacionesHitss, setEObservacionesHitss] = useState('')
+  const [eTipificacion, setETipificacion] = useState('')
   const [eGarantia, setEGarantia] = useState(false)
   const [eNumGarantia, setENumGarantia] = useState<number | null>(null)
   const [eEditando, setEEditando] = useState(false)
+
+  // Edición inline de Observaciones Hitss / Tipificación por entrega
+  // (visible para quienes tengan requerimientos.tipificacion.editar aunque no
+  // tengan requerimientos.editar completo).
+  const [tipifEdicion, setTipifEdicion] = useState<Record<number, { obs: string; tip: string }>>({})
+  const [guardandoTipif, setGuardandoTipif] = useState<Set<number>>(new Set())
+
+  function iniciarEdicionTipifEntrega(en: Requerimiento['entregas'][number]): void {
+    setTipifEdicion((p) => ({
+      ...p,
+      [en.numero]: { obs: en.observaciones_hitss ?? '', tip: en.tipificacion ?? '' },
+    }))
+  }
+
+  async function guardarTipifEntregaInline(numero: number): Promise<void> {
+    const edicion = tipifEdicion[numero]
+    if (!edicion || !req) return
+    setGuardandoTipif((s) => new Set(s).add(numero))
+    try {
+      await client.patch('/requerimientos/detalle-ans', {
+        tipo: 'entrega',
+        req_id: req.id,
+        entrega_numero: numero,
+        observaciones_hitss: edicion.obs || null,
+        tipificacion: edicion.tip || null,
+      }, writeConfig())
+      setTipifEdicion((p) => { const n = { ...p }; delete n[numero]; return n })
+      recargar()
+    } catch (err) {
+      setAviso(mensajeError(err))
+    } finally {
+      setGuardandoTipif((s) => { const n = new Set(s); n.delete(numero); return n })
+    }
+  }
 
   function cargarEntregaEnFormulario(en: Requerimiento['entregas'][number]): void {
     setENumero(String(en.numero))
@@ -84,6 +123,8 @@ export default function RequerimientoDetalle() {
     setEEstado(en.estado ?? estadosEnt[0])
     setEMesAprobacion(en.mes_aprobacion ?? '')
     setEObservaciones(en.observaciones ?? '')
+    setEObservacionesHitss(en.observaciones_hitss ?? '')
+    setETipificacion(en.tipificacion ?? '')
     setEGarantia(en.garantia ?? false)
     setENumGarantia(en.numero_garantia ?? (en.garantia ? 1 : null))
     setEEditando(true)
@@ -97,6 +138,8 @@ export default function RequerimientoDetalle() {
     setEEstado(estadosEnt[0])
     setEMesAprobacion('')
     setEObservaciones('')
+    setEObservacionesHitss('')
+    setETipificacion('')
     setEGarantia(false)
     setENumGarantia(null)
     setEEditando(false)
@@ -118,6 +161,8 @@ export default function RequerimientoDetalle() {
       setFechaSolicitudActa(data.fecha_solicitud_acta ? data.fecha_solicitud_acta.slice(0, 16) : '')
       setFechaRealEntregaEst(data.fecha_real_entrega_estimacion ? data.fecha_real_entrega_estimacion.slice(0, 16) : '')
       setSeguimiento(data.seguimiento ?? '')
+      setSeguimientoEpm(data.seguimiento_epm ?? '')
+      setTipificacion(data.tipificacion ?? '')
       setMotivoCierre(data.motivo_cierre ?? '')
       setActaTrabajo(data.acta_trabajo ?? '')
       const [liq, bit] = await Promise.all([
@@ -151,9 +196,56 @@ export default function RequerimientoDetalle() {
   }
 
   const squadNombre = resolverNombreSquad(squadId)
-  const scrums = personas.filter(
-    (p) => p.rol_operativo === 'SCRUM' && (!squadNombre || squadNombre === '—' || (p.squads ?? []).includes(squadNombre)),
+
+  // El squadId puede ser el código de una Aplicación (registros creados a mano) o el id
+  // de un documento Squad (registros importados). Para pedir personas del squad
+  // correcto siempre se resuelve al código real de Aplicación a partir del nombre.
+  const codigoAppSquad = squads.find((s) => s.codigo === squadId)?.codigo
+    ?? squads.find((s) => s.nombre === squadNombre)?.codigo
+    ?? ''
+
+  // Las personas (`useLista('/personas')`) solo traen quienes pertenecen al squad
+  // "ambiente" (el que se está navegando), no al squad seleccionado en este formulario.
+  // Por eso, para el listado de Scrum se consulta explícitamente el squad elegido
+  // (codigoAppSquad), así aparecen personas con varios squads aunque el squad del
+  // requerimiento sea distinto al squad ambiente actual.
+  const [personasSquad, setPersonasSquad] = useState<Persona[]>([])
+  useEffect(() => {
+    if (!codigoAppSquad) {
+      setPersonasSquad([])
+      return
+    }
+    client.get<Persona[]>('/personas', { headers: { 'X-Aplicacion': codigoAppSquad } })
+      .then((r) => setPersonasSquad(r.data))
+      .catch(() => setPersonasSquad([]))
+  }, [codigoAppSquad])
+
+  // Cuando ya se cargaron las personas del squad correcto (server-side ya filtra por
+  // aplicacion_id o squads), no hace falta repetir el filtro por nombre de squad; solo
+  // se re-aplica como respaldo si el fetch específico falló y se usa la lista ambiente.
+  const scrums = (personasSquad.length > 0 ? personasSquad : personas).filter(
+    (p) => p.rol_operativo === 'SCRUM' && (
+      personasSquad.length > 0 || !squadNombre || squadNombre === '—' || (p.squads ?? []).includes(squadNombre)
+    ),
   )
+
+  // Respaldo: si el scrum ya asignado no aparece en ninguna de las listas anteriores
+  // (por ejemplo, mientras el fetch por squad todavía no responde), se busca
+  // puntualmente por id para no perder su nombre en el select.
+  const [scrumAsignado, setScrumAsignado] = useState<Persona | null>(null)
+  useEffect(() => {
+    if (!scrumId) {
+      setScrumAsignado(null)
+      return
+    }
+    if (personas.some((p) => p.id === scrumId) || personasSquad.some((p) => p.id === scrumId)) {
+      setScrumAsignado(null)
+      return
+    }
+    client.get<Persona>(`/personas/${scrumId}`, { headers: { 'X-Aplicacion': '__todas__' } })
+      .then((r) => setScrumAsignado(r.data))
+      .catch(() => setScrumAsignado(null))
+  }, [scrumId, personas, personasSquad])
 
   // En modo consolidado el cliente envía __todas__; las escrituras necesitan
   // el código real de la aplicación. Se obtiene del propio requerimiento
@@ -189,8 +281,32 @@ export default function RequerimientoDetalle() {
         fecha_solicitud_acta: fechaSolicitudActa || null,
         fecha_real_entrega_estimacion: fechaRealEntregaEst || null,
         seguimiento: seguimiento || null,
+        seguimiento_epm: seguimientoEpm || null,
+        tipificacion: tipificacion || null,
         motivo_cierre: motivoCierre || null,
         acta_trabajo: actaTrabajo || null,
+      }, writeConfig())
+      setOk('Cambios guardados.')
+      recargar()
+    } catch (err) {
+      setAviso(mensajeError(err))
+    }
+  }
+
+  async function guardarTipificacionReq(): Promise<void> {
+    setAviso('')
+    setOk('')
+    if (!puedeEditarTipificacion) {
+      setAviso('No tienes permiso para editar Seguimiento Hitss / Tipificación.')
+      return
+    }
+    if (!req) return
+    try {
+      await client.patch('/requerimientos/detalle-ans', {
+        tipo: 'requerimiento',
+        req_id: req.id,
+        seguimiento: seguimiento || null,
+        tipificacion: tipificacion || null,
       }, writeConfig())
       setOk('Cambios guardados.')
       recargar()
@@ -231,6 +347,8 @@ export default function RequerimientoDetalle() {
         estado: eEstado,
         mes_aprobacion: eEstado.toUpperCase() === 'APROBADA' ? (eMesAprobacion || null) : null,
         observaciones: eObservaciones || null,
+        observaciones_hitss: eObservacionesHitss || null,
+        tipificacion: eTipificacion || null,
         garantia: eGarantia,
         numero_garantia: eGarantia ? (eNumGarantia ?? 1) : null,
       }, writeConfig())
@@ -240,6 +358,8 @@ export default function RequerimientoDetalle() {
       setEFechaReal('')
       setEMesAprobacion('')
       setEObservaciones('')
+      setEObservacionesHitss('')
+      setETipificacion('')
       setEEditando(false)
       recargar()
     } catch (err) {
@@ -366,6 +486,14 @@ export default function RequerimientoDetalle() {
               disabled={!squadId}
               className="w-full rounded border px-3 py-2 disabled:bg-slate-100">
               <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
+              {scrumId && !scrums.some((p) => p.id === scrumId) && (
+                <option value={scrumId}>
+                  {personas.find((p) => p.id === scrumId)?.nombre
+                    ?? personasSquad.find((p) => p.id === scrumId)?.nombre
+                    ?? scrumAsignado?.nombre
+                    ?? scrumId}
+                </option>
+              )}
               {scrums.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </label>
@@ -394,7 +522,7 @@ export default function RequerimientoDetalle() {
               className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-slate-600">ANS ACTA</span>
+            <span className="mb-1 block text-slate-600">ANS Estimación</span>
             {(() => {
               const cumple =
                 req.fecha_limite && fechaRealEntregaEst
@@ -424,9 +552,10 @@ export default function RequerimientoDetalle() {
               className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
           </label>
           <label className="text-sm sm:col-span-2 lg:col-span-3">
-            <span className="mb-1 block text-slate-600">Seguimiento</span>
-            <textarea value={seguimiento} onChange={(e) => setSeguimiento(e.target.value)} rows={2}
-              className="w-full rounded border px-3 py-2" />
+            <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
+            <textarea value={seguimientoEpm} onChange={(e) => setSeguimientoEpm(e.target.value)} rows={2}
+              disabled={!puedeEditarReq}
+              className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
           </label>
           <label className="text-sm sm:col-span-2 lg:col-span-3">
             <span className="mb-1 block text-slate-600">Motivo de cierre</span>
@@ -441,6 +570,37 @@ export default function RequerimientoDetalle() {
           </button>
         )}
       </form>
+
+      {/* Seguimiento Hitss y Tipificación (editable por Administrador de squad) */}
+      <div className="rounded-xl border bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Seguimiento Hitss
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="text-sm sm:col-span-2 lg:col-span-3">
+            <span className="mb-1 block text-slate-600">Seguimiento Hitss</span>
+            <textarea value={seguimiento} onChange={(e) => setSeguimiento(e.target.value)} rows={2}
+              disabled={!puedeEditarTipificacion}
+              className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Tipificación</span>
+            <select value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
+              disabled={!puedeEditarTipificacion}
+              className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500">
+              <option value="">— Seleccionar —</option>
+              <option value="HITSS">Hitss</option>
+              <option value="EPM">EPM</option>
+            </select>
+          </label>
+        </div>
+        {puedeEditarTipificacion && (
+          <button type="button" onClick={guardarTipificacionReq}
+            className="mt-3 rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">
+            Guardar Seguimiento Hitss / Tipificación
+          </button>
+        )}
+      </div>
 
       {/* Entregas */}
       <div className="rounded-xl border bg-white p-4">
@@ -466,7 +626,9 @@ export default function RequerimientoDetalle() {
               <th className="py-1">N°</th><th className="py-1">Horas</th>
               <th className="py-1">% Avance</th><th className="py-1">F. Comprometida</th>
               <th className="py-1">F. Real</th><th className="py-1">Estado</th><th className="py-1">Mes aprobación</th>
-              <th className="py-1">Observaciones</th><th className="py-1">ANS</th><th className="py-1">Garantía</th><th className="py-1">N° Garantía</th>
+              <th className="py-1">Observaciones EPM</th><th className="py-1">Observaciones Hitss</th>
+              <th className="py-1">Tipificación</th>
+              <th className="py-1">ANS</th><th className="py-1">Garantía</th><th className="py-1">N° Garantía</th>
               <th className="py-1"></th>
             </tr>
           </thead>
@@ -489,6 +651,28 @@ export default function RequerimientoDetalle() {
                   <td className="py-1">{en.estado ?? '—'}</td>
                   <td className="py-1">{en.mes_aprobacion ?? '—'}</td>
                   <td className="py-1">{en.observaciones ?? '—'}</td>
+                  <td className="py-1">
+                    {tipifEdicion[en.numero] ? (
+                      <input
+                        value={tipifEdicion[en.numero].obs}
+                        onChange={(ev) => setTipifEdicion((p) => ({ ...p, [en.numero]: { ...p[en.numero], obs: ev.target.value } }))}
+                        className="w-full rounded border px-2 py-1 text-xs"
+                      />
+                    ) : (en.observaciones_hitss ?? '—')}
+                  </td>
+                  <td className="py-1">
+                    {tipifEdicion[en.numero] ? (
+                      <select
+                        value={tipifEdicion[en.numero].tip}
+                        onChange={(ev) => setTipifEdicion((p) => ({ ...p, [en.numero]: { ...p[en.numero], tip: ev.target.value } }))}
+                        className="rounded border px-2 py-1 text-xs"
+                      >
+                        <option value="">— Seleccionar —</option>
+                        <option value="HITSS">Hitss</option>
+                        <option value="EPM">EPM</option>
+                      </select>
+                    ) : (en.tipificacion ?? '—')}
+                  </td>
                   <td className={`py-1 font-medium ${ansColor}`}>{ansLabel}</td>
                   <td className="py-1">{en.garantia ? 'Sí' : 'No'}</td>
                   <td className="py-1">{en.numero_garantia ?? '—'}</td>
@@ -511,12 +695,43 @@ export default function RequerimientoDetalle() {
                         </button>
                       </div>
                     )}
+                    {!puedeEditarReq && puedeEditarTipificacion && (
+                      <div className="flex gap-2">
+                        {tipifEdicion[en.numero] ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled={guardandoTipif.has(en.numero)}
+                              onClick={() => guardarTipifEntregaInline(en.numero)}
+                              className="text-marca hover:underline disabled:opacity-50"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setTipifEdicion((p) => { const n = { ...p }; delete n[en.numero]; return n })}
+                              className="text-slate-500 hover:underline"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => iniciarEdicionTipifEntrega(en)}
+                            className="text-marca hover:underline"
+                          >
+                            Editar Hitss
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               )
             })}
             {req.entregas.length === 0 && (
-              <tr><td colSpan={11} className="py-2 text-slate-400">Sin entregas.</td></tr>
+              <tr><td colSpan={13} className="py-2 text-slate-400">Sin entregas.</td></tr>
             )}
           </tbody>
         </table>
@@ -583,13 +798,34 @@ export default function RequerimientoDetalle() {
             </label>
           )}
           <label className="min-w-[280px] flex-1 text-sm">
-            <span className="mb-1 block text-slate-600">Observaciones</span>
+            <span className="mb-1 block text-slate-600">Observaciones EPM</span>
             <input
               value={eObservaciones}
               onChange={(e) => setEObservaciones(e.target.value)}
-              placeholder="Notas de la entrega"
+              placeholder="Notas de la entrega (EPM)"
               className="w-full rounded border px-3 py-2"
             />
+          </label>
+          <label className="min-w-[280px] flex-1 text-sm">
+            <span className="mb-1 block text-slate-600">Observaciones Hitss</span>
+            <input
+              value={eObservacionesHitss}
+              onChange={(e) => setEObservacionesHitss(e.target.value)}
+              placeholder="Notas de la entrega (Hitss)"
+              className="w-full rounded border px-3 py-2"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Tipificación</span>
+            <select
+              value={eTipificacion}
+              onChange={(e) => setETipificacion(e.target.value)}
+              className="rounded border px-3 py-2"
+            >
+              <option value="">— Seleccionar —</option>
+              <option value="HITSS">Hitss</option>
+              <option value="EPM">EPM</option>
+            </select>
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={eGarantia} onChange={(e) => { setEGarantia(e.target.checked); if (e.target.checked && !eNumGarantia) setENumGarantia(1) }} />

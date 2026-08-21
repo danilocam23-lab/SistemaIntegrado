@@ -8,6 +8,7 @@ from app.documents.enums import (
     AnsResultado,
     EstadoFacturacion,
     TipoCosto,
+    Tipificacion,
 )
 
 
@@ -37,6 +38,8 @@ class RequerimientoIn(BaseModel):
     fecha_solicitud_acta: datetime | None = None
     motivo_cierre: str | None = None
     seguimiento: str | None = None
+    seguimiento_epm: str | None = None
+    tipificacion: Tipificacion | None = None
     monto_pactado: Decimal | None = None
     acta_trabajo: str | None = None
     cantidad_entregas: int = 0
@@ -56,6 +59,8 @@ class RequerimientoUpdate(BaseModel):
     fecha_solicitud_acta: datetime | None = None
     motivo_cierre: str | None = None
     seguimiento: str | None = None
+    seguimiento_epm: str | None = None
+    tipificacion: Tipificacion | None = None
     monto_pactado: Decimal | None = None
     acta_trabajo: str | None = None
     cantidad_entregas: int | None = None
@@ -83,6 +88,8 @@ class EntregaIn(BaseModel):
     fecha_ejecucion: datetime | None = None
     estado: str | None = None
     observaciones: str | None = None
+    observaciones_hitss: str | None = None
+    tipificacion: Tipificacion | None = None
     mes_aprobacion: str | None = None
     ans_entrega: AnsResultado | None = None
     garantia: bool = False

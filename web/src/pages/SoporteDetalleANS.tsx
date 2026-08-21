@@ -145,27 +145,26 @@ export default function SoporteDetalleANS() {
     const cumplimiento: EstadoResumen = crearResumen()
     const inicio: EstadoResumen = crearResumen()
 
+    // Cada registro cuenta siempre hacia el total (denominador real). Solo se marca
+    // como "cumple" si el estado es explícitamente CUMPLE; cualquier otro valor
+    // (NO CUMPLE, "Sin información", vacío, etc.) se contabiliza como no-cumple,
+    // para que el % de la card refleje el cumplimiento real y no solo el de los
+    // registros con estado explícito.
     registrosFiltrados.forEach((r) => {
       const estadoOportunidad = estadoANS(r.datos?.['Estado_ANS_Oportunidad'])
-      if (estadoOportunidad !== 'OTRO') {
-        oportunidad.total++
-        if (estadoOportunidad === 'CUMPLE') oportunidad.cumple++
-        else oportunidad.noCumple++
-      }
+      oportunidad.total++
+      if (estadoOportunidad === 'CUMPLE') oportunidad.cumple++
+      else oportunidad.noCumple++
 
       const estadoCumplimiento = estadoANS(r.datos?.['Estado_ANS_Cumplimiento'])
-      if (estadoCumplimiento !== 'OTRO') {
-        cumplimiento.total++
-        if (estadoCumplimiento === 'CUMPLE') cumplimiento.cumple++
-        else cumplimiento.noCumple++
-      }
+      cumplimiento.total++
+      if (estadoCumplimiento === 'CUMPLE') cumplimiento.cumple++
+      else cumplimiento.noCumple++
 
       const estadoInicio = estadoANS(r.datos?.['Estado_ANS_inicio_trabajo'])
-      if (estadoInicio !== 'OTRO') {
-        inicio.total++
-        if (estadoInicio === 'CUMPLE') inicio.cumple++
-        else inicio.noCumple++
-      }
+      inicio.total++
+      if (estadoInicio === 'CUMPLE') inicio.cumple++
+      else inicio.noCumple++
     })
 
     return { oportunidad, cumplimiento, inicio }
@@ -173,19 +172,19 @@ export default function SoporteDetalleANS() {
 
   const registrosOportunidad = useMemo(
     () => registrosFiltrados
-      .filter((r) => estadoANS(r.datos?.['Estado_ANS_Oportunidad']) === 'NO_CUMPLE')
+      .filter((r) => estadoANS(r.datos?.['Estado_ANS_Oportunidad']) !== 'CUMPLE')
       .sort(ordenarPorWorkOrderID),
     [registrosFiltrados],
   )
   const registrosCumplimiento = useMemo(
     () => registrosFiltrados
-      .filter((r) => estadoANS(r.datos?.['Estado_ANS_Cumplimiento']) === 'NO_CUMPLE')
+      .filter((r) => estadoANS(r.datos?.['Estado_ANS_Cumplimiento']) !== 'CUMPLE')
       .sort(ordenarPorWorkOrderID),
     [registrosFiltrados],
   )
   const registrosInicio = useMemo(
     () => registrosFiltrados
-      .filter((r) => estadoANS(r.datos?.['Estado_ANS_inicio_trabajo']) === 'NO_CUMPLE')
+      .filter((r) => estadoANS(r.datos?.['Estado_ANS_inicio_trabajo']) !== 'CUMPLE')
       .sort(ordenarPorWorkOrderID),
     [registrosFiltrados],
   )
@@ -377,11 +376,11 @@ function CardANS({ titulo, data, color }: { titulo: string; data: EstadoResumen;
     amber: { borde: 'border-amber-200', fondo: 'bg-amber-50', texto: 'text-amber-800', sub: 'text-amber-600' },
     purple: { borde: 'border-purple-200', fondo: 'bg-purple-50', texto: 'text-purple-800', sub: 'text-purple-600' },
   }[color]
-  const pct = data.total > 0 ? Math.round((data.cumple / data.total) * 100) : 0
+  const pct = data.total > 0 ? Number(((data.cumple / data.total) * 100).toFixed(2)) : 0
   return (
     <div className={`rounded-xl border p-4 ${colores.borde} ${colores.fondo}`}>
       <p className={`text-sm font-semibold ${colores.sub}`}>{titulo}</p>
-      <p className={`text-2xl font-bold ${colores.texto}`}>{pct}%</p>
+      <p className={`text-2xl font-bold ${colores.texto}`}>{pct.toFixed(2)}%</p>
       <p className={`text-sm ${colores.sub}`}>Cumple: {data.cumple} / {data.total}</p>
       <p className="text-sm text-red-600">No cumple: {data.noCumple}</p>
     </div>

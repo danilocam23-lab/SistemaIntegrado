@@ -2,6 +2,7 @@
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError
 
 from app.documents.bitacora import Bitacora
@@ -127,6 +128,8 @@ async def crear(
         fecha_solicitud_acta=datos.fecha_solicitud_acta,
         motivo_cierre=datos.motivo_cierre,
         seguimiento=datos.seguimiento,
+        seguimiento_epm=datos.seguimiento_epm,
+        tipificacion=datos.tipificacion,
         monto_pactado=datos.monto_pactado,
         acta_trabajo=datos.acta_trabajo,
         cantidad_entregas=datos.cantidad_entregas,
@@ -180,7 +183,9 @@ async def actualizar(
         "total_horas_estimadas": "Horas estimadas",
         "fecha_solicitud_acta": "Fecha solicitud acta",
         "fecha_real_entrega_estimacion": "Fecha real entrega",
-        "seguimiento": "Seguimiento",
+        "seguimiento": "Seguimiento Hitss",
+        "seguimiento_epm": "Seguimiento EPM",
+        "tipificacion": "Tipificación",
         "motivo_cierre": "Motivo cierre",
         "acta_trabajo": "Acta de trabajo",
         "monto_pactado": "Monto pactado",
@@ -491,3 +496,70 @@ async def diagnostico(
         "creado_en": req.creado_en.isoformat() if req.creado_en else None,
         "actualizado_en": req.actualizado_en.isoformat() if req.actualizado_en else None,
     }
+
+
+class DetalleAnsReqUpdate(BaseModel):
+    tipo: str  # 'requerimiento' o 'entrega'
+    req_id: str
+    entrega_numero: int | None = None
+    se_levanto_ans: bool | None = None
+    observaciones: str | None = None
+    seguimiento: str | None = None
+    observaciones_hitss: str | None = None
+    tipificacion: str | None = None
+
+
+@router.patch("/detalle-ans")
+async def actualizar_detalle_ans_req(
+    body: DetalleAnsReqUpdate,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
+):
+    """Actualiza se_levanto_ans y/u observaciones_ans de un requerimiento o entrega.
+
+    También permite, a quienes tengan el permiso 'requerimientos.tipificacion.editar'
+    (p. ej. Administrador de squad), actualizar Seguimiento Hitss/Tipificación del
+    requerimiento u Observaciones Hitss/Tipificación de la entrega.
+    """
+    puede_ans = await tiene_permiso(usuario, "requerimientos.detalle_ans.editar") or await tiene_permiso(usuario, "requerimientos.editar")
+    puede_tipificacion = puede_ans or await tiene_permiso(usuario, "requerimientos.tipificacion.editar")
+    if not puede_ans and not puede_tipificacion:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
+
+    from bson import ObjectId
+    req = await Requerimiento.get(ObjectId(body.req_id))
+    if not req or req.aplicacion_id not in ctx.codigos:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Requerimiento no encontrado")
+
+    quiere_ans = body.se_levanto_ans is not None or body.observaciones is not None
+    quiere_tipificacion = body.seguimiento is not None or body.observaciones_hitss is not None or body.tipificacion is not None
+    if quiere_ans and not puede_ans:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
+    if quiere_tipificacion and not puede_tipificacion:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
+
+    if body.tipo == "entrega" and body.entrega_numero is not None:
+        entrega = next((e for e in (req.entregas or []) if e.numero == body.entrega_numero), None)
+        if not entrega:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Entrega no encontrada")
+        if body.se_levanto_ans is not None:
+            entrega.se_levanto_ans = body.se_levanto_ans
+        if body.observaciones is not None:
+            entrega.observaciones_ans = body.observaciones
+        if body.observaciones_hitss is not None:
+            entrega.observaciones_hitss = body.observaciones_hitss
+        if body.tipificacion is not None:
+            entrega.tipificacion = body.tipificacion or None
+    else:
+        if body.se_levanto_ans is not None:
+            req.se_levanto_ans = body.se_levanto_ans
+        if body.observaciones is not None:
+            req.observaciones_ans = body.observaciones
+        if body.seguimiento is not None:
+            req.seguimiento = body.seguimiento
+        if body.tipificacion is not None:
+            req.tipificacion = body.tipificacion or None
+
+    req.marcar_actualizado()
+    await req.save()
+    return {"ok": True}

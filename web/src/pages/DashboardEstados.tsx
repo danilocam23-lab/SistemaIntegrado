@@ -41,10 +41,6 @@ function colorEstado(estado: string): string {
   return PALETA.morado
 }
 
-function estadoNormalizado(estado: string): string {
-  return estado.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-}
-
 function esActivo(estado: string): boolean {
   const normalized = estado.toUpperCase()
   return !normalized.includes('CANCELADO') && !normalized.includes('REEMPLAZADO')
@@ -146,31 +142,6 @@ export default function DashboardEstados() {
       }))
       .sort((a, b) => b.cantidad - a.cantidad || b.horas - a.horas)
   }, [requerimientos])
-
-  const porEstadoEntregasAprobacion = useMemo(() => {
-    const filas = porEstadoEntregas.filter((fila) => {
-      const estado = estadoNormalizado(fila.estado)
-      return estado === 'APROBADA' || estado === 'EN ESPERA DE APROBACION'
-    })
-    const total = filas.reduce((sum, fila) => sum + fila.cantidad, 0) || 1
-    return filas.map((fila) => ({
-      ...fila,
-      porcentaje: (fila.cantidad / total) * 100,
-    }))
-  }, [porEstadoEntregas])
-
-  const totalesEntregasAprobacion = useMemo(() => (
-    porEstadoEntregasAprobacion.reduce(
-      (acc, fila) => {
-        acc.cantidad += fila.cantidad
-        acc.horas += fila.horas
-        acc.garantias += fila.garantias
-        return acc
-      },
-      { cantidad: 0, horas: 0, garantias: 0 },
-    )
-  ), [porEstadoEntregasAprobacion])
-
 
   const totalesEstados = useMemo(() => {
     return porEstado.reduce(
@@ -451,61 +422,6 @@ export default function DashboardEstados() {
                 </table>
               </div>
             )}
-            </ChartCardPremium>
-
-            <ChartCardPremium
-              titulo="Entregas aprobadas y en espera de aprobación"
-              descripcion="Distribución de entregas con estos estados"
-            >
-              {porEstadoEntregasAprobacion.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <div className="overflow-hidden">
-                  <table className="w-full table-fixed text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/50">
-                        <th className="px-3 py-3 text-left font-semibold text-slate-900">Estado</th>
-                        <th className="px-3 py-3 text-center font-semibold text-slate-900">Entregas</th>
-                        <th className="px-3 py-3 text-center font-semibold text-slate-900">% del total</th>
-                        <th className="px-3 py-3 text-center font-semibold text-slate-900">Horas</th>
-                        <th className="px-3 py-3 text-center font-semibold text-slate-900">Garantías</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {porEstadoEntregasAprobacion.map((fila) => (
-                        <tr key={fila.estado} className="hover:bg-blue-50/40 transition-colors duration-200 group">
-                          <td className="px-3 py-3 font-semibold text-slate-900 group-hover:text-blue-700 break-words">
-                            <div className="flex items-center gap-3">
-                              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: fila.color }} />
-                              {fila.estado}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-center"><Badge variant="blue" value={fila.cantidad} /></td>
-                          <td className="px-3 py-3 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="w-12">
-                                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${fila.porcentaje}%`, backgroundColor: fila.color }} />
-                                </div>
-                              </div>
-                              <span className="w-10 text-right text-sm font-medium text-slate-600">{fila.porcentaje.toFixed(1)}%</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-center"><Badge variant="amber" value={`${fmtNumero(fila.horas)}h`} /></td>
-                          <td className="px-3 py-3 text-center"><Badge variant="green" value={fila.garantias} /></td>
-                        </tr>
-                      ))}
-                      <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
-                        <td className="px-3 py-3 text-slate-900">Total</td>
-                        <td className="px-3 py-3 text-center"><Badge variant="blue" value={totalesEntregasAprobacion.cantidad} /></td>
-                        <td className="px-3 py-3 text-center text-slate-700">100.0%</td>
-                        <td className="px-3 py-3 text-center"><Badge variant="amber" value={`${fmtNumero(totalesEntregasAprobacion.horas)}h`} /></td>
-                        <td className="px-3 py-3 text-center"><Badge variant="green" value={totalesEntregasAprobacion.garantias} /></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </ChartCardPremium>
           </div>
         </div>

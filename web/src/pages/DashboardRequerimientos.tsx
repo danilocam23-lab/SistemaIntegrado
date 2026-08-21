@@ -22,6 +22,16 @@ function normalizarAns(valor: string | null | undefined): string {
   return normalizarTexto(valor ?? '').replace(/\s+/g, '_')
 }
 
+function conPorcentajes<T extends { total: number; cumple: number; noCumple: number }>(
+  v: T,
+): T & { cumplePct: number; noCumplePct: number } {
+  return {
+    ...v,
+    cumplePct: v.total > 0 ? parseFloat(((v.cumple / v.total) * 100).toFixed(1)) : 0,
+    noCumplePct: v.total > 0 ? parseFloat(((v.noCumple / v.total) * 100).toFixed(1)) : 0,
+  }
+}
+
 export default function DashboardRequerimientos() {
   const { datos: reqs, cargando } = useLista<Requerimiento>('/requerimientos')
   const { datos: personas } = useLista<Persona>('/personas')
@@ -30,7 +40,7 @@ export default function DashboardRequerimientos() {
   const [ansOportunidadData, setAnsOportunidadData] = useState({ total: 0, cumple: 0 })
   const [ansCumplimientoData, setAnsCumplimientoData] = useState({ total: 0, cumple: 0 })
   const [ansInicioTrabajoData, setAnsInicioTrabajoData] = useState({ total: 0, cumple: 0 })
-  const [ansTendencia, setAnsTendencia] = useState<Array<{ mes: string; oportunidadTotal: number; oportunidadCumple: number; oportunidadNoCumple: number; oportunidadPct: number; cumplimientoTotal: number; cumplimientoCumple: number; cumplimientoNoCumple: number; cumplimientoPct: number; inicioTotal: number; inicioCumple: number; inicioNoCumple: number; inicioPct: number }>>([])
+  const [ansTendencia, setAnsTendencia] = useState<Array<{ mes: string; oportunidadTotal: number; oportunidadCumple: number; oportunidadNoCumple: number; oportunidadPct: number; oportunidadNoCumplePct: number; cumplimientoTotal: number; cumplimientoCumple: number; cumplimientoNoCumple: number; cumplimientoPct: number; cumplimientoNoCumplePct: number; inicioTotal: number; inicioCumple: number; inicioNoCumple: number; inicioPct: number; inicioNoCumplePct: number }>>([])
   const [woPorLt, setWoPorLt] = useState<Record<string, number>>({})
   const [woPorMes, setWoPorMes] = useState<Array<{ mes: string; wo: number }>>([])
   // Filtros independientes por fuente de datos
@@ -43,6 +53,7 @@ export default function DashboardRequerimientos() {
     client
       .get<{ registros: Array<{ lider?: string; Work_Order_ID?: string; Fecha_Fin_Real?: string; Estado_ANS_Oportunidad?: string; Estado_ANS_Cumplimiento?: string; Estado_ANS_inicio_trabajo?: string }> }>('/soporte/solicitudes-fabrica/resumen')
       .then((r) => {
+        const hoy = new Date().toISOString().substring(0, 10)
         const workOrderIDs = new Set<string>()
         const woPorLtMap: Record<string, Set<string>> = {}
         const woPorMesMap: Record<string, Set<string>> = {}
@@ -70,6 +81,9 @@ export default function DashboardRequerimientos() {
           if (reg.Work_Order_ID) {
             woPorMesMap[mes].add(reg.Work_Order_ID)
           }
+
+          if (fechaFin && fechaFin.substring(0, 10) > hoy) return
+
           if (!tendenciaMap[mes]) tendenciaMap[mes] = { 
             oportunidadTotal: 0, oportunidadCumple: 0, oportunidadNoCumple: 0,
             cumplimientoTotal: 0, cumplimientoCumple: 0, cumplimientoNoCumple: 0,
@@ -123,8 +137,11 @@ export default function DashboardRequerimientos() {
         setAnsTendencia(Object.entries(tendenciaMap).sort(([a], [b]) => a.localeCompare(b)).map(([mes, datos]) => ({
           mes, ...datos,
           oportunidadPct: datos.oportunidadTotal > 0 ? parseFloat(((datos.oportunidadCumple / datos.oportunidadTotal) * 100).toFixed(1)) : 0,
+          oportunidadNoCumplePct: datos.oportunidadTotal > 0 ? parseFloat(((datos.oportunidadNoCumple / datos.oportunidadTotal) * 100).toFixed(1)) : 0,
           cumplimientoPct: datos.cumplimientoTotal > 0 ? parseFloat(((datos.cumplimientoCumple / datos.cumplimientoTotal) * 100).toFixed(1)) : 0,
+          cumplimientoNoCumplePct: datos.cumplimientoTotal > 0 ? parseFloat(((datos.cumplimientoNoCumple / datos.cumplimientoTotal) * 100).toFixed(1)) : 0,
           inicioPct: datos.inicioTotal > 0 ? parseFloat(((datos.inicioCumple / datos.inicioTotal) * 100).toFixed(1)) : 0,
+          inicioNoCumplePct: datos.inicioTotal > 0 ? parseFloat(((datos.inicioNoCumple / datos.inicioTotal) * 100).toFixed(1)) : 0,
         })))
       })
       .catch(() => {
@@ -161,7 +178,7 @@ export default function DashboardRequerimientos() {
       return !!r.fecha_solicitud_acta && pasaFiltroReq(r.fecha_solicitud_acta.substring(0, 7))
     })
 
-    // ANS Requerimientos: usa el campo ANS Acta y su fecha de solicitud de acta.
+    // ANS Estimación: usa el campo ANS Acta y su fecha de solicitud de acta.
     const reqsActivos = requerimientosFiltradosAnsActa.filter((r) => {
       const normalized = r.estado.toUpperCase()
       return !normalized.includes('CANCELADO') && !normalized.includes('REEMPLAZADO')
@@ -170,15 +187,32 @@ export default function DashboardRequerimientos() {
     const ansReqCumple = requerimentosConAns.filter((r) => normalizarAns(r.ans_acta) === 'cumple').length
     const ansReqPct = requerimentosConAns.length > 0 ? parseFloat(((ansReqCumple / requerimentosConAns.length) * 100).toFixed(1)) : 0
 
+    // ANS Estimación (Hitss): si Tipificación es EPM, un "No cumple" pasa a "Cumple"
+    const ansReqEpmCumple = requerimentosConAns.filter((r) => {
+      const ans = normalizarAns(r.ans_acta)
+      const esEpm = (r as any).tipificacion === 'EPM'
+      return ans === 'cumple' || (esEpm && ans === 'no_cumple')
+    }).length
+    const ansReqEpmPct = requerimentosConAns.length > 0 ? parseFloat(((ansReqEpmCumple / requerimentosConAns.length) * 100).toFixed(1)) : 0
+
     // ANS Entregas: campo ans_entrega de cada entrega
     const conAnsEnt    = entregasFiltradas.filter((e) => e.ans_entrega)
     const ansEntCumple = conAnsEnt.filter((e) => e.ans_entrega === 'CUMPLE').length
     const ansEntPct    = conAnsEnt.length > 0 ? parseFloat(((ansEntCumple / conAnsEnt.length) * 100).toFixed(1)) : 0
 
+    // ANS Entregas (Hitss): si Tipificación de la entrega es EPM, un "No cumple" pasa a "Cumple"
+    const ansEntEpmCumple = conAnsEnt.filter((e) => {
+      const esEpm = (e as any).tipificacion === 'EPM'
+      return e.ans_entrega === 'CUMPLE' || (esEpm && e.ans_entrega === 'NO_CUMPLE')
+    }).length
+    const ansEntEpmPct = conAnsEnt.length > 0 ? parseFloat(((ansEntEpmCumple / conAnsEnt.length) * 100).toFixed(1)) : 0
+
     return {
       total: requerimientosFiltrados.length, totalHoras, totalEntregas, activos: reqsActivos.length,
       ansReqPct, ansReqCumple, ansReqTotal: requerimentosConAns.length,
+      ansReqEpmPct, ansReqEpmCumple,
       ansEntPct, ansEntCumple, ansEntTotal: conAnsEnt.length,
+      ansEntEpmPct, ansEntEpmCumple,
     }
   }, [reqs, anosReq, mesesReq])
 
@@ -215,11 +249,13 @@ export default function DashboardRequerimientos() {
 
   // ─── Tendencia mensual (entregas por mes) ───────────────
   const tendencia = useMemo(() => {
+    const hoy = new Date().toISOString().substring(0, 10)
     const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
     for (const r of reqs) {
       for (const e of r.entregas ?? []) {
         const fecha = e.fecha_recepcion ?? e.fecha_comprometida
         if (!fecha) continue
+        if (fecha.substring(0, 10) > hoy) continue
         const mes = fecha.substring(0, 7)
         if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
         map[mes].total++
@@ -229,17 +265,40 @@ export default function DashboardRequerimientos() {
     }
    return Object.entries(map)
      .sort(([a], [b]) => a.localeCompare(b))
-     .map(([mes, v]) => ({ mes, ...v }))
+     .map(([mes, v]) => conPorcentajes({ mes, ...v }))
   }, [reqs])
 
-  // ─── Tendencia mensual (ANS requerimientos por mes) ───────────────
+  // ─── Tendencia mensual (entregas por mes) considerando Tipificación EPM como cumple ───
+  const tendenciaEpm = useMemo(() => {
+    const hoy = new Date().toISOString().substring(0, 10)
+    const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
+    for (const r of reqs) {
+      for (const e of r.entregas ?? []) {
+        const esEpm = (e as any).tipificacion === 'EPM'
+        const fecha = e.fecha_recepcion ?? e.fecha_comprometida
+        if (!fecha) continue
+        if (fecha.substring(0, 10) > hoy) continue
+        const mes = fecha.substring(0, 7)
+        if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
+        map[mes].total++
+        const cumple = e.ans_entrega === 'CUMPLE' || (esEpm && e.ans_entrega === 'NO_CUMPLE')
+        if (cumple) map[mes].cumple++
+        else if (e.ans_entrega === 'NO_CUMPLE') map[mes].noCumple++
+      }
+    }
+   return Object.entries(map)
+     .sort(([a], [b]) => a.localeCompare(b))
+     .map(([mes, v]) => conPorcentajes({ mes, ...v }))
+  }, [reqs])
   const tendenciaReqs = useMemo(() => {
+    const hoy = new Date().toISOString().substring(0, 10)
     const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
     for (const r of reqs) {
       const ans = normalizarAns(r.ans_acta)
       if (ans !== 'cumple' && ans !== 'no_cumple') continue
       const fecha = r.fecha_solicitud_acta ?? r.fecha_inicio
       if (!fecha) continue
+      if (fecha.substring(0, 10) > hoy) continue
       const mes = fecha.substring(0, 7)
       if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
       map[mes].total++
@@ -248,15 +307,38 @@ export default function DashboardRequerimientos() {
     }
     return Object.entries(map)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([mes, v]) => ({ mes, ...v }))
+      .map(([mes, v]) => conPorcentajes({ mes, ...v }))
+  }, [reqs])
+
+  // ─── Tendencia mensual (ANS requerimientos) considerando Tipificación EPM como cumple ───
+  const tendenciaReqsEpm = useMemo(() => {
+    const hoy = new Date().toISOString().substring(0, 10)
+    const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
+    for (const r of reqs) {
+      const ans = normalizarAns(r.ans_acta)
+      if (ans !== 'cumple' && ans !== 'no_cumple') continue
+      const fecha = r.fecha_solicitud_acta ?? r.fecha_inicio
+      if (!fecha) continue
+      if (fecha.substring(0, 10) > hoy) continue
+      const mes = fecha.substring(0, 7)
+      if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
+      map[mes].total++
+      const esEpm = (r as any).tipificacion === 'EPM'
+      const cumple = ans === 'cumple' || (esEpm && ans === 'no_cumple')
+      if (cumple) map[mes].cumple++
+      else map[mes].noCumple++
+    }
+    return Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([mes, v]) => conPorcentajes({ mes, ...v }))
   }, [reqs])
 
   // ─── Años disponibles por fuente ───────────────────────
   const anosDisponiblesReq = useMemo(() => {
     const s = new Set<string>()
-    for (const d of [...porMes, ...tendencia]) s.add(d.mes.substring(0, 4))
+    for (const d of [...porMes, ...tendencia, ...tendenciaEpm, ...tendenciaReqs, ...tendenciaReqsEpm]) s.add(d.mes.substring(0, 4))
     return Array.from(s).sort()
-  }, [porMes, tendencia])
+  }, [porMes, tendencia, tendenciaEpm, tendenciaReqs, tendenciaReqsEpm])
 
   const anosDisponiblesSop = useMemo(() => {
     const s = new Set<string>()
@@ -304,7 +386,9 @@ export default function DashboardRequerimientos() {
 
   const porMesFiltrado        = hayFiltroReq ? porMes.filter((d) => pasaFiltroReq(d.mes)) : porMes
   const tendenciaFiltrada     = hayFiltroReq ? tendencia.filter((d) => pasaFiltroReq(d.mes)) : tendencia
+  const tendenciaEpmFiltrada  = hayFiltroReq ? tendenciaEpm.filter((d) => pasaFiltroReq(d.mes)) : tendenciaEpm
   const tendenciaReqsFiltrada = hayFiltroReq ? tendenciaReqs.filter((d) => pasaFiltroReq(d.mes)) : tendenciaReqs
+  const tendenciaReqsEpmFiltrada = hayFiltroReq ? tendenciaReqsEpm.filter((d) => pasaFiltroReq(d.mes)) : tendenciaReqsEpm
   const woPorMesFiltrado      = hayFiltroSop ? woPorMes.filter((d) => pasaFiltroSop(d.mes)) : woPorMes
   const ansTendenciaFiltrada  = hayFiltroSop ? ansTendencia.filter((d) => pasaFiltroSop(d.mes)) : ansTendencia
 
@@ -389,8 +473,10 @@ export default function DashboardRequerimientos() {
               <MetricCard accent="blue" icon="📋" label="Requerimientos" value={kpis.total} sub={`${kpis.activos} activos`} />
               <MetricCard accent="emerald" icon="⏱️" label="Horas estimadas" value={kpis.totalHoras.toLocaleString()} sub="total acumulado" />
               <MetricCard accent="violet" icon="📦" label="Entregas" value={kpis.totalEntregas} sub={`de ${kpis.total} requerimientos`} />
-              <MetricCard accent="indigo" icon="📝" label="ANS Requerimientos" value={`${kpis.ansReqPct}%`} sub={`${kpis.ansReqCumple} / ${kpis.ansReqTotal}`} />
+              <MetricCard accent="indigo" icon="📝" label="ANS Estimación" value={`${kpis.ansReqPct}%`} sub={`${kpis.ansReqCumple} / ${kpis.ansReqTotal}`} />
+              <MetricCard accent="indigo" icon="📝" label="ANS Estimación (Hitss)" value={`${kpis.ansReqEpmPct}%`} sub={`${kpis.ansReqEpmCumple} / ${kpis.ansReqTotal}`} />
               <MetricCard accent="teal" icon="✅" label="ANS Entregas" value={`${kpis.ansEntPct}%`} sub={`${kpis.ansEntCumple} / ${kpis.ansEntTotal}`} />
+              <MetricCard accent="teal" icon="✅" label="ANS Entregas (Hitss)" value={`${kpis.ansEntEpmPct}%`} sub={`${kpis.ansEntEpmCumple} / ${kpis.ansEntTotal}`} />
             </div>
 
             {/* Gráfica: Requerimientos por mes */}
@@ -442,35 +528,67 @@ export default function DashboardRequerimientos() {
             </GlassPanel>
 
             {/* Gráfica: Tendencia de entregas */}
-            <GlassPanel titulo="Tendencia de entregas" icon="📈">
+            <GlassPanel titulo="ANS de entregas" icon="📈">
               {tendenciaFiltrada.length === 0 ? <Empty /> : (
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={tendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendTooltip />} />
-                    <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="cumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="noCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendPctTooltip />} />
+                    <Line type="monotone" dataKey="cumplePct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="noCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   </LineChart>
                 </ResponsiveContainer>
               )}
             </GlassPanel>
 
-            {/* Gráfica: Tendencia de requerimientos */}
-            <GlassPanel titulo="Tendencia de requerimientos" icon="📋">
+            {/* Gráfica: Tendencia de entregas (Tipificación EPM cuenta como cumple) */}
+            <GlassPanel titulo="ANS de entregas (Hitss)" icon="📈">
+              {tendenciaEpmFiltrada.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={tendenciaEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendPctTooltip />} />
+                    <Line type="monotone" dataKey="cumplePct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="noCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+
+            {/* Gráfica: Tendencia de estimación */}
+            <GlassPanel titulo="ANS de estimación" icon="📋">
               {tendenciaReqsFiltrada.length === 0 ? <Empty /> : (
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={tendenciaReqsFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendTooltip />} />
-                    <Line type="monotone" dataKey="total" stroke="#6366f1" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="cumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="noCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendPctTooltip />} />
+                    <Line type="monotone" dataKey="cumplePct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="noCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </GlassPanel>
+
+            {/* Gráfica: Tendencia de estimación (Hitss) */}
+            <GlassPanel titulo="ANS de estimación (Hitss)" icon="📋">
+              {tendenciaReqsEpmFiltrada.length === 0 ? <Empty /> : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={tendenciaReqsEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendPctTooltip />} />
+                    <Line type="monotone" dataKey="cumplePct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="noCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -564,17 +682,16 @@ export default function DashboardRequerimientos() {
             </GlassPanel>
 
             {/* Gráfica: ANS Oportunidad */}
-            <GlassPanel titulo="ANS Oportunidad — Tendencia" icon="🎯">
+            <GlassPanel titulo="ANS Oportunidad" icon="🎯">
               {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendTooltip />} />
-                    <Line type="monotone" dataKey="oportunidadTotal" stroke="#3b82f6" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="oportunidadCumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="oportunidadNoCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendPctTooltip />} />
+                    <Line type="monotone" dataKey="oportunidadPct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="oportunidadNoCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -582,17 +699,16 @@ export default function DashboardRequerimientos() {
             </GlassPanel>
 
             {/* Gráfica: ANS Cumplimiento */}
-            <GlassPanel titulo="ANS Cumplimiento — Tendencia" icon="✅">
+            <GlassPanel titulo="ANS Cumplimiento" icon="✅">
               {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendTooltip />} />
-                    <Line type="monotone" dataKey="cumplimientoTotal" stroke="#3b82f6" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="cumplimientoCumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="cumplimientoNoCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendPctTooltip />} />
+                    <Line type="monotone" dataKey="cumplimientoPct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="cumplimientoNoCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -600,17 +716,16 @@ export default function DashboardRequerimientos() {
             </GlassPanel>
 
             {/* Gráfica: ANS Inicio Trabajo */}
-            <GlassPanel titulo="ANS Inicio Trabajo — Tendencia" icon="🚀">
+            <GlassPanel titulo="ANS Inicio Trabajo" icon="🚀">
               {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
                 <ResponsiveContainer width="100%" height={240}>
                   <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendTooltip />} />
-                    <Line type="monotone" dataKey="inicioTotal" stroke="#3b82f6" strokeWidth={2.5} name="Total" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="inicioCumple" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="inicioNoCumple" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip content={<TrendPctTooltip />} />
+                    <Line type="monotone" dataKey="inicioPct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="inicioNoCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -626,21 +741,32 @@ export default function DashboardRequerimientos() {
 
 /* ─── Componentes auxiliares premium ─── */
 
-function TrendTooltip({ active, payload, label }: any) {
+function TrendPctTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
-  const totalEntry = payload.find((p: any) => /total/i.test(p.dataKey))
-  const totalVal = totalEntry?.value ?? 0
+  const fila = payload[0]?.payload ?? {}
+  // Mapea cada dataKey de %, a su campo de cantidad absoluta y su campo de total del mes.
+  const RAW_KEY: Record<string, string> = {
+    cumplePct: 'cumple', noCumplePct: 'noCumple',
+    oportunidadPct: 'oportunidadCumple', oportunidadNoCumplePct: 'oportunidadNoCumple',
+    cumplimientoPct: 'cumplimientoCumple', cumplimientoNoCumplePct: 'cumplimientoNoCumple',
+    inicioPct: 'inicioCumple', inicioNoCumplePct: 'inicioNoCumple',
+  }
+  const TOTAL_KEY: Record<string, string> = {
+    cumplePct: 'total', noCumplePct: 'total',
+    oportunidadPct: 'oportunidadTotal', oportunidadNoCumplePct: 'oportunidadTotal',
+    cumplimientoPct: 'cumplimientoTotal', cumplimientoNoCumplePct: 'cumplimientoTotal',
+    inicioPct: 'inicioTotal', inicioNoCumplePct: 'inicioTotal',
+  }
   return (
     <div className="rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
       <p className="mb-1 text-xs font-bold text-slate-700">{label}</p>
       {payload.map((entry: any) => {
-        const isTotal = /total/i.test(entry.dataKey)
-        const pct = !isTotal && totalVal > 0
-          ? ` (${((entry.value / totalVal) * 100).toFixed(1)}%)`
-          : ''
+        const cantidad = fila[RAW_KEY[entry.dataKey]]
+        const total = fila[TOTAL_KEY[entry.dataKey]]
+        const detalle = cantidad !== undefined && total !== undefined ? ` (${cantidad}/${total})` : ''
         return (
           <p key={entry.dataKey} className="text-xs" style={{ color: entry.stroke }}>
-            {entry.name}: <span className="font-bold">{entry.value}{pct}</span>
+            {entry.name}: <span className="font-bold">{entry.value}%{detalle}</span>
           </p>
         )
       })}

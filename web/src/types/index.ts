@@ -72,6 +72,8 @@ export interface Entrega {
   fecha_ejecucion: string | null
   estado: string | null
   observaciones: string | null
+  observaciones_hitss: string | null
+  tipificacion: 'HITSS' | 'EPM' | null
   mes_aprobacion: string | null
   ans_entrega: string | null
   garantia: boolean
@@ -93,6 +95,8 @@ export interface Requerimiento {
   ans_acta: string | null
   motivo_cierre: string | null
   seguimiento: string | null
+  seguimiento_epm: string | null
+  tipificacion: 'HITSS' | 'EPM' | null
   acta_trabajo: string | null
   monto_pactado: number | null
   cantidad_entregas: number

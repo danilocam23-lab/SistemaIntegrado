@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import client, { TOKEN_KEY, USUARIO_KEY, APP_KEY } from '../api/client'
 import type { TokenResponse, Usuario } from '../types'
@@ -20,6 +20,28 @@ function leerUsuario(): Usuario | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(leerUsuario)
+
+  // Los permisos del usuario se guardan en localStorage al iniciar sesión, pero
+  // pueden cambiar si un administrador edita el rol después (por ejemplo, al
+  // agregar un nuevo permiso). Se refrescan automáticamente contra /auth/me al
+  // cargar la app y al volver a la pestaña, sin exigir un nuevo login.
+  useEffect(() => {
+    if (!localStorage.getItem(TOKEN_KEY)) return
+    const refrescar = () => {
+      client.get<Usuario>('/auth/me')
+        .then((r) => {
+          localStorage.setItem(USUARIO_KEY, JSON.stringify(r.data))
+          setUsuario(r.data)
+        })
+        .catch(() => {})
+    }
+    refrescar()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refrescar()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   async function login(email: string, password: string): Promise<void> {
     const { data } = await client.post<TokenResponse>('/auth/login', { email, password })

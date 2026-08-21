@@ -37,12 +37,14 @@ export default function Personas() {
   const puedeEliminarPersonas = tienePermiso('personas.eliminar')
   const esGerente = tienePermiso('personas.ver_valores')
   const [roles, setRoles] = useState<string[]>(ROLES_DEFAULT)
+  const [tiposContratacion, setTiposContratacion] = useState<string[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
   const [editando, setEditando] = useState<Persona | null>(null)
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [rol, setRol] = useState('DEV')
+  const [tipoContratacion, setTipoContratacion] = useState('')
   const [squadsSelec, setSquadsSelec] = useState<string[]>([])
   const [activo, setActivo] = useState(true)
   const [valorPersona, setValorPersona] = useState(0)
@@ -81,6 +83,12 @@ export default function Personas() {
         }
       })
       .catch(() => {})
+    client
+      .get<string[]>('/personas/tipos-contratacion')
+      .then((r) => {
+        if (r.data.length > 0) setTiposContratacion(r.data)
+      })
+      .catch(() => {})
     cargarDuplicados()
   }, [])
 
@@ -102,6 +110,7 @@ export default function Personas() {
     setEmail('')
     setSquadsSelec([])
     setRol(roles[0] ?? 'DEV')
+    setTipoContratacion('')
     setActivo(true)
     setValorPersona(0)
     setValorPerifericos(0)
@@ -115,6 +124,7 @@ export default function Personas() {
     setNombre(persona.nombre)
     setEmail(persona.email ?? '')
     setRol(persona.rol_operativo)
+    setTipoContratacion(persona.tipo_contratacion ?? '')
     setSquadsSelec(persona.squads ?? [])
     setActivo(persona.activo)
     setValorPersona(persona.valor_persona ?? 0)
@@ -174,6 +184,7 @@ export default function Personas() {
       nombre,
       email: email || null,
       rol_operativo: rol,
+      tipo_contratacion: tipoContratacion || null,
       squads: squadsSelec,
       activo,
       valor_persona: valorPersona,
@@ -355,20 +366,22 @@ export default function Personas() {
                      <th className="p-2 text-left">Nombre</th>
                      <th className="p-2 text-left">Correo</th>
                      <th className="p-2 text-left">Squad</th>
-                     {esGerente && <th className="p-2 text-right whitespace-nowrap">Valor persona</th>}
-                     {esGerente && <th className="p-2 text-right whitespace-nowrap">Valor periféricos</th>}
-                     <th className="p-2 text-center">Activo</th>
-                     <th className="p-2 text-center">Acciones</th>
+                    <th className="p-2 text-left">Tipo de contratación</th>
+                    {esGerente && <th className="p-2 text-right whitespace-nowrap">Valor persona</th>}
+                    {esGerente && <th className="p-2 text-right whitespace-nowrap">Valor periféricos</th>}
+                    <th className="p-2 text-center">Activo</th>
+                    <th className="p-2 text-center">Acciones</th>
                    </tr>
                   </thead>
                   <tbody>
                     {personas.map((p) => (
-                      <tr key={p.id} className="border-t">
-                        <td className="p-2 truncate">{p.nombre}</td>
-                        <td className="p-2 truncate">{p.email ?? '—'}</td>
-                        <td className="p-2 truncate">{(p.squads ?? []).join(', ') || '—'}</td>
-                        {esGerente && <td className="p-2 text-right font-mono text-xs">${(p.valor_persona ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
-                        {esGerente && <td className="p-2 text-right font-mono text-xs">${(p.valor_perifericos ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
+                     <tr key={p.id} className="border-t">
+                       <td className="p-2 truncate">{p.nombre}</td>
+                       <td className="p-2 truncate">{p.email ?? '—'}</td>
+                       <td className="p-2 truncate">{(p.squads ?? []).join(', ') || '—'}</td>
+                       <td className="p-2 truncate">{p.tipo_contratacion ?? '—'}</td>
+                       {esGerente && <td className="p-2 text-right font-mono text-xs">${(p.valor_persona ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
+                       {esGerente && <td className="p-2 text-right font-mono text-xs">${(p.valor_perifericos ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
                         <td className="p-2 text-center">
                           {p.activo
                             ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Sí</span>
@@ -395,6 +408,7 @@ export default function Personas() {
                                   nombre: p.nombre,
                                   email: p.email,
                                   rol_operativo: p.rol_operativo,
+                                  tipo_contratacion: p.tipo_contratacion ?? null,
                                   squads: p.squads ?? [],
                                   activo: !p.activo,
                                   es_lider_tecnico: p.es_lider_tecnico ?? false,
@@ -476,6 +490,14 @@ export default function Personas() {
             <select value={rol} onChange={(e) => setRol(e.target.value)}
               className="w-full rounded border px-3 py-2">
               {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block text-slate-600">Tipo de contratación</span>
+            <select value={tipoContratacion} onChange={(e) => setTipoContratacion(e.target.value)}
+              className="w-full rounded border px-3 py-2">
+              <option value="">— Sin especificar —</option>
+              {tiposContratacion.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </label>
           {esGerente && (

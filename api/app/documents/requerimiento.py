@@ -19,6 +19,7 @@ from app.documents.enums import (
     EstadoFacturacion,
     EstadoRequerimiento,
     TipoCosto,
+    Tipificacion,
 )
 
 
@@ -57,9 +58,13 @@ class Entrega(BaseModel):
     fecha_aprobacion: datetime | None = None
     fecha_ejecucion: datetime | None = None
     estado: str | None = None
-    observaciones: str | None = None
+    observaciones: str | None = None  # Observaciones EPM
+    observaciones_hitss: str | None = None
+    tipificacion: Tipificacion | None = None
     mes_aprobacion: str | None = None
     ans_entrega: AnsResultado | None = None
+    se_levanto_ans: bool | None = None
+    observaciones_ans: str | None = None
     garantia: bool = False
     numero_garantia: int | None = None
     acta_trabajo_id: str | None = None
@@ -95,9 +100,13 @@ class Requerimiento(DocumentoOperativo):
     fecha_solicitud_acta: datetime | None = None
     fecha_limite: datetime | None = None
     ans_acta: AnsResultado | None = None
+    se_levanto_ans: bool | None = None
+    observaciones_ans: str | None = None
     motivo_cierre: str | None = None
     reemplaza_a_id: str | None = None
-    seguimiento: str | None = None
+    seguimiento: str | None = None  # Seguimiento Hitss
+    seguimiento_epm: str | None = None
+    tipificacion: Tipificacion | None = None
     monto_pactado: MongoDecimal | None = None
     acta_trabajo: str | None = None
     cantidad_entregas: int = 0

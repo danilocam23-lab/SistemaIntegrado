@@ -5,7 +5,7 @@ import { mensajeError, useLista } from '../api/hooks'
 import { ESTADOS_ENTREGA, ESTADOS_REQUERIMIENTO } from '../constantes'
 import type { Configuracion as Config, Festivo, Tarifa, Categoria } from '../types'
 
-type Tab = 'tarifas' | 'categorias' | 'roles' | 'festivos' | 'parametros' | 'estados'
+type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'estados'
 
 export default function Configuracion() {
   const [tab, setTab] = useState<Tab>('tarifas')
@@ -109,12 +109,27 @@ export default function Configuracion() {
   // ── Roles de personas ──
   const [roles, setRoles] = useState<string[]>([])
   const [nuevoRol, setNuevoRol] = useState('')
+  const rolesRef = useRef<string[]>([])
+  const colaRolesRef = useRef<Promise<void>>(Promise.resolve())
+
+  // ── Tipos de contratación ──
+  const [tiposContratacion, setTiposContratacion] = useState<string[]>([])
+  const [nuevoTipoContratacion, setNuevoTipoContratacion] = useState('')
+  const tiposContratacionRef = useRef<string[]>([])
+  const colaTiposContratacionRef = useRef<Promise<void>>(Promise.resolve())
 
   // ── Festivos ──
   const [festFecha, setFestFecha] = useState('')
 
   useEffect(() => {
-    client.get<string[]>('/personas/roles').then((r) => setRoles(r.data)).catch(() => {})
+    client.get<string[]>('/personas/roles').then((r) => {
+      rolesRef.current = r.data
+      setRoles(r.data)
+    }).catch(() => {})
+    client.get<string[]>('/personas/tipos-contratacion').then((r) => {
+      tiposContratacionRef.current = r.data
+      setTiposContratacion(r.data)
+    }).catch(() => {})
   }, [])
 
   async function guardarRoles(lista: string[]): Promise<void> {
@@ -125,6 +140,7 @@ export default function Configuracion() {
         valor: lista.join(','),
         grupo: 'personas',
       })
+      rolesRef.current = lista
       setRoles(lista)
       setOk('Roles guardados.')
       recargar()
@@ -133,17 +149,59 @@ export default function Configuracion() {
     }
   }
 
+  // Encola las operaciones para evitar condiciones de carrera: cada cambio
+  // parte siempre de la última lista confirmada por el servidor (rolesRef),
+  // nunca de un estado local potencialmente desactualizado.
+  function encolarRoles(calcular: (actual: string[]) => string[]): void {
+    colaRolesRef.current = colaRolesRef.current.then(() => guardarRoles(calcular(rolesRef.current)))
+  }
+
   function agregarRol(): void {
     const r = nuevoRol.trim().toUpperCase()
-    if (!r || roles.includes(r)) return
-    const nueva = [...roles, r]
+    if (!r) return
     setNuevoRol('')
-    void guardarRoles(nueva)
+    encolarRoles((actual) => (actual.includes(r) ? actual : [...actual, r]))
   }
 
   function quitarRol(rol: string): void {
-    void guardarRoles(roles.filter((r) => r !== rol))
+    encolarRoles((actual) => actual.filter((r) => r !== rol))
   }
+
+  async function guardarTiposContratacion(lista: string[]): Promise<void> {
+    setAviso('')
+    setOk('')
+    try {
+      await client.put('/configuracion/tipos_contratacion', {
+        valor: lista.join(','),
+        grupo: 'personas',
+      })
+      tiposContratacionRef.current = lista
+      setTiposContratacion(lista)
+      setOk('Tipos de contratación guardados.')
+      recargar()
+    } catch (err) {
+      setAviso(mensajeError(err))
+    }
+  }
+
+  // Misma protección contra condiciones de carrera que en encolarRoles.
+  function encolarTiposContratacion(calcular: (actual: string[]) => string[]): void {
+    colaTiposContratacionRef.current = colaTiposContratacionRef.current.then(() =>
+      guardarTiposContratacion(calcular(tiposContratacionRef.current)),
+    )
+  }
+
+  function agregarTipoContratacion(): void {
+    const t = nuevoTipoContratacion.trim().toUpperCase()
+    if (!t) return
+    setNuevoTipoContratacion('')
+    encolarTiposContratacion((actual) => (actual.includes(t) ? actual : [...actual, t]))
+  }
+
+  function quitarTipoContratacion(tipo: string): void {
+    encolarTiposContratacion((actual) => actual.filter((t) => t !== tipo))
+  }
+
 
   async function crearFestivo(e: FormEvent): Promise<void> {
     e.preventDefault()
@@ -348,6 +406,7 @@ export default function Configuracion() {
           { id: 'tarifas',    label: '💰 Tarifas' },
           { id: 'categorias', label: '🏷️ Categorías' },
           { id: 'roles',      label: '👤 Roles' },
+          { id: 'tipos_contratacion', label: '📄 Tipo de contratación' },
           { id: 'festivos',   label: '📅 Festivos' },
           { id: 'parametros', label: '⚙️ Parámetros' },
           { id: 'estados',    label: '🔖 Estados' },
@@ -560,6 +619,29 @@ export default function Configuracion() {
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarRol())}
               placeholder="Nuevo rol (ej: QA)" className="rounded border px-3 py-2 text-sm" />
             <button onClick={agregarRol} className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">Agregar</button>
+          </div>
+          {ok && <div className="mt-3 rounded bg-emerald-50 p-2 text-sm text-emerald-700">{ok}</div>}
+        </div>
+      )}
+
+      {/* ═══ TAB: Tipo de contratación ═══ */}
+      {tab === 'tipos_contratacion' && (
+        <div className="rounded-xl border bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Tipos de contratación</h2>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {tiposContratacion.map((t) => (
+              <span key={t} className="inline-flex items-center gap-1 rounded-full bg-marca/10 px-3 py-1 text-sm font-medium text-marca-osc">
+                {t}
+                <button onClick={() => quitarTipoContratacion(t)} className="ml-1 text-red-400 hover:text-red-600" title="Quitar">✕</button>
+              </span>
+            ))}
+            {tiposContratacion.length === 0 && <span className="text-sm text-slate-400">Sin tipos de contratación configurados</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <input value={nuevoTipoContratacion} onChange={(e) => setNuevoTipoContratacion(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarTipoContratacion())}
+              placeholder="Nuevo tipo (ej: TERMINO FIJO)" className="rounded border px-3 py-2 text-sm" />
+            <button onClick={agregarTipoContratacion} className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">Agregar</button>
           </div>
           {ok && <div className="mt-3 rounded bg-emerald-50 p-2 text-sm text-emerald-700">{ok}</div>}
         </div>

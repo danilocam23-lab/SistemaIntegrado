@@ -14,6 +14,7 @@ import RequerimientoNuevo from './pages/RequerimientoNuevo'
 import Personas from './pages/Personas'
 import Asignaciones from './pages/Asignaciones'
 import Capacidades from './pages/Capacidades'
+import ControlHorasFacturable from './pages/ControlHorasFacturable'
 import Roadmap from './pages/Roadmap'
 import Estimaciones from './pages/Estimaciones'
 import AzureDevOps from './pages/AzureDevOps'
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="categorias" element={<Navigate to="/configuracion" replace />} />
               <Route path="asignaciones" element={<Asignaciones />} />
               <Route path="capacidades" element={<Capacidades />} />
+              <Route path="control-horas-facturable" element={<RoleRoute permiso="control_horas_facturable.ver"><ControlHorasFacturable /></RoleRoute>} />
               <Route path="roadmap" element={<Roadmap />} />
               <Route path="estimaciones" element={<RoleRoute permiso="estimaciones.ver"><Estimaciones /></RoleRoute>} />
               <Route path="azure-devops" element={<RoleRoute permiso="azure_devops.ver"><AzureDevOps /></RoleRoute>} />

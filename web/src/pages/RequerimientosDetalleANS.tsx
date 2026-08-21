@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
-import { useLista } from '../api/hooks'
+import { mensajeError, useLista } from '../api/hooks'
+import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
 
 interface FilaRequerimiento {
@@ -16,6 +17,11 @@ interface FilaRequerimiento {
   horasEstimadas: number | null
   fechaLimite: string | null
   fechaRealEntregaEstimacion: string | null
+  seLevanto: boolean
+  observacionesAns: string
+  seguimientoHitss: string | null
+  seguimientoEpm: string | null
+  tipificacion: string | null
 }
 
 interface FilaEntrega {
@@ -33,6 +39,12 @@ interface FilaEntrega {
   fechaReal: string | null
   estado: string | null
   ansEntrega: string | null
+  entregaNumero: number
+  seLevanto: boolean
+  observacionesAns: string
+  observacionesEpm: string | null
+  observacionesHitss: string | null
+  tipificacion: string | null
 }
 
 function normalizarAns(valor: string | null | undefined): string {
@@ -81,11 +93,17 @@ export default function RequerimientosDetalleANS() {
   const [squadsCol, setSquadsCol] = useState<Squad[]>([])
   const [filtroTexto, setFiltroTexto] = useState('')
   const [anoLimite, setAnoLimite] = useState('')
-  const [mesLimite, setMesLimite] = useState('')
+  const [mesLimite, setMesLimite] = useState<string[]>([])
   const [anoComprometida, setAnoComprometida] = useState('')
-  const [mesComprometida, setMesComprometida] = useState('')
+  const [mesComprometida, setMesComprometida] = useState<string[]>([])
   const [mostrarRequerimientos, setMostrarRequerimientos] = useState(false)
   const [mostrarEntregas, setMostrarEntregas] = useState(false)
+  const [guardandoCheck, setGuardandoCheck] = useState<Set<string>>(new Set())
+  const [guardandoObs, setGuardandoObs] = useState<Set<string>>(new Set())
+  const [obsEdicion, setObsEdicion] = useState<Record<string, string>>({})
+  const [aviso, setAviso] = useState('')
+  const { tienePermiso } = useAuth()
+  const puedeEditar = tienePermiso('requerimientos.detalle_ans.editar') || tienePermiso('requerimientos.editar')
 
   useEffect(() => {
     const onVisible = () => {
@@ -132,6 +150,11 @@ export default function RequerimientosDetalleANS() {
       horasEstimadas: req.total_horas_estimadas ?? null,
     fechaLimite: req.fecha_limite ?? null,
     fechaRealEntregaEstimacion: req.fecha_real_entrega_estimacion ?? null,
+    seLevanto: !!(req as any).se_levanto_ans,
+    observacionesAns: (req as any).observaciones_ans ?? '',
+    seguimientoHitss: (req as any).seguimiento ?? null,
+    seguimientoEpm: (req as any).seguimiento_epm ?? null,
+    tipificacion: (req as any).tipificacion ?? null,
     }))
   }, [requerimientos, squadPorId, nombrePersona])
 
@@ -164,6 +187,12 @@ export default function RequerimientosDetalleANS() {
           fechaReal: en.fecha_recepcion ?? null,
           estado: en.estado ?? null,
           ansEntrega: en.ans_entrega ?? null,
+          entregaNumero: en.numero,
+          seLevanto: !!(en as any).se_levanto_ans,
+          observacionesAns: (en as any).observaciones_ans ?? '',
+          observacionesEpm: (en as any).observaciones ?? null,
+          observacionesHitss: (en as any).observaciones_hitss ?? null,
+          tipificacion: (en as any).tipificacion ?? null,
         })
       }
     }
@@ -188,7 +217,7 @@ export default function RequerimientosDetalleANS() {
       .filter((r) => {
         const fecha = r.fechaLimite?.slice(0, 10) ?? ''
         if (anoLimite && (!fecha || fecha.slice(0, 4) !== anoLimite)) return false
-        if (mesLimite && (!fecha || fecha.slice(5, 7) !== mesLimite)) return false
+        if (mesLimite.length && (!fecha || !mesLimite.includes(fecha.slice(5, 7)))) return false
         return true
       })
     if (!t) return base
@@ -206,7 +235,7 @@ export default function RequerimientosDetalleANS() {
       .filter((e) => {
         const fecha = e.fechaComprometida?.slice(0, 10) ?? ''
         if (anoComprometida && (!fecha || fecha.slice(0, 4) !== anoComprometida)) return false
-        if (mesComprometida && (!fecha || fecha.slice(5, 7) !== mesComprometida)) return false
+        if (mesComprometida.length && (!fecha || !mesComprometida.includes(fecha.slice(5, 7)))) return false
         return true
       })
     if (!t) return base
@@ -230,6 +259,38 @@ export default function RequerimientosDetalleANS() {
 
   if (cargando) return <div className="p-6 text-slate-500">Cargando detalle ANS…</div>
 
+  async function guardarCheck(tipo: 'requerimiento' | 'entrega', reqId: string, checked: boolean, entregaNumero?: number) {
+    const key = tipo === 'entrega' ? `${reqId}-${entregaNumero}` : reqId
+    setGuardandoCheck((s) => new Set(s).add(key))
+    try {
+      await client.patch('/requerimientos/detalle-ans', {
+        tipo,
+        req_id: reqId,
+        entrega_numero: entregaNumero ?? null,
+        se_levanto_ans: checked,
+      })
+      await recargar()
+    } catch (err) { setAviso(mensajeError(err)) }
+    finally { setGuardandoCheck((s) => { const n = new Set(s); n.delete(key); return n }) }
+  }
+
+  async function guardarObservacion(tipo: 'requerimiento' | 'entrega', reqId: string, entregaNumero?: number) {
+    const key = tipo === 'entrega' ? `${reqId}-${entregaNumero}` : reqId
+    const obs = obsEdicion[key] ?? ''
+    setGuardandoObs((s) => new Set(s).add(key))
+    try {
+      await client.patch('/requerimientos/detalle-ans', {
+        tipo,
+        req_id: reqId,
+        entrega_numero: entregaNumero ?? null,
+        observaciones: obs,
+      })
+      await recargar()
+      setObsEdicion((p) => { const n = { ...p }; delete n[key]; return n })
+    } catch (err) { setAviso(mensajeError(err)) }
+    finally { setGuardandoObs((s) => { const n = new Set(s); n.delete(key); return n }) }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
@@ -242,6 +303,7 @@ export default function RequerimientosDetalleANS() {
       </div>
 
       {error && <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {aviso && <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">{aviso}</div>}
 
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
         <label className="text-sm">
@@ -253,15 +315,15 @@ export default function RequerimientosDetalleANS() {
             className="w-72 rounded border px-3 py-2 text-sm"
           />
         </label>
-        {(filtroTexto || anoLimite || mesLimite || anoComprometida || mesComprometida) && (
+        {(filtroTexto || anoLimite || mesLimite.length > 0 || anoComprometida || mesComprometida.length > 0) && (
           <button
             type="button"
             onClick={() => {
               setFiltroTexto('')
               setAnoLimite('')
-              setMesLimite('')
+              setMesLimite([])
               setAnoComprometida('')
-              setMesComprometida('')
+              setMesComprometida([])
             }}
             className="text-xs text-red-500 hover:underline"
           >
@@ -327,12 +389,17 @@ export default function RequerimientosDetalleANS() {
                 <th className="p-2">Fecha límite</th>
                 <th className="p-2">Fecha real entrega de estimaciones</th>
                 <th className="p-2 text-right">Días transcurridos</th>
+                <th className="p-2 text-center">Se levantó ANS</th>
+                <th className="p-2">Observaciones</th>
+                <th className="p-2">Seguimiento Hitss</th>
+                <th className="p-2">Seguimiento EPM</th>
+                <th className="p-2">Tipificación</th>
               </tr>
             </thead>
             <tbody>
               {requerimientosFiltrados.length === 0 ? (
                 <tr className="border-t">
-                    <td className="p-4 text-center text-slate-400" colSpan={11}>Sin registros</td>
+                    <td className="p-4 text-center text-slate-400" colSpan={16}>Sin registros</td>
                   </tr>
                 ) : (
                   requerimientosFiltrados.map((r) => (
@@ -369,7 +436,42 @@ export default function RequerimientosDetalleANS() {
                         )
                       })()}
                     </td>
-                  </tr>
+                    <td className="p-2 text-center">
+                      <label className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold ${
+                        r.seLevanto ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-slate-50 text-slate-600'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={r.seLevanto}
+                          disabled={!puedeEditar || guardandoCheck.has(r.id)}
+                          onChange={(ev) => void guardarCheck('requerimiento', r.id, ev.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-marca focus:ring-marca"
+                        />
+                        {guardandoCheck.has(r.id) ? '…' : r.seLevanto ? 'Sí' : 'No'}
+                      </label>
+                    </td>
+                    <td className="p-2">
+                      <div className="flex min-w-[220px] gap-1.5">
+                        <input
+                          value={obsEdicion[r.id] ?? r.observacionesAns}
+                          onChange={(ev) => setObsEdicion((p) => ({ ...p, [r.id]: ev.target.value }))}
+                          readOnly={!puedeEditar}
+                          className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-marca"
+                          placeholder={puedeEditar ? 'Observaciones…' : ''}
+                        />
+                        {puedeEditar && (
+                          <button type="button" onClick={() => void guardarObservacion('requerimiento', r.id)}
+                            disabled={guardandoObs.has(r.id)}
+                            className="shrink-0 rounded bg-marca px-2 py-1 text-[10px] font-semibold text-white hover:bg-marca-osc disabled:opacity-60">
+                            {guardandoObs.has(r.id) ? '…' : 'Guardar'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                      <td className="p-2 max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{r.seguimientoHitss || '—'}</td>
+                      <td className="p-2 max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{r.seguimientoEpm || '—'}</td>
+                      <td className="p-2">{r.tipificacion === 'HITSS' ? 'Hitss' : r.tipificacion === 'EPM' ? 'EPM' : '—'}</td>
+                    </tr>
                 ))
               )}
             </tbody>
@@ -377,9 +479,9 @@ export default function RequerimientosDetalleANS() {
               <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-slate-700">
                 <td className="p-2" colSpan={7}>Total ({requerimientosFiltrados.length} requerimientos)</td>
                 <td className="p-2 text-right">
-                  {requerimientosFiltrados.reduce((total, r) => total + Number(r.horasEstimadas ?? 0), 0)}
+                    {requerimientosFiltrados.reduce((total, r) => total + Number(r.horasEstimadas ?? 0), 0)}
                 </td>
-                <td className="p-2" colSpan={3}></td>
+                <td className="p-2" colSpan={8}></td>
               </tr>
             </tfoot>
           </table>
@@ -423,12 +525,17 @@ export default function RequerimientosDetalleANS() {
               <th className="p-2 text-right">Días transcurridos</th>
               <th className="p-2">Estado</th>
               <th className="p-2">ANS Entrega</th>
+              <th className="p-2 text-center">Se levantó ANS</th>
+              <th className="p-2">Observaciones</th>
+              <th className="p-2">Observaciones EPM</th>
+              <th className="p-2">Observaciones Hitss</th>
+              <th className="p-2">Tipificación</th>
             </tr>
             </thead>
             <tbody>
               {entregasFiltradas.length === 0 ? (
                 <tr className="border-t">
-                  <td className="p-4 text-center text-slate-400" colSpan={12}>Sin entregas</td>
+                  <td className="p-4 text-center text-slate-400" colSpan={17}>Sin entregas</td>
                 </tr>
               ) : (
                 entregasFiltradas.map((e) => (
@@ -464,6 +571,41 @@ export default function RequerimientosDetalleANS() {
                         {normalizarAns(e.ansEntrega)}
                       </span>
                     </td>
+                    <td className="p-2 text-center">
+                      <label className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold ${
+                        e.seLevanto ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-slate-50 text-slate-600'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={e.seLevanto}
+                          disabled={!puedeEditar || guardandoCheck.has(e.id)}
+                          onChange={(ev) => void guardarCheck('entrega', e.reqId, ev.target.checked, e.entregaNumero)}
+                          className="h-4 w-4 rounded border-slate-300 text-marca focus:ring-marca"
+                        />
+                        {guardandoCheck.has(e.id) ? '…' : e.seLevanto ? 'Sí' : 'No'}
+                      </label>
+                    </td>
+                    <td className="p-2">
+                      <div className="flex min-w-[220px] gap-1.5">
+                        <input
+                          value={obsEdicion[e.id] ?? e.observacionesAns}
+                          onChange={(ev) => setObsEdicion((p) => ({ ...p, [e.id]: ev.target.value }))}
+                          readOnly={!puedeEditar}
+                          className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-marca"
+                          placeholder={puedeEditar ? 'Observaciones…' : ''}
+                        />
+                        {puedeEditar && (
+                          <button type="button" onClick={() => void guardarObservacion('entrega', e.reqId, e.entregaNumero)}
+                            disabled={guardandoObs.has(e.id)}
+                            className="shrink-0 rounded bg-marca px-2 py-1 text-[10px] font-semibold text-white hover:bg-marca-osc disabled:opacity-60">
+                            {guardandoObs.has(e.id) ? '…' : 'Guardar'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-2 max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{e.observacionesEpm || '—'}</td>
+                    <td className="p-2 max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{e.observacionesHitss || '—'}</td>
+                    <td className="p-2">{e.tipificacion === 'HITSS' ? 'Hitss' : e.tipificacion === 'EPM' ? 'EPM' : '—'}</td>
                   </tr>
                 ))
               )}
@@ -474,7 +616,7 @@ export default function RequerimientosDetalleANS() {
                 <td className="p-2 text-right">
                   {entregasFiltradas.reduce((total, e) => total + Number(e.horas ?? 0), 0)}
                 </td>
-                <td className="p-2" colSpan={6}></td>
+                <td className="p-2" colSpan={11}></td>
               </tr>
             </tfoot>
           </table>
@@ -494,11 +636,33 @@ function DateFilter({
 }: {
   label: string
   year: string
-  month: string
+  month: string[]
   years: string[]
   onYearChange: (value: string) => void
-  onMonthChange: (value: string) => void
+  onMonthChange: (value: string[]) => void
 }) {
+  const [abierto, setAbierto] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClickFuera(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false)
+    }
+    document.addEventListener('mousedown', onClickFuera)
+    return () => document.removeEventListener('mousedown', onClickFuera)
+  }, [])
+
+  function toggleMes(value: string) {
+    if (month.includes(value)) onMonthChange(month.filter((m) => m !== value))
+    else onMonthChange([...month, value])
+  }
+
+  const resumenMeses = month.length === 0
+    ? 'Todos los meses'
+    : month.length === 1
+      ? MESES.find(([value]) => value === month[0])?.[1] ?? month[0]
+      : `${month.length} meses`
+
   return (
     <div className="flex flex-wrap items-end gap-2">
       <label className="text-sm">
@@ -508,13 +672,38 @@ function DateFilter({
           {years.map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
       </label>
-      <label className="text-sm">
+      <div className="relative text-sm" ref={ref}>
         <span className="mb-1 block text-slate-600">{label} - mes</span>
-        <select value={month} onChange={(e) => onMonthChange(e.target.value)} className="rounded border px-3 py-2 text-sm">
-          <option value="">Todos los meses</option>
-          {MESES.map(([value, name]) => <option key={value} value={value}>{name}</option>)}
-        </select>
-      </label>
+        <button
+          type="button"
+          onClick={() => setAbierto((v) => !v)}
+          className="min-w-[160px] rounded border px-3 py-2 text-left text-sm"
+        >
+          {resumenMeses}
+        </button>
+        {abierto && (
+          <div className="absolute z-50 mt-1 max-h-64 w-48 overflow-y-auto rounded border bg-white p-2 shadow-lg">
+            <label className="flex items-center gap-2 border-b pb-1 text-xs">
+              <input
+                type="checkbox"
+                checked={month.length === 0}
+                onChange={() => onMonthChange([])}
+              />
+              Todos los meses
+            </label>
+            {MESES.map(([value, name]) => (
+              <label key={value} className="flex items-center gap-2 py-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={month.includes(value)}
+                  onChange={() => toggleMes(value)}
+                />
+                {name}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

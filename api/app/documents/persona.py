@@ -13,6 +13,7 @@ class Persona(DocumentoOperativo):
     nombre: str
     email: str | None = None
     rol_operativo: str = "DEV"
+    tipo_contratacion: str | None = None
     activo: bool = True
     squads: list[str] = []
     es_lider_tecnico: bool = False

@@ -70,6 +70,11 @@ class AnsResultado(StrEnum):
     NO_CUMPLE = "NO_CUMPLE"
 
 
+class Tipificacion(StrEnum):
+    HITSS = "HITSS"
+    EPM = "EPM"
+
+
 class EstadoRequerimiento(StrEnum):
     ESTIMACION_EN_CURSO_POR_HITSS = "ESTIMACION EN CURSO POR HITSS"
     ESTIMACION_EN_ESPERA_DE_APROBACION_POR_EPM = "ESTIMACION EN ESPERA DE APROBACION POR EPM"

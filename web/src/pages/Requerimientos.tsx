@@ -274,6 +274,7 @@ export default function Requerimientos() {
     fechaLimiteDesde: string
     fechaLimiteHasta: string
     estadoEntrega: string
+    ansEstimacion: string
   }
   const FILTROS_INIT: Filtros = {
     codigoReq: '', sc: '', squad: '', estado: '', liderTecnico: '',
@@ -281,6 +282,7 @@ export default function Requerimientos() {
     fechaComprometidaDesde: '', fechaComprometidaHasta: '',
     fechaLimiteDesde: '', fechaLimiteHasta: '',
     estadoEntrega: '',
+    ansEstimacion: '',
   }
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INIT)
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
@@ -509,9 +511,9 @@ export default function Requerimientos() {
         if (filtros.fechaComprometidaHasta && fc > filtros.fechaComprometidaHasta) return false
       }
 
-      // Fecha límite
+      // Fecha límite (filtra por fecha real de entrega de la estimación)
       if (filtros.fechaLimiteDesde || filtros.fechaLimiteHasta) {
-        const fl = req.fecha_limite ? req.fecha_limite.slice(0, 10) : null
+        const fl = req.fecha_real_entrega_estimacion ? req.fecha_real_entrega_estimacion.slice(0, 10) : null
         if (!fl) return false
         if (filtros.fechaLimiteDesde && fl < filtros.fechaLimiteDesde) return false
         if (filtros.fechaLimiteHasta && fl > filtros.fechaLimiteHasta) return false
@@ -523,6 +525,12 @@ export default function Requerimientos() {
           (en) => (en.estado ?? '').toLowerCase() === filtros.estadoEntrega.toLowerCase()
         )
         if (!match) return false
+      }
+
+      // ANS Estimación
+      if (filtros.ansEstimacion) {
+        const v = (req.ans_acta ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
+        if (v !== filtros.ansEstimacion) return false
       }
 
       return true
@@ -621,6 +629,17 @@ export default function Requerimientos() {
                 {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            {/* ANS Estimación */}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">ANS Estimación</label>
+              <select value={filtros.ansEstimacion}
+                onChange={(e) => setFiltros((f) => ({ ...f, ansEstimacion: e.target.value }))}
+                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                <option value="">Todos</option>
+                <option value="CUMPLE">Cumple</option>
+                <option value="NO CUMPLE">No cumple</option>
+              </select>
+            </div>
             {/* Fecha solicitud */}
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-medium text-slate-600">Fecha y hora de solicitud</label>
@@ -647,9 +666,9 @@ export default function Requerimientos() {
                   className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
               </div>
             </div>
-            {/* Fecha límite */}
+            {/* Fecha real entrega de estimaciones */}
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-slate-600">Fecha límite</label>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Fecha real entrega de estimaciones</label>
               <div className="flex items-center gap-1">
                 <input type="date" value={filtros.fechaLimiteDesde}
                   onChange={(e) => setFiltros((f) => ({ ...f, fechaLimiteDesde: e.target.value }))}
@@ -675,6 +694,7 @@ export default function Requerimientos() {
               <th className="p-2 text-left">Nombre de acta</th>
               <th className="p-2 text-left">Aplicación EPM</th>
               <th className="p-2 text-left">Estado</th>
+              <th className="p-2 text-center">ANS Estimación</th>
               <th className="p-2 text-left">Líder técnico</th>
               <th className="p-2 text-left">Scrum</th>
               <th className="p-2 text-right">Horas</th>
@@ -725,6 +745,21 @@ export default function Requerimientos() {
                       {req.nombre ? req.nombre.split('-')[0].trim() : '—'}
                     </td>
                     <td className="p-2">{renderCelda(req, 'estado', req.estado, 'select')}</td>
+                    <td className="p-2 text-center">
+                      {(() => {
+                        const v = (req.ans_acta ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
+                        if (!v) return <span className="text-slate-400">—</span>
+                        const clase = v === 'CUMPLE' ? 'bg-emerald-100 text-emerald-700'
+                          : v === 'NO CUMPLE' ? 'bg-red-100 text-red-700'
+                          : 'bg-slate-100 text-slate-600'
+                        const label = v === 'CUMPLE' ? 'Cumple' : v === 'NO CUMPLE' ? 'No cumple' : v
+                        return (
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${clase}`}>
+                            {label}
+                          </span>
+                        )
+                      })()}
+                    </td>
                     <td className="p-2">{renderCelda(req, 'lt_hitss_id', nombrePersona(req.solicitud?.lt_hitss_id ?? null), 'select-persona', 'LT_HITSS')}</td>
                     <td className="p-2">{renderCelda(req, 'scrum_id', nombrePersona(req.solicitud?.scrum_id ?? null), 'select-persona', 'SCRUM')}</td>
                     <td className="p-2 text-right">{renderCelda(req, 'total_horas_estimadas', req.total_horas_estimadas != null ? String(req.total_horas_estimadas) : '', 'number')}</td>
@@ -820,7 +855,7 @@ export default function Requerimientos() {
                   {/* Sub-fila: detalle de entregas */}
                   {expandedEntregas.has(req.id) && req.entregas?.length > 0 && (
                     <tr key={`${req.id}-entregas`}>
-                      <td colSpan={13} className="p-0">
+                      <td colSpan={14} className="p-0">
                         <div className="border-l-4 border-emerald-400 bg-emerald-50/40 px-4 py-2">
                           <table className="w-full text-xs">
                             <thead>
@@ -865,7 +900,7 @@ export default function Requerimientos() {
                   {/* Filas detalle: Historias de Usuario agrupadas */}
                   {isExpanded && grupos.length > 0 && (
                     <tr key={`${req.id}-hu`}>
-                      <td colSpan={13} className="p-0">
+                      <td colSpan={14} className="p-0">
                         <div className="border-l-4 border-cyan-400 bg-slate-50 px-4 py-2">
                           <table className="w-full text-xs">
                             <thead>
@@ -943,7 +978,7 @@ export default function Requerimientos() {
                   )}
                   {isExpanded && !estCargada && !loadingReqEst.has(req.id) && (
                     <tr key={`${req.id}-empty`}>
-                      <td colSpan={13} className="border-l-4 border-slate-300 bg-slate-50 px-6 py-3 text-center text-xs text-slate-400">
+                      <td colSpan={14} className="border-l-4 border-slate-300 bg-slate-50 px-6 py-3 text-center text-xs text-slate-400">
                         Sin datos de estimación para este requerimiento.
                       </td>
                     </tr>
@@ -952,7 +987,7 @@ export default function Requerimientos() {
               )
             })}
             {datosFiltrados.length === 0 && (
-              <tr><td colSpan={13} className="p-4 text-center text-slate-400">
+              <tr><td colSpan={14} className="p-4 text-center text-slate-400">
                 {hayFiltrosActivos ? 'Sin resultados con los filtros aplicados.' : 'Sin requerimientos.'}
               </td></tr>
             )}
@@ -964,7 +999,7 @@ export default function Requerimientos() {
               <tfoot>
                 <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700 text-sm">
                   <td className="p-2"></td>
-                  <td className="p-2" colSpan={7}>Total ({datosFiltrados.length} requerimientos)</td>
+                  <td className="p-2" colSpan={8}>Total ({datosFiltrados.length} requerimientos)</td>
                   <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>
                   <td className="p-2" colSpan={4}></td>
                   <td className="p-2 text-center">{totalEntregas}</td>
