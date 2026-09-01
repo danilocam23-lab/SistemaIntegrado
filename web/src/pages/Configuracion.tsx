@@ -2,10 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
-import { ESTADOS_ENTREGA, ESTADOS_REQUERIMIENTO } from '../constantes'
+import { ESTADOS_ENTREGA, ESTADOS_REQUERIMIENTO, ENTREGAS_ACTAS_CONFIG_CLAVES, ENTREGAS_ACTAS_COLUMNAS, ENTREGAS_ACTAS_FILTROS, REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../constantes'
+import type { EntregasActasCampo } from '../constantes'
 import type { Configuracion as Config, Festivo, Tarifa, Categoria } from '../types'
 
-type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'estados'
+type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'estados' | 'entregas_actas' | 'requerimientos'
+
+/** Agrupa una lista de campos configurables por su `grupo`, en un orden fijo legible. */
+function agruparCampos(campos: EntregasActasCampo[]): { grupo: string; items: EntregasActasCampo[] }[] {
+  const orden = ['Entrega', 'Requerimiento', 'Solicitud', 'Facturación']
+  const mapa = new Map<string, EntregasActasCampo[]>()
+  for (const c of campos) {
+    if (!mapa.has(c.grupo)) mapa.set(c.grupo, [])
+    mapa.get(c.grupo)?.push(c)
+  }
+  return orden.filter((g) => mapa.has(g)).map((g) => ({ grupo: g, items: mapa.get(g) ?? [] }))
+}
 
 export default function Configuracion() {
   const [tab, setTab] = useState<Tab>('tarifas')
@@ -396,6 +408,110 @@ export default function Configuracion() {
     void guardarEstados('estados_entrega', nueva)
   }
 
+  // ── Estado: Entregas de Actas (columnas, filtros y campos de exportación) ──
+  const [eaColumnas, setEaColumnas] = useState<Set<string>>(new Set(ENTREGAS_ACTAS_COLUMNAS.map((c) => c.key)))
+  const [eaFiltros, setEaFiltros] = useState<Set<string>>(new Set(ENTREGAS_ACTAS_FILTROS.map((f) => f.key)))
+  const [eaExport, setEaExport] = useState<Set<string>>(new Set(ENTREGAS_ACTAS_COLUMNAS.map((c) => c.key)))
+  const [eaAviso, setEaAviso] = useState('')
+  const [eaOk, setEaOk] = useState('')
+
+  useEffect(() => {
+    setEaColumnas(leerCamposActivos(datos, ENTREGAS_ACTAS_CONFIG_CLAVES.columnas, ENTREGAS_ACTAS_COLUMNAS))
+    setEaFiltros(leerCamposActivos(datos, ENTREGAS_ACTAS_CONFIG_CLAVES.filtros, ENTREGAS_ACTAS_FILTROS))
+    setEaExport(leerCamposActivos(datos, ENTREGAS_ACTAS_CONFIG_CLAVES.exportCampos, ENTREGAS_ACTAS_COLUMNAS))
+  }, [datos])
+
+  async function guardarCamposEntregasActas(clave: string, keys: string[]): Promise<void> {
+    setEaAviso('')
+    setEaOk('')
+    try {
+      await client.put(`/configuracion/${encodeURIComponent(clave)}`, {
+        valor: JSON.stringify(keys),
+        grupo: 'entregas_actas',
+      })
+      setEaOk('Configuración guardada.')
+      recargar()
+    } catch (err) {
+      setEaAviso(mensajeError(err))
+    }
+  }
+
+  function alternarEaColumna(key: string): void {
+    const nueva = new Set(eaColumnas)
+    if (nueva.has(key)) nueva.delete(key)
+    else nueva.add(key)
+    setEaColumnas(nueva)
+    void guardarCamposEntregasActas(ENTREGAS_ACTAS_CONFIG_CLAVES.columnas, Array.from(nueva))
+  }
+
+  function alternarEaFiltro(key: string): void {
+    const nueva = new Set(eaFiltros)
+    if (nueva.has(key)) nueva.delete(key)
+    else nueva.add(key)
+    setEaFiltros(nueva)
+    void guardarCamposEntregasActas(ENTREGAS_ACTAS_CONFIG_CLAVES.filtros, Array.from(nueva))
+  }
+
+  function alternarEaExport(key: string): void {
+    const nueva = new Set(eaExport)
+    if (nueva.has(key)) nueva.delete(key)
+    else nueva.add(key)
+    setEaExport(nueva)
+    void guardarCamposEntregasActas(ENTREGAS_ACTAS_CONFIG_CLAVES.exportCampos, Array.from(nueva))
+  }
+
+  // ── Estado: Requerimientos (columnas, filtros y campos de exportación) ──
+  const [reqColumnas, setReqColumnas] = useState<Set<string>>(new Set(REQUERIMIENTOS_COLUMNAS.map((c) => c.key)))
+  const [reqFiltros, setReqFiltros] = useState<Set<string>>(new Set(REQUERIMIENTOS_FILTROS.map((f) => f.key)))
+  const [reqExport, setReqExport] = useState<Set<string>>(new Set(REQUERIMIENTOS_COLUMNAS.map((c) => c.key)))
+  const [reqAviso, setReqAviso] = useState('')
+  const [reqOk, setReqOk] = useState('')
+
+  useEffect(() => {
+    setReqColumnas(leerCamposActivos(datos, REQUERIMIENTOS_CONFIG_CLAVES.columnas, REQUERIMIENTOS_COLUMNAS))
+    setReqFiltros(leerCamposActivos(datos, REQUERIMIENTOS_CONFIG_CLAVES.filtros, REQUERIMIENTOS_FILTROS))
+    setReqExport(leerCamposActivos(datos, REQUERIMIENTOS_CONFIG_CLAVES.exportCampos, REQUERIMIENTOS_COLUMNAS))
+  }, [datos])
+
+  async function guardarCamposRequerimientos(clave: string, keys: string[]): Promise<void> {
+    setReqAviso('')
+    setReqOk('')
+    try {
+      await client.put(`/configuracion/${encodeURIComponent(clave)}`, {
+        valor: JSON.stringify(keys),
+        grupo: 'requerimientos',
+      })
+      setReqOk('Configuración guardada.')
+      recargar()
+    } catch (err) {
+      setReqAviso(mensajeError(err))
+    }
+  }
+
+  function alternarReqColumna(key: string): void {
+    const nueva = new Set(reqColumnas)
+    if (nueva.has(key)) nueva.delete(key)
+    else nueva.add(key)
+    setReqColumnas(nueva)
+    void guardarCamposRequerimientos(REQUERIMIENTOS_CONFIG_CLAVES.columnas, Array.from(nueva))
+  }
+
+  function alternarReqFiltro(key: string): void {
+    const nueva = new Set(reqFiltros)
+    if (nueva.has(key)) nueva.delete(key)
+    else nueva.add(key)
+    setReqFiltros(nueva)
+    void guardarCamposRequerimientos(REQUERIMIENTOS_CONFIG_CLAVES.filtros, Array.from(nueva))
+  }
+
+  function alternarReqExport(key: string): void {
+    const nueva = new Set(reqExport)
+    if (nueva.has(key)) nueva.delete(key)
+    else nueva.add(key)
+    setReqExport(nueva)
+    void guardarCamposRequerimientos(REQUERIMIENTOS_CONFIG_CLAVES.exportCampos, Array.from(nueva))
+  }
+
   return (
     <div>
       <h1 className="mb-4 text-xl font-bold text-marca-osc">Configuración</h1>
@@ -410,6 +526,8 @@ export default function Configuracion() {
           { id: 'festivos',   label: '📅 Festivos' },
           { id: 'parametros', label: '⚙️ Parámetros' },
           { id: 'estados',    label: '🔖 Estados' },
+          { id: 'entregas_actas', label: '📋 Entregas de Actas' },
+          { id: 'requerimientos', label: '🧾 Requerimientos' },
         ] as { id: Tab; label: string }[]).map(({ id, label }) => (
           <button
             key={id}
@@ -845,6 +963,177 @@ export default function Configuracion() {
               <button onClick={agregarEstadoEnt} className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">
                 Agregar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ TAB: Entregas de Actas ═══ */}
+      {tab === 'entregas_actas' && (
+        <div className="space-y-6">
+          <p className="text-sm text-slate-500">
+            Activa o desactiva, sin necesidad de desarrollo, las columnas visibles en la tabla, los
+            filtros de búsqueda disponibles y los campos incluidos al exportar a Excel en la vista
+            "Entregas de Actas".
+          </p>
+
+          {eaAviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{eaAviso}</div>}
+          {eaOk && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">{eaOk}</div>}
+
+          {/* Columnas de la tabla */}
+          <div className="rounded-xl border bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Columnas de la tabla
+            </h2>
+            <div className="space-y-4">
+              {agruparCampos(ENTREGAS_ACTAS_COLUMNAS).map(({ grupo, items }) => (
+                <div key={grupo}>
+                  <h3 className="mb-2 text-xs font-semibold text-slate-400">{grupo}</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    {items.map((c) => (
+                      <label key={c.key} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={eaColumnas.has(c.key)}
+                          onChange={() => alternarEaColumna(c.key)}
+                        />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Filtros de búsqueda */}
+          <div className="rounded-xl border bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Filtros de búsqueda
+            </h2>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              {ENTREGAS_ACTAS_FILTROS.map((f) => (
+                <label key={f.key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={eaFiltros.has(f.key)}
+                    onChange={() => alternarEaFiltro(f.key)}
+                  />
+                  {f.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Campos de exportación a Excel */}
+          <div className="rounded-xl border bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Campos incluidos al exportar a Excel
+            </h2>
+            <div className="space-y-4">
+              {agruparCampos(ENTREGAS_ACTAS_COLUMNAS).map(({ grupo, items }) => (
+                <div key={grupo}>
+                  <h3 className="mb-2 text-xs font-semibold text-slate-400">{grupo}</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    {items.map((c) => (
+                      <label key={c.key} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={eaExport.has(c.key)}
+                          onChange={() => alternarEaExport(c.key)}
+                        />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ TAB: Requerimientos ═══ */}
+      {tab === 'requerimientos' && (
+        <div className="space-y-6">
+          <p className="text-sm text-slate-500">
+            Activa o desactiva, sin necesidad de desarrollo, las columnas visibles en la tabla principal,
+            los filtros de búsqueda disponibles y los campos incluidos al exportar a Excel en la vista
+            "Requerimientos". Las columnas de acciones (expandir, estimación, editar/eliminar) no son
+            configurables porque son funcionales.
+          </p>
+
+          {reqAviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{reqAviso}</div>}
+          {reqOk && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">{reqOk}</div>}
+
+          {/* Columnas de la tabla */}
+          <div className="rounded-xl border bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Columnas de la tabla
+            </h2>
+            <div className="space-y-4">
+              {agruparCampos(REQUERIMIENTOS_COLUMNAS).map(({ grupo, items }) => (
+                <div key={grupo}>
+                  <h3 className="mb-2 text-xs font-semibold text-slate-400">{grupo}</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    {items.map((c) => (
+                      <label key={c.key} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={reqColumnas.has(c.key)}
+                          onChange={() => alternarReqColumna(c.key)}
+                        />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Filtros de búsqueda */}
+          <div className="rounded-xl border bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Filtros de búsqueda
+            </h2>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+              {REQUERIMIENTOS_FILTROS.map((f) => (
+                <label key={f.key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={reqFiltros.has(f.key)}
+                    onChange={() => alternarReqFiltro(f.key)}
+                  />
+                  {f.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Campos de exportación a Excel */}
+          <div className="rounded-xl border bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Campos incluidos al exportar a Excel
+            </h2>
+            <div className="space-y-4">
+              {agruparCampos(REQUERIMIENTOS_COLUMNAS).map(({ grupo, items }) => (
+                <div key={grupo}>
+                  <h3 className="mb-2 text-xs font-semibold text-slate-400">{grupo}</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                    {items.map((c) => (
+                      <label key={c.key} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={reqExport.has(c.key)}
+                          onChange={() => alternarReqExport(c.key)}
+                        />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

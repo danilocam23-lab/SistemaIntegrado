@@ -61,6 +61,13 @@ export interface Squad {
   activo: boolean
 }
 
+export interface Facturacion {
+  mes_facturacion: string | null
+  estado: string | null
+  fecha_aprobacion_factura: string | null
+  valor_facturado: number | null
+}
+
 export interface Entrega {
   numero: number
   horas: number | null
@@ -76,8 +83,11 @@ export interface Entrega {
   tipificacion: 'HITSS' | 'EPM' | null
   mes_aprobacion: string | null
   ans_entrega: string | null
+  se_levanto_ans?: boolean | null
+  observaciones_ans?: string | null
   garantia: boolean
   numero_garantia: number | null
+  facturacion?: Facturacion | null
 }
 
 export interface Requerimiento {
@@ -90,6 +100,8 @@ export interface Requerimiento {
   total_horas_estimadas: number | null
   fecha_real_entrega_estimacion: string | null
   ans_estimacion: string | null
+  se_levanto_ans?: boolean | null
+  observaciones_ans?: string | null
   fecha_solicitud_acta: string | null
   fecha_limite: string | null
   ans_acta: string | null
@@ -209,6 +221,15 @@ export interface Capacidad {
   mes: string
   horas_disponibles: number
   personas: number
+}
+
+export interface PlanAccion {
+  id: string
+  titulo: string
+  descripcion: string | null
+  responsable_id: string | null
+  fecha_limite: string | null
+  estado: string
 }
 
 // --- Transversal ---

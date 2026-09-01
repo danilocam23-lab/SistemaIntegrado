@@ -1,21 +1,47 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import * as XLSX from 'xlsx'
 import client from '../api/client'
 import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import type { Aplicacion, Estimacion, EstimacionConResumen, FilaEstimacion, Persona, Requerimiento, Squad } from '../types'
+import { REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../constantes'
+import type { Aplicacion, Categoria, Configuracion as ConfigItem, Estimacion, EstimacionConResumen, FilaEstimacion, Persona, Requerimiento, Squad } from '../types'
 
 export default function Requerimientos() {
   const { tienePermiso } = useAuth()
   const puedeEditar = tienePermiso('requerimientos.editar')
   const puedeEliminar = tienePermiso('requerimientos.eliminar')
   const puedeCrear = tienePermiso('requerimientos.crear')
+  const puedeExportar = tienePermiso('requerimientos.exportar')
   const puedeGestionarEstimaciones = tienePermiso('requerimientos.editar')
   const { datos, error, recargar } = useLista<Requerimiento>('/requerimientos')
   const { estadosReq, estadosEnt } = useEstados()
   const { datos: personas } = useLista<Persona>('/personas')
+  const { datos: categorias } = useLista<Categoria>('/categorias')
+  const { datos: configuracion } = useLista<ConfigItem>('/configuracion')
   // Aplicaciones: fuente principal de nombre de squad (squad_id = codigo de app)
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
+
+  /** Columnas, filtros y campos de exportación activados desde /configuracion
+   *  (tab "Requerimientos" en Configuración). Por defecto, todo lo histórico activo. */
+  const columnasActivas = useMemo(
+    () => leerCamposActivos(configuracion, REQUERIMIENTOS_CONFIG_CLAVES.columnas, REQUERIMIENTOS_COLUMNAS),
+    [configuracion],
+  )
+  const filtrosActivos = useMemo(
+    () => leerCamposActivos(configuracion, REQUERIMIENTOS_CONFIG_CLAVES.filtros, REQUERIMIENTOS_FILTROS),
+    [configuracion],
+  )
+  const exportCamposActivos = useMemo(
+    () => leerCamposActivos(configuracion, REQUERIMIENTOS_CONFIG_CLAVES.exportCampos, REQUERIMIENTOS_COLUMNAS),
+    [configuracion],
+  )
+  /** Columnas "extra" (no forman parte del set histórico de 15), en el orden del catálogo. */
+  const CORE_COLUMNAS = ['codigoReq', 'sc', 'squad', 'nombreActa', 'aplicacionEpm', 'estado', 'ansEstimacion', 'ltHitss', 'scrum', 'horas', 'fechaSolicitud', 'fechaLimite', 'fechaReal', 'diasTranscurridos', 'entregasCount']
+  const columnasExtra = useMemo(
+    () => REQUERIMIENTOS_COLUMNAS.filter((c) => !CORE_COLUMNAS.includes(c.key) && columnasActivas.has(c.key)),
+    [columnasActivas],
+  )
 
   // Squads de la colección squads (para registros importados con _id numérico)
   const [squadsCol, setSquadsCol] = useState<Squad[]>([])
@@ -275,6 +301,9 @@ export default function Requerimientos() {
     fechaLimiteHasta: string
     estadoEntrega: string
     ansEstimacion: string
+    categoria: string
+    tipificacion: string
+    tipoCosto: string
   }
   const FILTROS_INIT: Filtros = {
     codigoReq: '', sc: '', squad: '', estado: '', liderTecnico: '',
@@ -283,6 +312,9 @@ export default function Requerimientos() {
     fechaLimiteDesde: '', fechaLimiteHasta: '',
     estadoEntrega: '',
     ansEstimacion: '',
+    categoria: '',
+    tipificacion: '',
+    tipoCosto: '',
   }
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INIT)
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
@@ -473,6 +505,31 @@ export default function Requerimientos() {
     personas.filter((p) => p.rol_operativo === 'LT_HITSS'),
     [personas])
 
+  const personaPorId = useMemo(() => {
+    const m = new Map<string, string>()
+    personas.forEach((p) => m.set(String(p.id), p.nombre))
+    return m
+  }, [personas])
+
+  const categoriaPorId = useMemo(() => {
+    const m = new Map<string, string>()
+    categorias.forEach((c) => m.set(String(c.id), c.nombre))
+    return m
+  }, [categorias])
+
+  const categoriasDisponibles = useMemo(() =>
+    Array.from(new Set(datos.filter((r) => r.categoria_id).map((r) => categoriaPorId.get(String(r.categoria_id)) ?? String(r.categoria_id))))
+      .sort((a, b) => a.localeCompare(b, 'es')),
+    [datos, categoriaPorId])
+
+  const tipificacionesDisponibles = useMemo(() =>
+    Array.from(new Set(datos.filter((r) => r.tipificacion).map((r) => r.tipificacion as string))),
+    [datos])
+
+  const tiposCostoDisponibles = useMemo(() =>
+    Array.from(new Set(datos.filter((r) => r.solicitud?.tipo_costo).map((r) => r.solicitud!.tipo_costo as string))),
+    [datos])
+
   const hayFiltrosActivos = Object.values(filtros).some((v) => v !== '')
 
   const datosFiltrados = useMemo(() => {
@@ -533,9 +590,93 @@ export default function Requerimientos() {
         if (v !== filtros.ansEstimacion) return false
       }
 
+      // Categoría (resuelto por nombre)
+      if (filtros.categoria) {
+        const nombreCat = req.categoria_id ? (categoriaPorId.get(String(req.categoria_id)) ?? String(req.categoria_id)) : ''
+        if (nombreCat !== filtros.categoria) return false
+      }
+
+      // Tipificación del requerimiento
+      if (filtros.tipificacion && req.tipificacion !== filtros.tipificacion) return false
+
+      // Tipo de costo (solicitud)
+      if (filtros.tipoCosto && req.solicitud?.tipo_costo !== filtros.tipoCosto) return false
+
       return true
     })
-  }, [datos, filtros, squadPorId])
+  }, [datos, filtros, squadPorId, categoriaPorId])
+
+  /** Accesores de valor (texto/número) por clave de columna, usados para exportar a
+   *  Excel y para renderizar las columnas "extra" (no editables, activadas desde
+   *  Configuración). Las 15 columnas históricas se siguen renderizando con su JSX
+   *  específico (edición inline, badges, etc.) para no romper esa funcionalidad. */
+  const CAMPO_ACCESOR_REQ: Record<string, (r: Requerimiento) => string | number> = {
+    codigoReq: (r) => r.codigo_req,
+    sc: (r) => r.solicitud?.codigo_sc ?? '',
+    squad: (r) => (r.solicitud?.squad_id ? (squadPorId.get(String(r.solicitud.squad_id)) ?? String(r.solicitud.squad_id)) : ''),
+    nombreActa: (r) => r.nombre ?? '',
+    aplicacionEpm: (r) => (r.nombre ? r.nombre.split('-')[0].trim() : ''),
+    estado: (r) => r.estado,
+    ansEstimacion: (r) => {
+      const v = (r.ans_acta ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
+      return v === 'CUMPLE' ? 'Cumple' : v === 'NO CUMPLE' ? 'No cumple' : v
+    },
+    ltHitss: (r) => nombrePersona(r.solicitud?.lt_hitss_id ?? null),
+    scrum: (r) => nombrePersona(r.solicitud?.scrum_id ?? null),
+    horas: (r) => r.total_horas_estimadas ?? '',
+    fechaSolicitud: (r) => (r.fecha_solicitud_acta ? r.fecha_solicitud_acta.slice(0, 10) : ''),
+    fechaLimite: (r) => (r.fecha_limite ? r.fecha_limite.slice(0, 10) : ''),
+    fechaReal: (r) => (r.fecha_real_entrega_estimacion ? r.fecha_real_entrega_estimacion.slice(0, 10) : ''),
+    diasTranscurridos: (r) => {
+      const result = calcularDiasTranscurridos(r.fecha_limite, r.fecha_real_entrega_estimacion)
+      return result ? `${result.esNegativo ? '-' : '+'}${result.dias}` : ''
+    },
+    entregasCount: (r) => r.entregas?.length ?? 0,
+    // ── Extra ──
+    ansEstimacionReal: (r) => r.ans_estimacion ?? '',
+    seLevantoAnsReq: (r) => (r.se_levanto_ans == null ? '' : r.se_levanto_ans ? 'Sí' : 'No'),
+    observacionesAnsReq: (r) => r.observaciones_ans ?? '',
+    motivoCierre: (r) => r.motivo_cierre ?? '',
+    seguimiento: (r) => r.seguimiento ?? '',
+    seguimientoEpm: (r) => r.seguimiento_epm ?? '',
+    tipificacion: (r) => r.tipificacion ?? '',
+    montoPactado: (r) => r.monto_pactado ?? '',
+    actaTrabajo: (r) => r.acta_trabajo ?? '',
+    cantidadEntregas: (r) => r.cantidad_entregas ?? '',
+    categoria: (r) => (r.categoria_id ? (categoriaPorId.get(String(r.categoria_id)) ?? String(r.categoria_id)) : ''),
+    developers: (r) => (r.developers_asignados ?? []).map((id) => personaPorId.get(String(id)) ?? String(id)).join(', '),
+    fechaInicio: (r) => (r.fecha_inicio ? r.fecha_inicio.slice(0, 10) : ''),
+    fechaFin: (r) => (r.fecha_fin ? r.fecha_fin.slice(0, 10) : ''),
+    ltEpm: (r) => nombrePersona(r.solicitud?.lt_epm_id ?? null),
+    tipoCosto: (r) => r.solicitud?.tipo_costo ?? '',
+    tecnologia: (r) => r.solicitud?.tecnologia ?? '',
+    solicitudEstado: (r) => r.solicitud?.estado ?? '',
+    fechaSolicitudSc: (r) => (r.solicitud?.fecha_solicitud ? r.solicitud.fecha_solicitud.slice(0, 10) : ''),
+    anioTarifa: (r) => r.solicitud?.anio_tarifa ?? '',
+  }
+
+  /** Exporta a Excel el listado actualmente filtrado, según los campos configurados. */
+  function exportarExcel(): void {
+    if (!puedeExportar) return
+    const columnasExport = REQUERIMIENTOS_COLUMNAS.filter((c) => exportCamposActivos.has(c.key))
+    const filas = datosFiltrados.map((r) => {
+      const fila: Record<string, string | number> = {}
+      for (const c of columnasExport) {
+        fila[c.label] = CAMPO_ACCESOR_REQ[c.key]?.(r) ?? ''
+      }
+      return fila
+    })
+    const hoja = XLSX.utils.json_to_sheet(filas)
+    const libro = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(libro, hoja, 'Requerimientos')
+    const fecha = new Date().toISOString().slice(0, 10)
+    XLSX.writeFile(libro, `requerimientos_${fecha}.xlsx`)
+  }
+
+  // Total de columnas activas de la tabla principal (usado para colSpan dinámico).
+  const coreVisibleCount = CORE_COLUMNAS.filter((k) => columnasActivas.has(k)).length
+  const metricasVisibles = ['horas', 'entregasCount'].filter((k) => columnasActivas.has(k))
+  const totalColumnasTabla = 2 + coreVisibleCount + columnasExtra.length
 
   return (
     <div>
@@ -556,6 +697,16 @@ export default function Requerimientos() {
             </svg>
             Filtros{hayFiltrosActivos && <span className="ml-1 rounded-full bg-marca px-1.5 py-0.5 text-[10px] font-bold text-white">ON</span>}
           </button>
+          {puedeExportar && (
+            <button
+              onClick={exportarExcel}
+              disabled={datosFiltrados.length === 0}
+              title="Exporta a Excel el listado con los filtros actualmente aplicados"
+              className="flex items-center gap-1 rounded-lg border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Exportar a Excel
+            </button>
+          )}
         </div>
       </div>
 
@@ -576,20 +727,25 @@ export default function Requerimientos() {
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {/* Código REQ */}
+            {filtrosActivos.has('codigoReq') && (
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">Código REQ</label>
               <input type="text" value={filtros.codigoReq} placeholder="Buscar..."
                 onChange={(e) => setFiltros((f) => ({ ...f, codigoReq: e.target.value }))}
                 className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
             </div>
+            )}
             {/* SC */}
+            {filtrosActivos.has('sc') && (
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">SC</label>
               <input type="text" value={filtros.sc} placeholder="Buscar..."
                 onChange={(e) => setFiltros((f) => ({ ...f, sc: e.target.value }))}
                 className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
             </div>
+            )}
             {/* Squad */}
+            {filtrosActivos.has('squad') && (
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">Squad</label>
               <select value={filtros.squad}
@@ -599,7 +755,9 @@ export default function Requerimientos() {
                 {squadsDisponibles.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            )}
             {/* Estado */}
+            {filtrosActivos.has('estado') && (
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">Estado</label>
               <select value={filtros.estado}
@@ -609,7 +767,9 @@ export default function Requerimientos() {
                 {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            )}
             {/* Líder técnico */}
+            {filtrosActivos.has('liderTecnico') && (
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">Líder técnico</label>
               <select value={filtros.liderTecnico}
@@ -619,7 +779,9 @@ export default function Requerimientos() {
                 {lideresDisponibles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </div>
+            )}
             {/* Estado entregas */}
+            {filtrosActivos.has('estadoEntrega') && (
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">Estado (entregas)</label>
               <select value={filtros.estadoEntrega}
@@ -629,7 +791,9 @@ export default function Requerimientos() {
                 {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            )}
             {/* ANS Estimación */}
+            {filtrosActivos.has('ansEstimacion') && (
             <div>
               <label className="mb-1 block text-xs font-medium text-slate-600">ANS Estimación</label>
               <select value={filtros.ansEstimacion}
@@ -640,7 +804,45 @@ export default function Requerimientos() {
                 <option value="NO CUMPLE">No cumple</option>
               </select>
             </div>
+            )}
+            {/* Categoría */}
+            {filtrosActivos.has('categoria') && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Categoría</label>
+              <select value={filtros.categoria}
+                onChange={(e) => setFiltros((f) => ({ ...f, categoria: e.target.value }))}
+                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                <option value="">Todas</option>
+                {categoriasDisponibles.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            )}
+            {/* Tipificación */}
+            {filtrosActivos.has('tipificacion') && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Tipificación</label>
+              <select value={filtros.tipificacion}
+                onChange={(e) => setFiltros((f) => ({ ...f, tipificacion: e.target.value }))}
+                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                <option value="">Todas</option>
+                {tipificacionesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            )}
+            {/* Tipo de costo */}
+            {filtrosActivos.has('tipoCosto') && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Tipo de costo</label>
+              <select value={filtros.tipoCosto}
+                onChange={(e) => setFiltros((f) => ({ ...f, tipoCosto: e.target.value }))}
+                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                <option value="">Todos</option>
+                {tiposCostoDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            )}
             {/* Fecha solicitud */}
+            {filtrosActivos.has('fechaSolicitud') && (
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-medium text-slate-600">Fecha y hora de solicitud</label>
               <div className="flex items-center gap-1">
@@ -653,7 +855,9 @@ export default function Requerimientos() {
                   className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
               </div>
             </div>
+            )}
             {/* Fecha comprometida */}
+            {filtrosActivos.has('fechaComprometida') && (
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-medium text-slate-600">Fecha comprometida</label>
               <div className="flex items-center gap-1">
@@ -666,7 +870,9 @@ export default function Requerimientos() {
                   className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
               </div>
             </div>
+            )}
             {/* Fecha real entrega de estimaciones */}
+            {filtrosActivos.has('fechaLimite') && (
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-medium text-slate-600">Fecha real entrega de estimaciones</label>
               <div className="flex items-center gap-1">
@@ -679,6 +885,7 @@ export default function Requerimientos() {
                   className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
               </div>
             </div>
+            )}
           </div>
         </div>
       )}
@@ -688,22 +895,25 @@ export default function Requerimientos() {
           <thead className="bg-marca-osc text-white">
             <tr>
               <th className="w-8 p-2"></th>
-              <th className="p-2 text-left">Código REQ</th>
-              <th className="p-2 text-left">SC</th>
-              <th className="p-2 text-left">Squad</th>
-              <th className="p-2 text-left">Nombre de acta</th>
-              <th className="p-2 text-left">Aplicación EPM</th>
-              <th className="p-2 text-left">Estado</th>
-              <th className="p-2 text-center">ANS Estimación</th>
-              <th className="p-2 text-left">Líder técnico</th>
-              <th className="p-2 text-left">Scrum</th>
-              <th className="p-2 text-right">Horas</th>
-              <th className="p-2 text-center">F. Solicitud</th>
-              <th className="p-2 text-center">F. Límite</th>
-              <th className="p-2 text-center">F. Real</th>
-              <th className="p-2 text-right">Días transcurridos</th>
-              <th className="p-2 text-center">Entregas</th>
+              {columnasActivas.has('codigoReq') && <th className="p-2 text-left">Código REQ</th>}
+              {columnasActivas.has('sc') && <th className="p-2 text-left">SC</th>}
+              {columnasActivas.has('squad') && <th className="p-2 text-left">Squad</th>}
+              {columnasActivas.has('nombreActa') && <th className="p-2 text-left">Nombre de acta</th>}
+              {columnasActivas.has('aplicacionEpm') && <th className="p-2 text-left">Aplicación EPM</th>}
+              {columnasActivas.has('estado') && <th className="p-2 text-left">Estado</th>}
+              {columnasActivas.has('ansEstimacion') && <th className="p-2 text-center">ANS Estimación</th>}
+              {columnasActivas.has('ltHitss') && <th className="p-2 text-left">Líder técnico</th>}
+              {columnasActivas.has('scrum') && <th className="p-2 text-left">Scrum</th>}
+              {columnasActivas.has('horas') && <th className="p-2 text-right">Horas</th>}
+              {columnasActivas.has('fechaSolicitud') && <th className="p-2 text-center">F. Solicitud</th>}
+              {columnasActivas.has('fechaLimite') && <th className="p-2 text-center">F. Límite</th>}
+              {columnasActivas.has('fechaReal') && <th className="p-2 text-center">F. Real</th>}
+              {columnasActivas.has('diasTranscurridos') && <th className="p-2 text-right">Días transcurridos</th>}
+              {columnasActivas.has('entregasCount') && <th className="p-2 text-center">Entregas</th>}
               <th className="p-2 text-center">Est.</th>
+              {columnasExtra.map((c) => (
+                <th key={c.key} className="p-2 text-left whitespace-nowrap">{c.label}</th>
+              ))}
               <th className="p-2"></th>
             </tr>
           </thead>
@@ -731,20 +941,33 @@ export default function Requerimientos() {
                         </button>
                       ) : null}
                     </td>
+                    {columnasActivas.has('codigoReq') && (
                     <td className="p-2 font-mono">
                       <Link to={`/requerimientos/${req.id}`} className="text-marca hover:underline">
                         {req.codigo_req}
                       </Link>
                     </td>
+                    )}
+                    {columnasActivas.has('sc') && (
                     <td className="p-2">{renderCelda(req, 'codigo_sc', req.solicitud?.codigo_sc ?? '')}</td>
+                    )}
+                    {columnasActivas.has('squad') && (
                     <td className="p-2 text-xs text-slate-600">
                       {req.solicitud?.squad_id ? (squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id)) : '—'}
                     </td>
+                    )}
+                    {columnasActivas.has('nombreActa') && (
                     <td className="p-2">{renderCelda(req, 'nombre', req.nombre ?? '')}</td>
+                    )}
+                    {columnasActivas.has('aplicacionEpm') && (
                     <td className="p-2 text-xs text-slate-600">
                       {req.nombre ? req.nombre.split('-')[0].trim() : '—'}
                     </td>
+                    )}
+                    {columnasActivas.has('estado') && (
                     <td className="p-2">{renderCelda(req, 'estado', req.estado, 'select')}</td>
+                    )}
+                    {columnasActivas.has('ansEstimacion') && (
                     <td className="p-2 text-center">
                       {(() => {
                         const v = (req.ans_acta ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
@@ -760,24 +983,38 @@ export default function Requerimientos() {
                         )
                       })()}
                     </td>
+                    )}
+                    {columnasActivas.has('ltHitss') && (
                     <td className="p-2">{renderCelda(req, 'lt_hitss_id', nombrePersona(req.solicitud?.lt_hitss_id ?? null), 'select-persona', 'LT_HITSS')}</td>
+                    )}
+                    {columnasActivas.has('scrum') && (
                     <td className="p-2">{renderCelda(req, 'scrum_id', nombrePersona(req.solicitud?.scrum_id ?? null), 'select-persona', 'SCRUM')}</td>
+                    )}
+                    {columnasActivas.has('horas') && (
                     <td className="p-2 text-right">{renderCelda(req, 'total_horas_estimadas', req.total_horas_estimadas != null ? String(req.total_horas_estimadas) : '', 'number')}</td>
+                    )}
+                    {columnasActivas.has('fechaSolicitud') && (
                     <td className="p-2 text-center text-xs">
                       {req.fecha_solicitud_acta
                         ? req.fecha_solicitud_acta.slice(0, 10)
                         : <span className="text-slate-400">—</span>}
                     </td>
+                    )}
+                    {columnasActivas.has('fechaLimite') && (
                     <td className="p-2 text-center text-xs">
                       {req.fecha_limite
                         ? req.fecha_limite.slice(0, 10)
                         : <span className="text-slate-400">—</span>}
                     </td>
+                    )}
+                    {columnasActivas.has('fechaReal') && (
                     <td className="p-2 text-center text-xs">
                       {req.fecha_real_entrega_estimacion
                         ? req.fecha_real_entrega_estimacion.slice(0, 10)
                         : <span className="text-slate-400">—</span>}
                     </td>
+                    )}
+                    {columnasActivas.has('diasTranscurridos') && (
                     <td className="p-2 text-right">
                       {(() => {
                         const result = calcularDiasTranscurridos(req.fecha_limite, req.fecha_real_entrega_estimacion)
@@ -790,6 +1027,8 @@ export default function Requerimientos() {
                         )
                       })()}
                     </td>
+                    )}
+                    {columnasActivas.has('entregasCount') && (
                     <td className="p-2 text-center">
                       {(req.entregas?.length ?? 0) > 0 ? (
                         <button
@@ -812,6 +1051,7 @@ export default function Requerimientos() {
                         <span className="text-slate-400">0</span>
                       )}
                     </td>
+                    )}
                     <td className="p-2 text-center">
                       {hasEst ? (
                         <button onClick={() => { void openEstimationModal(req.id) }} title="Ver estimación"
@@ -834,6 +1074,14 @@ export default function Requerimientos() {
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
+                    {columnasExtra.map((c) => (
+                      <td key={c.key} className="p-2 text-xs text-slate-600 whitespace-nowrap">
+                        {(() => {
+                          const v = CAMPO_ACCESOR_REQ[c.key]?.(req)
+                          return v != null && v !== '' ? v : <span className="text-slate-400">—</span>
+                        })()}
+                      </td>
+                    ))}
                     <td className="p-2 text-center whitespace-nowrap">
                       {(puedeEditar || puedeEliminar) && (
                         <>
@@ -855,7 +1103,7 @@ export default function Requerimientos() {
                   {/* Sub-fila: detalle de entregas */}
                   {expandedEntregas.has(req.id) && req.entregas?.length > 0 && (
                     <tr key={`${req.id}-entregas`}>
-                      <td colSpan={14} className="p-0">
+                      <td colSpan={totalColumnasTabla} className="p-0">
                         <div className="border-l-4 border-emerald-400 bg-emerald-50/40 px-4 py-2">
                           <table className="w-full text-xs">
                             <thead>
@@ -900,7 +1148,7 @@ export default function Requerimientos() {
                   {/* Filas detalle: Historias de Usuario agrupadas */}
                   {isExpanded && grupos.length > 0 && (
                     <tr key={`${req.id}-hu`}>
-                      <td colSpan={14} className="p-0">
+                      <td colSpan={totalColumnasTabla} className="p-0">
                         <div className="border-l-4 border-cyan-400 bg-slate-50 px-4 py-2">
                           <table className="w-full text-xs">
                             <thead>
@@ -978,7 +1226,7 @@ export default function Requerimientos() {
                   )}
                   {isExpanded && !estCargada && !loadingReqEst.has(req.id) && (
                     <tr key={`${req.id}-empty`}>
-                      <td colSpan={14} className="border-l-4 border-slate-300 bg-slate-50 px-6 py-3 text-center text-xs text-slate-400">
+                      <td colSpan={totalColumnasTabla} className="border-l-4 border-slate-300 bg-slate-50 px-6 py-3 text-center text-xs text-slate-400">
                         Sin datos de estimación para este requerimiento.
                       </td>
                     </tr>
@@ -987,7 +1235,7 @@ export default function Requerimientos() {
               )
             })}
             {datosFiltrados.length === 0 && (
-              <tr><td colSpan={14} className="p-4 text-center text-slate-400">
+              <tr><td colSpan={totalColumnasTabla} className="p-4 text-center text-slate-400">
                 {hayFiltrosActivos ? 'Sin resultados con los filtros aplicados.' : 'Sin requerimientos.'}
               </td></tr>
             )}
@@ -995,15 +1243,16 @@ export default function Requerimientos() {
           {datosFiltrados.length > 0 && (() => {
             const totalHoras = datosFiltrados.reduce((s, r) => s + (r.total_horas_estimadas ?? 0), 0)
             const totalEntregas = datosFiltrados.reduce((s, r) => s + (r.entregas?.length ?? 0), 0)
+            // Label ocupa todas las columnas activas no numéricas (lead + Est. + extras + acciones vacía).
+            const leadCount = coreVisibleCount - metricasVisibles.length + columnasExtra.length + 1
             return (
               <tfoot>
                 <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700 text-sm">
                   <td className="p-2"></td>
-                  <td className="p-2" colSpan={8}>Total ({datosFiltrados.length} requerimientos)</td>
-                  <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>
-                  <td className="p-2" colSpan={4}></td>
-                  <td className="p-2 text-center">{totalEntregas}</td>
-                  <td className="p-2" colSpan={2}></td>
+                  <td className="p-2" colSpan={leadCount}>Total ({datosFiltrados.length} requerimientos)</td>
+                  {columnasActivas.has('horas') && <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>}
+                  {columnasActivas.has('entregasCount') && <td className="p-2 text-center">{totalEntregas}</td>}
+                  <td className="p-2"></td>
                 </tr>
               </tfoot>
             )

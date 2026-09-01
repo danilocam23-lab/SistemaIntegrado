@@ -14,12 +14,14 @@ import RequerimientoNuevo from './pages/RequerimientoNuevo'
 import Personas from './pages/Personas'
 import Asignaciones from './pages/Asignaciones'
 import Capacidades from './pages/Capacidades'
+import PlanesAccion from './pages/PlanesAccion'
 import ControlHorasFacturable from './pages/ControlHorasFacturable'
 import Roadmap from './pages/Roadmap'
 import Estimaciones from './pages/Estimaciones'
 import AzureDevOps from './pages/AzureDevOps'
 import Configuracion from './pages/Configuracion'
 import EntregasActas from './pages/EntregasActas'
+import Predictivos from './pages/Predictivos'
 import RequerimientosDetalleANS from './pages/RequerimientosDetalleANS'
 import DashboardEstados from './pages/DashboardEstados'
 import DashboardSquad from './pages/DashboardSquad'
@@ -56,11 +58,13 @@ export default function App() {
               <Route path="requerimientos/nuevo" element={<RoleRoute permiso="requerimientos.crear"><RequerimientoNuevo /></RoleRoute>} />
               <Route path="requerimientos/:reqId" element={<RoleRoute permiso="requerimientos.ver"><RequerimientoDetalle /></RoleRoute>} />
               <Route path="entregas-actas" element={<RoleRoute permiso="entregas_actas.ver"><EntregasActas /></RoleRoute>} />
+              <Route path="predictivos" element={<RoleRoute permiso="predictivos.ver"><Predictivos /></RoleRoute>} />
               <Route path="tarifas" element={<Navigate to="/configuracion" replace />} />
               <Route path="personas" element={<Personas />} />
               <Route path="categorias" element={<Navigate to="/configuracion" replace />} />
               <Route path="asignaciones" element={<Asignaciones />} />
               <Route path="capacidades" element={<Capacidades />} />
+              <Route path="planes-accion" element={<RoleRoute permiso="planes_accion.ver"><PlanesAccion /></RoleRoute>} />
               <Route path="control-horas-facturable" element={<RoleRoute permiso="control_horas_facturable.ver"><ControlHorasFacturable /></RoleRoute>} />
               <Route path="roadmap" element={<Roadmap />} />
               <Route path="estimaciones" element={<RoleRoute permiso="estimaciones.ver"><Estimaciones /></RoleRoute>} />

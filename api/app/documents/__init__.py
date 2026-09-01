@@ -19,6 +19,7 @@ from app.documents.festivo import Festivo
 from app.documents.garantia_wo import GarantiaWO
 from app.documents.orden_compra import OrdenCompra
 from app.documents.persona import Persona
+from app.documents.plan_accion import PlanAccion
 from app.documents.requerimiento import Requerimiento
 from app.documents.soporte_solicitud_fabrica import (
     SoporteSolicitudFabrica,
@@ -59,6 +60,7 @@ ALL_DOCUMENTS = [
     GarantiaWO,
     ControlHoras,
     EndpointAdmin,
+    PlanAccion,
 ]
 
 __all__ = [
@@ -88,4 +90,5 @@ __all__ = [
     "GarantiaWO",
     "ControlHoras",
     "EndpointAdmin",
+    "PlanAccion",
 ]

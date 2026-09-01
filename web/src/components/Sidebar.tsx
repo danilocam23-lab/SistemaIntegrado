@@ -26,12 +26,13 @@ const GRUPOS: Grupo[] = [
     ],
   },
   {
-    titulo: 'Requerimientos y entregas',
+    titulo: 'Desarrollos de fábrica',
     icono: '📋',
     items: [
       { to: '/requerimientos', label: 'Requerimientos', permiso: 'requerimientos.ver' },
       { to: '/requerimientos/detalle-ans', label: 'Detalle ANS', permiso: 'requerimientos.ver' },
       { to: '/entregas-actas', label: 'Entregas de Actas', permiso: 'entregas_actas.ver' },
+      { to: '/predictivos', label: 'Predictivos', permiso: 'predictivos.ver' },
     ],
   },
   {
@@ -41,6 +42,7 @@ const GRUPOS: Grupo[] = [
       { to: '/personas', label: 'Personas', permiso: 'personas.ver' },
       { to: '/asignaciones', label: 'Asignaciones', permiso: 'asignaciones.ver' },
       { to: '/capacidades', label: 'Capacidades', permiso: 'capacidades.ver' },
+      { to: '/planes-accion', label: 'Planes de acción', permiso: 'planes_accion.ver' },
       { to: '/control-horas-facturable', label: 'Control de Horas Facturable', permiso: 'control_horas_facturable.ver' },
       { to: '/azure-devops', label: 'Azure DevOps', permiso: 'azure_devops.ver' },
       { to: '/roadmap', label: 'Roadmap y equipo', permiso: 'roadmap.ver' },

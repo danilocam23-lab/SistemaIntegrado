@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
@@ -12,52 +12,57 @@ const PERMISOS_INFO: Record<string, { modulo: string; nombre: string; descripcio
   'dashboard.ver': { modulo: 'Dashboard', nombre: 'Ver Dashboard General', descripcion: 'Permite consultar indicadores generales.' },
   'dashboard.estados.ver': { modulo: 'Dashboard', nombre: 'Ver Estados', descripcion: 'Permite consultar el dashboard de estados.' },
   'dashboard.squad.ver': { modulo: 'Dashboard', nombre: 'Ver Backlog', descripcion: 'Permite consultar backlog, capacidad y WO.' },
-  'requerimientos.ver': { modulo: 'Requerimientos y entregas', nombre: 'Ver requerimientos', descripcion: 'Consulta requerimientos, entregas y detalle ANS.' },
-  'requerimientos.detalle_ans.editar': { modulo: 'Requerimientos y entregas', nombre: 'Editar detalle ANS Req.', descripcion: 'Permite modificar Se levantó ANS y Observaciones en requerimientos/entregas.' },
-  'requerimientos.crear': { modulo: 'Requerimientos y entregas', nombre: 'Crear requerimientos', descripcion: 'Permite registrar nuevos requerimientos.' },
-  'requerimientos.editar': { modulo: 'Requerimientos y entregas', nombre: 'Editar requerimientos', descripcion: 'Permite actualizar requerimientos, entregas y estimaciones.' },
-  'requerimientos.tipificacion.editar': { modulo: 'Requerimientos y entregas', nombre: 'Editar Seguimiento Hitss / Tipificación', descripcion: 'Permite editar Seguimiento Hitss y Tipificación del requerimiento, y Observaciones Hitss y Tipificación de la entrega, sin permiso completo de edición.' },
-  'requerimientos.eliminar': { modulo: 'Requerimientos y entregas', nombre: 'Eliminar requerimientos', descripcion: 'Permite borrar requerimientos.' },
-  'entregas_actas.ver': { modulo: 'Requerimientos y entregas', nombre: 'Ver entregas de actas', descripcion: 'Permite consultar entregas de actas.' },
+  'requerimientos.ver': { modulo: 'Desarrollos de fábrica', nombre: 'Ver requerimientos', descripcion: 'Consulta requerimientos, entregas y detalle ANS.' },
+  'requerimientos.detalle_ans.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar detalle ANS Req.', descripcion: 'Permite modificar Se levantÃ³ ANS y Observaciones en requerimientos/entregas.' },
+  'requerimientos.crear': { modulo: 'Desarrollos de fábrica', nombre: 'Crear requerimientos', descripcion: 'Permite registrar nuevos requerimientos.' },
+  'requerimientos.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar requerimientos', descripcion: 'Permite actualizar requerimientos, entregas y estimaciones.' },
+  'requerimientos.tipificacion.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar Seguimiento Hitss / TipificaciÃ³n', descripcion: 'Permite editar Seguimiento Hitss y TipificaciÃ³n del requerimiento, y Observaciones Hitss y TipificaciÃ³n de la entrega, sin permiso completo de ediciÃ³n.' },
+  'requerimientos.eliminar': { modulo: 'Desarrollos de fábrica', nombre: 'Eliminar requerimientos', descripcion: 'Permite borrar requerimientos.' },
+  'entregas_actas.ver': { modulo: 'Desarrollos de fábrica', nombre: 'Ver entregas de actas', descripcion: 'Permite consultar entregas de actas.' },
+  'entregas_actas.exportar': { modulo: 'Desarrollos de fábrica', nombre: 'Exportar entregas de actas', descripcion: 'Permite exportar a Excel el listado de entregas de actas con los filtros aplicados.' },
+  'requerimientos.exportar': { modulo: 'Desarrollos de fábrica', nombre: 'Exportar requerimientos', descripcion: 'Permite exportar a Excel el listado de requerimientos con los filtros aplicados.' },
+  'predictivos.ver': { modulo: 'Desarrollos de fábrica', nombre: 'Ver predictivos', descripcion: 'Permite consultar la vista de Predictivos.' },
   'personas.ver': { modulo: 'Carga de trabajo', nombre: 'Ver personas', descripcion: 'Consulta el equipo registrado.' },
   'personas.crear': { modulo: 'Carga de trabajo', nombre: 'Crear personas', descripcion: 'Permite registrar personas.' },
   'personas.editar': { modulo: 'Carga de trabajo', nombre: 'Editar personas', descripcion: 'Permite actualizar personas.' },
   'personas.eliminar': { modulo: 'Carga de trabajo', nombre: 'Eliminar personas', descripcion: 'Permite eliminar personas.' },
-  'personas.ver_valores': { modulo: 'Carga de trabajo', nombre: 'Ver valores personas', descripcion: 'Ver y editar valor de persona y periféricos.' },
+  'personas.ver_valores': { modulo: 'Carga de trabajo', nombre: 'Ver valores personas', descripcion: 'Ver y editar valor de persona y perifÃ©ricos.' },
   'asignaciones.ver': { modulo: 'Carga de trabajo', nombre: 'Ver asignaciones', descripcion: 'Consulta asignaciones de trabajo.' },
   'asignaciones.editar': { modulo: 'Carga de trabajo', nombre: 'Editar asignaciones', descripcion: 'Permite crear o modificar asignaciones.' },
   'capacidades.ver': { modulo: 'Carga de trabajo', nombre: 'Ver capacidades', descripcion: 'Consulta capacidad disponible.' },
   'capacidades.editar': { modulo: 'Carga de trabajo', nombre: 'Editar capacidades', descripcion: 'Permite actualizar capacidades.' },
+  'planes_accion.ver': { modulo: 'Carga de trabajo', nombre: 'Ver planes de acción', descripcion: 'Permite consultar los planes de acción.' },
+  'planes_accion.editar': { modulo: 'Carga de trabajo', nombre: 'Editar planes de acción', descripcion: 'Permite crear, editar y eliminar planes de acción.' },
   'control_horas_facturable.ver': { modulo: 'Carga de trabajo', nombre: 'Ver Control de Horas Facturable', descripcion: 'Permite abrir la vista de Control de Horas Facturable.' },
   'roadmap.ver': { modulo: 'Carga de trabajo', nombre: 'Ver roadmap y equipo', descripcion: 'Consulta roadmap y equipo.' },
-  'azure_devops.ver': { modulo: 'Azure DevOps', nombre: 'Ver Azure DevOps', descripcion: 'Permite abrir la integración Azure DevOps.' },
-  'azure_devops.editar': { modulo: 'Azure DevOps', nombre: 'Configurar Azure DevOps', descripcion: 'Permite editar conexión, probar y sincronizar.' },
+  'azure_devops.ver': { modulo: 'Azure DevOps', nombre: 'Ver Azure DevOps', descripcion: 'Permite abrir la integraciÃ³n Azure DevOps.' },
+  'azure_devops.editar': { modulo: 'Azure DevOps', nombre: 'Configurar Azure DevOps', descripcion: 'Permite editar conexiÃ³n, probar y sincronizar.' },
   'estimaciones.ver': { modulo: 'Estimaciones', nombre: 'Ver estimaciones', descripcion: 'Permite consultar estimaciones.' },
-  'facturacion.ver': { modulo: 'Facturación', nombre: 'Ver facturación', descripcion: 'Permite consultar General y Valores de proyecto.' },
-  'aplicaciones.ver': { modulo: 'Administración', nombre: 'Ver squads', descripcion: 'Consulta la administración de squads.' },
-  'aplicaciones.crear': { modulo: 'Administración', nombre: 'Crear squads', descripcion: 'Permite crear squads.' },
-  'aplicaciones.editar': { modulo: 'Administración', nombre: 'Editar squads', descripcion: 'Permite actualizar squads.' },
-  'admin.usuarios.ver': { modulo: 'Administración', nombre: 'Ver usuarios', descripcion: 'Consulta usuarios y roles.' },
-  'admin.usuarios.crear': { modulo: 'Administración', nombre: 'Crear usuarios', descripcion: 'Permite crear usuarios.' },
-  'admin.usuarios.editar': { modulo: 'Administración', nombre: 'Editar usuarios', descripcion: 'Permite actualizar usuarios.' },
-  'admin.roles.ver': { modulo: 'Administración', nombre: 'Ver roles y permisos', descripcion: 'Consulta roles y catálogo de permisos.' },
-  'admin.roles.crear': { modulo: 'Administración', nombre: 'Crear roles', descripcion: 'Permite crear roles personalizados.' },
-  'admin.roles.editar': { modulo: 'Administración', nombre: 'Editar roles', descripcion: 'Permite modificar permisos de roles.' },
-  'admin.roles.eliminar': { modulo: 'Administración', nombre: 'Eliminar roles', descripcion: 'Permite eliminar roles personalizados.' },
-  'admin.importacion.ver': { modulo: 'Administración', nombre: 'Ver importación/exportación', descripcion: 'Permite abrir importación y exportación.' },
-  'admin.importacion.ejecutar': { modulo: 'Administración', nombre: 'Ejecutar importaciones', descripcion: 'Permite importar datos.' },
-  'admin.endpoints.ver': { modulo: 'Administración', nombre: 'Ver endpoints', descripcion: 'Consulta el catálogo técnico de endpoints.' },
-  'admin.configuracion.ver': { modulo: 'Administración', nombre: 'Ver configuración', descripcion: 'Consulta configuración general.' },
-  'admin.configuracion.editar': { modulo: 'Administración', nombre: 'Editar configuración', descripcion: 'Permite modificar configuración general.' },
-  'soporte.solicitudes_fabrica.ver': { modulo: 'Soporte', nombre: 'Ver soporte', descripcion: 'Consulta solicitudes fábrica y detalle ANS.' },
-  'soporte.solicitudes_fabrica.actualizar': { modulo: 'Soporte', nombre: 'Sincronizar soporte', descripcion: 'Permite cargar y sincronizar solicitudes fábrica.' },
-  'soporte.detalle_ans.editar': { modulo: 'Soporte', nombre: 'Editar detalle ANS', descripcion: 'Permite modificar Se levantó ANS y Observaciones.' },
-  'admin.acceso': { modulo: 'Administración', nombre: 'Acceso administrativo', descripcion: 'Habilita funciones administrativas avanzadas.' },
+  'facturacion.ver': { modulo: 'FacturaciÃ³n', nombre: 'Ver facturaciÃ³n', descripcion: 'Permite consultar General y Valores de proyecto.' },
+  'aplicaciones.ver': { modulo: 'AdministraciÃ³n', nombre: 'Ver squads', descripcion: 'Consulta la administraciÃ³n de squads.' },
+  'aplicaciones.crear': { modulo: 'AdministraciÃ³n', nombre: 'Crear squads', descripcion: 'Permite crear squads.' },
+  'aplicaciones.editar': { modulo: 'AdministraciÃ³n', nombre: 'Editar squads', descripcion: 'Permite actualizar squads.' },
+  'admin.usuarios.ver': { modulo: 'AdministraciÃ³n', nombre: 'Ver usuarios', descripcion: 'Consulta usuarios y roles.' },
+  'admin.usuarios.crear': { modulo: 'AdministraciÃ³n', nombre: 'Crear usuarios', descripcion: 'Permite crear usuarios.' },
+  'admin.usuarios.editar': { modulo: 'AdministraciÃ³n', nombre: 'Editar usuarios', descripcion: 'Permite actualizar usuarios.' },
+  'admin.roles.ver': { modulo: 'AdministraciÃ³n', nombre: 'Ver roles y permisos', descripcion: 'Consulta roles y catÃ¡logo de permisos.' },
+  'admin.roles.crear': { modulo: 'AdministraciÃ³n', nombre: 'Crear roles', descripcion: 'Permite crear roles personalizados.' },
+  'admin.roles.editar': { modulo: 'AdministraciÃ³n', nombre: 'Editar roles', descripcion: 'Permite modificar permisos de roles.' },
+  'admin.roles.eliminar': { modulo: 'AdministraciÃ³n', nombre: 'Eliminar roles', descripcion: 'Permite eliminar roles personalizados.' },
+  'admin.importacion.ver': { modulo: 'AdministraciÃ³n', nombre: 'Ver importaciÃ³n/exportaciÃ³n', descripcion: 'Permite abrir importaciÃ³n y exportaciÃ³n.' },
+  'admin.importacion.ejecutar': { modulo: 'AdministraciÃ³n', nombre: 'Ejecutar importaciones', descripcion: 'Permite importar datos.' },
+  'admin.endpoints.ver': { modulo: 'AdministraciÃ³n', nombre: 'Ver endpoints', descripcion: 'Consulta el catÃ¡logo tÃ©cnico de endpoints.' },
+  'admin.configuracion.ver': { modulo: 'AdministraciÃ³n', nombre: 'Ver configuraciÃ³n', descripcion: 'Consulta configuraciÃ³n general.' },
+  'admin.configuracion.editar': { modulo: 'AdministraciÃ³n', nombre: 'Editar configuraciÃ³n', descripcion: 'Permite modificar configuraciÃ³n general.' },
+  'soporte.solicitudes_fabrica.ver': { modulo: 'Soporte', nombre: 'Ver soporte', descripcion: 'Consulta solicitudes fÃ¡brica y detalle ANS.' },
+  'soporte.solicitudes_fabrica.actualizar': { modulo: 'Soporte', nombre: 'Sincronizar soporte', descripcion: 'Permite cargar y sincronizar solicitudes fÃ¡brica.' },
+  'soporte.detalle_ans.editar': { modulo: 'Soporte', nombre: 'Editar detalle ANS', descripcion: 'Permite modificar Se levantÃ³ ANS y Observaciones.' },
+  'admin.acceso': { modulo: 'AdministraciÃ³n', nombre: 'Acceso administrativo', descripcion: 'Habilita funciones administrativas avanzadas.' },
   'consolidado.ver': { modulo: 'Consolidado', nombre: 'Ver todos los squads', descripcion: 'Permite usar el selector Todos los squads.' },
 }
 
 function permisoInfo(permiso: string) {
-  return PERMISOS_INFO[permiso] ?? { modulo: 'Otros', nombre: permiso, descripcion: 'Permiso técnico sin descripción configurada.' }
+  return PERMISOS_INFO[permiso] ?? { modulo: 'Otros', nombre: permiso, descripcion: 'Permiso tÃ©cnico sin descripciÃ³n configurada.' }
 }
 
 export default function Usuarios() {
@@ -204,7 +209,7 @@ export default function Usuarios() {
 
   async function eliminarAcceso(u: Usuario): Promise<void> {
     if (!puedeEditarUsuarios || u.id === yo?.id) return
-    if (!window.confirm(`¿Eliminar definitivamente el acceso de ${u.email}? Esta acción borrará el registro del usuario.`)) return
+    if (!window.confirm(`Â¿Eliminar definitivamente el acceso de ${u.email}? Esta acciÃ³n borrarÃ¡ el registro del usuario.`)) return
     setAviso('')
     try {
       await client.delete(`/usuarios/${u.id}`)
@@ -216,10 +221,10 @@ export default function Usuarios() {
 
   async function resetPassword(u: Usuario): Promise<void> {
     if (!puedeEditarUsuarios) return
-    const nueva = window.prompt(`Nueva contraseña para ${u.email}:`)
+    const nueva = window.prompt(`Nueva contraseÃ±a para ${u.email}:`)
     if (!nueva) return
     await client.patch(`/usuarios/${u.id}/password`, { password: nueva })
-    window.alert('Contraseña actualizada.')
+    window.alert('ContraseÃ±a actualizada.')
   }
 
   function toggleNuevoPermiso(permiso: string): void {
@@ -241,11 +246,11 @@ export default function Usuarios() {
   }
 
   function nombresSquadsUsuario(u: Usuario): string {
-    if (u.rol === 'superadmin') return '★ Todos'
+    if (u.rol === 'superadmin') return 'â˜… Todos'
     const codigosActivos = appsActivasDisponibles.map((a) => a.codigo)
     const tieneTodos = codigosActivos.length > 0 && codigosActivos.every((codigo) => u.aplicaciones_codigos.includes(codigo))
-    if (tieneTodos) return '★ Todos'
-    return u.aplicaciones_codigos.map((c) => apps.find((a) => a.codigo === c)?.nombre ?? c).join(', ') || '—'
+    if (tieneTodos) return 'â˜… Todos'
+    return u.aplicaciones_codigos.map((c) => apps.find((a) => a.codigo === c)?.nombre ?? c).join(', ') || 'â€”'
   }
 
   async function crearRol(e: FormEvent): Promise<void> {
@@ -289,7 +294,7 @@ export default function Usuarios() {
 
   async function eliminarRol(rol: Rol): Promise<void> {
     if (!puedeEliminarRoles || rol.es_sistema) return
-    if (!window.confirm(`¿Eliminar rol "${rol.nombre}"?`)) return
+    if (!window.confirm(`Â¿Eliminar rol "${rol.nombre}"?`)) return
     setAvisoRoles('')
     try {
       await client.delete(`/roles/${rol.id}`)
@@ -336,7 +341,7 @@ export default function Usuarios() {
                   className="rounded border px-3 py-2" />
               </label>
               <label className="text-sm">
-                <span className="mb-1 block text-slate-600">Contraseña</span>
+                <span className="mb-1 block text-slate-600">ContraseÃ±a</span>
                 <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required
                   className="rounded border px-3 py-2" />
               </label>
@@ -366,7 +371,7 @@ export default function Usuarios() {
                       checked={appsActivasDisponibles.length > 0 && appsActivasDisponibles.every((a) => aplicacionesNuevo.includes(a.codigo))}
                       onChange={(e) => setAplicacionesNuevo(e.target.checked ? appsActivasDisponibles.map((a) => a.codigo) : [])}
                     />
-                    ★ Todos los squads
+                    â˜… Todos los squads
                   </label>
                   {appsActivasDisponibles.map((a) => (
                     <label key={a.codigo} className="flex cursor-pointer items-center gap-2 rounded px-1 text-sm hover:bg-slate-50">
@@ -411,7 +416,7 @@ export default function Usuarios() {
                     </select>
                   </td>
                   <td className="p-2">{nombresSquadsUsuario(u)}</td>
-                  <td className="p-2 text-center">{u.activo ? 'Sí' : 'No'}</td>
+                  <td className="p-2 text-center">{u.activo ? 'SÃ­' : 'No'}</td>
                   <td className="p-2 text-center whitespace-nowrap">
                     <button onClick={() => abrirEditar(u)} disabled={!puedeEditarUsuarios} className="mr-2 text-marca hover:underline text-xs disabled:text-slate-300">
                       Editar
@@ -453,7 +458,7 @@ export default function Usuarios() {
               <div className="flex flex-wrap gap-3">
                 <input className="rounded border px-3 py-2 text-sm" placeholder="Clave (ej: auditor)" value={nuevoRolClave} onChange={(e) => setNuevoRolClave(e.target.value)} required />
                 <input className="rounded border px-3 py-2 text-sm" placeholder="Nombre" value={nuevoRolNombre} onChange={(e) => setNuevoRolNombre(e.target.value)} required />
-                <input className="rounded border px-3 py-2 text-sm min-w-72" placeholder="Descripción" value={nuevoRolDescripcion} onChange={(e) => setNuevoRolDescripcion(e.target.value)} />
+                <input className="rounded border px-3 py-2 text-sm min-w-72" placeholder="DescripciÃ³n" value={nuevoRolDescripcion} onChange={(e) => setNuevoRolDescripcion(e.target.value)} />
               </div>
               <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto rounded border p-2 md:grid-cols-2">
                 {catalogoPermisosOrdenado.map((permiso) => {
@@ -463,7 +468,7 @@ export default function Usuarios() {
                       <input type="checkbox" checked={nuevoRolPermisos.includes(permiso)} onChange={() => toggleNuevoPermiso(permiso)} className="mt-1" />
                       <span>
                         <span className="block font-semibold text-slate-800">{info.nombre}</span>
-                        <span className="block text-[11px] text-slate-500">{info.modulo} · {info.descripcion}</span>
+                        <span className="block text-[11px] text-slate-500">{info.modulo} Â· {info.descripcion}</span>
                         <span className="block font-mono text-[10px] text-slate-400">{permiso}</span>
                       </span>
                     </label>
@@ -490,7 +495,7 @@ export default function Usuarios() {
                   <td className="p-2">{rol.nombre}</td>
                   <td className="p-2 font-mono">{rol.clave}</td>
                   <td className="p-2">{rol.permisos.length}</td>
-                  <td className="p-2 text-center">{rol.activo ? 'Sí' : 'No'}</td>
+                  <td className="p-2 text-center">{rol.activo ? 'SÃ­' : 'No'}</td>
                   <td className="p-2 text-center whitespace-nowrap">
                     <button
                       onClick={() => setRolEditando({ ...rol })}
@@ -561,7 +566,7 @@ export default function Usuarios() {
                   onChange={(e) => setEditApps(e.target.checked ? appsActivasDisponibles.map((a) => a.codigo) : [])}
                   className="rounded"
                 />
-                <span>★ Todos los squads</span>
+                <span>â˜… Todos los squads</span>
               </label>
               {appsActivasDisponibles.map((a) => (
                 <label key={a.codigo} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 rounded px-1">
@@ -604,7 +609,7 @@ export default function Usuarios() {
               />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block text-slate-600">Descripción</span>
+              <span className="mb-1 block text-slate-600">DescripciÃ³n</span>
               <input
                 value={rolEditando.descripcion}
                 onChange={(e) => setRolEditando({ ...rolEditando, descripcion: e.target.value })}
@@ -638,7 +643,7 @@ export default function Usuarios() {
                     />
                     <span>
                       <span className="block font-semibold text-slate-800">{info.nombre}</span>
-                      <span className="block text-[11px] text-slate-500">{info.modulo} · {info.descripcion}</span>
+                      <span className="block text-[11px] text-slate-500">{info.modulo} Â· {info.descripcion}</span>
                       <span className="block font-mono text-[10px] text-slate-400">{permiso}</span>
                     </span>
                   </label>
