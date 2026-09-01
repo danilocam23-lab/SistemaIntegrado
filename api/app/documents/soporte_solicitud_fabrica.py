@@ -30,6 +30,7 @@ class SoporteSolicitudFabrica(DocumentoOperativo):
             IndexModel([("aplicacion_id", ASCENDING), ("lider", ASCENDING)], name="ix_app_lider"),
             IndexModel([("aplicacion_id", ASCENDING), ("squad", ASCENDING)], name="ix_app_squad"),
             IndexModel([("aplicacion_id", ASCENDING), ("datos.Work Order ID", ASCENDING)], name="ix_app_wo_id"),
+            IndexModel([("aplicacion_id", ASCENDING), ("datos.Fecha_Fin_Real", ASCENDING)], name="ix_app_fecha_fin_real"),
         ]
 
 

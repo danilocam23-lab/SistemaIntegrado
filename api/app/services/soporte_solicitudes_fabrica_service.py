@@ -165,9 +165,28 @@ def _extraer_lider_squad(row_por_key: dict[str, str]) -> tuple[str | None, str |
     return (None, None)
 
 
-# ── Caché en memoria para listar() ──────────────────────────────────
+# ── Caché en memoria para listar() y resumen() ─────────────────────
 _CACHE_TTL = 300  # 5 minutos
 _cache_listar: dict[str, tuple[float, dict]] = {}
+_cache_resumen: dict[str, tuple[float, dict]] = {}
+
+# Campos ligeros que expone resumen() — se proyectan en Mongo para evitar
+# traer y validar los ~65 campos de texto de cada fila.
+_RESUMEN_PROJECTION = {
+    "_id": 1,
+    "lider": 1,
+    "squad": 1,
+    "datos.Work Order ID": 1,
+    "datos.Fecha_Fin_Real": 1,
+    "datos.Horas_Estimadas": 1,
+    "datos.Horas_Aprobadas": 1,
+    "datos.Horas_Reales": 1,
+    "datos.Status WO": 1,
+    "datos.Assigned To": 1,
+    "datos.Estado_ANS_Oportunidad": 1,
+    "datos.Estado_ANS_Cumplimiento": 1,
+    "datos.Estado_ANS_inicio_trabajo": 1,
+}
 
 ANS_DETALLE_CAMPOS = {
     "oportunidad": {
@@ -190,8 +209,9 @@ def _cache_key(codigos: list[str]) -> str:
 
 
 def _cache_invalidar() -> None:
-    """Limpia toda la caché (llamar tras sincronizar)."""
+    """Limpia toda la caché (llamar tras sincronizar o editar)."""
     _cache_listar.clear()
+    _cache_resumen.clear()
 
 
 class SoporteSolicitudesFabricaService:
@@ -560,15 +580,31 @@ class SoporteSolicitudesFabricaService:
 
     @staticmethod
     async def resumen(ctx: ContextoAplicacion) -> dict:
-        """Devuelve solo campos clave por registro (sin datos completos)."""
-        completo = await SoporteSolicitudesFabricaService.listar(ctx)
+        """Campos clave por registro vía agregación con proyección en Mongo.
+
+        No hidrata documentos Beanie ni trae los ~65 campos de ``datos``: se
+        proyectan en la base los ~10 que consumen los dashboards. Resultado
+        cacheado en memoria (TTL corto) e invalidado al sincronizar/editar.
+        """
+        key = _cache_key(ctx.codigos)
+        ahora = time.monotonic()
+        cached = _cache_resumen.get(key)
+        if cached and (ahora - cached[0]) < _CACHE_TTL:
+            return cached[1]
+
+        pipeline = [
+            {"$match": {"aplicacion_id": {"$in": ctx.codigos}}},
+            {"$project": _RESUMEN_PROJECTION},
+        ]
+        docs = await SoporteSolicitudFabrica.aggregate(pipeline).to_list()
+
         resumidos = []
-        for r in completo.get("registros", []):
-            datos = r.get("datos") or {}
+        for doc in docs:
+            datos = doc.get("datos") or {}
             resumidos.append({
-                "id": r.get("id"),
-                "lider": r.get("lider"),
-                "squad": r.get("squad"),
+                "id": str(doc["_id"]),
+                "lider": doc.get("lider"),
+                "squad": doc.get("squad"),
                 "Work_Order_ID": datos.get("Work Order ID", ""),
                 "Fecha_Fin_Real": datos.get("Fecha_Fin_Real", ""),
                 "Horas_Estimadas": datos.get("Horas_Estimadas", ""),
@@ -580,11 +616,18 @@ class SoporteSolicitudesFabricaService:
                 "Estado_ANS_Cumplimiento": datos.get("Estado_ANS_Cumplimiento", ""),
                 "Estado_ANS_inicio_trabajo": datos.get("Estado_ANS_inicio_trabajo", ""),
             })
-        return {
-            "total": completo.get("total", 0),
-            "ultima_actualizacion": completo.get("ultima_actualizacion"),
+
+        log = await SoporteSolicitudFabricaSyncLog.find(
+            {"$or": [{"aplicacion_id": {"$in": ctx.codigos}}, {"aplicacion_id": "__todas__"}]}
+        ).sort("-iniciado_en").first_or_none()
+
+        resultado = {
+            "total": len(resumidos),
+            "ultima_actualizacion": (log.finalizado_en or log.iniciado_en) if log else None,
             "registros": resumidos,
         }
+        _cache_resumen[key] = (time.monotonic(), resultado)
+        return resultado
 
     @staticmethod
     async def datos_ans(
