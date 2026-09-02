@@ -306,13 +306,13 @@ export default function RequerimientosDetalleANS() {
       {aviso && <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">{aviso}</div>}
 
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
-        <label className="text-sm">
+        <label className="w-full text-sm sm:w-auto">
           <span className="mb-1 block text-slate-600">Buscar</span>
           <input
             value={filtroTexto}
             onChange={(e) => setFiltroTexto(e.target.value)}
             placeholder="REQ, SC, squad, ANS…"
-            className="w-72 rounded border px-3 py-2 text-sm"
+            className="w-full rounded border px-3 py-2 text-sm sm:w-72"
           />
         </label>
         {(filtroTexto || anoLimite || mesLimite.length > 0 || anoComprometida || mesComprometida.length > 0) && (
@@ -330,26 +330,35 @@ export default function RequerimientosDetalleANS() {
             Limpiar
           </button>
         )}
-        <span className="ml-auto text-xs text-slate-400">
+        <span className="text-xs text-slate-400 sm:ml-auto">
           {requerimientosFiltrados.length} requerimientos · {entregasFiltradas.length} entregas
         </span>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-sm font-semibold text-slate-500">Requerimientos</p>
-          <p className="text-2xl font-bold text-slate-900">{resumenReq.total}</p>
-          <p className="text-xs text-slate-500">solo ANS acta no cumple</p>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-lg">📋</span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Requerimientos con ANS incumplido</p>
+            <p className="text-2xl font-bold text-slate-900">{resumenReq.total}</p>
+            <p className="text-xs text-slate-400">Cumplimiento ANS (Acta) = No cumple</p>
+          </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-sm font-semibold text-slate-500">Entregas</p>
-          <p className="text-2xl font-bold text-slate-900">{resumenEnt.total}</p>
-          <p className="text-xs text-slate-500">solo ANS entrega no cumple</p>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-lg">📦</span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Entregas con ANS incumplido</p>
+            <p className="text-2xl font-bold text-slate-900">{resumenEnt.total}</p>
+            <p className="text-xs text-slate-400">Cumplimiento ANS (Entrega) = No cumple</p>
+          </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-sm font-semibold text-slate-500">Filtrado</p>
-          <p className="text-2xl font-bold text-slate-900">{filtroTexto ? 'Activo' : 'Sin filtros'}</p>
-          <p className="text-xs text-slate-500">Aplica a ambas tablas</p>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-lg">🔍</span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Filtros aplicados</p>
+            <p className="text-2xl font-bold text-slate-900">{filtroTexto ? 'Activo' : 'Ninguno'}</p>
+            <p className="text-xs text-slate-400">Se aplican a ambas tablas</p>
+          </div>
         </div>
       </div>
 
@@ -358,16 +367,22 @@ export default function RequerimientosDetalleANS() {
           type="button"
           onClick={() => setMostrarRequerimientos((v) => !v)}
           aria-expanded={mostrarRequerimientos}
-          className="flex w-full items-center justify-between border-b border-slate-200 px-4 py-3 text-left"
+          className="flex w-full flex-col items-start gap-3 border-b border-slate-200 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
         >
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
-            Requerimientos
-          </h2>
-          <span className="flex items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-              {requerimientosFiltrados.length} / {requerimientosRows.filter((r) => (r.ansActa ?? '').toUpperCase() === 'NO_CUMPLE').length}
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="shrink-0 text-xs font-semibold text-marca">{mostrarRequerimientos ? '▲ Ocultar' : '▼ Mostrar'}</span>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-slate-800">Requerimientos y su cumplimiento ANS</h2>
+              <p className="text-xs text-slate-400">Estimaciones frente a la fecha límite pactada</p>
+            </div>
+          </div>
+          <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" title="Requerimientos visibles con los filtros actuales">
+              {requerimientosFiltrados.length} visibles
             </span>
-            <span className="text-xs text-slate-400">{mostrarRequerimientos ? 'Ocultar' : 'Mostrar'}</span>
+            <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600" title="Total con ANS incumplido, sin filtros">
+              {requerimientosRows.filter((r) => (r.ansActa ?? '').toUpperCase() === 'NO_CUMPLE').length} incumplen ANS
+            </span>
           </span>
         </button>
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
@@ -382,14 +397,14 @@ export default function RequerimientosDetalleANS() {
                 <th className="p-2">SC</th>
                 <th className="p-2">Nombre</th>
                 <th className="p-2">Squad</th>
-                <th className="p-2">Lt hitss</th>
+                <th className="p-2">LT HITSS</th>
                 <th className="p-2">Estado</th>
-                <th className="p-2">ANS Acta</th>
+                <th className="p-2">Cumplimiento ANS (Acta)</th>
                 <th className="p-2 text-right">Horas estimadas</th>
                 <th className="p-2">Fecha límite</th>
-                <th className="p-2">Fecha real entrega de estimaciones</th>
-                <th className="p-2 text-right">Días transcurridos</th>
-                <th className="p-2 text-center">Se levantó ANS</th>
+                <th className="p-2">F. Real entrega estimación</th>
+                <th className="p-2 text-right">Días de atraso/adelanto</th>
+                <th className="p-2 text-center">¿Incumplió ANS?</th>
                 <th className="p-2">Observaciones</th>
                 <th className="p-2">Seguimiento Hitss</th>
                 <th className="p-2">Seguimiento EPM</th>
@@ -493,16 +508,22 @@ export default function RequerimientosDetalleANS() {
           type="button"
           onClick={() => setMostrarEntregas((v) => !v)}
           aria-expanded={mostrarEntregas}
-          className="flex w-full items-center justify-between border-b border-slate-200 px-4 py-3 text-left"
+          className="flex w-full flex-col items-start gap-3 border-b border-slate-200 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
         >
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">
-            Entregas
-          </h2>
-          <span className="flex items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-              {entregasFiltradas.length} / {entregasRows.filter((e) => (e.ansEntrega ?? '').toUpperCase() === 'NO_CUMPLE').length}
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="shrink-0 text-xs font-semibold text-marca">{mostrarEntregas ? '▲ Ocultar' : '▼ Mostrar'}</span>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-slate-800">Entregas y su cumplimiento ANS</h2>
+              <p className="text-xs text-slate-400">Fecha comprometida frente a fecha real de entrega</p>
+            </div>
+          </div>
+          <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" title="Entregas visibles con los filtros actuales">
+              {entregasFiltradas.length} visibles
             </span>
-            <span className="text-xs text-slate-400">{mostrarEntregas ? 'Ocultar' : 'Mostrar'}</span>
+            <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600" title="Total con ANS incumplido, sin filtros">
+              {entregasRows.filter((e) => (e.ansEntrega ?? '').toUpperCase() === 'NO_CUMPLE').length} incumplen ANS
+            </span>
           </span>
         </button>
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
@@ -517,15 +538,15 @@ export default function RequerimientosDetalleANS() {
               <th className="p-2">N° Entrega</th>
               <th className="p-2">SC</th>
               <th className="p-2">Squad</th>
-              <th className="p-2">LT hitss</th>
+              <th className="p-2">LT HITSS</th>
               <th className="p-2">Horas</th>
               <th className="p-2 text-right">% Avance</th>
               <th className="p-2">F. Comprometida</th>
               <th className="p-2">F. Real</th>
-              <th className="p-2 text-right">Días transcurridos</th>
+              <th className="p-2 text-right">Días de atraso/adelanto</th>
               <th className="p-2">Estado</th>
-              <th className="p-2">ANS Entrega</th>
-              <th className="p-2 text-center">Se levantó ANS</th>
+              <th className="p-2">Cumplimiento ANS (Entrega)</th>
+              <th className="p-2 text-center">¿Incumplió ANS?</th>
               <th className="p-2">Observaciones</th>
               <th className="p-2">Observaciones EPM</th>
               <th className="p-2">Observaciones Hitss</th>

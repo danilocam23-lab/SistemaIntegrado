@@ -490,11 +490,20 @@ function DetalleTablaANS({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between border-b border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        aria-expanded={abierta}
+        className="flex w-full flex-col items-start gap-3 border-b border-slate-200 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
       >
-        <span>{titulo}</span>
-        <span className="text-xs text-slate-500">
-          {totalLevantados} levantados / {registros.length} registros · {abierta ? 'Ocultar' : 'Mostrar'}
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="shrink-0 text-xs font-semibold text-marca">{abierta ? '▲ Ocultar' : '▼ Mostrar'}</span>
+          <span className="truncate text-sm font-semibold text-slate-800">{titulo}</span>
+        </div>
+        <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700" title="Registros con ANS levantado">
+            {totalLevantados} levantados
+          </span>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" title="Total de registros en esta sección">
+            {registros.length} registros
+          </span>
         </span>
       </button>
       {abierta && (
