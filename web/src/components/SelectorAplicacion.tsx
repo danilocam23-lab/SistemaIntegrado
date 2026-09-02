@@ -20,7 +20,7 @@ export default function SelectorAplicacion() {
         id="selector-squad-principal"
         value={activa}
         onChange={(e) => cambiar(e.target.value)}
-        className="min-w-0 max-w-full flex-1 rounded border px-2 py-1 sm:flex-none"
+        className="campo campo-sm min-w-0 max-w-full flex-1 sm:flex-none"
       >
         {aplicaciones.map((a) => (
           <option key={a.codigo} value={a.codigo}>

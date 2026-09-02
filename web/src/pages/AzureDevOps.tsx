@@ -173,10 +173,10 @@ function PanelAzdo({ titulo, target, personas }: {
   return (
     <div className="space-y-6">
       {/* ── Conexión ── */}
-      <div className="rounded-xl border bg-white p-5 shadow-sm">
+      <div className="tarjeta tarjeta-pad">
         <div className="mb-1 flex items-center gap-2">
           <span className="text-xl text-marca">☁</span>
-          <h2 className="text-base font-bold text-slate-800">{titulo}</h2>
+          <h2 className="titulo-seccion">{titulo}</h2>
         </div>
         <p className="mb-5 text-xs text-slate-500">
           Conecta con Azure DevOps para crear Work Items y sincronizar sprints.
@@ -192,7 +192,7 @@ function PanelAzdo({ titulo, target, personas }: {
             value={scopeUsuarioId ?? ''}
             onChange={(e) => setScopeUsuarioId(e.target.value || null)}
             disabled={!puedeEditar}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
+            className="campo w-full"
           >
             <option value="">Ninguno (config global)</option>
             {personas.filter((p) => p.activo).map((p) => (
@@ -209,7 +209,7 @@ function PanelAzdo({ titulo, target, personas }: {
             onChange={(e) => setOrgUrl(e.target.value)}
             readOnly={!puedeEditar}
             placeholder="https://dev.azure.com/TuOrganizacion"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
+            className="campo w-full"
           />
         </div>
 
@@ -223,12 +223,12 @@ function PanelAzdo({ titulo, target, personas }: {
               onChange={(e) => setPat(e.target.value)}
               readOnly={!puedeEditar}
               placeholder={patGuardado ? '••••••••••••••••••••' : 'Ingresa tu PAT'}
-              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
+              className="campo flex-1"
             />
             <button
               type="button"
               onClick={() => setMostrarPat(!mostrarPat)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-600 hover:bg-slate-50"
+              className="btn btn-secundario btn-sm"
             >
               {mostrarPat ? 'Ocultar' : 'Mostrar'}
             </button>
@@ -243,7 +243,7 @@ function PanelAzdo({ titulo, target, personas }: {
           <button
             onClick={probar}
             disabled={probando}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            className="btn btn-secundario btn-sm items-center gap-1.5"
           >
             <span className="text-sm">🔄</span>
             {probando ? 'Probando…' : 'Probar conexión'}
@@ -263,7 +263,7 @@ function PanelAzdo({ titulo, target, personas }: {
             onChange={(e) => setProyecto(e.target.value)}
             readOnly={!puedeEditar}
             placeholder="Nombre del proyecto"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
+            className="campo w-full"
           />
         </div>
 
@@ -274,7 +274,7 @@ function PanelAzdo({ titulo, target, personas }: {
             value={frecuencia}
             onChange={(e) => setFrecuencia(e.target.value)}
             disabled={!puedeEditar}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-marca focus:outline-none focus:ring-1 focus:ring-marca"
+            className="campo w-full"
           >
             {Object.entries(frecuenciaLabel).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>
@@ -287,7 +287,7 @@ function PanelAzdo({ titulo, target, personas }: {
           <button
             onClick={guardarConfig}
             disabled={guardando}
-            className="inline-flex items-center gap-2 rounded-lg bg-marca px-4 py-2 text-sm font-medium text-white hover:bg-marca-osc disabled:opacity-50"
+            className="btn btn-primario items-center gap-2"
           >
             <span>💾</span>
             {guardando ? 'Guardando…' : 'Guardar configuración'}
@@ -296,7 +296,7 @@ function PanelAzdo({ titulo, target, personas }: {
       </div>
 
       {/* ── Campos Requeridos ── */}
-      <div className="rounded-xl border bg-white p-5 shadow-sm">
+      <div className="tarjeta tarjeta-pad">
         <div className="mb-1 flex items-center gap-2">
           <span className="text-xl text-marca">📋</span>
           <h3 className="text-base font-bold text-slate-800">Campos Requeridos</h3>
@@ -309,7 +309,7 @@ function PanelAzdo({ titulo, target, personas }: {
           <button
             onClick={descubrirCampos}
             disabled={descubriendo || !proyecto}
-            className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            className="btn btn-secundario btn-sm mb-3 items-center gap-1.5"
           >
             <span className="text-sm">🔍</span>
             {descubriendo ? 'Descubriendo…' : 'Descubrir campos'}
@@ -377,7 +377,7 @@ export default function AzureDevOps() {
     <div className="mx-auto max-w-7xl">
       <div className="mb-4 flex items-center gap-2">
         <span className="text-2xl text-marca">☁</span>
-        <h1 className="text-lg font-bold text-slate-800">Integración Azure DevOps</h1>
+        <h1 className="titulo-pagina">Integración Azure DevOps</h1>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <PanelAzdo titulo="Azure DevOps — HITSS" target="hitss" personas={listaPersonas} />

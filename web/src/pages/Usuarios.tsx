@@ -307,19 +307,19 @@ export default function Usuarios() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Usuarios</h1>
+      <h1 className="titulo-pagina mb-4">Usuarios</h1>
 
-      <div className="mb-4 flex gap-2">
+      <div className="pestanas mb-4">
         <button
           onClick={() => setTab('usuarios')}
-          className={`rounded px-3 py-1.5 text-sm ${tab === 'usuarios' ? 'bg-marca text-white' : 'border bg-white text-slate-700'}`}
+          className={`pestana ${tab === 'usuarios' ? 'pestana-activa' : ''}`}
         >
           Usuarios
         </button>
         {puedeVerRoles && (
           <button
             onClick={() => setTab('roles')}
-            className={`rounded px-3 py-1.5 text-sm ${tab === 'roles' ? 'bg-marca text-white' : 'border bg-white text-slate-700'}`}
+            className={`pestana ${tab === 'roles' ? 'pestana-activa' : ''}`}
           >
             Roles y permisos
           </button>
@@ -329,25 +329,25 @@ export default function Usuarios() {
       {tab === 'usuarios' && (
         <>
           {puedeCrearUsuarios && (
-            <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+            <form onSubmit={crear} className="barra-filtros mb-4">
               <label className="text-sm">
                 <span className="mb-1 block text-slate-600">Nombre</span>
                 <input value={nombre} onChange={(e) => setNombre(e.target.value)} required
-                  className="rounded border px-3 py-2" />
+                  className="campo" />
               </label>
               <label className="text-sm">
                 <span className="mb-1 block text-slate-600">Correo</span>
                 <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required
-                  className="rounded border px-3 py-2" />
+                  className="campo" />
               </label>
               <label className="text-sm">
                 <span className="mb-1 block text-slate-600">ContraseÃ±a</span>
                 <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required
-                  className="rounded border px-3 py-2" />
+                  className="campo" />
               </label>
               <label className="text-sm">
                 <span className="mb-1 block text-slate-600">Rol</span>
-                <select value={rolId} onChange={(e) => setRolId(e.target.value)} className="rounded border px-3 py-2">
+                <select value={rolId} onChange={(e) => setRolId(e.target.value)} className="campo">
                   <option value="">Seleccione</option>
                   {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                 </select>
@@ -356,10 +356,10 @@ export default function Usuarios() {
                 <div className="mb-1 flex items-center justify-between gap-3">
                   <span className="block text-slate-600">Squads</span>
                   <div className="flex gap-2 text-[11px] font-semibold">
-                    <button type="button" className="text-marca hover:underline" onClick={() => setAplicacionesNuevo(appsActivasDisponibles.map((a) => a.codigo))}>
+                    <button type="button" className="enlace-accion" onClick={() => setAplicacionesNuevo(appsActivasDisponibles.map((a) => a.codigo))}>
                       Todos
                     </button>
-                    <button type="button" className="text-slate-400 hover:underline" onClick={() => setAplicacionesNuevo([])}>
+                    <button type="button" className="enlace-accion-sutil" onClick={() => setAplicacionesNuevo([])}>
                       Limpiar
                     </button>
                   </div>
@@ -381,15 +381,15 @@ export default function Usuarios() {
                   ))}
                 </div>
               </div>
-              <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
+              <button className="btn btn-primario">Crear</button>
             </form>
           )}
 
           {(aviso || error) && (
-            <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
+            <div className="aviso aviso-error mb-3">{aviso || error}</div>
           )}
 
-          <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+          <table className="tabla-scroll text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Nombre</th>
@@ -410,7 +410,7 @@ export default function Usuarios() {
                       value={u.rol_id ?? ''}
                       onChange={(e) => cambiarRol(u, e.target.value)}
                       disabled={!puedeEditarUsuarios}
-                      className="rounded border px-2 py-1 text-xs"
+                      className="campo campo-sm"
                     >
                       {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                     </select>
@@ -449,16 +449,16 @@ export default function Usuarios() {
       {tab === 'roles' && puedeVerRoles && (
         <div className="space-y-4">
           {(avisoRoles || errorRoles) && (
-            <div className="rounded bg-red-50 p-2 text-sm text-red-700">{avisoRoles || errorRoles}</div>
+            <div className="aviso aviso-error">{avisoRoles || errorRoles}</div>
           )}
 
           {puedeCrearRoles && (
             <form onSubmit={crearRol} className="rounded-xl border bg-white p-4 space-y-3">
-              <h2 className="text-sm font-semibold text-slate-700">Crear rol</h2>
+              <h2 className="titulo-seccion text-sm">Crear rol</h2>
               <div className="flex flex-wrap gap-3">
-                <input className="rounded border px-3 py-2 text-sm" placeholder="Clave (ej: auditor)" value={nuevoRolClave} onChange={(e) => setNuevoRolClave(e.target.value)} required />
-                <input className="rounded border px-3 py-2 text-sm" placeholder="Nombre" value={nuevoRolNombre} onChange={(e) => setNuevoRolNombre(e.target.value)} required />
-                <input className="rounded border px-3 py-2 text-sm min-w-72" placeholder="DescripciÃ³n" value={nuevoRolDescripcion} onChange={(e) => setNuevoRolDescripcion(e.target.value)} />
+                <input className="campo" placeholder="Clave (ej: auditor)" value={nuevoRolClave} onChange={(e) => setNuevoRolClave(e.target.value)} required />
+                <input className="campo" placeholder="Nombre" value={nuevoRolNombre} onChange={(e) => setNuevoRolNombre(e.target.value)} required />
+                <input className="campo min-w-72" placeholder="DescripciÃ³n" value={nuevoRolDescripcion} onChange={(e) => setNuevoRolDescripcion(e.target.value)} />
               </div>
               <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto rounded border p-2 md:grid-cols-2">
                 {catalogoPermisosOrdenado.map((permiso) => {
@@ -475,11 +475,11 @@ export default function Usuarios() {
                   )
                 })}
               </div>
-              <button className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">Crear rol</button>
+              <button className="btn btn-primario">Crear rol</button>
             </form>
           )}
 
-          <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+          <table className="tabla-scroll text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Rol</th>
@@ -528,21 +528,21 @@ export default function Usuarios() {
         onCerrar={cerrarModal}
       >
         <form onSubmit={guardarEdicion} className="space-y-3">
-          {editAviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{editAviso}</div>}
+          {editAviso && <div className="aviso aviso-error">{editAviso}</div>}
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Nombre</span>
             <input value={editNombre} onChange={(e) => setEditNombre(e.target.value)} required
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Correo</span>
             <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" required
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Rol</span>
             <select value={editRolId} onChange={(e) => setEditRolId(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
             </select>
           </label>
@@ -550,10 +550,10 @@ export default function Usuarios() {
             <div className="mb-1 flex items-center justify-between gap-3">
               <span className="block text-slate-600">Squads</span>
               <div className="flex gap-2 text-[11px] font-semibold">
-                <button type="button" className="text-marca hover:underline" onClick={() => setEditApps(appsActivasDisponibles.map((a) => a.codigo))}>
+                <button type="button" className="enlace-accion" onClick={() => setEditApps(appsActivasDisponibles.map((a) => a.codigo))}>
                   Todos
                 </button>
-                <button type="button" className="text-slate-400 hover:underline" onClick={() => setEditApps([])}>
+                <button type="button" className="enlace-accion-sutil" onClick={() => setEditApps([])}>
                   Limpiar
                 </button>
               </div>
@@ -583,10 +583,10 @@ export default function Usuarios() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={cerrarModal}
-              className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+              className="btn btn-secundario">
               Cancelar
             </button>
-            <button className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">
+            <button className="btn btn-primario">
               Guardar cambios
             </button>
           </div>
@@ -605,7 +605,7 @@ export default function Usuarios() {
               <input
                 value={rolEditando.nombre}
                 onChange={(e) => setRolEditando({ ...rolEditando, nombre: e.target.value })}
-                className="w-full rounded border px-3 py-2"
+                className="campo w-full"
               />
             </label>
             <label className="block text-sm">
@@ -613,7 +613,7 @@ export default function Usuarios() {
               <input
                 value={rolEditando.descripcion}
                 onChange={(e) => setRolEditando({ ...rolEditando, descripcion: e.target.value })}
-                className="w-full rounded border px-3 py-2"
+                className="campo w-full"
               />
             </label>
             <label className="flex items-center gap-2 text-sm">
@@ -653,14 +653,14 @@ export default function Usuarios() {
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded border px-4 py-2 text-sm"
+                className="btn btn-secundario"
                 onClick={() => setRolEditando(null)}
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                className="rounded bg-marca px-4 py-2 text-sm text-white"
+                className="btn btn-primario"
                 onClick={guardarRol}
               >
                 Guardar

@@ -649,7 +649,7 @@ export default function Asignaciones() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Asignaciones de carga</h1>
+      <h1 className="titulo-pagina mb-4">Asignaciones de carga</h1>
 
       {puedeEditarAsignaciones && (
       <form onSubmit={modoEdicion ? actualizar : crear} className="mb-4 rounded-xl border bg-white p-4">
@@ -661,7 +661,7 @@ export default function Asignaciones() {
             <button
               type="button"
               onClick={limpiarFormulario}
-              className="text-xs text-slate-400 hover:text-red-500"
+              className="enlace-accion-sutil"
             >
               Cancelar edición ✕
             </button>
@@ -675,7 +675,7 @@ export default function Asignaciones() {
               value={personaId}
               onChange={(e) => onPersonaChange(e.target.value)}
               required
-              className="rounded border px-3 py-2"
+              className="campo"
             >
               <option value="">— Seleccionar —</option>
               {personasDisponibles.map((persona) => (
@@ -692,7 +692,7 @@ export default function Asignaciones() {
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
               required
-              className="rounded border px-3 py-2"
+              className="campo"
             >
               <option value="">— Seleccionar —</option>
               {categorias
@@ -715,7 +715,7 @@ export default function Asignaciones() {
               min="0"
               max="100"
               required
-              className="w-28 rounded border px-3 py-2"
+              className="campo w-28"
             />
             {!modoEdicion && personaId && porcentaje === porcentajeSugerido && porcentaje && (
               <span className="mt-1 block text-xs text-emerald-700">{porcentajeSugerido}% (sugerido)</span>
@@ -731,7 +731,7 @@ export default function Asignaciones() {
               onChange={(e) => cambiarBusquedaReq(e.target.value)}
               onFocus={() => setDropdownReqAbierto(true)}
               placeholder="Buscar SC - REQ - Nombre"
-              className="w-full rounded border px-3 py-2"
+              className="campo w-full"
             />
             {busquedaReq && (
               <button
@@ -774,7 +774,7 @@ export default function Asignaciones() {
 
           <button
             disabled={!puedeEditarAsignaciones}
-            className={`rounded px-5 py-2 text-white ${modoEdicion ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-marca hover:bg-marca-osc'}`}
+            className={`btn ${modoEdicion ? 'btn-exito' : 'btn-primario'}`}
           >
             {modoEdicion ? 'Actualizar' : 'Crear'}
           </button>
@@ -810,7 +810,7 @@ export default function Asignaciones() {
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
-            className="rounded border px-3 py-1.5 text-sm"
+            className="campo campo-sm"
           >
             <option value="__todos__">Todos</option>
             {estadosUnicos.map((estado) => (
@@ -822,7 +822,7 @@ export default function Asignaciones() {
             <button
               type="button"
               onClick={() => setFiltroEstado('__todos__')}
-              className="text-xs text-slate-400 hover:text-red-500"
+              className="enlace-accion-sutil"
             >
               Limpiar ✕
             </button>
@@ -836,12 +836,12 @@ export default function Asignaciones() {
             value={busquedaPersona}
             onChange={(e) => setBusquedaPersona(e.target.value)}
             placeholder="Nombre de la persona…"
-            className="rounded border px-3 py-1.5 text-sm w-56"
+            className="campo campo-sm w-56"
           />
           <select
             value={filtroPersona}
             onChange={(e) => setFiltroPersona(e.target.value)}
-            className="rounded border px-3 py-1.5 text-sm"
+            className="campo campo-sm"
           >
             <option value="__todos__">Todas</option>
             {personas
@@ -856,7 +856,7 @@ export default function Asignaciones() {
             <button
               type="button"
               onClick={() => { setFiltroPersona('__todos__'); setBusquedaPersona('') }}
-              className="text-xs text-slate-400 hover:text-red-500"
+              className="enlace-accion-sutil"
             >
               Limpiar ✕
             </button>
@@ -869,7 +869,7 @@ export default function Asignaciones() {
         {gruposFiltrados.map((grupo) => {
           const expandido = gruposExpandidos.has(grupo.reqId)
           return (
-            <section key={grupo.reqId ?? 'sin-requerimiento'} className="overflow-hidden rounded-xl border bg-white">
+            <section key={grupo.reqId ?? 'sin-requerimiento'} className="tarjeta overflow-hidden">
               <div className="flex items-center justify-between gap-3 bg-marca-osc px-4 py-3 text-white">
                 <button
                   type="button"
@@ -905,7 +905,7 @@ export default function Asignaciones() {
                       Ver req
                     </Link>
                   )}
-                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${badgeEstadoClass(grupo.reqEstado)}`}>
+                  <span className={`chip ${badgeEstadoClass(grupo.reqEstado)}`}>
                     {grupo.reqEstado ?? 'Sin estado'}
                   </span>
                   <span className="rounded-full bg-white/10 px-2 py-1 text-xs font-medium text-white">
@@ -955,7 +955,7 @@ export default function Asignaciones() {
                                   onChange={(e) => setEdicionInlineValor(e.target.value)}
                                   onBlur={() => void guardarEdicionInline(asig)}
                                   onKeyDown={onInlineKeyDown}
-                                  className="w-20 rounded border px-2 py-1 text-right"
+                                  className="campo campo-sm w-20 text-right"
                                 />
                               ) : (
                                 <span className="inline-flex items-center gap-1">
@@ -1008,7 +1008,7 @@ export default function Asignaciones() {
         })}
 
         {gruposFiltrados.length === 0 && (
-          <div className="rounded-xl border bg-white p-6 text-center text-sm text-slate-400">
+          <div className="tarjeta p-6 text-center text-sm text-slate-400">
             {filtroEstado !== '__todos__' ? 'No hay asignaciones con ese estado de requerimiento.' : 'Sin asignaciones.'}
           </div>
         )}
@@ -1021,7 +1021,7 @@ export default function Asignaciones() {
           const expandida = personasExpandidas.has(gp.persona.id)
           const totalHoras = gp.reqs.reduce((s, r) => s + r.horasCarga, 0)
           return (
-            <section key={gp.persona.id} className="overflow-hidden rounded-xl border bg-white">
+            <section key={gp.persona.id} className="tarjeta overflow-hidden">
               <div className="flex items-center justify-between gap-3 bg-marca-osc px-4 py-3 text-white">
                 <button
                   type="button"
@@ -1104,7 +1104,7 @@ export default function Asignaciones() {
           )
         })}
         {gruposPorPersona.length === 0 && (
-          <div className="rounded-xl border bg-white p-6 text-center text-sm text-slate-400">
+          <div className="tarjeta p-6 text-center text-sm text-slate-400">
             Sin asignaciones para mostrar.
           </div>
         )}

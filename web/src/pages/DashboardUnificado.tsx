@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { useAplicacion } from '../context/AplicacionContext'
+import { EncabezadoPagina } from '../components/ui'
 
 const COLORES_SQUAD = ['#2563eb', '#7c3aed', '#16a34a', '#f59e0b', '#dc2626', '#0891b2', '#06b6d4', '#8b5cf6']
 
@@ -34,34 +35,21 @@ export default function DashboardUnificado() {
   }, [activa])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
-      {/* Header Premium */}
-      <div className="sticky top-0 z-30 border-b border-slate-200/50 bg-white/80 backdrop-blur-xl shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-teal-600 to-teal-700 flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">🌐</span>
-                </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 via-teal-800 to-slate-900 bg-clip-text text-transparent">
-                  Dashboard Unificado
-                </h1>
-              </div>
-              <p className="text-slate-600 text-sm">
-                {modoConsolidado
-                  ? 'Vista consolidada de todos los squads autorizados'
-                  : 'Selecciona "★ Todos los squads" en el encabezado para la vista consolidada'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <EncabezadoPagina
+        icono="🌐"
+        titulo="Dashboard Unificado"
+        descripcion={
+          modoConsolidado
+            ? 'Vista consolidada de todos los squads autorizados'
+            : 'Selecciona "★ Todos los squads" en el encabezado para la vista consolidada'
+        }
+      />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="pagina">
         {error && (
-          <div className="mb-6 rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-700">
+          <div className="aviso aviso-alerta mb-6">
             ⚠️ {error}
           </div>
         )}

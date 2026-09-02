@@ -104,14 +104,14 @@ export default function Capacidades() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Capacidades mensuales</h1>
+      <h1 className="titulo-pagina mb-4">Capacidades mensuales</h1>
 
       {puedeEditarCapacidades && (
-      <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+      <form onSubmit={crear} className="barra-filtros mb-4">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Persona</span>
           <select value={personaId} onChange={(e) => setPersonaId(e.target.value)} required
-            className="rounded border px-3 py-2">
+            className="campo">
             <option value="">— Seleccionar —</option>
             {personasDisponibles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
@@ -119,22 +119,22 @@ export default function Capacidades() {
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Mes</span>
           <input value={mes} onChange={(e) => setMes(e.target.value)} type="month" required
-            className="rounded border px-3 py-2" />
+            className="campo" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Horas disponibles</span>
           <input value={horas} onChange={(e) => setHoras(e.target.value)} type="number" required
-            className="w-32 rounded border px-3 py-2" />
+            className="campo w-32" />
         </label>
-        <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
+        <button className="btn btn-primario">Crear</button>
       </form>
       )}
 
       {(aviso || error) && (
-        <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
+        <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+      <table className="tabla-scroll text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Persona</th>
@@ -176,13 +176,13 @@ export default function Capacidades() {
                         cancelarEdicion()
                       }
                     }}
-                    className="w-24 rounded border px-2 py-1 text-right"
+                    className="campo campo-sm w-24 text-right"
                   />
                 ) : c.horas_disponibles}
               </td>
               <td className="p-2 text-center">
                 {puedeEditarCapacidades && (
-                  <button onClick={() => eliminar(c)} className="text-red-600 hover:underline">
+                  <button onClick={() => eliminar(c)} className="enlace-accion enlace-accion-peligro">
                     Eliminar
                   </button>
                 )}

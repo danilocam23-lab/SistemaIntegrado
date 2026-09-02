@@ -141,18 +141,18 @@ export default function Importacion() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-marca-osc">Importar / Exportar datos</h1>
+      <h1 className="titulo-pagina mb-1">Importar / Exportar datos</h1>
       <p className="mb-4 text-sm text-slate-500">
         Exporta la plantilla con dos hojas: <b>REQUERIMIENTOS</b> y <b>ENTREGAS</b>.
         La plantilla no pide APLICACIÓN, TECNOLOGIA ni DIRECCIÓN.
         Luego importa el archivo y confirma el resumen de registros nuevos/actualizados.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+      <div className="barra-filtros mb-4">
         <button
           onClick={exportarPlantilla}
           disabled={descargando}
-          className="rounded border border-marca px-4 py-2 text-marca hover:bg-marca/5 disabled:opacity-60"
+          className="btn btn-primario"
         >
           {descargando ? 'Exportando…' : 'Exportar plantilla'}
         </button>
@@ -164,17 +164,17 @@ export default function Importacion() {
         <button
           onClick={previsualizarImportacion}
           disabled={!archivo || cargando || previsualizando}
-          className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+          className="btn btn-primario"
         >
           {previsualizando ? 'Verificando…' : 'Importar'}
         </button>
       </div>
 
-      {aviso && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
+      {aviso && <div className="aviso aviso-error mb-3">{aviso}</div>}
 
       {resultado && (
-        <div className="rounded-xl border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <div className="tarjeta tarjeta-pad">
+          <h2 className="etiqueta-sup mb-3">
             Resultado
           </h2>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -322,7 +322,7 @@ export default function Importacion() {
                 type="button"
                 onClick={() => setConfirmacionAbierta(false)}
                 disabled={cargando}
-                className="rounded border px-3 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                className="btn btn-secundario"
               >
                 Cancelar
               </button>
@@ -330,7 +330,7 @@ export default function Importacion() {
                 type="button"
                 onClick={confirmarImportacion}
                 disabled={cargando}
-                className="rounded bg-marca px-3 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+                className="btn btn-primario"
               >
                 {cargando ? 'Importando…' : 'Confirmar'}
               </button>

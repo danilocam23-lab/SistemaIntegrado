@@ -404,7 +404,7 @@ export default function Requerimientos() {
         return (
           <select value={editValue} onChange={(e) => setEditValue(e.target.value)}
             onBlur={() => guardarCelda(req)} autoFocus
-            className="w-full rounded border px-2 py-1 text-xs">
+            className="campo campo-sm w-full">
             {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )
@@ -414,7 +414,7 @@ export default function Requerimientos() {
         return (
           <select value={editValue} onChange={(e) => { setEditValue(e.target.value) }}
             onBlur={() => guardarCelda(req)} autoFocus
-            className="w-full rounded border px-2 py-1 text-xs">
+            className="campo campo-sm w-full">
             <option value="">—</option>
             {lista.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
@@ -424,7 +424,7 @@ export default function Requerimientos() {
         <input value={editValue} onChange={(e) => setEditValue(e.target.value)}
           onBlur={() => guardarCelda(req)} onKeyDown={(e) => handleKeyDown(e, req)}
           type={type === 'number' ? 'number' : 'text'} autoFocus
-          className="w-full rounded border px-2 py-1 text-xs" />
+          className="campo campo-sm w-full" />
       )
     }
     return (
@@ -681,7 +681,7 @@ export default function Requerimientos() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-marca-osc">Requerimientos</h1>
+        <h1 className="titulo-pagina">Requerimientos</h1>
         <div className="flex items-center gap-2">
           {puedeCrear && (
             <Link to="/requerimientos/nuevo" className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc text-sm">
@@ -690,19 +690,19 @@ export default function Requerimientos() {
           )}
           <button
             onClick={() => setMostrarFiltros((v) => !v)}
-            className={`flex items-center gap-2 rounded border px-4 py-2 text-sm font-medium transition-colors ${mostrarFiltros || hayFiltrosActivos ? 'border-marca bg-marca/10 text-marca' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}`}
+            className={`btn ${mostrarFiltros || hayFiltrosActivos ? 'btn-suave' : 'btn-secundario'}`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
-            Filtros{hayFiltrosActivos && <span className="ml-1 rounded-full bg-marca px-1.5 py-0.5 text-[10px] font-bold text-white">ON</span>}
+            Filtros{hayFiltrosActivos && <span className="contador-filtro ml-1">ON</span>}
           </button>
           {puedeExportar && (
             <button
               onClick={exportarExcel}
               disabled={datosFiltrados.length === 0}
               title="Exporta a Excel el listado con los filtros actualmente aplicados"
-              className="flex items-center gap-1 rounded-lg border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-exito items-center gap-1"
             >
               Exportar a Excel
             </button>
@@ -711,7 +711,7 @@ export default function Requerimientos() {
       </div>
 
       {(aviso || error) && (
-        <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
+        <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
       {/* Panel de filtros */}
@@ -720,7 +720,7 @@ export default function Requerimientos() {
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filtros</span>
             {hayFiltrosActivos && (
-              <button onClick={() => setFiltros(FILTROS_INIT)} className="text-xs text-red-500 hover:underline">
+              <button onClick={() => setFiltros(FILTROS_INIT)} className="enlace-accion enlace-accion-peligro text-xs">
                 Limpiar filtros
               </button>
             )}
@@ -732,7 +732,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">Código REQ</label>
               <input type="text" value={filtros.codigoReq} placeholder="Buscar..."
                 onChange={(e) => setFiltros((f) => ({ ...f, codigoReq: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
+                className="campo campo-sm w-full" />
             </div>
             )}
             {/* SC */}
@@ -741,7 +741,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">SC</label>
               <input type="text" value={filtros.sc} placeholder="Buscar..."
                 onChange={(e) => setFiltros((f) => ({ ...f, sc: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
+                className="campo campo-sm w-full" />
             </div>
             )}
             {/* Squad */}
@@ -750,7 +750,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">Squad</label>
               <select value={filtros.squad}
                 onChange={(e) => setFiltros((f) => ({ ...f, squad: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                className="campo campo-sm w-full">
                 <option value="">Todos</option>
                 {squadsDisponibles.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -762,7 +762,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">Estado</label>
               <select value={filtros.estado}
                 onChange={(e) => setFiltros((f) => ({ ...f, estado: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                className="campo campo-sm w-full">
                 <option value="">Todos</option>
                 {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -774,7 +774,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">Líder técnico</label>
               <select value={filtros.liderTecnico}
                 onChange={(e) => setFiltros((f) => ({ ...f, liderTecnico: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                className="campo campo-sm w-full">
                 <option value="">Todos</option>
                 {lideresDisponibles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
@@ -786,7 +786,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">Estado (entregas)</label>
               <select value={filtros.estadoEntrega}
                 onChange={(e) => setFiltros((f) => ({ ...f, estadoEntrega: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                className="campo campo-sm w-full">
                 <option value="">Todos</option>
                 {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -798,7 +798,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">ANS Estimación</label>
               <select value={filtros.ansEstimacion}
                 onChange={(e) => setFiltros((f) => ({ ...f, ansEstimacion: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                className="campo campo-sm w-full">
                 <option value="">Todos</option>
                 <option value="CUMPLE">Cumple</option>
                 <option value="NO CUMPLE">No cumple</option>
@@ -811,7 +811,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">Categoría</label>
               <select value={filtros.categoria}
                 onChange={(e) => setFiltros((f) => ({ ...f, categoria: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                className="campo campo-sm w-full">
                 <option value="">Todas</option>
                 {categoriasDisponibles.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -823,7 +823,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">Tipificación</label>
               <select value={filtros.tipificacion}
                 onChange={(e) => setFiltros((f) => ({ ...f, tipificacion: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                className="campo campo-sm w-full">
                 <option value="">Todas</option>
                 {tipificacionesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -835,7 +835,7 @@ export default function Requerimientos() {
               <label className="mb-1 block text-xs font-medium text-slate-600">Tipo de costo</label>
               <select value={filtros.tipoCosto}
                 onChange={(e) => setFiltros((f) => ({ ...f, tipoCosto: e.target.value }))}
-                className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none">
+                className="campo campo-sm w-full">
                 <option value="">Todos</option>
                 {tiposCostoDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -848,11 +848,11 @@ export default function Requerimientos() {
               <div className="flex items-center gap-1">
                 <input type="date" value={filtros.fechaSolicitudDesde}
                   onChange={(e) => setFiltros((f) => ({ ...f, fechaSolicitudDesde: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
+                  className="campo campo-sm w-full" />
                 <span className="text-xs text-slate-400">–</span>
                 <input type="date" value={filtros.fechaSolicitudHasta}
                   onChange={(e) => setFiltros((f) => ({ ...f, fechaSolicitudHasta: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
+                  className="campo campo-sm w-full" />
               </div>
             </div>
             )}
@@ -863,11 +863,11 @@ export default function Requerimientos() {
               <div className="flex items-center gap-1">
                 <input type="date" value={filtros.fechaComprometidaDesde}
                   onChange={(e) => setFiltros((f) => ({ ...f, fechaComprometidaDesde: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
+                  className="campo campo-sm w-full" />
                 <span className="text-xs text-slate-400">–</span>
                 <input type="date" value={filtros.fechaComprometidaHasta}
                   onChange={(e) => setFiltros((f) => ({ ...f, fechaComprometidaHasta: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
+                  className="campo campo-sm w-full" />
               </div>
             </div>
             )}
@@ -878,11 +878,11 @@ export default function Requerimientos() {
               <div className="flex items-center gap-1">
                 <input type="date" value={filtros.fechaLimiteDesde}
                   onChange={(e) => setFiltros((f) => ({ ...f, fechaLimiteDesde: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
+                  className="campo campo-sm w-full" />
                 <span className="text-xs text-slate-400">–</span>
                 <input type="date" value={filtros.fechaLimiteHasta}
                   onChange={(e) => setFiltros((f) => ({ ...f, fechaLimiteHasta: e.target.value }))}
-                  className="w-full rounded border border-slate-300 px-2 py-1.5 text-xs focus:border-marca focus:outline-none" />
+                  className="campo campo-sm w-full" />
               </div>
             </div>
             )}
@@ -891,7 +891,7 @@ export default function Requerimientos() {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+        <table className="tabla-scroll text-sm">
           <thead className="bg-marca-osc text-white">
             <tr>
               <th className="w-8 p-2"></th>
@@ -943,7 +943,7 @@ export default function Requerimientos() {
                     </td>
                     {columnasActivas.has('codigoReq') && (
                     <td className="p-2 font-mono">
-                      <Link to={`/requerimientos/${req.id}`} className="text-marca hover:underline">
+                      <Link to={`/requerimientos/${req.id}`} className="enlace-accion">
                         {req.codigo_req}
                       </Link>
                     </td>
@@ -1037,7 +1037,7 @@ export default function Requerimientos() {
                             next.has(req.id) ? next.delete(req.id) : next.add(req.id)
                             return next
                           })}
-                          className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-200"
+                          className="btn btn-exito btn-sm items-center gap-1"
                           title="Ver entregas"
                         >
                           {req.entregas.length}
@@ -1086,12 +1086,12 @@ export default function Requerimientos() {
                       {(puedeEditar || puedeEliminar) && (
                         <>
                           {puedeEditar && (
-                            <Link to={`/requerimientos/${req.id}`} className="mr-2 text-marca hover:underline text-xs">
+                            <Link to={`/requerimientos/${req.id}`} className="enlace-accion text-xs mr-2">
                               Editar
                             </Link>
                           )}
                           {puedeEliminar && (
-                            <button onClick={() => { void eliminar(req) }} className="text-red-600 hover:underline text-xs">
+                            <button onClick={() => { void eliminar(req) }} className="enlace-accion enlace-accion-peligro text-xs">
                               Eliminar
                             </button>
                           )}
@@ -1272,7 +1272,7 @@ export default function Requerimientos() {
                     </svg>
                   </div>
                   <div className="min-w-0">
-                    <h2 className="truncate text-lg font-bold text-slate-900">
+                    <h2 className="titulo-seccion truncate">
                       Estimación — {reqSeleccionado?.codigo_req ?? estModalReqId} — {reqSeleccionado?.nombre ?? 'Sin nombre'}
                     </h2>
                     <p className="truncate text-sm text-slate-600">
@@ -1288,7 +1288,7 @@ export default function Requerimientos() {
                       onClick={() => { void handleCreateTasks('hitss') }}
                       disabled={!estData?.estimacion || creatingTasks !== null}
                       title="Crear tareas en Azure DevOps HITSS"
-                      className="flex items-center gap-1 rounded-lg border border-cyan-300 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="btn btn-secundario items-center gap-1"
                     >
                       {creatingTasks === 'hitss' ? (
                         <div className="h-3 w-3 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" />
@@ -1303,7 +1303,7 @@ export default function Requerimientos() {
                       onClick={() => { void handleCreateTasks('epm') }}
                       disabled={!estData?.estimacion || creatingTasks !== null}
                       title="Crear tareas en Azure DevOps EPM"
-                      className="flex items-center gap-1 rounded-lg border border-purple-300 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="btn btn-secundario items-center gap-1"
                     >
                       {creatingTasks === 'epm' ? (
                         <div className="h-3 w-3 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600" />
@@ -1315,10 +1315,10 @@ export default function Requerimientos() {
                       Crear tareas EPM
                     </button>
                     <div className="mx-1 h-5 w-px bg-slate-200" />
-                    <button onClick={() => handleUploadClick(estModalReqId)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    <button onClick={() => handleUploadClick(estModalReqId)} className="btn btn-secundario">
                       Reemplazar
                     </button>
-                    <button onClick={() => { void deleteEstimation() }} disabled={!estimacion} className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">
+                    <button onClick={() => { void deleteEstimation() }} disabled={!estimacion} className="btn btn-peligro">
                       Eliminar
                     </button>
                   </>
@@ -1381,7 +1381,7 @@ export default function Requerimientos() {
                   </div>
 
                   <div className="space-y-4">
-                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <section className="tarjeta overflow-hidden">
                       <button onClick={() => toggleSection('type')} className="flex w-full items-center justify-between px-5 py-4 text-left">
                         <div>
                           <h3 className="font-semibold text-slate-900">Resumen por Tipo de Tarea</h3>
@@ -1423,7 +1423,7 @@ export default function Requerimientos() {
                       )}
                     </section>
 
-                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <section className="tarjeta overflow-hidden">
                       <button onClick={() => toggleSection('sprint')} className="flex w-full items-center justify-between px-5 py-4 text-left">
                         <div>
                           <h3 className="font-semibold text-slate-900">Resumen por Sprint</h3>
@@ -1465,7 +1465,7 @@ export default function Requerimientos() {
                       )}
                     </section>
 
-                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <section className="tarjeta overflow-hidden">
                       <button onClick={() => toggleSection('complexity')} className="flex w-full items-center justify-between px-5 py-4 text-left">
                         <div>
                           <h3 className="font-semibold text-slate-900">Resumen por Complejidad</h3>
@@ -1504,7 +1504,7 @@ export default function Requerimientos() {
                     </section>
                   </div>
 
-                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <section className="tarjeta overflow-hidden">
                     <div className="border-b border-slate-200 px-5 py-4">
                       <h3 className="font-semibold text-slate-900">
                         Detalle por Historia de Usuario ({agruparPorHU(estimacion.filas).length} HU · {estimacion.filas.length} tareas)

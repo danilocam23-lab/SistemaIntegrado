@@ -276,7 +276,7 @@ export default function Personas() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Personas</h1>
+      <h1 className="titulo-pagina mb-4">Personas</h1>
 
       {/* Banner de duplicados */}
       {duplicados.length > 0 && (
@@ -287,7 +287,7 @@ export default function Personas() {
           <div className="flex gap-2">
             <button
               onClick={() => setModalDupAbierto(true)}
-              className="rounded border border-amber-400 px-3 py-1 text-xs hover:bg-amber-100"
+              className="btn btn-secundario btn-sm"
             >
               Ver detalle
             </button>
@@ -295,7 +295,7 @@ export default function Personas() {
               <button
                 onClick={deduplicar}
                 disabled={deduplicando}
-                className="rounded bg-amber-600 px-3 py-1 text-xs text-white hover:bg-amber-700 disabled:opacity-60"
+                className="btn btn-alerta btn-sm"
               >
                 {deduplicando ? 'Fusionando…' : 'Fusionar duplicados'}
               </button>
@@ -316,22 +316,22 @@ export default function Personas() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Buscar por nombre, correo, squad o rol…"
-          className="w-72 rounded border px-3 py-2 text-sm"
+          className="campo w-72"
         />
         {puedeCrearPersonas && (
           <button
             onClick={abrirNuevo}
-            className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc"
+            className="btn btn-primario"
           >
             + Nueva persona
           </button>
         )}
       </div>
 
-      {error && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
+      {error && <div className="aviso aviso-error mb-3">{error}</div>}
 
       {filtradas.length === 0 && (
-        <div className="rounded-xl border bg-white p-4 text-center text-slate-400">
+        <div className="tarjeta tarjeta-pad text-center text-slate-400">
           {busqueda ? 'Sin resultados para la búsqueda.' : 'Sin personas.'}
         </div>
       )}
@@ -389,14 +389,14 @@ export default function Personas() {
                         </td>
                         <td className="p-2 text-center whitespace-nowrap">
                           {puedeEditarPersonas && (
-                            <button onClick={() => abrirEditar(p)} className="mr-2 text-marca hover:underline text-xs">
+                            <button onClick={() => abrirEditar(p)} className="enlace-accion text-xs mr-2">
                               Editar
                             </button>
                           )}
                           {puedeEliminarPersonas && (
                             <button
                               onClick={() => eliminar(p)}
-                              className="mr-2 text-red-600 hover:underline text-xs"
+                              className="enlace-accion enlace-accion-peligro text-xs mr-2"
                             >
                               Eliminar
                             </button>
@@ -439,7 +439,7 @@ export default function Personas() {
         onCerrar={cerrar}
       >
         <form onSubmit={guardar} className="space-y-3">
-          {aviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
+          {aviso && <div className="aviso aviso-error">{aviso}</div>}
           <div className="block text-sm">
             <span className="mb-1 block text-slate-600">
               Squads
@@ -456,7 +456,7 @@ export default function Personas() {
                 setSquadsSelec(Array.from(e.target.selectedOptions, (o) => o.value))
                 setAplicacionId('') // recalcular desde squad
               }}
-              className="w-full rounded border px-3 py-2 h-32"
+              className="campo w-full h-32"
             >
               {squads.filter((s) => s.activa).map((s) => (
                 <option key={s.codigo} value={s.nombre}>{s.nombre}</option>
@@ -468,7 +468,7 @@ export default function Personas() {
             <label className="block text-sm">
               <span className="mb-1 block text-slate-600">Aplicación <span className="text-slate-400">(se auto-detecta del squad; cambia solo si es necesario)</span></span>
               <select value={aplicacionIdEfectivo} onChange={(e) => setAplicacionId(e.target.value)}
-                className="w-full rounded border px-3 py-2">
+                className="campo w-full">
                 {squads.filter((s) => s.activa).map((s) => (
                   <option key={s.codigo} value={s.codigo}>{s.nombre}</option>
                 ))}
@@ -478,24 +478,24 @@ export default function Personas() {
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Nombre</span>
             <input value={nombre} onChange={(e) => setNombre(e.target.value)} required
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Correo</span>
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email"
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Rol</span>
             <select value={rol} onChange={(e) => setRol(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               {roles.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Tipo de contratación</span>
             <select value={tipoContratacion} onChange={(e) => setTipoContratacion(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               <option value="">— Sin especificar —</option>
               {tiposContratacion.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -506,13 +506,13 @@ export default function Personas() {
                 <span className="mb-1 block text-slate-600">Valor de la persona ($)</span>
                 <input type="number" min={0} step={0.01} value={valorPersona}
                   onChange={(e) => setValorPersona(Number(e.target.value))}
-                  className="w-full rounded border px-3 py-2" placeholder="0.00" />
+                  className="campo w-full" placeholder="0.00" />
               </label>
               <label className="block text-sm">
                 <span className="mb-1 block text-slate-600">Valor de periféricos ($)</span>
                 <input type="number" min={0} step={0.01} value={valorPerifericos}
                   onChange={(e) => setValorPerifericos(Number(e.target.value))}
-                  className="w-full rounded border px-3 py-2" placeholder="0.00" />
+                  className="campo w-full" placeholder="0.00" />
               </label>
             </div>
           )}
@@ -522,11 +522,11 @@ export default function Personas() {
           </label>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={cerrar}
-              className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+              className="btn btn-secundario">
               Cancelar
             </button>
             {((editando && puedeEditarPersonas) || (!editando && puedeCrearPersonas)) && (
-              <button className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">
+              <button className="btn btn-primario">
                 {editando ? 'Guardar cambios' : 'Crear'}
               </button>
             )}
@@ -586,7 +586,7 @@ export default function Personas() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={cerrarModalDup}
-              className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+              className="btn btn-secundario">
               Cancelar
             </button>
             {puedeEditarPersonas && (

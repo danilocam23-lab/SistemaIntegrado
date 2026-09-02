@@ -212,7 +212,7 @@ export default function FacturacionGeneral() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-marca-osc">Facturación — General</h1>
+          <h1 className="titulo-pagina">Facturación — General</h1>
           <p className="mt-1 text-sm text-slate-500">
             Tabla manual: sin funciones automáticas en horas. El valor hora viene automático de configuración.
           </p>
@@ -221,14 +221,14 @@ export default function FacturacionGeneral() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={agregarFila}
-              className="rounded border border-marca px-3 py-1.5 text-sm text-marca hover:bg-marca/5"
+              className="btn btn-primario btn-sm"
             >
               Agregar fila
             </button>
             <button
               onClick={() => void guardarCambios()}
               disabled={guardando || !inicializado}
-              className="rounded bg-marca px-3 py-1.5 text-sm text-white hover:bg-marca-osc disabled:opacity-60"
+              className="btn btn-primario btn-sm"
             >
               {guardando ? 'Guardando…' : 'Guardar cambios'}
             </button>
@@ -236,9 +236,9 @@ export default function FacturacionGeneral() {
         )}
       </div>
 
-      {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
-      {mensaje === 'ok' && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">Cambios guardados.</div>}
-      {mensaje === 'error' && <div className="rounded bg-red-50 p-2 text-sm text-red-700">Error al guardar.</div>}
+      {error && <div className="aviso aviso-error">{error}</div>}
+      {mensaje === 'ok' && <div className="aviso aviso-exito">Cambios guardados.</div>}
+      {mensaje === 'error' && <div className="aviso aviso-error">Error al guardar.</div>}
 
       <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
         <table className="w-full min-w-[1200px] text-sm">
@@ -274,14 +274,14 @@ export default function FacturacionGeneral() {
                     onChange={(e) => actualizar(f.id, 'periodo', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
                     placeholder="Enero - Febrero"
-                    className="w-44 rounded border border-slate-200 px-2 py-1 read-only:bg-slate-50 read-only:text-slate-600"
+                    className="campo campo-sm w-44"
                   />
                 </td>
                 <td className="p-2">
                   <input
                     value={valorHoraAutomaticoTexto ? formatoCOP(aNumero(valorHoraAutomaticoTexto)) : ''}
                     readOnly
-                    className="w-32 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-right text-slate-600"
+                    className="campo campo-sm w-32 text-right"
                   />
                 </td>
                 <td className="p-2">
@@ -289,14 +289,14 @@ export default function FacturacionGeneral() {
                     value={f.horasComprometidas}
                     onChange={(e) => actualizar(f.id, 'horasComprometidas', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
-                    className="w-32 rounded border border-slate-200 px-2 py-1 text-right read-only:bg-slate-50 read-only:text-slate-600"
+                    className="campo campo-sm w-32 text-right"
                   />
                 </td>
                 <td className="p-2">
                   <input
                     value={formatoCOP(totalComprometidoNum)}
                     readOnly
-                    className="w-36 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-right text-slate-600"
+                    className="campo campo-sm w-36 text-right"
                   />
                 </td>
                 <td className="p-2">
@@ -304,14 +304,14 @@ export default function FacturacionGeneral() {
                     value={f.horasFacturadas}
                     onChange={(e) => actualizar(f.id, 'horasFacturadas', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
-                    className="w-32 rounded border border-slate-200 px-2 py-1 text-right read-only:bg-slate-50 read-only:text-slate-600"
+                    className="campo campo-sm w-32 text-right"
                   />
                 </td>
                 <td className="p-2">
                   <input
                     value={formatoCOP(totalFacturadoNum)}
                     readOnly
-                    className="w-36 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-right text-slate-600"
+                    className="campo campo-sm w-36 text-right"
                   />
                 </td>
                 <td className="p-2">
@@ -335,14 +335,14 @@ export default function FacturacionGeneral() {
                     value={f.observacion}
                     onChange={(e) => actualizar(f.id, 'observacion', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
-                    className="w-full resize-none rounded border border-slate-200 px-2 py-1 read-only:bg-slate-50 read-only:text-slate-600"
+                    className="campo campo-sm w-full resize-none"
                   />
                 </td>
                 <td className="p-2 text-center">
                   {puedeEditarFacturacion && (
                     <button
                       onClick={() => eliminarFila(f.id)}
-                      className="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                      className="btn btn-peligro btn-sm"
                     >
                       Quitar
                     </button>

@@ -90,34 +90,34 @@ export default function Tarifas() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Tarifas</h1>
+      <h1 className="titulo-pagina mb-4">Tarifas</h1>
 
-      <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+      <form onSubmit={crear} className="barra-filtros mb-4">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Año</span>
           <input value={anio} onChange={(e) => setAnio(e.target.value)} type="number" required
-            className="w-24 rounded border px-3 py-2" />
+            className="campo w-24" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Valor hora</span>
           <input value={valorHora} onChange={(e) => setValorHora(e.target.value)} type="number" required
-            className="w-32 rounded border px-3 py-2" />
+            className="campo w-32" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Ramificación</span>
           <select value={ramificacion} onChange={(e) => setRamificacion(e.target.value)}
-            className="rounded border px-3 py-2">
+            className="campo">
             {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </label>
-        <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
+        <button className="btn btn-primario">Crear</button>
       </form>
 
       {(aviso || error) && (
-        <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
+        <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+      <table className="tabla-scroll text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Año</th>
@@ -152,7 +152,7 @@ export default function Tarifas() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1"
+                    className="campo campo-sm w-full"
                   />
                 ) : (
                   t.anio
@@ -181,7 +181,7 @@ export default function Tarifas() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1 text-right"
+                    className="campo campo-sm w-full text-right"
                   />
                 ) : (
                   t.valor_hora
@@ -209,7 +209,7 @@ export default function Tarifas() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1"
+                    className="campo campo-sm w-full"
                   >
                     {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
@@ -219,10 +219,10 @@ export default function Tarifas() {
               </td>
               <td className="p-2 text-center">
                 <div className="flex justify-center gap-2">
-                  <button onClick={() => abrirEdicion(t)} className="text-amber-600 hover:underline">
+                  <button onClick={() => abrirEdicion(t)} className="enlace-accion enlace-accion-alerta">
                     Editar
                   </button>
-                  <button onClick={() => eliminar(t)} className="text-red-600 hover:underline">
+                  <button onClick={() => eliminar(t)} className="enlace-accion enlace-accion-peligro">
                     Eliminar
                   </button>
                 </div>
@@ -241,31 +241,31 @@ export default function Tarifas() {
           onClick={() => setEditItem(null)}>
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-4 text-lg font-bold text-marca-osc">Editar tarifa</h2>
+            <h2 className="titulo-seccion mb-4">Editar tarifa</h2>
             <div className="mb-3">
               <label className="mb-1 block text-sm text-slate-600">Año</label>
               <input value={editAnio} onChange={(e) => setEditAnio(e.target.value)}
-                type="number" className="w-full rounded border px-3 py-2" />
+                type="number" className="campo w-full" />
             </div>
             <div className="mb-3">
               <label className="mb-1 block text-sm text-slate-600">Valor hora</label>
               <input value={editValorHora} onChange={(e) => setEditValorHora(e.target.value)}
-                type="number" className="w-full rounded border px-3 py-2" />
+                type="number" className="campo w-full" />
             </div>
             <div className="mb-4">
               <label className="mb-1 block text-sm text-slate-600">Ramificación</label>
               <select value={editRamificacion} onChange={(e) => setEditRamificacion(e.target.value)}
-                className="w-full rounded border px-3 py-2">
+                className="campo w-full">
                 {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div className="flex justify-end gap-2">
               <button onClick={() => setEditItem(null)}
-                className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                className="btn btn-secundario">
                 Cancelar
               </button>
               <button onClick={guardarPopup}
-                className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">
+                className="btn btn-primario">
                 Guardar
               </button>
             </div>

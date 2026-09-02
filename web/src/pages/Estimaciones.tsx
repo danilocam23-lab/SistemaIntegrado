@@ -81,38 +81,38 @@ export default function Estimaciones() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-marca-osc">Estimaciones</h1>
+      <h1 className="titulo-pagina mb-1">Estimaciones</h1>
       <p className="mb-4 text-sm text-slate-500">
         Crea la cabecera de una estimación. La carga masiva de filas desde Excel
         se habilitará con el importador (pendiente).
       </p>
 
       {puedeGestionarEstimaciones && (
-        <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+        <form onSubmit={crear} className="barra-filtros mb-4">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Título</span>
             <input value={titulo} onChange={(e) => setTitulo(e.target.value)} required
-              className="rounded border px-3 py-2" />
+              className="campo" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Cliente</span>
             <input value={cliente} onChange={(e) => setCliente(e.target.value)}
-              className="rounded border px-3 py-2" />
+              className="campo" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Iniciativa</span>
             <input value={iniciativa} onChange={(e) => setIniciativa(e.target.value)}
-              className="rounded border px-3 py-2" />
+              className="campo" />
           </label>
-          <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
+          <button className="btn btn-primario">Crear</button>
         </form>
       )}
 
       {(aviso || error) && (
-        <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
+        <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+      <table className="tabla-scroll text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Título</th>
@@ -148,7 +148,7 @@ export default function Estimaciones() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1"
+                    className="campo campo-sm w-full"
                   />
                 ) : (
                   es.titulo ?? '—'
@@ -176,7 +176,7 @@ export default function Estimaciones() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1"
+                    className="campo campo-sm w-full"
                   />
                 ) : (
                   es.cliente ?? '—'
@@ -204,7 +204,7 @@ export default function Estimaciones() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1"
+                    className="campo campo-sm w-full"
                   />
                 ) : (
                   es.iniciativa ?? '—'
@@ -214,7 +214,7 @@ export default function Estimaciones() {
               <td className="p-2 text-right">{es.total_horas}</td>
               <td className="p-2 text-center">
                 {puedeGestionarEstimaciones && (
-                  <button onClick={() => eliminar(es)} className="text-red-600 hover:underline">
+                  <button onClick={() => eliminar(es)} className="enlace-accion enlace-accion-peligro">
                     Eliminar
                   </button>
                 )}

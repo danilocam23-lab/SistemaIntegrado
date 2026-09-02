@@ -412,7 +412,7 @@ export default function AdminEndpoints() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="mb-2 text-xl font-bold text-marca-osc">Administración de Endpoints</h1>
+        <h1 className="titulo-pagina mb-2">Administración de Endpoints</h1>
         <p className="rounded border bg-white p-3 text-sm text-slate-700">
           Panel operativo y documentación de rutas FastAPI. Las acciones administrativas de requerimientos
           envían <code>X-Aplicacion: __todas__</code> para trabajar en modo consolidado.
@@ -420,8 +420,8 @@ export default function AdminEndpoints() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <form onSubmit={ejecutarDiagnostico} className="rounded-xl border bg-white p-4">
-          <h2 className="mb-3 text-base font-semibold text-marca-osc">Diagnóstico</h2>
+        <form onSubmit={ejecutarDiagnostico} className="tarjeta tarjeta-pad">
+          <h2 className="titulo-seccion mb-3">Diagnóstico</h2>
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Código REQ o SC</span>
@@ -430,12 +430,12 @@ export default function AdminEndpoints() {
                 onChange={(e) => setIdentificador(e.target.value)}
                 placeholder="Ej: 10813 o REQ-123"
                 required
-                className="min-w-64 rounded border px-3 py-2"
+                className="campo min-w-64"
               />
             </label>
             <button
               disabled={cargandoDiag}
-              className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+              className="btn btn-primario"
             >
               {cargandoDiag ? 'Consultando...' : 'Consultar diagnóstico'}
             </button>
@@ -443,8 +443,8 @@ export default function AdminEndpoints() {
           <p className="mt-2 text-xs text-slate-500">GET /api/requerimientos/{'{codigo_req}'}/diagnostico</p>
         </form>
 
-        <form onSubmit={ejecutarReasignacion} className="rounded-xl border bg-white p-4">
-          <h2 className="mb-3 text-base font-semibold text-marca-osc">Reasignar aplicación</h2>
+        <form onSubmit={ejecutarReasignacion} className="tarjeta tarjeta-pad">
+          <h2 className="titulo-seccion mb-3">Reasignar aplicación</h2>
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Nueva aplicación</span>
@@ -452,7 +452,7 @@ export default function AdminEndpoints() {
                 value={nuevaAplicacion}
                 onChange={(e) => setNuevaAplicacion(e.target.value)}
                 required
-                className="min-w-64 rounded border px-3 py-2"
+                className="campo min-w-64"
               >
                 <option value="">Seleccione una aplicación</option>
                 {apps.map((a) => (
@@ -464,7 +464,7 @@ export default function AdminEndpoints() {
             </label>
             <button
               disabled={cargandoReasig || !identificador.trim()}
-              className="rounded bg-amber-600 px-4 py-2 text-white hover:bg-amber-700 disabled:opacity-60"
+              className="btn btn-alerta"
             >
               {cargandoReasig ? 'Reasignando...' : 'Reasignar'}
             </button>
@@ -475,9 +475,9 @@ export default function AdminEndpoints() {
         </form>
       </div>
 
-      <form onSubmit={probarEntregasIntegracion} className="rounded-xl border bg-white p-4">
+      <form onSubmit={probarEntregasIntegracion} className="tarjeta tarjeta-pad">
         <div className="mb-3">
-          <h2 className="text-base font-semibold text-marca-osc">Probar integración de entregas</h2>
+          <h2 className="titulo-seccion">Probar integración de entregas</h2>
           <p className="text-xs text-slate-500">
             GET /api/integracion/entregas — solo requerimientos en estado ESTIMACION APROBADA ENTREGA PENDIENTE
             y entregas en estado Pendiente.
@@ -492,7 +492,7 @@ export default function AdminEndpoints() {
               onChange={(e) => setApiKeyIntegracion(e.target.value)}
               placeholder="Clave configurada en API_KEY"
               required
-              className="min-w-72 rounded border px-3 py-2"
+              className="campo min-w-72"
             />
           </label>
           <label className="text-sm">
@@ -500,7 +500,7 @@ export default function AdminEndpoints() {
             <select
               value={aplicacionIntegracion}
               onChange={(e) => setAplicacionIntegracion(e.target.value)}
-              className="min-w-64 rounded border px-3 py-2"
+              className="campo min-w-64"
             >
               <option value="">Todas</option>
               {apps.map((a) => (
@@ -512,7 +512,7 @@ export default function AdminEndpoints() {
           </label>
           <button
             disabled={cargandoEntregas}
-            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+            className="btn btn-primario"
           >
             {cargandoEntregas ? 'Probando...' : 'Probar endpoint'}
           </button>
@@ -522,9 +522,9 @@ export default function AdminEndpoints() {
         </p>
       </form>
 
-      <form onSubmit={probarRequerimientosIntegracion} className="rounded-xl border bg-white p-4">
+      <form onSubmit={probarRequerimientosIntegracion} className="tarjeta tarjeta-pad">
         <div className="mb-3">
-          <h2 className="text-base font-semibold text-marca-osc">Probar integración de requerimientos</h2>
+          <h2 className="titulo-seccion">Probar integración de requerimientos</h2>
           <p className="text-xs text-slate-500">
             GET /api/integracion/requerimientos — requiere API_KEY_REQUERIMIENTOS y permite filtrar por aplicación
             o estado del requerimiento. No usa la API_KEY de entregas.
@@ -539,7 +539,7 @@ export default function AdminEndpoints() {
               onChange={(e) => setApiKeyRequerimientosIntegracion(e.target.value)}
               placeholder="Clave configurada en API_KEY_REQUERIMIENTOS"
               required
-              className="min-w-72 rounded border px-3 py-2"
+              className="campo min-w-72"
             />
           </label>
           <label className="text-sm">
@@ -547,7 +547,7 @@ export default function AdminEndpoints() {
             <select
               value={aplicacionRequerimientosIntegracion}
               onChange={(e) => setAplicacionRequerimientosIntegracion(e.target.value)}
-              className="min-w-64 rounded border px-3 py-2"
+              className="campo min-w-64"
             >
               <option value="">Todas</option>
               {apps.map((a) => (
@@ -563,12 +563,12 @@ export default function AdminEndpoints() {
               value={estadoRequerimientosIntegracion}
               onChange={(e) => setEstadoRequerimientosIntegracion(e.target.value)}
               placeholder="Ej: ESTIMACION APROBADA ENTREGA PENDIENTE"
-              className="min-w-80 rounded border px-3 py-2"
+              className="campo min-w-80"
             />
           </label>
           <button
             disabled={cargandoRequerimientosIntegracion}
-            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+            className="btn btn-primario"
           >
             {cargandoRequerimientosIntegracion ? 'Probando...' : 'Probar endpoint'}
           </button>
@@ -583,9 +583,9 @@ export default function AdminEndpoints() {
         </p>
       </form>
 
-      <form onSubmit={probarSolicitudesIntegracion} className="rounded-xl border bg-white p-4">
+      <form onSubmit={probarSolicitudesIntegracion} className="tarjeta tarjeta-pad">
         <div className="mb-3">
-          <h2 className="text-base font-semibold text-marca-osc">Probar integración de solicitudes dashboard</h2>
+          <h2 className="titulo-seccion">Probar integración de solicitudes dashboard</h2>
           <p className="text-xs text-slate-500">
             GET /api/integracion/solicitudes — devuelve fecha y hora de solicitud, Código SC y Código REQ.
             Requiere API_KEY_SOLICITUDES (clave independiente de entregas y requerimientos).
@@ -600,7 +600,7 @@ export default function AdminEndpoints() {
               onChange={(e) => setApiKeySolicitudesIntegracion(e.target.value)}
               placeholder="Clave configurada en API_KEY_SOLICITUDES"
               required
-              className="min-w-72 rounded border px-3 py-2"
+              className="campo min-w-72"
             />
           </label>
           <label className="text-sm">
@@ -608,7 +608,7 @@ export default function AdminEndpoints() {
             <select
               value={aplicacionSolicitudesIntegracion}
               onChange={(e) => setAplicacionSolicitudesIntegracion(e.target.value)}
-              className="min-w-64 rounded border px-3 py-2"
+              className="campo min-w-64"
             >
               <option value="">Todas</option>
               {apps.map((a) => (
@@ -620,7 +620,7 @@ export default function AdminEndpoints() {
           </label>
           <button
             disabled={cargandoSolicitudesIntegracion}
-            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+            className="btn btn-primario"
           >
             {cargandoSolicitudesIntegracion ? 'Probando...' : 'Probar endpoint'}
           </button>
@@ -630,9 +630,9 @@ export default function AdminEndpoints() {
         </p>
       </form>
 
-      <form onSubmit={probarSolicitudesEntregasIntegracion} className="rounded-xl border bg-white p-4">
+      <form onSubmit={probarSolicitudesEntregasIntegracion} className="tarjeta tarjeta-pad">
         <div className="mb-3">
-          <h2 className="text-base font-semibold text-marca-osc">Probar integración de entregas dashboard</h2>
+          <h2 className="titulo-seccion">Probar integración de entregas dashboard</h2>
           <p className="text-xs text-slate-500">
             GET /api/integracion/solicitudes-entregas — devuelve Código SC, Código REQ, N° Entrega, Horas,
             F. Comprometida, F. Real, Estado, Mes de aprobación, ANS, Garantía y N° Garantía (fechas sin hora).
@@ -648,7 +648,7 @@ export default function AdminEndpoints() {
               onChange={(e) => setApiKeySolicitudesIntegracion(e.target.value)}
               placeholder="Clave configurada en API_KEY_SOLICITUDES"
               required
-              className="min-w-72 rounded border px-3 py-2"
+              className="campo min-w-72"
             />
           </label>
           <label className="text-sm">
@@ -656,7 +656,7 @@ export default function AdminEndpoints() {
             <select
               value={aplicacionSolicitudesIntegracion}
               onChange={(e) => setAplicacionSolicitudesIntegracion(e.target.value)}
-              className="min-w-64 rounded border px-3 py-2"
+              className="campo min-w-64"
             >
               <option value="">Todas</option>
               {apps.map((a) => (
@@ -668,7 +668,7 @@ export default function AdminEndpoints() {
           </label>
           <button
             disabled={cargandoSolicitudesEntregasIntegracion}
-            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+            className="btn btn-primario"
           >
             {cargandoSolicitudesEntregasIntegracion ? 'Probando...' : 'Probar endpoint'}
           </button>
@@ -678,8 +678,8 @@ export default function AdminEndpoints() {
         </p>
       </form>
 
-      {ok && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">{ok}</div>}
-      {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
+      {ok && <div className="aviso aviso-exito">{ok}</div>}
+      {error && <div className="aviso aviso-error">{error}</div>}
 
       <div className="rounded-xl border bg-slate-900 p-4 text-sm text-slate-100">
         <div className="mb-2 font-semibold">Respuesta</div>
@@ -688,9 +688,9 @@ export default function AdminEndpoints() {
         </pre>
       </div>
 
-      <section className="rounded-xl border bg-white p-4">
+      <section className="tarjeta tarjeta-pad">
         <div className="mb-3">
-          <h2 className="text-base font-semibold text-marca-osc">Catálogo administrable (agente de endpoints)</h2>
+          <h2 className="titulo-seccion">Catálogo administrable (agente de endpoints)</h2>
           <p className="text-xs text-slate-500">
             Prueba en vivo del agente CRUD de <code>/api/admin/endpoints</code>: agrega, lista y elimina entradas
             reales almacenadas en MongoDB (colección <code>endpoints_admin</code>).
@@ -705,7 +705,7 @@ export default function AdminEndpoints() {
               onChange={(e) => setNuevoModulo(e.target.value)}
               placeholder="Ej: Endpoints"
               required
-              className="min-w-40 rounded border px-3 py-2"
+              className="campo min-w-40"
             />
           </label>
           <label className="text-sm">
@@ -713,7 +713,7 @@ export default function AdminEndpoints() {
             <select
               value={nuevoMetodo}
               onChange={(e) => setNuevoMetodo(e.target.value as Metodo)}
-              className="rounded border px-3 py-2"
+              className="campo"
             >
               {(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as Metodo[]).map((m) => (
                 <option key={m} value={m}>{m}</option>
@@ -727,7 +727,7 @@ export default function AdminEndpoints() {
               onChange={(e) => setNuevaRuta(e.target.value)}
               placeholder="/api/admin/endpoints"
               required
-              className="min-w-64 rounded border px-3 py-2"
+              className="campo min-w-64"
             />
           </label>
           <label className="text-sm">
@@ -736,19 +736,19 @@ export default function AdminEndpoints() {
               value={nuevaDescripcion}
               onChange={(e) => setNuevaDescripcion(e.target.value)}
               placeholder="Descripción breve"
-              className="min-w-64 rounded border px-3 py-2"
+              className="campo min-w-64"
             />
           </label>
           <button
             disabled={creandoEndpointAdmin}
-            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+            className="btn btn-primario"
           >
             {creandoEndpointAdmin ? 'Creando...' : 'Crear endpoint'}
           </button>
         </form>
 
         {(avisoEndpointsAdmin || errorEndpointsAdmin) && (
-          <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">
+          <div className="aviso aviso-error mb-3">
             {avisoEndpointsAdmin || errorEndpointsAdmin}
           </div>
         )}
@@ -776,7 +776,7 @@ export default function AdminEndpoints() {
                   <td className="px-3 py-2 font-mono text-[11px] text-slate-700">{endpoint.ruta}</td>
                   <td className="px-3 py-2 text-slate-600">{endpoint.descripcion || '—'}</td>
                   <td className="px-3 py-2 text-center">
-                    <button onClick={() => eliminarEndpointAdmin(endpoint)} className="text-red-600 hover:underline">
+                    <button onClick={() => eliminarEndpointAdmin(endpoint)} className="enlace-accion enlace-accion-peligro">
                       Eliminar
                     </button>
                   </td>
@@ -790,23 +790,23 @@ export default function AdminEndpoints() {
         </div>
       </section>
 
-      <section className="rounded-xl border bg-white p-4">
+      <section className="tarjeta tarjeta-pad">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-marca-osc">Documentación de endpoints</h2>
+            <h2 className="titulo-seccion">Documentación de endpoints</h2>
             <p className="text-xs text-slate-500">
               {endpointsFiltrados.length} de {ENDPOINTS.length} rutas documentadas. Todas requieren JWT salvo login y health; los recursos operativos usan <code>X-Aplicacion</code>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <select value={modulo} onChange={(e) => setModulo(e.target.value)} className="rounded border px-3 py-2 text-sm">
+            <select value={modulo} onChange={(e) => setModulo(e.target.value)} className="campo">
               {modulos.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
             <input
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
               placeholder="Buscar ruta, permiso o descripción"
-              className="min-w-72 rounded border px-3 py-2 text-sm"
+              className="campo min-w-72"
             />
           </div>
         </div>

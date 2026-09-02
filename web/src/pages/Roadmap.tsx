@@ -361,7 +361,7 @@ export default function Roadmap() {
             </svg>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-marca-osc">Roadmap del Equipo</h1>
+            <h1 className="titulo-pagina">Roadmap del Equipo</h1>
             <p className="text-xs text-zinc-500">Línea de tiempo de proyectos y entregas</p>
           </div>
         </div>
@@ -369,7 +369,7 @@ export default function Roadmap() {
           <select
             value={modoAgrupacion}
             onChange={(e) => setModoAgrupacion(e.target.value as 'usuario' | 'plano')}
-            className="rounded border px-3 py-1.5 text-sm"
+            className="campo campo-sm"
           >
             <option value="usuario">Por usuario asignado</option>
             <option value="plano">Sin agrupar por usuario</option>
@@ -379,7 +379,7 @@ export default function Roadmap() {
             <select
               value={filtroPersona}
               onChange={(e) => setFiltroPersona(e.target.value)}
-              className="rounded border px-3 py-1.5 text-sm"
+              className="campo campo-sm"
             >
               <option value="__todos__">Todos los desarrolladores</option>
               <option value={SIN_ASIGNAR_ID}>Sin asignar</option>
@@ -412,14 +412,14 @@ export default function Roadmap() {
                 <button
                   type="button"
                   onClick={() => setEstadosActivos(new Set(estadosRequerimiento))}
-                  className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-white"
+                  className="btn btn-secundario btn-sm"
                 >
                   Todos
                 </button>
                 <button
                   type="button"
                   onClick={() => setEstadosActivos(new Set())}
-                  className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-white"
+                  className="btn btn-secundario btn-sm"
                 >
                   Limpiar
                 </button>
@@ -471,14 +471,14 @@ export default function Roadmap() {
             <button
               type="button"
               onClick={() => setMesesActivos(new Set(meses.map((m) => m.key)))}
-              className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
+              className="btn btn-secundario btn-sm rounded-full"
             >
               Todos
             </button>
             <button
               type="button"
               onClick={() => setMesesActivos(new Set())}
-              className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
+              className="btn btn-secundario btn-sm rounded-full"
             >
               Limpiar
             </button>

@@ -185,12 +185,12 @@ export default function FacturacionValoresProyecto() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-marca-osc">Facturación — Valores de proyecto</h1>
+        <h1 className="titulo-pagina">Facturación — Valores de proyecto</h1>
         <p className="mt-1 text-sm text-slate-500">Valores de proyecto.</p>
       </div>
-      {errorVisible && <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorVisible}</div>}
+      {errorVisible && <div className="aviso aviso-error">{errorVisible}</div>}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="aviso aviso-exito">
           <p className="text-sm font-medium text-emerald-800">Dinero de soporte</p>
           <p className="mt-1 text-2xl font-bold text-emerald-900">{formatoMoneda(totales.valorTotal)}</p>
         </div>
@@ -202,7 +202,7 @@ export default function FacturacionValoresProyecto() {
           <p className="text-sm font-medium text-violet-800">Dinero entregas aprobadas</p>
           <p className="mt-1 text-2xl font-bold text-violet-900">{formatoMoneda(totalAprobadas)}</p>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="aviso aviso-alerta">
           <p className="text-sm font-medium text-amber-800">Total dinero</p>
           <p className="mt-1 text-2xl font-bold text-amber-900">{formatoMoneda(totalDinero)}</p>
         </div>
@@ -212,7 +212,7 @@ export default function FacturacionValoresProyecto() {
           <p className="mt-2 text-xs text-indigo-700">Nota: falta validar horas de soporte.</p>
         </div>
       </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="tarjeta overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-marca-osc text-left text-white">
             <tr>
@@ -269,8 +269,8 @@ export default function FacturacionValoresProyecto() {
         Nota: los registros sin año se conservan en la fila <strong>Sin fecha</strong> y usan la tarifa del año actual.
       </p>
       <div>
-        <h2 className="mb-2 text-lg font-bold text-marca-osc">Valores de entregas</h2>
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <h2 className="titulo-seccion mb-2">Valores de entregas</h2>
+        <div className="tarjeta overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-marca-osc text-left text-white">
               <tr>
@@ -324,8 +324,8 @@ export default function FacturacionValoresProyecto() {
         </p>
       </div>
       <div>
-        <h2 className="mb-2 text-lg font-bold text-marca-osc">Entregas por estado</h2>
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <h2 className="titulo-seccion mb-2">Entregas por estado</h2>
+        <div className="tarjeta overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-marca-osc text-left text-white">
               <tr>

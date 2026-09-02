@@ -16,6 +16,7 @@ import { CONSOLIDADO } from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import type { Aplicacion, Requerimiento } from '../types'
+import { EncabezadoPagina } from '../components/ui'
 
 // Paleta de colores premium
 const PALETA = {
@@ -201,31 +202,17 @@ export default function DashboardEstados() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
-      {/* Header Premium */}
-      <div className="sticky top-0 z-30 border-b border-slate-200/50 bg-white/80 backdrop-blur-xl shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">📊</span>
-                </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 via-blue-800 to-slate-900 bg-clip-text text-transparent">
-                  Estados de Requerimientos
-                </h1>
-              </div>
-              <p className="text-slate-600 text-sm">
-                Análisis detallado de estados
-                {appActiva && appActiva !== CONSOLIDADO ? ` • ${appActiva}` : ' • Consolidado'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <EncabezadoPagina
+        icono="📊"
+        titulo="Estados de Requerimientos"
+        descripcion={`Análisis detallado de estados${
+          appActiva && appActiva !== CONSOLIDADO ? ` · ${appActiva}` : ' · Consolidado'
+        }`}
+      />
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="pagina">
         {/* KPI Grid - Premium Design */}
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4 mb-8">
           <KpiCardPremium
@@ -512,7 +499,7 @@ export default function DashboardEstados() {
           <div className="w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">{detalleGarantias.titulo}</h2>
+                <h2 className="titulo-seccion">{detalleGarantias.titulo}</h2>
                 <p className="mt-1 text-sm text-slate-500">
                   {fmtNumero(detalleGarantias.filas.length)} entrega(s) marcadas como garantía.
                 </p>

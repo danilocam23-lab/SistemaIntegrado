@@ -292,17 +292,17 @@ export default function ControlHorasFacturable() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-marca-osc">Control de Horas Facturable</h1>
+        <h1 className="titulo-pagina">Control de Horas Facturable</h1>
         <p className="mt-1 text-sm text-slate-500">
           Listado de personas con su líder técnico HITSS. Use el selector o el botón ↓ para aplicar en bloque.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-white p-3">
+      <div className="barra-filtros">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Año</span>
           <select value={anio} onChange={(e) => setAnio(Number(e.target.value))}
-            className="rounded border px-3 py-2 text-sm">
+            className="campo">
             {Array.from({ length: 5 }, (_, i) => hoy.getFullYear() - 2 + i).map((a) => (
               <option key={a} value={a}>{a}</option>
             ))}
@@ -311,7 +311,7 @@ export default function ControlHorasFacturable() {
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Mes</span>
           <select value={mes} onChange={(e) => setMes(Number(e.target.value))}
-            className="rounded border px-3 py-2 text-sm">
+            className="campo">
             {_MESES.map((n, i) => (
               <option key={i + 1} value={i + 1}>{n}</option>
             ))}
@@ -324,11 +324,11 @@ export default function ControlHorasFacturable() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar…"
-            className="rounded border px-3 py-2 text-sm w-64"
+            className="campo w-64"
           />
         </label>
         {busqueda && (
-          <button onClick={() => setBusqueda('')} className="text-xs text-red-500 hover:underline self-end pb-2">
+          <button onClick={() => setBusqueda('')} className="enlace-accion enlace-accion-peligro text-xs self-end pb-2">
             Limpiar
           </button>
         )}
@@ -339,7 +339,7 @@ export default function ControlHorasFacturable() {
           <select
             onChange={(e) => { if (e.target.value) aplicarATodos(e.target.value); e.target.value = '' }}
             defaultValue=""
-            className="rounded border px-3 py-2 text-sm"
+            className="campo"
           >
             <option value="" disabled>Seleccionar…</option>
             {todosLtNombres.map((n) => (
@@ -351,22 +351,22 @@ export default function ControlHorasFacturable() {
         <span className="ml-auto text-xs text-slate-400 self-end pb-2">
           {filas.length} registros
           {eliminadas.size > 0 && (
-            <button onClick={restaurarTodo} className="ml-2 text-xs text-blue-600 hover:underline">
+            <button onClick={restaurarTodo} className="enlace-accion text-xs ml-2">
               Restaurar {eliminadas.size} eliminados
             </button>
           )}
         </span>
       </div>
 
-      {aviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
-      {avisoOk && <div className="rounded bg-green-50 p-2 text-sm text-green-700">{avisoOk}</div>}
+      {aviso && <div className="aviso aviso-error">{aviso}</div>}
+      {avisoOk && <div className="aviso aviso-exito">{avisoOk}</div>}
 
       <div className="flex justify-end">
         <button
           type="button"
           onClick={() => void guardarTodos()}
           disabled={guardandoTodos || filas.length === 0}
-          className="rounded bg-marca px-4 py-2 text-sm font-semibold text-white hover:bg-marca-osc disabled:opacity-50"
+          className="btn btn-primario"
         >
           {guardandoTodos ? 'Guardando…' : `💾 Guardar todos (${filas.length})`}
         </button>
@@ -431,7 +431,7 @@ export default function ControlHorasFacturable() {
                         <select
                           value={valor}
                           onChange={(e) => cambiarLt(f.key, e.target.value)}
-                          className="rounded border border-slate-300 px-2 py-1 text-sm"
+                          className="campo campo-sm"
                         >
                           {f.opcionesLt.map((n) => (
                             <option key={n} value={n}>{n}</option>
@@ -452,7 +452,7 @@ export default function ControlHorasFacturable() {
                   </td>
                   <td className="p-2 text-slate-600">{f.squad}</td>
                   <td className="p-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    <span className={`chip ${
                       f.rol === 'LT_HITSS' ? 'bg-blue-100 text-blue-700'
                       : f.rol === 'SCRUM' ? 'bg-purple-100 text-purple-700'
                       : f.rol === 'DEV' ? 'bg-green-100 text-green-700'
@@ -468,7 +468,7 @@ export default function ControlHorasFacturable() {
                       type="number"
                       value={horasSoporte[f.key] ?? 0}
                       onChange={(e) => setHorasSoporte((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
+                      className="campo campo-sm w-20 text-right"
                       min={0}
                     />
                   </td>
@@ -477,7 +477,7 @@ export default function ControlHorasFacturable() {
                       type="number"
                       value={horasDesarrollo[f.key] ?? 0}
                       onChange={(e) => setHorasDesarrollo((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
+                      className="campo campo-sm w-20 text-right"
                       min={0}
                     />
                   </td>
@@ -500,7 +500,7 @@ export default function ControlHorasFacturable() {
                       type="number"
                       value={horasSopCerrado[f.key] ?? 0}
                       onChange={(e) => setHorasSopCerrado((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
+                      className="campo campo-sm w-20 text-right"
                       min={0}
                     />
                   </td>
@@ -509,7 +509,7 @@ export default function ControlHorasFacturable() {
                       type="number"
                       value={horasDesCerrado[f.key] ?? 0}
                       onChange={(e) => setHorasDesCerrado((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right"
+                      className="campo campo-sm w-20 text-right"
                       min={0}
                     />
                   </td>
@@ -530,27 +530,27 @@ export default function ControlHorasFacturable() {
                   <td className="p-2">
                     <input type="number" value={horasVac[f.key] ?? 0}
                       onChange={(e) => setHorasVac((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2">
                     <input type="number" value={horasInc[f.key] ?? 0}
                       onChange={(e) => setHorasInc((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2">
                     <input type="number" value={horasLic[f.key] ?? 0}
                       onChange={(e) => setHorasLic((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2">
                     <input type="number" value={horasPerm[f.key] ?? 0}
                       onChange={(e) => setHorasPerm((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2">
                     <input type="number" value={otrasNov[f.key] ?? 0}
                       onChange={(e) => setOtrasNov((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2 text-right font-mono font-semibold text-marca-osc">
                     {(horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)}
@@ -558,22 +558,22 @@ export default function ControlHorasFacturable() {
                   <td className="p-2">
                     <input type="number" value={horasErr[f.key] ?? 0}
                       onChange={(e) => setHorasErr((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2">
                     <input type="number" value={horasGar[f.key] ?? 0}
                       onChange={(e) => setHorasGar((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2">
                     <input type="number" value={horasRep[f.key] ?? 0}
                       onChange={(e) => setHorasRep((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2">
                     <input type="number" value={otrasNovCal[f.key] ?? 0}
                       onChange={(e) => setOtrasNovCal((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-right" min={0} />
+                      className="campo campo-sm w-20 text-right" min={0} />
                   </td>
                   <td className="p-2 text-right font-mono font-semibold text-marca-osc">
                     {(horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
@@ -591,7 +591,7 @@ export default function ControlHorasFacturable() {
                     <textarea
                       value={observaciones[f.key] ?? ''}
                       onChange={(e) => setObservaciones((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                      className="w-full min-w-[180px] rounded border border-slate-300 px-2 py-1 text-sm"
+                      className="campo campo-sm w-full min-w-[180px]"
                       rows={2}
                     />
                   </td>
@@ -601,7 +601,7 @@ export default function ControlHorasFacturable() {
                       onClick={() => void guardarUno(f)}
                       disabled={guardandoFila.has(f.key)}
                       title="Guardar este registro"
-                      className="rounded bg-marca px-2 py-1 text-xs text-white hover:bg-marca-osc disabled:opacity-50"
+                      className="btn btn-primario btn-sm"
                     >
                       {guardandoFila.has(f.key) ? '…' : '💾'}
                     </button>
@@ -611,7 +611,7 @@ export default function ControlHorasFacturable() {
                       type="button"
                       onClick={() => eliminarFila(f.key)}
                       title="Quitar este registro"
-                      className="rounded p-1 text-slate-400 hover:bg-red-100 hover:text-red-600"
+                      className="btn btn-peligro"
                     >
                       ✕
                     </button>

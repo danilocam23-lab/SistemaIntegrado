@@ -61,32 +61,32 @@ export default function Actas() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Actas de trabajo</h1>
+      <h1 className="titulo-pagina mb-4">Actas de trabajo</h1>
 
-      <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+      <form onSubmit={crear} className="barra-filtros mb-4">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Código</span>
           <input value={codigo} onChange={(e) => setCodigo(e.target.value)} required
-            className="rounded border px-3 py-2" />
+            className="campo" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Fecha</span>
           <input value={fecha} onChange={(e) => setFecha(e.target.value)} type="date"
-            className="rounded border px-3 py-2" />
+            className="campo" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Dirección</span>
           <input value={direccion} onChange={(e) => setDireccion(e.target.value)}
-            className="rounded border px-3 py-2" />
+            className="campo" />
         </label>
-        <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
+        <button className="btn btn-primario">Crear</button>
       </form>
 
       {(aviso || error) && (
-        <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
+        <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+      <table className="tabla-scroll text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Código</th>
@@ -122,7 +122,7 @@ export default function Actas() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1 font-mono"
+                    className="campo campo-sm w-full font-mono"
                   />
                 ) : (
                   a.codigo
@@ -151,7 +151,7 @@ export default function Actas() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1"
+                    className="campo campo-sm w-full"
                   />
                 ) : (
                   a.fecha?.slice(0, 10) ?? '—'
@@ -179,7 +179,7 @@ export default function Actas() {
                         setEditValue('')
                       }
                     }}
-                    className="w-full rounded border px-2 py-1"
+                    className="campo campo-sm w-full"
                   />
                 ) : (
                   a.direccion ?? '—'
@@ -188,7 +188,7 @@ export default function Actas() {
               <td className="p-2 text-right">{a.total_horas ?? '—'}</td>
               <td className="p-2 text-right">{a.total_valor ?? '—'}</td>
               <td className="p-2 text-center">
-                <button onClick={() => eliminar(a)} className="text-red-600 hover:underline">
+                <button onClick={() => eliminar(a)} className="enlace-accion enlace-accion-peligro">
                   Eliminar
                 </button>
               </td>

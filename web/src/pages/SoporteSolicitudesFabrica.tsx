@@ -113,7 +113,7 @@ const FilaRegistro = memo(function FilaRegistro({ registro: r, headers, onVerDes
         {r.datos?.['Detailed Description'] ? (
           <button
             onClick={() => onVerDescripcion(r.datos['Detailed Description'])}
-            className="rounded bg-marca/10 px-2 py-0.5 text-xs text-marca hover:bg-marca/20"
+            className="btn btn-primario btn-sm"
             title="Ver descripción completa"
           >
             Ver detalle
@@ -332,7 +332,7 @@ export default function SoporteSolicitudesFabrica() {
     <div className="min-w-0 w-full space-y-4 overflow-x-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-marca-osc">Soporte — Solicitudes Fábrica</h1>
+          <h1 className="titulo-pagina">Soporte — Solicitudes Fábrica</h1>
           <p className="mt-1 text-sm text-slate-500">
             {puedeActualizar
               ? 'Cargue el archivo Excel para validar y sincronizar, aplicando la regla Líder y Squad.'
@@ -351,7 +351,7 @@ export default function SoporteSolicitudesFabrica() {
             <button
               onClick={abrirSelectorArchivo}
               disabled={actualizando || sincronizando}
-              className="shrink-0 whitespace-nowrap rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+              className="btn btn-primario shrink-0"
             >
               {actualizando ? 'Cargando…' : 'Actualizar (cargar Excel)'}
             </button>
@@ -359,7 +359,7 @@ export default function SoporteSolicitudesFabrica() {
         )}
       </div>
 
-      {aviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
+      {aviso && <div className="aviso aviso-error">{aviso}</div>}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded border bg-white p-3">
@@ -373,8 +373,8 @@ export default function SoporteSolicitudesFabrica() {
       </div>
 
       {resultadoSync && (
-        <div className="rounded-xl border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Resultado de sincronización</h2>
+        <div className="tarjeta tarjeta-pad">
+          <h2 className="etiqueta-sup mb-3">Resultado de sincronización</h2>
           <div className="grid gap-3 sm:grid-cols-4">
             <div className="rounded border p-3">
               <div className="text-2xl font-bold text-marca-osc">{resultadoSync.total_procesados}</div>
@@ -397,7 +397,7 @@ export default function SoporteSolicitudesFabrica() {
             <div className="mt-3">
               <button
                 onClick={() => void descargarErroresCsv()}
-                className="rounded border border-marca px-3 py-1.5 text-sm text-marca hover:bg-marca/5"
+                className="btn btn-primario btn-sm"
               >
                 Descargar errores (CSV)
               </button>
@@ -406,7 +406,7 @@ export default function SoporteSolicitudesFabrica() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-white p-3">
+      <div className="barra-filtros">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Filtrar por Work Order ID</span>
           <input
@@ -414,13 +414,13 @@ export default function SoporteSolicitudesFabrica() {
             value={filtroWorkOrderID}
             onChange={(e) => onFiltroChange(e.target.value)}
             placeholder="Buscar Work Order ID…"
-            className="rounded border px-3 py-2 text-sm w-64"
+            className="campo w-64"
           />
         </label>
         {filtroWorkOrderID && (
           <button
             onClick={() => { setFiltroWorkOrderID(''); setPagina(1); void cargar(1, '') }}
-            className="text-xs text-red-500 hover:underline self-end pb-2"
+            className="enlace-accion enlace-accion-peligro text-xs self-end pb-2"
           >
             Limpiar filtro
           </button>
@@ -436,14 +436,14 @@ export default function SoporteSolicitudesFabrica() {
           <button
             onClick={() => irPagina(1)}
             disabled={pagina <= 1}
-            className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+            className="campo campo-sm disabled:opacity-40"
           >
             «
           </button>
           <button
             onClick={() => irPagina(pagina - 1)}
             disabled={pagina <= 1}
-            className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+            className="campo campo-sm disabled:opacity-40"
           >
             ‹ Anterior
           </button>
@@ -453,14 +453,14 @@ export default function SoporteSolicitudesFabrica() {
           <button
             onClick={() => irPagina(pagina + 1)}
             disabled={pagina >= data.total_paginas}
-            className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+            className="campo campo-sm disabled:opacity-40"
           >
             Siguiente ›
           </button>
           <button
             onClick={() => irPagina(data.total_paginas)}
             disabled={pagina >= data.total_paginas}
-            className="rounded border px-2 py-1 text-xs disabled:opacity-40"
+            className="campo campo-sm disabled:opacity-40"
           >
             »
           </button>
@@ -552,7 +552,7 @@ export default function SoporteSolicitudesFabrica() {
               <button
                 onClick={() => setModalAbierto(false)}
                 disabled={sincronizando}
-                className="rounded border px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+                className="btn btn-secundario btn-sm"
               >
                 Cancelar
               </button>
@@ -560,7 +560,7 @@ export default function SoporteSolicitudesFabrica() {
                 <button
                   onClick={() => void confirmarSincronizacion()}
                   disabled={sincronizando}
-                  className="rounded bg-marca px-3 py-1.5 text-sm text-white hover:bg-marca-osc disabled:opacity-60"
+                  className="btn btn-primario btn-sm"
                 >
                   {sincronizando ? 'Sincronizando…' : 'Confirmar'}
                 </button>
@@ -581,7 +581,7 @@ export default function SoporteSolicitudesFabrica() {
         <div className="mt-4 flex justify-end">
           <button
             onClick={() => setDescripcionSeleccionada(null)}
-            className="rounded border px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+            className="btn btn-secundario btn-sm"
           >
             Cerrar
           </button>
@@ -606,7 +606,7 @@ export default function SoporteSolicitudesFabrica() {
             <div className="flex justify-end pt-1">
               <button
                 onClick={() => setTaskSeleccionada(null)}
-                className="rounded border px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+                className="btn btn-secundario btn-sm"
               >
                 Cerrar
               </button>

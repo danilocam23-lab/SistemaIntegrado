@@ -1,0 +1,96 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="sistema-diseno.css"><title>Sistema de diseño</title></head>
+<body class="bg-slate-50">
+<div class="min-h-screen">
+  <header class="encabezado-pagina"><div class="mx-auto flex w-full max-w-[1600px] flex-col gap-3 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex min-w-0 items-center gap-3">
+      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-marca-50 text-lg text-marca-700">📊</div>
+      <div class="min-w-0"><h1 class="titulo-pagina truncate">Dashboard General</h1><p class="subtitulo-pagina">Vista consolidada de métricas operativas</p></div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <details class="group relative" open><summary class="filtro-desplegable filtro-desplegable-activo"><span>📅 Año</span><span class="contador-filtro">2</span></summary>
+      <div class="panel-desplegable" style="min-width:200px"><div class="mb-2 flex justify-end gap-3"><button class="enlace-mini">Todos</button><button class="text-2xs font-semibold text-slate-400">Limpiar</button></div>
+      <div class="flex flex-wrap gap-1.5"><label class="opcion-filtro opcion-filtro-on"><input type="checkbox" checked class="h-3.5 w-3.5">2025</label><label class="opcion-filtro opcion-filtro-off"><input type="checkbox" class="h-3.5 w-3.5">2026</label></div></div></details>
+      <details class="group relative"><summary class="filtro-desplegable"><span>🗓️ Mes</span></summary></details>
+      <button class="btn btn-secundario">Restablecer</button>
+      <button class="btn btn-primario">Guardar</button>
+    </div></div></header>
+
+  <div class="pagina space-y-5">
+    <div class="barra-filtros">
+      <label class="grupo-filtro"><span class="etiqueta">Buscar</span><input class="campo w-64" placeholder="Buscar…"></label>
+      <label class="grupo-filtro"><span class="etiqueta">Estado</span><select class="campo pr-8"><option>Todos</option></select></label>
+      <label class="grupo-filtro"><span class="etiqueta">Horas</span><input class="campo campo-sm w-20 text-right" value="120"></label>
+      <button class="btn btn-primario">Aplicar</button>
+      <button class="btn btn-secundario">Limpiar</button>
+      <button class="btn btn-peligro-suave btn-sm">Eliminar</button>
+      <button class="btn btn-exito btn-sm">Exportar</button>
+      <button class="btn btn-fantasma btn-sm">Cancelar</button>
+      <button class="btn btn-primario" disabled>Deshabilitado</button>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="kpi"><p class="kpi-rotulo">Total requerimientos</p><p class="kpi-valor">1.284</p><p class="kpi-nota">en el sistema</p></div>
+      <div class="kpi"><p class="kpi-rotulo">Activos</p><p class="kpi-valor">342</p><p class="kpi-nota">en curso</p></div>
+      <div class="kpi"><p class="kpi-rotulo">Horas aprobadas</p><p class="kpi-valor">8.940h</p><p class="kpi-nota">promedio 32h</p></div>
+      <div class="kpi"><p class="kpi-rotulo">Cumplimiento ANS</p><p class="kpi-valor">96%</p><p class="kpi-nota">últimos 3 meses</p></div>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="tarjeta"><div class="tarjeta-encabezado"><h2 class="tarjeta-titulo">Detalle</h2><span class="chip chip-marca">12 registros</span></div>
+        <div class="tabla-scroll" style="border:0;box-shadow:none"><table class="tabla"><thead><tr><th>Código</th><th>Squad</th><th>Estado</th><th>Horas</th></tr></thead>
+        <tbody><tr><td>SC-10813</td><td>Comercial</td><td><span class="chip chip-exito">Cerrado</span></td><td>32</td></tr>
+        <tr><td>SC-10814</td><td>Cartera</td><td><span class="chip chip-alerta">En curso</span></td><td>18</td></tr>
+        <tr><td>SC-10815</td><td>Facturación</td><td><span class="chip chip-error">Vencido</span></td><td>64</td></tr></tbody></table></div></div>
+      <div class="space-y-3">
+        <div class="aviso aviso-info">Aviso informativo del sistema.</div>
+        <div class="aviso aviso-alerta">⚠️ No fue posible cargar el dashboard.</div>
+        <div class="aviso aviso-error">Error al guardar los cambios.</div>
+        <div class="aviso aviso-exito">Cambios guardados correctamente.</div>
+        <div class="tarjeta tarjeta-pad"><h3 class="titulo-seccion mb-2">Tipografía</h3>
+          <p class="text-2xs">2xs · 11px etiqueta</p><p class="text-xs">xs · 12px secundario</p><p class="text-sm">sm · 13px cuerpo</p>
+          <p class="text-base">base · 14px cuerpo</p><p class="text-lg font-semibold">lg · 16px subtítulo</p><p class="text-2xl font-bold">2xl · 22px título</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pagina space-y-4">
+    <div class="pestanas"><button class="pestana pestana-activa">💰 Tarifas</button><button class="pestana">👤 Roles</button><button class="pestana">📅 Festivos</button><button class="pestana">⚙️ Parámetros</button></div>
+    <div class="tarjeta tarjeta-pad flex flex-wrap items-center gap-4">
+      <span class="text-sm text-slate-500">Acciones en tabla:</span>
+      <button class="enlace-accion">Editar</button>
+      <button class="enlace-accion enlace-accion-alerta">Duplicar</button>
+      <button class="enlace-accion enlace-accion-peligro">Eliminar</button>
+      <button class="enlace-accion-sutil">Limpiar</button>
+      <span class="chip chip-neutro">Neutro</span><span class="chip chip-marca">Marca</span>
+      <span class="chip chip-exito">Éxito</span><span class="chip chip-alerta">Alerta</span><span class="chip chip-error">Error</span>
+    </div>
+  </div>
+
+  <div class="mt-6 flex overflow-hidden rounded-xl border border-slate-200" style="height:420px">
+    <aside class="w-64 shrink-0 overflow-y-auto bg-marca-osc text-slate-100">
+      <div class="flex items-center justify-between gap-3 border-b border-white/10 p-4">
+        <div><div class="text-base font-bold leading-tight text-white">Sistema Integrado</div><div class="text-xs text-slate-300">HITSS</div></div>
+        <button class="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 md:flex">‹</button>
+      </div>
+      <nav class="space-y-1 px-3 pb-6 pt-3">
+        <div><button class="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-2xs font-bold uppercase tracking-wider text-slate-400"><span class="flex items-center gap-2">📊 <span>Dashboard</span></span><span>▾</span></button>
+        <div class="mb-2 mt-0.5 flex flex-col gap-0.5 border-l border-white/10 pl-2">
+          <a class="block rounded-lg bg-white/15 px-2.5 py-2 text-sm font-semibold text-white">Dashboard</a>
+          <a class="block rounded-lg px-2.5 py-2 text-sm text-slate-300">Estados</a>
+          <a class="block rounded-lg px-2.5 py-2 text-sm text-slate-300">Backlog</a></div></div>
+        <div><button class="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-2xs font-bold uppercase tracking-wider text-slate-400"><span class="flex items-center gap-2">📋 <span>Desarrollos de fábrica</span></span><span>▸</span></button></div>
+        <div><button class="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-2xs font-bold uppercase tracking-wider text-slate-400"><span class="flex items-center gap-2">👥 <span>Carga de trabajo</span></span><span>▸</span></button></div>
+      </nav>
+    </aside>
+    <div class="flex min-w-0 flex-1 flex-col bg-slate-50">
+      <header class="flex items-center gap-3 border-b border-slate-200 bg-white/95 px-6 py-2.5">
+        <div class="min-w-0 flex-1"><div class="flex min-w-0 items-center gap-2 text-sm"><span class="shrink-0 text-slate-500">Squad:</span>
+        <select class="campo campo-sm"><option>★ Todos los squads</option></select></div></div>
+        <div class="flex shrink-0 items-center gap-2 text-sm"><span class="truncate text-slate-600">Danilo · <b class="text-marca-osc">Administrador</b></span>
+        <button class="btn btn-secundario btn-sm">Salir</button></div></header>
+      <main class="flex-1 p-6"><div class="tarjeta tarjeta-pad"><h2 class="titulo-seccion mb-2">Contenido de la página</h2>
+      <p class="text-sm text-slate-500">Los encabezados, filtros y botones son idénticos en todas las vistas.</p></div></main>
+    </div>
+  </div>
+</div></body></html>

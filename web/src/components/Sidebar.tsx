@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const CLAVE_COLAPSADO = 'sidebar_colapsado'
+const CLAVE_GRUPOS = 'sidebar_grupos_cerrados'
 
 interface Item {
   to: string
@@ -78,8 +79,16 @@ const GRUPOS: Grupo[] = [
   },
 ]
 
-export default function Sidebar() {
+interface Props {
+  /** Abre el menú como panel deslizante en móvil */
+  abierto: boolean
+  onCerrar: () => void
+}
+
+export default function Sidebar({ abierto, onCerrar }: Props) {
   const { tienePermiso } = useAuth()
+  const { pathname } = useLocation()
+
   const [colapsado, setColapsado] = useState<boolean>(() => {
     try {
       return localStorage.getItem(CLAVE_COLAPSADO) === '1'
@@ -89,8 +98,8 @@ export default function Sidebar() {
   })
   const [gruposCerrados, setGruposCerrados] = useState<Set<string>>(() => {
     try {
-      const raw = localStorage.getItem('sidebar_grupos_cerrados')
-      return raw ? new Set(JSON.parse(raw)) : new Set(GRUPOS.map((g) => g.titulo))
+      const raw = localStorage.getItem(CLAVE_GRUPOS)
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set(GRUPOS.map((g) => g.titulo))
     } catch {
       return new Set()
     }
@@ -98,20 +107,11 @@ export default function Sidebar() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('sidebar_grupos_cerrados', JSON.stringify(Array.from(gruposCerrados)))
+      localStorage.setItem(CLAVE_GRUPOS, JSON.stringify(Array.from(gruposCerrados)))
     } catch {
       /* ignorar */
     }
   }, [gruposCerrados])
-
-  const alternarGrupo = (titulo: string) => {
-    setGruposCerrados((prev) => {
-      const next = new Set(prev)
-      if (next.has(titulo)) next.delete(titulo)
-      else next.add(titulo)
-      return next
-    })
-  }
 
   useEffect(() => {
     try {
@@ -121,122 +121,154 @@ export default function Sidebar() {
     }
   }, [colapsado])
 
-  return (
-    <aside
-      className={`shrink-0 border-r border-white/5 bg-marca-osc text-slate-100 transition-[width] duration-200 md:sticky md:top-0 md:max-h-screen md:overflow-y-auto md:overflow-x-hidden ${
-        colapsado ? 'w-full md:w-[72px]' : 'w-full md:w-64'
-      }`}
-    >
-      <div className={`flex items-center ${colapsado ? 'justify-center md:justify-center' : 'justify-between'} gap-3 p-3 md:p-4`}>
-        <div className={`min-w-0 ${colapsado ? 'hidden' : ''}`}>
-          <div className="text-base font-bold leading-tight md:text-lg">Sistema Integrado</div>
-          <div className="text-xs text-slate-300">HITSS</div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setColapsado((v) => !v)}
-          title={colapsado ? 'Expandir menú' : 'Colapsar menú'}
-          className="hidden shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 p-1.5 text-slate-200 transition hover:bg-white/15 md:flex"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className={`h-4 w-4 transition-transform duration-200 ${colapsado ? 'rotate-180' : ''}`}
-          >
-            <path
-              fillRule="evenodd"
-              d="M12.79 5.23a.75.75 0 0 1 0 1.06L9.06 10l3.73 3.71a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
-      </div>
+  // Al navegar se cierra el panel móvil
+  useEffect(() => {
+    onCerrar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
-      <nav
-        className={`px-2 pb-3 md:mt-0 md:pb-4 ${
-          colapsado
-            ? 'grid grid-cols-3 gap-2 md:grid-cols-1 md:gap-2 md:px-2'
-            : 'flex gap-3 overflow-x-auto md:block md:space-y-1.5 md:overflow-visible md:px-3'
+  // Abre automáticamente el grupo de la ruta activa
+  useEffect(() => {
+    const grupo = GRUPOS.find((g) => g.items.some((i) => pathname.startsWith(i.to)))
+    if (!grupo) return
+    setGruposCerrados((prev) => {
+      if (!prev.has(grupo.titulo)) return prev
+      const n = new Set(prev)
+      n.delete(grupo.titulo)
+      return n
+    })
+  }, [pathname])
+
+  const alternarGrupo = (titulo: string) =>
+    setGruposCerrados((prev) => {
+      const n = new Set(prev)
+      if (n.has(titulo)) n.delete(titulo)
+      else n.add(titulo)
+      return n
+    })
+
+  const ancho = colapsado ? 'md:w-[72px]' : 'md:w-64'
+
+  return (
+    <>
+      {/* Velo en móvil */}
+      <div
+        onClick={onCerrar}
+        className={`fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm transition-opacity md:hidden ${
+          abierto ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 shrink-0 overflow-y-auto overflow-x-hidden border-r border-white/5 bg-marca-osc text-slate-100 transition-transform duration-200 md:sticky md:top-0 md:z-auto md:max-h-screen md:translate-x-0 md:transition-[width] ${ancho} ${
+          abierto ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {GRUPOS.map((grupo) => {
-          const items = grupo.items.filter((i) => {
-            if (i.permiso && !tienePermiso(i.permiso)) return false
-            return true
-          })
-          if (items.length === 0) return null
-          const abierto = !colapsado && !gruposCerrados.has(grupo.titulo)
+        {/* Cabecera */}
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 p-3 md:p-4">
+          <div className={`min-w-0 ${colapsado ? 'md:hidden' : ''}`}>
+            <div className="text-base font-bold leading-tight text-white">Sistema Integrado</div>
+            <div className="text-xs text-slate-300">HITSS</div>
+          </div>
+          {/* Colapsar (escritorio) */}
+          <button
+            type="button"
+            onClick={() => setColapsado((v) => !v)}
+            title={colapsado ? 'Expandir menú' : 'Colapsar menú'}
+            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 transition-colors hover:bg-white/15 hover:text-white md:flex"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 transition-transform duration-200 ${colapsado ? 'rotate-180' : ''}`}>
+              <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1 0 1.06L9.06 10l3.73 3.71a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+            </svg>
+          </button>
+          {/* Cerrar (móvil) */}
+          <button
+            type="button"
+            onClick={onCerrar}
+            title="Cerrar menú"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white md:hidden"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+            </svg>
+          </button>
+        </div>
 
-          if (colapsado) {
-            return (
-              <div key={grupo.titulo} className="min-w-0">
+        <nav className="space-y-1 px-3 pb-6 pt-3 md:px-2.5">
+          {GRUPOS.map((grupo) => {
+            const items = grupo.items.filter((i) => !i.permiso || tienePermiso(i.permiso))
+            if (items.length === 0) return null
+            const abiertoGrupo = !gruposCerrados.has(grupo.titulo)
+            const activoGrupo = items.some((i) => pathname.startsWith(i.to))
+
+            // Modo colapsado (solo escritorio): un icono por grupo
+            if (colapsado) {
+              return (
                 <button
+                  key={grupo.titulo}
                   type="button"
                   title={grupo.titulo}
                   onClick={() => {
                     setGruposCerrados((prev) => {
-                      const next = new Set(prev)
-                      next.delete(grupo.titulo)
-                      return next
+                      const n = new Set(prev)
+                      n.delete(grupo.titulo)
+                      return n
                     })
                     setColapsado(false)
                   }}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xl text-slate-300 shadow-sm transition duration-150 hover:-translate-y-0.5 hover:bg-white/10 hover:text-white hover:shadow-md"
+                  className={`hidden h-11 w-11 items-center justify-center rounded-lg border text-xl transition-colors md:flex ${
+                    activoGrupo
+                      ? 'border-white/20 bg-white/15 text-white'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                  }`}
                 >
                   <span aria-hidden="true">{grupo.icono}</span>
                 </button>
+              )
+            }
+
+            return (
+              <div key={grupo.titulo}>
+                <button
+                  type="button"
+                  onClick={() => alternarGrupo(grupo.titulo)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-2xs font-bold uppercase tracking-wider text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span aria-hidden="true">{grupo.icono}</span>
+                    <span className="truncate">{grupo.titulo}</span>
+                  </span>
+                  <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3 w-3 shrink-0 transition-transform duration-200 ${abiertoGrupo ? 'rotate-180' : ''}`}>
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.25a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+
+                {abiertoGrupo && (
+                  <div className="mb-2 mt-0.5 flex flex-col gap-0.5 border-l border-white/10 pl-2">
+                    {items.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.to === '/dashboard'}
+                        className={({ isActive }) =>
+                          `block rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                            isActive
+                              ? 'bg-white/15 font-semibold text-white'
+                              : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                          }`
+                        }
+                      >
+                        {item.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
               </div>
             )
-          }
-
-          return (
-            <div key={grupo.titulo} className="min-w-max md:min-w-0">
-              <button
-                type="button"
-                onClick={() => alternarGrupo(grupo.titulo)}
-                className="mb-1 hidden w-full items-center justify-between whitespace-nowrap rounded px-1 py-1 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400 transition hover:text-slate-200 md:flex md:text-[11px]"
-              >
-                <span>{grupo.titulo}</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className={`h-3 w-3 shrink-0 transition-transform duration-200 ${abierto ? 'rotate-180' : ''}`}
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.25a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-              <div className="mb-1 whitespace-nowrap text-[10px] uppercase tracking-wide text-slate-400 md:hidden">
-                {grupo.titulo}
-              </div>
-              <div
-                className={`flex flex-col gap-1 transition-all duration-200 md:gap-0.5 ${
-                  abierto ? 'md:block md:overflow-visible' : 'md:hidden md:overflow-hidden'
-                } md:flex-col`}
-              >
-                {items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `block whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs transition-colors md:text-sm ${
-                        isActive ? 'bg-white/15 font-medium text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                      }`
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </nav>
-    </aside>
+          })}
+        </nav>
+      </aside>
+    </>
   )
 }

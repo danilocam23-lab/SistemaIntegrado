@@ -106,13 +106,13 @@ export default function SoporteGarantiasWO() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-marca-osc">Garantías de Work Orders</h1>
+        <h1 className="titulo-pagina">Garantías de Work Orders</h1>
         <p className="text-sm text-slate-500">Gestión de WO marcadas como garantía con observaciones</p>
       </div>
 
       {/* Buscador */}
-      <div className="rounded-xl border bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">Agregar WO de garantía</h2>
+      <div className="tarjeta tarjeta-pad">
+        <h2 className="titulo-seccion text-sm mb-3">Agregar WO de garantía</h2>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex-1 text-sm">
             <span className="mb-1 block text-slate-600">Buscar Work Order ID</span>
@@ -121,11 +121,11 @@ export default function SoporteGarantiasWO() {
               onChange={(e) => setBusqueda(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && buscarWO()}
               placeholder="Ej: WO-12345"
-              className="w-full rounded border px-3 py-2"
+              className="campo w-full"
             />
           </label>
           <button onClick={buscarWO} disabled={buscando}
-            className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc disabled:opacity-60">
+            className="btn btn-primario">
             {buscando ? 'Buscando…' : 'Buscar'}
           </button>
         </div>
@@ -155,7 +155,7 @@ export default function SoporteGarantiasWO() {
                     <td className="px-3 py-2">{r.estado}</td>
                     <td className="px-3 py-2">
                       <button onClick={() => agregarWO(r.work_order_id)}
-                        className="rounded bg-emerald-600 px-3 py-1 text-white text-xs hover:bg-emerald-700">
+                        className="btn btn-exito btn-sm">
                         + Agregar
                       </button>
                     </td>
@@ -168,8 +168,8 @@ export default function SoporteGarantiasWO() {
       </div>
 
       {/* Tabla de garantías */}
-      <div className="rounded-xl border bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-700">
+      <div className="tarjeta tarjeta-pad">
+        <h2 className="titulo-seccion text-sm mb-3">
           Garantías registradas ({(garantias ?? []).length})
         </h2>
         {(garantias ?? []).length === 0 ? (
@@ -206,7 +206,7 @@ export default function SoporteGarantiasWO() {
                           <textarea
                             value={edicion.obs}
                             onChange={(e) => setEditandoObs((p) => ({ ...p, [getId(g)]: { ...p[getId(g)], obs: e.target.value } }))}
-                            className="w-full rounded border px-2 py-1 text-xs"
+                            className="campo campo-sm w-full"
                             rows={2}
                           />
                         ) : (
@@ -218,7 +218,7 @@ export default function SoporteGarantiasWO() {
                           <textarea
                             value={edicion.res}
                             onChange={(e) => setEditandoObs((p) => ({ ...p, [getId(g)]: { ...p[getId(g)], res: e.target.value } }))}
-                            className="w-full rounded border px-2 py-1 text-xs"
+                            className="campo campo-sm w-full"
                             rows={2}
                           />
                         ) : (
@@ -231,22 +231,22 @@ export default function SoporteGarantiasWO() {
                             <>
                               <button onClick={() => guardarObservaciones(getId(g))}
                                 disabled={guardando.has(getId(g))}
-                                className="rounded bg-marca px-2 py-1 text-white text-[10px] hover:bg-marca-osc disabled:opacity-60">
+                                className="btn btn-primario btn-sm">
                                 {guardando.has(getId(g)) ? 'Guardando…' : 'Guardar'}
                               </button>
                               <button onClick={() => setEditandoObs((p) => { const n = { ...p }; delete n[getId(g)]; return n })}
-                                className="rounded border px-2 py-1 text-[10px] text-slate-600 hover:bg-slate-50">
+                                className="btn btn-secundario btn-sm">
                                 Cancelar
                               </button>
                             </>
                           ) : (
                             <>
                               <button onClick={() => iniciarEdicion(g)}
-                                className="rounded bg-blue-600 px-2 py-1 text-white text-[10px] hover:bg-blue-700">
+                                className="btn btn-primario btn-sm">
                                 Editar
                               </button>
                               <button onClick={() => eliminar(getId(g))}
-                                className="rounded bg-red-600 px-2 py-1 text-white text-[10px] hover:bg-red-700">
+                                className="btn btn-peligro btn-sm">
                                 Eliminar
                               </button>
                             </>

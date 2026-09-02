@@ -7,6 +7,7 @@ import {
 import { useLista } from '../api/hooks'
 import client from '../api/client'
 import type { Persona, Requerimiento } from '../types'
+import { EncabezadoPagina, FiltroDesplegable } from '../components/ui'
 
 
 function normalizarTexto(v: string): string {
@@ -401,23 +402,16 @@ export default function DashboardRequerimientos() {
   const ansInicioShow = hayFiltroSop ? ansInicioFilt : ansInicioTrabajoData
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100">
+    <div className="min-h-screen bg-slate-50">
       {/* ═══ Header ejecutivo ═══ */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/60 bg-white/90 backdrop-blur-xl shadow-sm">
-        <div className="mx-auto max-w-[1920px] px-6 py-5">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
-              Dashboard General
-            </h1>
-            <p className="text-sm text-slate-500">
-              Vista consolidada de métricas operativas · Requerimientos &amp; Soporte
-            </p>
-          </div>
-        </div>
-      </header>
+      <EncabezadoPagina
+        icono="📈"
+        titulo="Dashboard General"
+        descripcion="Vista consolidada de métricas operativas · Requerimientos y Soporte"
+      />
 
       {/* ═══ Contenido principal: dos columnas ═══ */}
-      <div className="mx-auto max-w-[1920px] px-6 py-8">
+      <div className="pagina max-w-[1920px]">
         <div className="grid gap-8 xl:grid-cols-2">
 
           {/* ════════════════════════════════════════════════════════════════════
@@ -433,7 +427,7 @@ export default function DashboardRequerimientos() {
                 <span className="text-lg text-white">📋</span>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Requerimientos &amp; Actas</h2>
+                <h2 className="titulo-seccion">Requerimientos &amp; Actas</h2>
                 <p className="text-xs text-slate-500">Gestión de demanda, entregas y cumplimiento ANS</p>
               </div>
             </div>
@@ -444,24 +438,22 @@ export default function DashboardRequerimientos() {
                 Filtro por fecha inicio / recepción
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <FilterDropdown
-                  label="Año" emoji="📅"
+                <FiltroDesplegable
+                  label="Año" icono="📅"
                   opciones={anosDisponiblesReq}
                   activos={anosReq}
                   setActivos={setAnosReq}
-                  color="blue"
                 />
-                <FilterDropdown
-                  label="Mes" emoji="🗓️"
+                <FiltroDesplegable
+                  label="Mes" icono="🗓️"
                   opciones={MESES_LABELS}
                   activos={mesesReq}
                   setActivos={setMesesReq}
                   esMes
-                  color="blue"
                 />
                 {hayFiltroReq && (
                   <button type="button" onClick={() => { setAnosReq(new Set()); setMesesReq(new Set()) }}
-                    className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors">
+                    className="btn btn-secundario btn-sm">
                     ✕ Limpiar
                   </button>
                 )}
@@ -609,7 +601,7 @@ export default function DashboardRequerimientos() {
                 <span className="text-lg text-white">🛠️</span>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Soporte &amp; Work Orders</h2>
+                <h2 className="titulo-seccion">Soporte &amp; Work Orders</h2>
                 <p className="text-xs text-slate-500">Operaciones, ANS de soporte y tendencias</p>
               </div>
             </div>
@@ -620,24 +612,22 @@ export default function DashboardRequerimientos() {
                 Filtro por Fecha Fin Real
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <FilterDropdown
-                  label="Año" emoji="📅"
+                <FiltroDesplegable
+                  label="Año" icono="📅"
                   opciones={anosDisponiblesSop}
                   activos={anosSop}
                   setActivos={setAnosSop}
-                  color="green"
                 />
-                <FilterDropdown
-                  label="Mes" emoji="🗓️"
+                <FiltroDesplegable
+                  label="Mes" icono="🗓️"
                   opciones={MESES_LABELS}
                   activos={mesesSop}
                   setActivos={setMesesSop}
                   esMes
-                  color="green"
                 />
                 {hayFiltroSop && (
                   <button type="button" onClick={() => { setAnosSop(new Set()); setMesesSop(new Set()) }}
-                    className="rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors">
+                    className="btn btn-exito btn-sm">
                     ✕ Limpiar
                   </button>
                 )}
@@ -774,58 +764,6 @@ function TrendPctTooltip({ active, payload, label }: any) {
   )
 }
 
-function FilterDropdown({
-  label, emoji, opciones, activos, setActivos, esMes = false, color
-}: {
-  label: string
-  emoji: string
-  opciones: string[]
-  activos: Set<string>
-  setActivos: React.Dispatch<React.SetStateAction<Set<string>>>
-  esMes?: boolean
-  color: 'blue' | 'green'
-}) {
-  const ring   = color === 'blue' ? 'border-blue-200 focus-within:border-blue-400' : 'border-emerald-200 focus-within:border-emerald-400'
-  const badge  = color === 'blue' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
-  const chkOn  = color === 'blue' ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-emerald-300 bg-emerald-50 text-emerald-900'
-  const allBtn = color === 'blue' ? 'text-blue-600' : 'text-emerald-600'
-
-  const toKey   = (_o: string, i: number) => esMes ? String(i + 1) : _o
-  const allKeys = opciones.map((o, i) => toKey(o, i))
-  const toggle  = (k: string) => setActivos((prev) => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n })
-
-  return (
-    <details className="group relative">
-      <summary className={`flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl border ${ring} bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:shadow transition-all`}>
-        <div className="flex items-center gap-1.5">
-          <span>{emoji} {label}</span>
-          {activos.size > 0 && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${badge}`}>{activos.size}</span>}
-        </div>
-        <svg className="h-3.5 w-3.5 text-slate-400 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
-        </svg>
-      </summary>
-      <div className="absolute z-20 mt-2 min-w-[200px] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
-        <div className="flex justify-end gap-3 mb-2">
-          <button type="button" onClick={() => setActivos(new Set(allKeys))} className={`text-[10px] font-semibold ${allBtn} hover:underline`}>Todos</button>
-          <button type="button" onClick={() => setActivos(new Set())} className="text-[10px] font-semibold text-slate-400 hover:underline">Limpiar</button>
-        </div>
-        <div className={esMes ? 'grid grid-cols-3 gap-1.5' : 'flex flex-wrap gap-1.5'}>
-          {opciones.map((o, i) => {
-            const k = toKey(o, i)
-            const checked = activos.has(k)
-            return (
-              <label key={k} className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-all ${checked ? chkOn : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
-                <input type="checkbox" checked={checked} onChange={() => toggle(k)} className="rounded" />
-                {o}
-              </label>
-            )
-          })}
-        </div>
-      </div>
-    </details>
-  )
-}
 
 const METRIC_ACCENTS = {
   blue:    { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', sub: 'text-blue-500' },

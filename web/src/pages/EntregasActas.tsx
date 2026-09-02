@@ -575,7 +575,7 @@ export default function EntregasActas() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-marca-osc">Entregas de Actas</h1>
+          <h1 className="titulo-pagina">Entregas de Actas</h1>
           <p className="mt-1 text-sm text-slate-500">
             Entregas ordenadas de la más próxima a la más lejana.
           </p>
@@ -585,7 +585,7 @@ export default function EntregasActas() {
             onClick={exportarExcel}
             disabled={filasFiltradas.length === 0}
             title="Exporta a Excel el listado con los filtros actualmente aplicados"
-            className="flex items-center gap-1 rounded-lg border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn btn-exito items-center gap-1"
           >
             Exportar a Excel
           </button>
@@ -593,7 +593,7 @@ export default function EntregasActas() {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-white p-3">
+      <div className="barra-filtros">
         {filtrosActivos.has('texto') && (
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Buscar</span>
@@ -601,7 +601,7 @@ export default function EntregasActas() {
             value={filtroTexto}
             onChange={(e) => setFiltroTexto(e.target.value)}
             placeholder="REQ, SC, acta o acta de trabajo…"
-            className="rounded border px-3 py-2 text-sm w-48"
+            className="campo w-48"
           />
         </label>
         )}
@@ -611,7 +611,7 @@ export default function EntregasActas() {
             <select
               value={filtroMes}
               onChange={(e) => setFiltroMes(e.target.value)}
-              className="rounded border px-3 py-2 text-sm w-52"
+              className="campo w-52"
             >
               <option value="">Todos los meses</option>
               {mesesEnBD.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -624,7 +624,7 @@ export default function EntregasActas() {
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
-            className="rounded border px-3 py-2 text-sm w-52"
+            className="campo w-52"
           >
             <option value="">Todos los estados</option>
             {estadosEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -637,7 +637,7 @@ export default function EntregasActas() {
           <select
             value={filtroAns}
             onChange={(e) => setFiltroAns(e.target.value)}
-            className="rounded border px-3 py-2 text-sm w-44"
+            className="campo w-44"
           >
             <option value="">Todos</option>
             <option value="__SIN_ANS__">Sin ANS</option>
@@ -653,14 +653,14 @@ export default function EntregasActas() {
               type="date"
               value={filtroFechaDesde}
               onChange={(e) => setFiltroFechaDesde(e.target.value)}
-              className="rounded border px-2 py-2 text-sm"
+              className="campo campo-sm"
             />
             <span className="text-xs text-slate-400">–</span>
             <input
               type="date"
               value={filtroFechaHasta}
               onChange={(e) => setFiltroFechaHasta(e.target.value)}
-              className="rounded border px-2 py-2 text-sm"
+              className="campo campo-sm"
             />
           </div>
         </label>
@@ -671,7 +671,7 @@ export default function EntregasActas() {
           <select
             value={filtroReqEstado}
             onChange={(e) => setFiltroReqEstado(e.target.value)}
-            className="rounded border px-3 py-2 text-sm w-56"
+            className="campo w-56"
           >
             <option value="">Todos</option>
             {reqEstadosEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -684,7 +684,7 @@ export default function EntregasActas() {
           <select
             value={filtroSquad}
             onChange={(e) => setFiltroSquad(e.target.value)}
-            className="rounded border px-3 py-2 text-sm w-44"
+            className="campo w-44"
           >
             <option value="">Todos</option>
             {squadsEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -697,7 +697,7 @@ export default function EntregasActas() {
           <select
             value={filtroTipificacion}
             onChange={(e) => setFiltroTipificacion(e.target.value)}
-            className="rounded border px-3 py-2 text-sm w-40"
+            className="campo w-40"
           >
             <option value="">Todas</option>
             {tipificacionesEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -710,7 +710,7 @@ export default function EntregasActas() {
           <select
             value={filtroGarantia}
             onChange={(e) => setFiltroGarantia(e.target.value)}
-            className="rounded border px-3 py-2 text-sm w-32"
+            className="campo w-32"
           >
             <option value="">Todas</option>
             <option value="SI">Sí</option>
@@ -724,7 +724,7 @@ export default function EntregasActas() {
               setFiltroTexto(''); setFiltroEstado(''); setFiltroAns(''); setFiltroMes(''); setFiltroFechaDesde(''); setFiltroFechaHasta('')
               setFiltroReqEstado(''); setFiltroSquad(''); setFiltroTipificacion(''); setFiltroGarantia('')
             }}
-            className="text-xs text-red-500 hover:underline self-end pb-2"
+            className="enlace-accion enlace-accion-peligro text-xs self-end pb-2"
           >
             Limpiar
           </button>
@@ -734,7 +734,7 @@ export default function EntregasActas() {
         </span>
       </div>
 
-      {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
+      {error && <div className="aviso aviso-error">{error}</div>}
 
       <div className="overflow-x-auto rounded-xl border bg-white">
         <table className="w-full text-sm">

@@ -51,7 +51,7 @@ export default function AdminAplicaciones() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Administración de squads</h1>
+      <h1 className="titulo-pagina mb-4">Administración de squads</h1>
 
       {puedeCrear && (
         <form
@@ -65,7 +65,7 @@ export default function AdminAplicaciones() {
               onChange={(e) => setCodigo(e.target.value)}
               required
               placeholder="bi"
-              className="rounded border px-3 py-2"
+              className="campo"
             />
           </label>
           <label className="text-sm">
@@ -75,17 +75,17 @@ export default function AdminAplicaciones() {
               onChange={(e) => setNombre(e.target.value)}
               required
               placeholder="Business Intelligence"
-              className="rounded border px-3 py-2"
+              className="campo"
             />
           </label>
-          <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">
+          <button className="btn btn-primario">
             Crear squad
           </button>
           {error && <span className="text-sm text-red-600">{error}</span>}
         </form>
       )}
 
-      <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+      <table className="tabla-scroll text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Código</th>
@@ -104,7 +104,7 @@ export default function AdminAplicaciones() {
                 <button
                   onClick={() => alternarEstado(app)}
                   disabled={!puedeEditar}
-                  className="text-marca hover:underline"
+                  className="enlace-accion"
                 >
                   {app.activa ? 'Desactivar' : 'Activar'}
                 </button>

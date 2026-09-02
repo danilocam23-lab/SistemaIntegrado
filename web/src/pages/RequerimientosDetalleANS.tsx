@@ -295,15 +295,15 @@ export default function RequerimientosDetalleANS() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-marca-osc">Detalle ANS</h1>
+          <h1 className="titulo-pagina">Detalle ANS</h1>
           <p className="mt-1 text-sm text-slate-500">
             Vista consolidada de requerimientos y entregas con sus estados ANS.
           </p>
         </div>
       </div>
 
-      {error && <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
-      {aviso && <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">{aviso}</div>}
+      {error && <div className="aviso aviso-error">{error}</div>}
+      {aviso && <div className="aviso aviso-alerta">{aviso}</div>}
 
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
         <label className="w-full text-sm sm:w-auto">
@@ -312,7 +312,7 @@ export default function RequerimientosDetalleANS() {
             value={filtroTexto}
             onChange={(e) => setFiltroTexto(e.target.value)}
             placeholder="REQ, SC, squad, ANS…"
-            className="w-full rounded border px-3 py-2 text-sm sm:w-72"
+            className="campo w-full sm:w-72"
           />
         </label>
         {(filtroTexto || anoLimite || mesLimite.length > 0 || anoComprometida || mesComprometida.length > 0) && (
@@ -325,7 +325,7 @@ export default function RequerimientosDetalleANS() {
               setAnoComprometida('')
               setMesComprometida([])
             }}
-            className="text-xs text-red-500 hover:underline"
+            className="enlace-accion enlace-accion-peligro text-xs"
           >
             Limpiar
           </button>
@@ -336,7 +336,7 @@ export default function RequerimientosDetalleANS() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="tarjeta tarjeta-pad flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-lg">📋</span>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Requerimientos con ANS incumplido</p>
@@ -344,7 +344,7 @@ export default function RequerimientosDetalleANS() {
             <p className="text-xs text-slate-400">Cumplimiento ANS (Acta) = No cumple</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="tarjeta tarjeta-pad flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-lg">📦</span>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Entregas con ANS incumplido</p>
@@ -352,7 +352,7 @@ export default function RequerimientosDetalleANS() {
             <p className="text-xs text-slate-400">Cumplimiento ANS (Entrega) = No cumple</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="tarjeta tarjeta-pad flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-lg">🔍</span>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Filtros aplicados</p>
@@ -362,7 +362,7 @@ export default function RequerimientosDetalleANS() {
         </div>
       </div>
 
-      <section className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <section className="tabla-scroll">
         <button
           type="button"
           onClick={() => setMostrarRequerimientos((v) => !v)}
@@ -372,15 +372,15 @@ export default function RequerimientosDetalleANS() {
           <div className="flex min-w-0 items-center gap-3">
             <span className="shrink-0 text-xs font-semibold text-marca">{mostrarRequerimientos ? '▲ Ocultar' : '▼ Mostrar'}</span>
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-800">Requerimientos y su cumplimiento ANS</h2>
+              <h2 className="titulo-seccion text-sm">Requerimientos y su cumplimiento ANS</h2>
               <p className="text-xs text-slate-400">Estimaciones frente a la fecha límite pactada</p>
             </div>
           </div>
           <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" title="Requerimientos visibles con los filtros actuales">
+            <span className="chip chip-neutro" title="Requerimientos visibles con los filtros actuales">
               {requerimientosFiltrados.length} visibles
             </span>
-            <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600" title="Total con ANS incumplido, sin filtros">
+            <span className="chip chip-error" title="Total con ANS incumplido, sin filtros">
               {requerimientosRows.filter((r) => (r.ansActa ?? '').toUpperCase() === 'NO_CUMPLE').length} incumplen ANS
             </span>
           </span>
@@ -471,13 +471,13 @@ export default function RequerimientosDetalleANS() {
                           value={obsEdicion[r.id] ?? r.observacionesAns}
                           onChange={(ev) => setObsEdicion((p) => ({ ...p, [r.id]: ev.target.value }))}
                           readOnly={!puedeEditar}
-                          className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-marca"
+                          className="campo campo-sm min-w-0 flex-1"
                           placeholder={puedeEditar ? 'Observaciones…' : ''}
                         />
                         {puedeEditar && (
                           <button type="button" onClick={() => void guardarObservacion('requerimiento', r.id)}
                             disabled={guardandoObs.has(r.id)}
-                            className="shrink-0 rounded bg-marca px-2 py-1 text-[10px] font-semibold text-white hover:bg-marca-osc disabled:opacity-60">
+                            className="btn btn-primario btn-sm shrink-0">
                             {guardandoObs.has(r.id) ? '…' : 'Guardar'}
                           </button>
                         )}
@@ -503,7 +503,7 @@ export default function RequerimientosDetalleANS() {
         )}
       </section>
 
-      <section className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <section className="tabla-scroll">
         <button
           type="button"
           onClick={() => setMostrarEntregas((v) => !v)}
@@ -513,15 +513,15 @@ export default function RequerimientosDetalleANS() {
           <div className="flex min-w-0 items-center gap-3">
             <span className="shrink-0 text-xs font-semibold text-marca">{mostrarEntregas ? '▲ Ocultar' : '▼ Mostrar'}</span>
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-800">Entregas y su cumplimiento ANS</h2>
+              <h2 className="titulo-seccion text-sm">Entregas y su cumplimiento ANS</h2>
               <p className="text-xs text-slate-400">Fecha comprometida frente a fecha real de entrega</p>
             </div>
           </div>
           <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600" title="Entregas visibles con los filtros actuales">
+            <span className="chip chip-neutro" title="Entregas visibles con los filtros actuales">
               {entregasFiltradas.length} visibles
             </span>
-            <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600" title="Total con ANS incumplido, sin filtros">
+            <span className="chip chip-error" title="Total con ANS incumplido, sin filtros">
               {entregasRows.filter((e) => (e.ansEntrega ?? '').toUpperCase() === 'NO_CUMPLE').length} incumplen ANS
             </span>
           </span>
@@ -612,13 +612,13 @@ export default function RequerimientosDetalleANS() {
                           value={obsEdicion[e.id] ?? e.observacionesAns}
                           onChange={(ev) => setObsEdicion((p) => ({ ...p, [e.id]: ev.target.value }))}
                           readOnly={!puedeEditar}
-                          className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-marca"
+                          className="campo campo-sm min-w-0 flex-1"
                           placeholder={puedeEditar ? 'Observaciones…' : ''}
                         />
                         {puedeEditar && (
                           <button type="button" onClick={() => void guardarObservacion('entrega', e.reqId, e.entregaNumero)}
                             disabled={guardandoObs.has(e.id)}
-                            className="shrink-0 rounded bg-marca px-2 py-1 text-[10px] font-semibold text-white hover:bg-marca-osc disabled:opacity-60">
+                            className="btn btn-primario btn-sm shrink-0">
                             {guardandoObs.has(e.id) ? '…' : 'Guardar'}
                           </button>
                         )}
@@ -688,7 +688,7 @@ function DateFilter({
     <div className="flex flex-wrap items-end gap-2">
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">{label} - año</span>
-        <select value={year} onChange={(e) => onYearChange(e.target.value)} className="rounded border px-3 py-2 text-sm">
+        <select value={year} onChange={(e) => onYearChange(e.target.value)} className="campo">
           <option value="">Todos los años</option>
           {years.map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
@@ -698,7 +698,7 @@ function DateFilter({
         <button
           type="button"
           onClick={() => setAbierto((v) => !v)}
-          className="min-w-[160px] rounded border px-3 py-2 text-left text-sm"
+          className="btn btn-secundario min-w-[160px] text-left"
         >
           {resumenMeses}
         </button>

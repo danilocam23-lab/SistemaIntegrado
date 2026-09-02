@@ -28,10 +28,10 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
       <form onSubmit={enviar} className="w-full max-w-sm rounded-xl bg-white p-6 shadow sm:p-8">
-        <h1 className="text-xl font-bold text-marca-osc">Sistema Integrado</h1>
+        <h1 className="titulo-pagina">Sistema Integrado</h1>
         <p className="mb-5 text-sm text-slate-500">HITSS — Plataforma unificada</p>
         {error && (
-          <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>
+          <div className="aviso aviso-error mb-3">{error}</div>
         )}
         <label className="mb-3 block text-sm">
           <span className="text-slate-600">Correo</span>
@@ -40,7 +40,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="mt-1 w-full rounded border px-3 py-2"
+            className="campo mt-1 w-full"
           />
         </label>
         <label className="mb-4 block text-sm">
@@ -50,13 +50,13 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="mt-1 w-full rounded border px-3 py-2"
+            className="campo mt-1 w-full"
           />
         </label>
         <button
           type="submit"
           disabled={cargando}
-          className="w-full rounded bg-marca py-2 text-white hover:bg-marca-osc disabled:opacity-60"
+          className="btn btn-primario btn-bloque"
         >
           {cargando ? 'Ingresando…' : 'Ingresar'}
         </button>

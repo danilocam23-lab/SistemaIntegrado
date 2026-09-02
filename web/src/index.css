@@ -2,15 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   SISTEMA DE DISEÑO — Sistema Integrado HITSS
+   1. Base        · tipografía, formularios, tablas
+   2. Componentes · botones, campos, tarjetas, filtros, KPIs
+   3. Responsive  · reglas móviles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. BASE ──────────────────────────────────────────────────── */
 @layer base {
+  :root {
+    --alto-encabezado: 3.5rem;
+  }
+
   html,
   body,
   #root {
     min-height: 100%;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
+    @apply bg-slate-50 font-sans text-base text-slate-700 antialiased;
     overflow-x: hidden;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1 {
+    @apply text-2xl font-bold tracking-tight text-slate-900;
+  }
+  h2 {
+    @apply text-lg font-semibold tracking-tight text-slate-900;
+  }
+  h3 {
+    @apply text-base font-semibold text-slate-900;
+  }
+  h4 {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  /* Números siempre alineados en tablas y KPIs */
+  td,
+  th {
+    font-variant-numeric: tabular-nums;
   }
 
   input,
@@ -18,12 +55,277 @@
   textarea,
   button {
     max-width: 100%;
+    font-family: inherit;
+  }
+
+  /* Apariencia base coherente para cualquier control sin clase propia */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    @apply border-slate-300 bg-white text-slate-900;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-slate-400;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply border-marca outline-none ring-2 ring-marca/25;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  summary:focus-visible {
+    @apply outline-none ring-2 ring-marca/40 ring-offset-1;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    @apply h-4 w-4 shrink-0 cursor-pointer accent-marca;
   }
 
   table {
     border-collapse: collapse;
   }
 
+  ::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-300;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+}
+
+/* ── 2. COMPONENTES ───────────────────────────────────────────── */
+@layer components {
+  /* ---- Botones ---------------------------------------------- */
+  .btn {
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-sm font-semibold leading-5 transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primario {
+    @apply border-marca bg-marca text-white shadow-sm hover:bg-marca-700 active:bg-marca-800;
+  }
+  .btn-secundario {
+    @apply border-slate-300 bg-white text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-50 active:bg-slate-100;
+  }
+  .btn-suave {
+    @apply border-marca-100 bg-marca-50 text-marca-700 hover:bg-marca-100;
+  }
+  .btn-fantasma {
+    @apply border-transparent bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+  }
+  .btn-peligro {
+    @apply border-red-600 bg-red-600 text-white shadow-sm hover:bg-red-700;
+  }
+  .btn-peligro-suave {
+    @apply border-red-200 bg-red-50 text-red-700 hover:bg-red-100;
+  }
+  .btn-exito {
+    @apply border-emerald-600 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700;
+  }
+  .btn-alerta {
+    @apply border-amber-500 bg-amber-500 text-white shadow-sm hover:bg-amber-600;
+  }
+  .btn-sm {
+    @apply gap-1 px-2.5 py-1.5 text-xs;
+  }
+  .btn-lg {
+    @apply px-5 py-2.5 text-base;
+  }
+  .btn-icono {
+    @apply h-9 w-9 shrink-0 p-0;
+  }
+  .btn-bloque {
+    @apply w-full;
+  }
+
+  /* ---- Acciones en texto (tablas, listados) ------------------ */
+  .enlace-accion {
+    @apply inline-flex items-center gap-1 rounded text-sm font-semibold text-marca transition-colors hover:text-marca-800 hover:underline;
+  }
+  .enlace-accion-peligro {
+    @apply text-red-600 hover:text-red-700;
+  }
+  .enlace-accion-alerta {
+    @apply text-amber-600 hover:text-amber-700;
+  }
+  .enlace-accion-sutil {
+    @apply text-xs font-medium text-slate-500 hover:text-slate-700;
+  }
+
+  /* ---- Pestañas ---------------------------------------------- */
+  .pestanas {
+    @apply flex flex-wrap items-center gap-1 border-b border-slate-200;
+  }
+  .pestana {
+    @apply -mb-px inline-flex items-center gap-1.5 whitespace-nowrap rounded-t-lg border-b-2 border-transparent px-3.5 py-2 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800;
+  }
+  .pestana-activa {
+    @apply border-marca bg-marca-50/60 text-marca-700;
+  }
+
+  /* ---- Campos de formulario --------------------------------- */
+  .campo {
+    @apply block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 hover:border-slate-400 focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 read-only:bg-slate-50;
+  }
+  .campo-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+  .etiqueta {
+    @apply mb-1 block text-xs font-semibold text-slate-600;
+  }
+  .etiqueta-sup {
+    @apply mb-1.5 block text-2xs font-bold uppercase tracking-wider text-slate-500;
+  }
+  .ayuda {
+    @apply mt-1 block text-xs text-slate-500;
+  }
+
+  /* ---- Tarjetas y superficies -------------------------------- */
+  .tarjeta {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+  .tarjeta-pad {
+    @apply p-4 sm:p-5;
+  }
+  .tarjeta-encabezado {
+    @apply flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5;
+  }
+  .tarjeta-titulo {
+    @apply text-base font-semibold text-slate-900;
+  }
+
+  /* ---- Encabezado de página ---------------------------------- */
+  .pagina {
+    @apply mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 sm:py-7;
+  }
+  .encabezado-pagina {
+    @apply sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md;
+  }
+  .titulo-pagina {
+    @apply text-2xl font-bold tracking-tight text-slate-900;
+  }
+  .subtitulo-pagina {
+    @apply mt-0.5 text-sm text-slate-500;
+  }
+  .titulo-seccion {
+    @apply text-base font-semibold tracking-tight text-slate-900;
+  }
+
+  /* ---- Barra de filtros -------------------------------------- */
+  .barra-filtros {
+    @apply flex flex-wrap items-end gap-2.5 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:gap-3 sm:p-4;
+  }
+  .grupo-filtro {
+    @apply flex min-w-0 flex-col;
+  }
+  .filtro-desplegable {
+    @apply flex cursor-pointer select-none list-none items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50;
+  }
+  .filtro-desplegable-activo {
+    @apply border-marca-300 bg-marca-50 text-marca-700;
+  }
+  .panel-desplegable {
+    @apply absolute z-40 mt-1.5 max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white p-3 shadow-panel;
+  }
+  .opcion-filtro {
+    @apply flex cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold transition-colors;
+  }
+  .opcion-filtro-off {
+    @apply border-slate-200 bg-white text-slate-600 hover:bg-slate-50;
+  }
+  .opcion-filtro-on {
+    @apply border-marca-300 bg-marca-50 text-marca-800;
+  }
+  .enlace-mini {
+    @apply text-2xs font-semibold text-marca hover:underline;
+  }
+
+  /* ---- Chips / badges ---------------------------------------- */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .chip-neutro {
+    @apply bg-slate-100 text-slate-700;
+  }
+  .chip-marca {
+    @apply bg-marca-50 text-marca-700;
+  }
+  .chip-exito {
+    @apply bg-emerald-50 text-emerald-700;
+  }
+  .chip-alerta {
+    @apply bg-amber-50 text-amber-700;
+  }
+  .chip-error {
+    @apply bg-red-50 text-red-700;
+  }
+  .contador-filtro {
+    @apply rounded-full bg-marca-100 px-1.5 py-0.5 text-2xs font-bold text-marca-700;
+  }
+
+  /* ---- KPIs --------------------------------------------------- */
+  .kpi {
+    @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md;
+  }
+  .kpi-rotulo {
+    @apply text-2xs font-bold uppercase tracking-wider text-slate-500;
+  }
+  .kpi-valor {
+    @apply mt-1 text-3xl font-bold tracking-tight text-slate-900;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-nota {
+    @apply mt-1 text-xs text-slate-500;
+  }
+
+  /* ---- Tablas -------------------------------------------------- */
+  .tabla-scroll {
+    @apply w-full overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+  .tabla {
+    @apply w-full text-sm;
+  }
+  .tabla thead th {
+    @apply whitespace-nowrap border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600;
+  }
+  .tabla tbody td {
+    @apply border-b border-slate-100 px-3 py-2 align-middle text-slate-700;
+  }
+  .tabla tbody tr:hover {
+    @apply bg-slate-50/70;
+  }
+
+  /* ---- Avisos --------------------------------------------------- */
+  .aviso {
+    @apply rounded-xl border p-3 text-sm sm:p-4;
+  }
+  .aviso-info {
+    @apply border-marca-100 bg-marca-50 text-marca-800;
+  }
+  .aviso-alerta {
+    @apply border-amber-200 bg-amber-50 text-amber-800;
+  }
+  .aviso-error {
+    @apply border-red-200 bg-red-50 text-red-700;
+  }
+  .aviso-exito {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+  }
+}
+
+/* ── 3. RESPONSIVE ────────────────────────────────────────────── */
+@layer base {
   @media (max-width: 640px) {
     main form > label,
     main form fieldset > label {
@@ -36,14 +338,28 @@
       width: 100%;
     }
 
+    /* Tablas: desplazamiento horizontal en lugar de romper el layout */
     main table {
       width: max-content;
-      min-width: 720px;
+      min-width: 100%;
     }
 
     main th,
     main td {
       white-space: nowrap;
+    }
+
+    /* Objetivos táctiles mínimos */
+    .btn {
+      min-height: 2.25rem;
+    }
+  }
+
+  @media print {
+    .encabezado-pagina,
+    .barra-filtros,
+    .btn {
+      display: none !important;
     }
   }
 }

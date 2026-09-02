@@ -92,10 +92,10 @@ export default function Predictivos() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Predictivos</h1>
+      <h1 className="titulo-pagina mb-4">Predictivos</h1>
 
       <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="mb-1 text-sm font-semibold text-marca-osc">
+        <h2 className="titulo-seccion text-sm mb-1">
           Entregas próximas a vencer (≤ 5 días)
         </h2>
         <p className="text-xs text-slate-500">
@@ -114,7 +114,7 @@ export default function Predictivos() {
             <p className="text-sm">No hay entregas próximas a vencer en este momento.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="tabla-scroll">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -131,7 +131,7 @@ export default function Predictivos() {
                 {filas.map((f) => (
                   <tr key={`${f.reqId}-${f.entregaNum}`} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="p-2">
-                      <Link to={`/requerimientos/${f.reqId}`} className="text-marca-verde hover:underline">
+                      <Link to={`/requerimientos/${f.reqId}`} className="enlace-accion">
                         {f.codigoReq}
                       </Link>
                     </td>
@@ -140,12 +140,12 @@ export default function Predictivos() {
                     <td className="p-2 text-center">{f.entregaNum}</td>
                     <td className="p-2 text-center">{f.fechaComprometida}</td>
                     <td className="p-2 text-center">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeEstado(f.estado)}`}>
+                      <span className={`chip ${badgeEstado(f.estado)}`}>
                         {f.estado}
                       </span>
                     </td>
                     <td className="p-2 text-center">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeDias(f.diasRestantes)}`}>
+                      <span className={`chip ${badgeDias(f.diasRestantes)}`}>
                         {f.diasRestantes < 0 ? `Vencida (${Math.abs(f.diasRestantes)}d)` : `${f.diasRestantes}d`}
                       </span>
                     </td>

@@ -404,13 +404,13 @@ export default function RequerimientoDetalle() {
           ← Requerimientos
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-bold text-marca-osc">{req.codigo_req}</h1>
+          <h1 className="titulo-pagina">{req.codigo_req}</h1>
           {req.nombre && <span className="text-base text-slate-600">— {req.nombre}</span>}
           {puedeEditarReq ? (
             <select
               value={req.estado}
               onChange={(e) => transicion(e.target.value)}
-              className="rounded border px-2 py-1 text-xs"
+              className="campo campo-sm"
             >
               {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -420,30 +420,30 @@ export default function RequerimientoDetalle() {
         </div>
       </div>
 
-      {aviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
-      {ok && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">{ok}</div>}
+      {aviso && <div className="aviso aviso-error">{aviso}</div>}
+      {ok && <div className="aviso aviso-exito">{ok}</div>}
 
       {/* Datos generales */}
-      <form onSubmit={guardar} className="rounded-xl border bg-white p-4">
+      <form onSubmit={guardar} className="tarjeta tarjeta-pad">
         <fieldset disabled={!puedeEditarReq}>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <h2 className="etiqueta-sup mb-3">
           Datos generales
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Código SC</span>
             <input value={codigoSc} onChange={(e) => setCodigoSc(e.target.value)} required
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="text-sm sm:col-span-2">
             <span className="mb-1 block text-slate-600">Nombre de acta</span>
             <input value={nombreActa} onChange={(e) => setNombreActa(e.target.value)}
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Tipo de costo</span>
             <select value={tipoCosto} onChange={(e) => setTipoCosto(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               {TIPOS_COSTO.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </label>
@@ -457,7 +457,7 @@ export default function RequerimientoDetalle() {
               <select
                 value={squadId}
                 onChange={(e) => { setSquadId(e.target.value); setScrumId('') }}
-                className="w-full rounded border px-3 py-2 text-sm text-slate-500"
+                className="campo w-full"
               >
                 <option value="">— Cambiar squad —</option>
                 {squads.filter((s) => s.activa).map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}
@@ -467,7 +467,7 @@ export default function RequerimientoDetalle() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Líder técnico</span>
             <select value={ltHitssId} onChange={(e) => setLtHitssId(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               <option value="">— Seleccionar —</option>
               {ltHitss.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
@@ -475,7 +475,7 @@ export default function RequerimientoDetalle() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Líder técnico EPM</span>
             <select value={ltEpmId} onChange={(e) => setLtEpmId(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               <option value="">— Seleccionar —</option>
               {ltEpm.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
@@ -484,7 +484,7 @@ export default function RequerimientoDetalle() {
             <span className="mb-1 block text-slate-600">Scrum</span>
             <select value={scrumId} onChange={(e) => setScrumId(e.target.value)}
               disabled={!squadId}
-              className="w-full rounded border px-3 py-2 disabled:bg-slate-100">
+              className="campo w-full">
               <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
               {scrumId && !scrums.some((p) => p.id === scrumId) && (
                 <option value={scrumId}>
@@ -500,26 +500,26 @@ export default function RequerimientoDetalle() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Horas estimadas</span>
             <input value={horas} onChange={(e) => setHoras(e.target.value)} type="number" step="any"
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Fecha y hora de solicitud</span>
             <input value={fechaSolicitudActa} onChange={(e) => setFechaSolicitudActa(e.target.value)}
-              type="datetime-local" className="w-full rounded border px-3 py-2" />
+              type="datetime-local" className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Fecha límite</span>
             <input
               value={req.fecha_limite ? req.fecha_limite.slice(0, 16).replace('T', ' ') : '—'}
               readOnly disabled
-              className="w-full rounded border bg-slate-100 px-3 py-2 text-slate-500" />
+              className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Fecha real entrega de estimaciones</span>
             <input value={fechaRealEntregaEst} onChange={(e) => setFechaRealEntregaEst(e.target.value)}
               type="datetime-local"
               disabled={!puedeEditarReq}
-              className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
+              className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">ANS Estimación</span>
@@ -542,38 +542,38 @@ export default function RequerimientoDetalle() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Cantidad de entregas</span>
             <input value={req.entregas.length} readOnly disabled
-              className="w-full rounded border bg-slate-100 px-3 py-2 text-slate-500" />
+              className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Acta de trabajo</span>
             <input value={actaTrabajo} onChange={(e) => setActaTrabajo(e.target.value)}
               disabled={!puedeEditarReq}
               placeholder="Número o referencia del acta de trabajo"
-              className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
+              className="campo w-full" />
           </label>
           <label className="text-sm sm:col-span-2 lg:col-span-3">
             <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
             <textarea value={seguimientoEpm} onChange={(e) => setSeguimientoEpm(e.target.value)} rows={2}
               disabled={!puedeEditarReq}
-              className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
+              className="campo w-full" />
           </label>
           <label className="text-sm sm:col-span-2 lg:col-span-3">
             <span className="mb-1 block text-slate-600">Motivo de cierre</span>
             <input value={motivoCierre} onChange={(e) => setMotivoCierre(e.target.value)}
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
         </div>
         </fieldset>
         {puedeEditarReq && (
-          <button className="mt-3 rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">
+          <button className="btn btn-primario mt-3">
             Guardar cambios
           </button>
         )}
       </form>
 
       {/* Seguimiento Hitss y Tipificación (editable por Administrador de squad) */}
-      <div className="rounded-xl border bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <div className="tarjeta tarjeta-pad">
+        <h2 className="etiqueta-sup mb-3">
           Seguimiento Hitss
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -581,13 +581,13 @@ export default function RequerimientoDetalle() {
             <span className="mb-1 block text-slate-600">Seguimiento Hitss</span>
             <textarea value={seguimiento} onChange={(e) => setSeguimiento(e.target.value)} rows={2}
               disabled={!puedeEditarTipificacion}
-              className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500" />
+              className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Tipificación</span>
             <select value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
               disabled={!puedeEditarTipificacion}
-              className="w-full rounded border px-3 py-2 disabled:bg-slate-100 disabled:text-slate-500">
+              className="campo w-full">
               <option value="">— Seleccionar —</option>
               <option value="HITSS">Hitss</option>
               <option value="EPM">EPM</option>
@@ -596,15 +596,15 @@ export default function RequerimientoDetalle() {
         </div>
         {puedeEditarTipificacion && (
           <button type="button" onClick={guardarTipificacionReq}
-            className="mt-3 rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">
+            className="btn btn-primario mt-3">
             Guardar Seguimiento Hitss / Tipificación
           </button>
         )}
       </div>
 
       {/* Entregas */}
-      <div className="rounded-xl border bg-white p-4">
-        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <div className="tarjeta tarjeta-pad">
+        <h2 className="etiqueta-sup mb-1">
           Entregas ({req.entregas.length})
         </h2>
         <p className="mb-3 text-xs text-slate-500">
@@ -656,7 +656,7 @@ export default function RequerimientoDetalle() {
                       <input
                         value={tipifEdicion[en.numero].obs}
                         onChange={(ev) => setTipifEdicion((p) => ({ ...p, [en.numero]: { ...p[en.numero], obs: ev.target.value } }))}
-                        className="w-full rounded border px-2 py-1 text-xs"
+                        className="campo campo-sm w-full"
                       />
                     ) : (en.observaciones_hitss ?? '—')}
                   </td>
@@ -665,7 +665,7 @@ export default function RequerimientoDetalle() {
                       <select
                         value={tipifEdicion[en.numero].tip}
                         onChange={(ev) => setTipifEdicion((p) => ({ ...p, [en.numero]: { ...p[en.numero], tip: ev.target.value } }))}
-                        className="rounded border px-2 py-1 text-xs"
+                        className="campo campo-sm"
                       >
                         <option value="">— Seleccionar —</option>
                         <option value="HITSS">Hitss</option>
@@ -682,14 +682,14 @@ export default function RequerimientoDetalle() {
                         <button
                           type="button"
                           onClick={() => cargarEntregaEnFormulario(en)}
-                          className="text-marca hover:underline"
+                          className="enlace-accion"
                         >
                           Editar
                         </button>
                         <button
                           type="button"
                           onClick={() => eliminarEntrega(en.numero)}
-                          className="text-red-600 hover:underline"
+                          className="enlace-accion enlace-accion-peligro"
                         >
                           Eliminar
                         </button>
@@ -719,7 +719,7 @@ export default function RequerimientoDetalle() {
                           <button
                             type="button"
                             onClick={() => iniciarEdicionTipifEntrega(en)}
-                            className="text-marca hover:underline"
+                            className="enlace-accion"
                           >
                             Editar Hitss
                           </button>
@@ -751,7 +751,7 @@ export default function RequerimientoDetalle() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Horas</span>
             <input value={eHoras} onChange={(e) => setEHoras(e.target.value)} type="number" step="any"
-              className="w-28 rounded border px-3 py-2" />
+              className="campo w-28" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">
@@ -765,13 +765,13 @@ export default function RequerimientoDetalle() {
               onChange={(e) => setEFecha(e.target.value)}
               type="date"
               required={req?.estado?.toUpperCase() !== 'CONTROL DE CAMBIOS'}
-              className="rounded border px-3 py-2"
+              className="campo"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Fecha real entrega</span>
             <input value={eFechaReal} onChange={(e) => setEFechaReal(e.target.value)} type="date"
-              className="rounded border px-3 py-2" />
+              className="campo" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Estado</span>
@@ -780,7 +780,7 @@ export default function RequerimientoDetalle() {
               setEEstado(nuevoEstado)
               if (nuevoEstado.toUpperCase() !== 'APROBADA') setEMesAprobacion('')
             }}
-              className="rounded border px-3 py-2">
+              className="campo">
               {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
@@ -790,7 +790,7 @@ export default function RequerimientoDetalle() {
               <select
                 value={eMesAprobacion}
                 onChange={(e) => setEMesAprobacion(e.target.value)}
-                className="rounded border px-3 py-2"
+                className="campo"
               >
                 <option value="">— Seleccionar —</option>
                 {MESES_ES.map((mes) => <option key={mes} value={mes}>{mes}</option>)}
@@ -803,7 +803,7 @@ export default function RequerimientoDetalle() {
               value={eObservaciones}
               onChange={(e) => setEObservaciones(e.target.value)}
               placeholder="Notas de la entrega (EPM)"
-              className="w-full rounded border px-3 py-2"
+              className="campo w-full"
             />
           </label>
           <label className="min-w-[280px] flex-1 text-sm">
@@ -812,7 +812,7 @@ export default function RequerimientoDetalle() {
               value={eObservacionesHitss}
               onChange={(e) => setEObservacionesHitss(e.target.value)}
               placeholder="Notas de la entrega (Hitss)"
-              className="w-full rounded border px-3 py-2"
+              className="campo w-full"
             />
           </label>
           <label className="text-sm">
@@ -820,7 +820,7 @@ export default function RequerimientoDetalle() {
             <select
               value={eTipificacion}
               onChange={(e) => setETipificacion(e.target.value)}
-              className="rounded border px-3 py-2"
+              className="campo"
             >
               <option value="">— Seleccionar —</option>
               <option value="HITSS">Hitss</option>
@@ -835,15 +835,15 @@ export default function RequerimientoDetalle() {
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">N° Garantía</span>
               <input type="number" min={1} value={eNumGarantia ?? ''} onChange={(e) => setENumGarantia(e.target.value ? Number(e.target.value) : null)}
-                className="w-20 rounded border px-2 py-2" />
+                className="campo campo-sm w-20" />
             </label>
           )}
-          <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">
+          <button className="btn btn-primario">
             {eEditando ? 'Guardar cambios' : 'Guardar entrega'}
           </button>
           {eEditando && (
             <button type="button" onClick={cancelarEdicionEntrega}
-              className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+              className="btn btn-secundario">
               Cancelar
             </button>
           )}
@@ -852,8 +852,8 @@ export default function RequerimientoDetalle() {
       </div>
 
       {/* Liquidación */}
-      <div className="rounded-xl border bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <div className="tarjeta tarjeta-pad">
+        <h2 className="etiqueta-sup mb-3">
           Liquidación
         </h2>
         {liquidacion ? (
@@ -876,8 +876,8 @@ export default function RequerimientoDetalle() {
       </div>
 
       {/* Bitácora */}
-      <div className="rounded-xl border bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <div className="tarjeta tarjeta-pad">
+        <h2 className="etiqueta-sup mb-3">
           Bitácora
         </h2>
         <ul className="space-y-1 text-sm">
@@ -891,7 +891,7 @@ export default function RequerimientoDetalle() {
               {puedeEliminarBitacora && (
                 <button
                   onClick={() => { void eliminarEvento(ev.id) }}
-                  className="shrink-0 rounded p-0.5 text-slate-300 hover:bg-red-50 hover:text-red-500"
+                  className="btn btn-peligro shrink-0"
                   title="Eliminar evento"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

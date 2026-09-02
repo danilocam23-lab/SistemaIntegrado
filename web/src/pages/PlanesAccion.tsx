@@ -118,17 +118,17 @@ export default function PlanesAccion() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Planes de acción</h1>
+      <h1 className="titulo-pagina mb-4">Planes de acción</h1>
 
       {puedeEditar && (
-        <form onSubmit={guardar} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+        <form onSubmit={guardar} className="barra-filtros mb-4">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Título</span>
             <input
               value={form.titulo}
               onChange={(e) => setForm({ ...form, titulo: e.target.value })}
               required
-              className="w-56 rounded border px-3 py-2"
+              className="campo w-56"
             />
           </label>
           <label className="text-sm">
@@ -136,7 +136,7 @@ export default function PlanesAccion() {
             <input
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="w-64 rounded border px-3 py-2"
+              className="campo w-64"
             />
           </label>
           <label className="text-sm">
@@ -144,7 +144,7 @@ export default function PlanesAccion() {
             <select
               value={form.responsableId}
               onChange={(e) => setForm({ ...form, responsableId: e.target.value })}
-              className="rounded border px-3 py-2"
+              className="campo"
             >
               <option value="">— Ninguno —</option>
               {personasOrdenadas.map((p) => (
@@ -158,7 +158,7 @@ export default function PlanesAccion() {
               type="date"
               value={form.fechaLimite}
               onChange={(e) => setForm({ ...form, fechaLimite: e.target.value })}
-              className="rounded border px-3 py-2"
+              className="campo"
             />
           </label>
           <label className="text-sm">
@@ -166,18 +166,18 @@ export default function PlanesAccion() {
             <select
               value={form.estado}
               onChange={(e) => setForm({ ...form, estado: e.target.value })}
-              className="rounded border px-3 py-2"
+              className="campo"
             >
               {ESTADOS.map((s) => (
                 <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
               ))}
             </select>
           </label>
-          <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">
+          <button className="btn btn-primario">
             {form.id ? 'Guardar' : 'Crear'}
           </button>
           {form.id && (
-            <button type="button" onClick={cancelarEdicion} className="rounded border px-4 py-2 text-slate-600 hover:bg-slate-50">
+            <button type="button" onClick={cancelarEdicion} className="btn btn-secundario">
               Cancelar
             </button>
           )}
@@ -189,7 +189,7 @@ export default function PlanesAccion() {
         <select
           value={filtroEstado}
           onChange={(e) => setFiltroEstado(e.target.value)}
-          className="rounded border px-3 py-2 text-sm"
+          className="campo"
         >
           <option value="">Todos</option>
           {ESTADOS.map((s) => (
@@ -199,10 +199,10 @@ export default function PlanesAccion() {
       </div>
 
       {(aviso || error) && (
-        <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>
+        <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+      <table className="tabla-scroll text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Título</th>
@@ -221,17 +221,17 @@ export default function PlanesAccion() {
               <td className="p-2">{(p.responsable_id && personasPorId.get(p.responsable_id)?.nombre) || '—'}</td>
               <td className="p-2 text-center">{p.fecha_limite || '—'}</td>
               <td className="p-2 text-center">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[p.estado] ?? 'bg-slate-100 text-slate-700'}`}>
+                <span className={`chip ${ESTADO_BADGE[p.estado] ?? 'bg-slate-100 text-slate-700'}`}>
                   {ESTADO_LABEL[p.estado] ?? p.estado}
                 </span>
               </td>
               <td className="p-2 text-center whitespace-nowrap">
                 {puedeEditar && (
                   <>
-                    <button onClick={() => editar(p)} className="mr-3 text-marca-verde hover:underline">
+                    <button onClick={() => editar(p)} className="enlace-accion mr-3">
                       Editar
                     </button>
-                    <button onClick={() => eliminar(p)} className="text-red-600 hover:underline">
+                    <button onClick={() => eliminar(p)} className="enlace-accion enlace-accion-peligro">
                       Eliminar
                     </button>
                   </>

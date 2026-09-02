@@ -514,10 +514,10 @@ export default function Configuracion() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-marca-osc">Configuración</h1>
+      <h1 className="titulo-pagina mb-4">Configuración</h1>
 
       {/* ═══ Tabs ═══ */}
-      <div className="mb-6 flex gap-1 border-b">
+      <div className="pestanas mb-6">
         {([
           { id: 'tarifas',    label: '💰 Tarifas' },
           { id: 'categorias', label: '🏷️ Categorías' },
@@ -532,11 +532,7 @@ export default function Configuracion() {
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`rounded-t px-4 py-2 text-sm font-medium transition-colors ${
-              tab === id
-                ? 'border-b-2 border-marca text-marca-osc bg-white -mb-px'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className={`pestana ${tab === id ? 'pestana-activa' : ''}`}
           >
             {label}
           </button>
@@ -549,30 +545,30 @@ export default function Configuracion() {
           <p className="mb-4 text-sm text-slate-500">
             Valores hora globales del proyecto. No dependen de un squad específico.
           </p>
-          <form onSubmit={crearTarifa} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+          <form onSubmit={crearTarifa} className="barra-filtros mb-4">
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Año</span>
               <input value={tAnio} onChange={(e) => setTAnio(e.target.value)} type="number" required
-                className="w-24 rounded border px-3 py-2" />
+                className="campo w-24" />
             </label>
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Valor hora</span>
               <input value={tValorHora} onChange={(e) => setTValorHora(e.target.value)} type="number" required
-                className="w-32 rounded border px-3 py-2" />
+                className="campo w-32" />
             </label>
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Ramificación</span>
               <select value={tRamificacion} onChange={(e) => setTRamificacion(e.target.value)}
-                className="rounded border px-3 py-2">
+                className="campo">
                 {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             </label>
-            <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
+            <button className="btn btn-primario">Crear</button>
           </form>
 
-          {tAviso && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{tAviso}</div>}
+          {tAviso && <div className="aviso aviso-error mb-3">{tAviso}</div>}
 
-          <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+          <table className="tabla-scroll text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Año</th>
@@ -589,8 +585,8 @@ export default function Configuracion() {
                   <td className="p-2">{t.ramificacion ?? '—'}</td>
                   <td className="p-2 text-center">
                     <div className="flex justify-center gap-2">
-                      <button onClick={() => abrirEdicionTarifa(t)} className="text-amber-600 hover:underline">Editar</button>
-                      <button onClick={() => eliminarTarifa(t)} className="text-red-600 hover:underline">Eliminar</button>
+                      <button onClick={() => abrirEdicionTarifa(t)} className="enlace-accion enlace-accion-alerta">Editar</button>
+                      <button onClick={() => eliminarTarifa(t)} className="enlace-accion enlace-accion-peligro">Eliminar</button>
                     </div>
                   </td>
                 </tr>
@@ -607,29 +603,29 @@ export default function Configuracion() {
               onClick={() => setTEditItem(null)}>
               <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
                 onClick={(e) => e.stopPropagation()}>
-                <h2 className="mb-4 text-lg font-bold text-marca-osc">Editar tarifa</h2>
+                <h2 className="titulo-seccion mb-4">Editar tarifa</h2>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm text-slate-600">Año</label>
                   <input value={tEditAnio} onChange={(e) => setTEditAnio(e.target.value)}
-                    type="number" className="w-full rounded border px-3 py-2" />
+                    type="number" className="campo w-full" />
                 </div>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm text-slate-600">Valor hora</label>
                   <input value={tEditValorHora} onChange={(e) => setTEditValorHora(e.target.value)}
-                    type="number" className="w-full rounded border px-3 py-2" />
+                    type="number" className="campo w-full" />
                 </div>
                 <div className="mb-4">
                   <label className="mb-1 block text-sm text-slate-600">Ramificación</label>
                   <select value={tEditRamificacion} onChange={(e) => setTEditRamificacion(e.target.value)}
-                    className="w-full rounded border px-3 py-2">
+                    className="campo w-full">
                     {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
                 <div className="flex justify-end gap-2">
                   <button onClick={() => setTEditItem(null)}
-                    className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                    className="btn btn-secundario">Cancelar</button>
                   <button onClick={guardarPopupTarifa}
-                    className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">Guardar</button>
+                    className="btn btn-primario">Guardar</button>
                 </div>
               </div>
             </div>
@@ -643,23 +639,23 @@ export default function Configuracion() {
           <p className="mb-4 text-sm text-slate-500">
             Categorías globales para clasificar los requerimientos del proyecto.
           </p>
-          <form onSubmit={cCrear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+          <form onSubmit={cCrear} className="barra-filtros mb-4">
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Nombre</span>
               <input value={cNombre} onChange={(e) => setCNombre(e.target.value)} required
-                className="rounded border px-3 py-2" />
+                className="campo" />
             </label>
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Color</span>
               <input value={cColor} onChange={(e) => setCColor(e.target.value)} type="color"
                 className="h-10 w-16 rounded border" />
             </label>
-            <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Crear</button>
+            <button className="btn btn-primario">Crear</button>
           </form>
 
-          {cAviso && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{cAviso}</div>}
+          {cAviso && <div className="aviso aviso-error mb-3">{cAviso}</div>}
 
-          <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+          <table className="tabla-scroll text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Orden</th>
@@ -678,7 +674,7 @@ export default function Configuracion() {
                         onChange={(e) => setCEditValue(e.target.value)}
                         onBlur={() => { if (cCancelarBlur.current) { cCancelarBlur.current = false; return } void cGuardarEdicion(c) }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } if (e.key === 'Escape') { e.preventDefault(); cCancelarEdicion() } }}
-                        className="w-20 rounded border px-2 py-1" />
+                        className="campo campo-sm w-20" />
                     ) : c.orden}
                   </td>
                   <td className="cursor-pointer p-2" title="Doble clic para editar"
@@ -688,7 +684,7 @@ export default function Configuracion() {
                         onChange={(e) => setCEditValue(e.target.value)}
                         onBlur={() => { if (cCancelarBlur.current) { cCancelarBlur.current = false; return } void cGuardarEdicion(c) }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } if (e.key === 'Escape') { e.preventDefault(); cCancelarEdicion() } }}
-                        className="w-full rounded border px-2 py-1" />
+                        className="campo campo-sm w-full" />
                     ) : c.nombre}
                   </td>
                   <td className="cursor-pointer p-2" title="Doble clic para editar"
@@ -707,7 +703,7 @@ export default function Configuracion() {
                     )}
                   </td>
                   <td className="p-2 text-center">
-                    <button onClick={() => void cEliminar(c)} className="text-red-600 hover:underline">Eliminar</button>
+                    <button onClick={() => void cEliminar(c)} className="enlace-accion enlace-accion-peligro">Eliminar</button>
                   </td>
                 </tr>
               ))}
@@ -721,13 +717,13 @@ export default function Configuracion() {
 
       {/* ═══ TAB: Roles ═══ */}
       {tab === 'roles' && (
-        <div className="rounded-xl border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Roles de personas</h2>
+        <div className="tarjeta tarjeta-pad">
+          <h2 className="etiqueta-sup mb-3">Roles de personas</h2>
           <div className="mb-3 flex flex-wrap gap-2">
             {roles.map((r) => (
-              <span key={r} className="inline-flex items-center gap-1 rounded-full bg-marca/10 px-3 py-1 text-sm font-medium text-marca-osc">
+              <span key={r} className="chip chip-marca">
                 {r}
-                <button onClick={() => quitarRol(r)} className="ml-1 text-red-400 hover:text-red-600" title="Quitar">✕</button>
+                <button onClick={() => quitarRol(r)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
               </span>
             ))}
             {roles.length === 0 && <span className="text-sm text-slate-400">Sin roles configurados</span>}
@@ -735,22 +731,22 @@ export default function Configuracion() {
           <div className="flex items-center gap-2">
             <input value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarRol())}
-              placeholder="Nuevo rol (ej: QA)" className="rounded border px-3 py-2 text-sm" />
-            <button onClick={agregarRol} className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">Agregar</button>
+              placeholder="Nuevo rol (ej: QA)" className="campo" />
+            <button onClick={agregarRol} className="btn btn-primario btn-sm">Agregar</button>
           </div>
-          {ok && <div className="mt-3 rounded bg-emerald-50 p-2 text-sm text-emerald-700">{ok}</div>}
+          {ok && <div className="aviso aviso-exito mt-3">{ok}</div>}
         </div>
       )}
 
       {/* ═══ TAB: Tipo de contratación ═══ */}
       {tab === 'tipos_contratacion' && (
-        <div className="rounded-xl border bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Tipos de contratación</h2>
+        <div className="tarjeta tarjeta-pad">
+          <h2 className="etiqueta-sup mb-3">Tipos de contratación</h2>
           <div className="mb-3 flex flex-wrap gap-2">
             {tiposContratacion.map((t) => (
-              <span key={t} className="inline-flex items-center gap-1 rounded-full bg-marca/10 px-3 py-1 text-sm font-medium text-marca-osc">
+              <span key={t} className="chip chip-marca">
                 {t}
-                <button onClick={() => quitarTipoContratacion(t)} className="ml-1 text-red-400 hover:text-red-600" title="Quitar">✕</button>
+                <button onClick={() => quitarTipoContratacion(t)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
               </span>
             ))}
             {tiposContratacion.length === 0 && <span className="text-sm text-slate-400">Sin tipos de contratación configurados</span>}
@@ -758,25 +754,25 @@ export default function Configuracion() {
           <div className="flex items-center gap-2">
             <input value={nuevoTipoContratacion} onChange={(e) => setNuevoTipoContratacion(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarTipoContratacion())}
-              placeholder="Nuevo tipo (ej: TERMINO FIJO)" className="rounded border px-3 py-2 text-sm" />
-            <button onClick={agregarTipoContratacion} className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">Agregar</button>
+              placeholder="Nuevo tipo (ej: TERMINO FIJO)" className="campo" />
+            <button onClick={agregarTipoContratacion} className="btn btn-primario btn-sm">Agregar</button>
           </div>
-          {ok && <div className="mt-3 rounded bg-emerald-50 p-2 text-sm text-emerald-700">{ok}</div>}
+          {ok && <div className="aviso aviso-exito mt-3">{ok}</div>}
         </div>
       )}
 
       {/* ═══ TAB: Festivos ═══ */}
       {tab === 'festivos' && (
-        <div className="rounded-xl border bg-white p-4">
-          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Festivos</h2>
+        <div className="tarjeta tarjeta-pad">
+          <h2 className="etiqueta-sup mb-1">Festivos</h2>
           <p className="mb-3 text-xs text-slate-500">Se usan para el cálculo de ANS por días hábiles.</p>
           <form onSubmit={crearFestivo} className="mb-3 flex flex-wrap items-end gap-3">
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Fecha</span>
               <input value={festFecha} onChange={(e) => setFestFecha(e.target.value)} type="date" required
-                className="rounded border px-3 py-2" />
+                className="campo" />
             </label>
-            <button className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">+ Agregar</button>
+            <button className="btn btn-primario btn-sm">+ Agregar</button>
           </form>
           <div className="space-y-3">
             {festivosAgrupados.map((grupo) => (
@@ -794,7 +790,7 @@ export default function Configuracion() {
             ))}
             {festivos.length === 0 && <div className="text-sm text-slate-400">Sin festivos registrados</div>}
           </div>
-          {(aviso || error) && <div className="mt-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>}
+          {(aviso || error) && <div className="aviso aviso-error mt-3">{aviso || error}</div>}
         </div>
       )}
 
@@ -807,29 +803,29 @@ export default function Configuracion() {
             <code className="mx-1 rounded bg-slate-100 px-1">azdo_pat</code>,
             <code className="mx-1 rounded bg-slate-100 px-1">azdo_sync_interval</code>.
           </p>
-          <form onSubmit={crear} className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4">
+          <form onSubmit={crear} className="barra-filtros mb-4">
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Clave</span>
               <input value={nuevaClave} onChange={(e) => setNuevaClave(e.target.value)} required
-                className="rounded border px-3 py-2" />
+                className="campo" />
             </label>
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Valor</span>
               <input value={nuevoValor} onChange={(e) => setNuevoValor(e.target.value)}
-                className="rounded border px-3 py-2" />
+                className="campo" />
             </label>
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Grupo</span>
               <input value={grupo} onChange={(e) => setGrupo(e.target.value)}
-                className="rounded border px-3 py-2" />
+                className="campo" />
             </label>
-            <button className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc">Agregar / actualizar</button>
+            <button className="btn btn-primario">Agregar / actualizar</button>
           </form>
 
-          {(aviso || error) && <div className="mb-3 rounded bg-red-50 p-2 text-sm text-red-700">{aviso || error}</div>}
-          {ok && <div className="mb-3 rounded bg-emerald-50 p-2 text-sm text-emerald-700">{ok}</div>}
+          {(aviso || error) && <div className="aviso aviso-error mb-3">{aviso || error}</div>}
+          {ok && <div className="aviso aviso-exito mb-3">{ok}</div>}
 
-          <table className="w-full overflow-hidden rounded-xl border bg-white text-sm">
+          <table className="tabla-scroll text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Clave</th>
@@ -847,14 +843,14 @@ export default function Configuracion() {
                     <input
                       value={valorDe(c)}
                       onChange={(e) => setValores({ ...valores, [c.clave]: e.target.value })}
-                      className="w-full rounded border px-2 py-1"
+                      className="campo campo-sm w-full"
                     />
                   </td>
                   <td className="p-2 text-center">
                     <div className="flex justify-center gap-2">
-                      <button onClick={() => guardar(c)} className="text-marca hover:underline">Guardar</button>
-                      <button onClick={() => abrirEdicion(c)} className="text-amber-600 hover:underline">Editar</button>
-                      <button onClick={() => void eliminarParametro(c)} className="text-red-600 hover:underline">Eliminar</button>
+                      <button onClick={() => guardar(c)} className="enlace-accion">Guardar</button>
+                      <button onClick={() => abrirEdicion(c)} className="enlace-accion enlace-accion-alerta">Editar</button>
+                      <button onClick={() => void eliminarParametro(c)} className="enlace-accion enlace-accion-peligro">Eliminar</button>
                     </div>
                   </td>
                 </tr>
@@ -871,27 +867,27 @@ export default function Configuracion() {
               onClick={() => setEditItem(null)}>
               <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
                 onClick={(e) => e.stopPropagation()}>
-                <h2 className="mb-4 text-lg font-bold text-marca-osc">Editar parámetro</h2>
+                <h2 className="titulo-seccion mb-4">Editar parámetro</h2>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm text-slate-600">Clave</label>
                   <input value={editClave} onChange={(e) => setEditClave(e.target.value)}
-                    className="w-full rounded border px-3 py-2" />
+                    className="campo w-full" />
                 </div>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm text-slate-600">Grupo</label>
                   <input value={editGrupo} onChange={(e) => setEditGrupo(e.target.value)}
-                    className="w-full rounded border px-3 py-2" />
+                    className="campo w-full" />
                 </div>
                 <div className="mb-4">
                   <label className="mb-1 block text-sm text-slate-600">Valor</label>
                   <textarea value={editValor} onChange={(e) => setEditValor(e.target.value)}
-                    rows={3} className="w-full rounded border px-3 py-2" />
+                    rows={3} className="campo w-full" />
                 </div>
                 <div className="flex justify-end gap-2">
                   <button onClick={() => setEditItem(null)}
-                    className="rounded border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+                    className="btn btn-secundario">Cancelar</button>
                   <button onClick={guardarEdicion}
-                    className="rounded bg-marca px-4 py-2 text-sm text-white hover:bg-marca-osc">Guardar</button>
+                    className="btn btn-primario">Guardar</button>
                 </div>
               </div>
             </div>
@@ -907,19 +903,19 @@ export default function Configuracion() {
             automáticamente al crear o editar requerimientos.
           </p>
 
-          {estAviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{estAviso}</div>}
-          {estOk && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">{estOk}</div>}
+          {estAviso && <div className="aviso aviso-error">{estAviso}</div>}
+          {estOk && <div className="aviso aviso-exito">{estOk}</div>}
 
           {/* Estados de Requerimiento */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="tarjeta tarjeta-pad">
+            <h2 className="etiqueta-sup mb-3">
               Estados de Requerimiento
             </h2>
             <div className="mb-3 flex flex-wrap gap-2">
               {estReq.map((e) => (
-                <span key={e} className="inline-flex items-center gap-1 rounded-full bg-marca/10 px-3 py-1 text-sm font-medium text-marca-osc">
+                <span key={e} className="chip chip-marca">
                   {e}
-                  <button onClick={() => quitarEstadoReq(e)} className="ml-1 text-red-400 hover:text-red-600" title="Quitar">✕</button>
+                  <button onClick={() => quitarEstadoReq(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
                 </span>
               ))}
               {estReq.length === 0 && <span className="text-sm text-slate-400">Sin estados configurados</span>}
@@ -930,24 +926,24 @@ export default function Configuracion() {
                 onChange={(e) => setNuevoEstReq(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarEstadoReq())}
                 placeholder="Nuevo estado (ej: EN REVISION)"
-                className="rounded border px-3 py-2 text-sm w-72"
+                className="campo w-72"
               />
-              <button onClick={agregarEstadoReq} className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">
+              <button onClick={agregarEstadoReq} className="btn btn-primario btn-sm">
                 Agregar
               </button>
             </div>
           </div>
 
           {/* Estados de Entrega */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="tarjeta tarjeta-pad">
+            <h2 className="etiqueta-sup mb-3">
               Estados de Entrega
             </h2>
             <div className="mb-3 flex flex-wrap gap-2">
               {estEnt.map((e) => (
                 <span key={e} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-800">
                   {e}
-                  <button onClick={() => quitarEstadoEnt(e)} className="ml-1 text-red-400 hover:text-red-600" title="Quitar">✕</button>
+                  <button onClick={() => quitarEstadoEnt(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
                 </span>
               ))}
               {estEnt.length === 0 && <span className="text-sm text-slate-400">Sin estados configurados</span>}
@@ -958,9 +954,9 @@ export default function Configuracion() {
                 onChange={(e) => setNuevoEstEnt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarEstadoEnt())}
                 placeholder="Nuevo estado (ej: EN GARANTIA)"
-                className="rounded border px-3 py-2 text-sm w-72"
+                className="campo w-72"
               />
-              <button onClick={agregarEstadoEnt} className="rounded bg-marca px-3 py-2 text-sm text-white hover:bg-marca-osc">
+              <button onClick={agregarEstadoEnt} className="btn btn-primario btn-sm">
                 Agregar
               </button>
             </div>
@@ -977,12 +973,12 @@ export default function Configuracion() {
             "Entregas de Actas".
           </p>
 
-          {eaAviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{eaAviso}</div>}
-          {eaOk && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">{eaOk}</div>}
+          {eaAviso && <div className="aviso aviso-error">{eaAviso}</div>}
+          {eaOk && <div className="aviso aviso-exito">{eaOk}</div>}
 
           {/* Columnas de la tabla */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="tarjeta tarjeta-pad">
+            <h2 className="etiqueta-sup mb-3">
               Columnas de la tabla
             </h2>
             <div className="space-y-4">
@@ -1007,8 +1003,8 @@ export default function Configuracion() {
           </div>
 
           {/* Filtros de búsqueda */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="tarjeta tarjeta-pad">
+            <h2 className="etiqueta-sup mb-3">
               Filtros de búsqueda
             </h2>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
@@ -1026,8 +1022,8 @@ export default function Configuracion() {
           </div>
 
           {/* Campos de exportación a Excel */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="tarjeta tarjeta-pad">
+            <h2 className="etiqueta-sup mb-3">
               Campos incluidos al exportar a Excel
             </h2>
             <div className="space-y-4">
@@ -1063,12 +1059,12 @@ export default function Configuracion() {
             configurables porque son funcionales.
           </p>
 
-          {reqAviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{reqAviso}</div>}
-          {reqOk && <div className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">{reqOk}</div>}
+          {reqAviso && <div className="aviso aviso-error">{reqAviso}</div>}
+          {reqOk && <div className="aviso aviso-exito">{reqOk}</div>}
 
           {/* Columnas de la tabla */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="tarjeta tarjeta-pad">
+            <h2 className="etiqueta-sup mb-3">
               Columnas de la tabla
             </h2>
             <div className="space-y-4">
@@ -1093,8 +1089,8 @@ export default function Configuracion() {
           </div>
 
           {/* Filtros de búsqueda */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="tarjeta tarjeta-pad">
+            <h2 className="etiqueta-sup mb-3">
               Filtros de búsqueda
             </h2>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
@@ -1112,8 +1108,8 @@ export default function Configuracion() {
           </div>
 
           {/* Campos de exportación a Excel */}
-          <div className="rounded-xl border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="tarjeta tarjeta-pad">
+            <h2 className="etiqueta-sup mb-3">
               Campos incluidos al exportar a Excel
             </h2>
             <div className="space-y-4">

@@ -112,18 +112,18 @@ export default function RequerimientoNuevo() {
         <Link to="/requerimientos" className="text-sm text-marca hover:underline">
           ← Requerimientos
         </Link>
-        <h1 className="mt-1 text-xl font-bold text-marca-osc">Nuevo Requerimiento</h1>
+        <h1 className="titulo-pagina mt-1">Nuevo Requerimiento</h1>
       </div>
 
-      {aviso && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{aviso}</div>}
+      {aviso && <div className="aviso aviso-error">{aviso}</div>}
 
       {modoConsolidado && !puedeCrearConsolidado && (
-        <div className="rounded bg-amber-50 p-3 text-sm text-amber-700">
+        <div className="aviso aviso-alerta">
           La creación de requerimientos en modo consolidado requiere permisos de consolidado y creación.
         </div>
       )}
 
-      <form onSubmit={crear} className="rounded-xl border bg-white p-4">
+      <form onSubmit={crear} className="tarjeta tarjeta-pad">
         <fieldset disabled={!puedeCrear} className="space-y-0">
         {modoConsolidado && (
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
@@ -138,7 +138,7 @@ export default function RequerimientoNuevo() {
                 value={aplicacionDestino}
                 onChange={(e) => setAplicacionDestino(e.target.value)}
                 required
-                className="w-full rounded border px-3 py-2 text-sm"
+                className="campo w-full"
               >
                 <option value="">— Seleccionar squad destino —</option>
                 {squads.filter((s) => s.activa).map((s) => (
@@ -148,36 +148,36 @@ export default function RequerimientoNuevo() {
             </label>
           </div>
         )}
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <h2 className="etiqueta-sup mb-3">
           Datos generales
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Código SC *</span>
             <input value={codigoSc} onChange={(e) => setCodigoSc(e.target.value)} required
-              placeholder="11110" className="w-full rounded border px-3 py-2" />
+              placeholder="11110" className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Código REQ *</span>
             <input value={codigoReq} onChange={(e) => setCodigoReq(e.target.value)} required
-              placeholder="RP-SSC-0964" className="w-full rounded border px-3 py-2" />
+              placeholder="RP-SSC-0964" className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Nombre</span>
             <input value={nombre} onChange={(e) => setNombre(e.target.value)}
-              placeholder="Nombre del requerimiento" className="w-full rounded border px-3 py-2" />
+              placeholder="Nombre del requerimiento" className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Tipo de costo</span>
             <select value={tipoCosto} onChange={(e) => setTipoCosto(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               {TIPOS_COSTO.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Squad</span>
             <select value={squadId} onChange={(e) => cambiarSquad(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               <option value="">— Seleccionar —</option>
               {squads.filter((s) => s.activa).map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}
             </select>
@@ -185,7 +185,7 @@ export default function RequerimientoNuevo() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Líder técnico</span>
             <select value={ltHitssId} onChange={(e) => setLtHitssId(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               <option value="">— Seleccionar —</option>
               {ltHitss.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
@@ -193,7 +193,7 @@ export default function RequerimientoNuevo() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Líder técnico EPM</span>
             <select value={ltEpmId} onChange={(e) => setLtEpmId(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               <option value="">— Seleccionar —</option>
               {ltEpm.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
@@ -202,7 +202,7 @@ export default function RequerimientoNuevo() {
             <span className="mb-1 block text-slate-600">Scrum</span>
             <select value={scrumId} onChange={(e) => setScrumId(e.target.value)}
               disabled={!squadId}
-              className="w-full rounded border px-3 py-2 disabled:bg-slate-100">
+              className="campo w-full">
               <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
               {scrums.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
@@ -210,27 +210,27 @@ export default function RequerimientoNuevo() {
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Horas estimadas</span>
             <input value={horas} onChange={(e) => setHoras(e.target.value)} type="number" step="any"
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Fecha y hora de solicitud</span>
             <input value={fechaSolicitud} onChange={(e) => setFechaSolicitud(e.target.value)}
-              type="datetime-local" className="w-full rounded border px-3 py-2" />
+              type="datetime-local" className="campo w-full" />
           </label>
           <label className="text-sm sm:col-span-2 lg:col-span-3">
             <span className="mb-1 block text-slate-600">Seguimiento Hitss</span>
             <textarea value={seguimiento} onChange={(e) => setSeguimiento(e.target.value)} rows={2}
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="text-sm sm:col-span-2 lg:col-span-3">
             <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
             <textarea value={seguimientoEpm} onChange={(e) => setSeguimientoEpm(e.target.value)} rows={2}
-              className="w-full rounded border px-3 py-2" />
+              className="campo w-full" />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Tipificación</span>
             <select value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
-              className="w-full rounded border px-3 py-2">
+              className="campo w-full">
               <option value="">— Seleccionar —</option>
               <option value="HITSS">Hitss</option>
               <option value="EPM">EPM</option>
@@ -241,7 +241,7 @@ export default function RequerimientoNuevo() {
           La cantidad de entregas inicia en 0 y se calcula automáticamente al registrar
           entregas en el requerimiento.
         </p>
-        <button className="mt-4 rounded bg-marca px-6 py-2 text-white hover:bg-marca-osc">
+        <button className="btn btn-primario mt-4">
           Crear requerimiento
         </button>
         </fieldset>
