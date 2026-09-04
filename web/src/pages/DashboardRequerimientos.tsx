@@ -233,19 +233,29 @@ export default function DashboardRequerimientos() {
 
   // ─── Equipo: solo Líderes Técnicos HITSS ───────────────
   const equipo = useMemo(() => {
-    const ids = new Set<string>()
-    for (const r of reqs) {
-      if (r.solicitud?.lt_hitss_id) ids.add(r.solicitud.lt_hitss_id)
-    }
     const conteo: Record<string, number> = {}
     for (const r of reqs) {
       if (r.solicitud?.lt_hitss_id) conteo[r.solicitud.lt_hitss_id] = (conteo[r.solicitud.lt_hitss_id] ?? 0) + 1
     }
-    return Array.from(ids).map((id) => {
+    // Agrupa por persona real (nombreKey) en lugar de por id: distintos lt_hitss_id
+    // (p.ej. un id huérfano que ya no existe en personas) pueden resolver al mismo
+    // nombre y no deben aparecer como filas duplicadas.
+    const porNombre = new Map<string, { id: string; nombre: string; nombreKey: string; email: string; reqs: number }>()
+    for (const id of Object.keys(conteo)) {
       const p = personas.find((x) => x.id === id)
       const nombre = p?.nombre ?? id
-      return { id, nombre, nombreKey: normalizarTexto(nombre), email: p?.email ?? '', reqs: conteo[id] ?? 0 }
-    }).sort((a, b) => b.reqs - a.reqs)
+      const nombreKey = normalizarTexto(nombre)
+      const existente = porNombre.get(nombreKey)
+      if (existente) {
+        existente.reqs += conteo[id] ?? 0
+        // Prioriza el id/email de un registro que sí exista en `personas`.
+        if (!existente.email && p?.email) existente.email = p.email
+        if (p && existente.id !== id && !personas.find((x) => x.id === existente.id)) existente.id = id
+      } else {
+        porNombre.set(nombreKey, { id, nombre, nombreKey, email: p?.email ?? '', reqs: conteo[id] ?? 0 })
+      }
+    }
+    return Array.from(porNombre.values()).sort((a, b) => b.reqs - a.reqs)
   }, [reqs, personas])
 
   // ─── Tendencia mensual (entregas por mes) ───────────────
