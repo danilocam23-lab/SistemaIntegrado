@@ -7,6 +7,7 @@ from app.api import (
     asignaciones,
     auth,
     azdo,
+    backlog_futuro,
     bitacora,
     capacidad,
     categorias,
@@ -51,6 +52,7 @@ api_router.include_router(categorias.router)
 api_router.include_router(asignaciones.router)
 api_router.include_router(capacidad.router)
 api_router.include_router(plan_accion.router)
+api_router.include_router(backlog_futuro.router)
 api_router.include_router(estimaciones.router)
 api_router.include_router(configuracion.router)
 api_router.include_router(azdo.router)

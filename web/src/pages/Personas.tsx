@@ -366,10 +366,11 @@ export default function Personas() {
                      <th className="p-2 text-left">Nombre</th>
                      <th className="p-2 text-left">Correo</th>
                      <th className="p-2 text-left">Squad</th>
-                    <th className="p-2 text-left">Tipo de contratación</th>
-                    {esGerente && <th className="p-2 text-right whitespace-nowrap">Valor persona</th>}
-                    {esGerente && <th className="p-2 text-right whitespace-nowrap">Valor periféricos</th>}
+                    {rol !== 'LT_EPM' && <th className="p-2 text-left">Tipo de contratación</th>}
+                    {esGerente && rol !== 'LT_EPM' && <th className="p-2 text-right whitespace-nowrap">Valor persona</th>}
+                    {esGerente && rol !== 'LT_EPM' && <th className="p-2 text-right whitespace-nowrap">Valor periféricos</th>}
                     <th className="p-2 text-center">Activo</th>
+                    <th className="p-2 text-center whitespace-nowrap">F. desactivación</th>
                     <th className="p-2 text-center">Acciones</th>
                    </tr>
                   </thead>
@@ -379,13 +380,16 @@ export default function Personas() {
                        <td className="p-2 truncate">{p.nombre}</td>
                        <td className="p-2 truncate">{p.email ?? '—'}</td>
                        <td className="p-2 truncate">{(p.squads ?? []).join(', ') || '—'}</td>
-                       <td className="p-2 truncate">{p.tipo_contratacion ?? '—'}</td>
-                       {esGerente && <td className="p-2 text-right font-mono text-xs">${(p.valor_persona ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
-                       {esGerente && <td className="p-2 text-right font-mono text-xs">${(p.valor_perifericos ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
+                       {rol !== 'LT_EPM' && <td className="p-2 truncate">{p.tipo_contratacion ?? '—'}</td>}
+                       {esGerente && rol !== 'LT_EPM' && <td className="p-2 text-right font-mono text-xs">${(p.valor_persona ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
+                       {esGerente && rol !== 'LT_EPM' && <td className="p-2 text-right font-mono text-xs">${(p.valor_perifericos ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
                         <td className="p-2 text-center">
                           {p.activo
                             ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Sí</span>
                             : <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">No</span>}
+                        </td>
+                        <td className="p-2 text-center whitespace-nowrap text-xs text-slate-600">
+                          {p.fecha_desactivacion ? p.fecha_desactivacion.slice(0, 10) : '—'}
                         </td>
                         <td className="p-2 text-center whitespace-nowrap">
                           {puedeEditarPersonas && (

@@ -50,6 +50,7 @@ export interface Solicitud {
   lt_hitss_id: string | null
   lt_epm_id: string | null
   scrum_id: string | null
+  analista_requerimientos_id?: string | null
   tarifa_id: string | null
   anio_tarifa: number | null
 }
@@ -169,6 +170,7 @@ export interface Persona {
   rol_operativo: string
   tipo_contratacion?: string | null
   activo: boolean
+  fecha_desactivacion?: string | null
   squads: string[]
   es_lider_tecnico?: boolean
   permite_sobrecarga?: boolean
@@ -230,6 +232,17 @@ export interface PlanAccion {
   responsable_id: string | null
   fecha_limite: string | null
   estado: string
+}
+
+export interface BacklogFuturo {
+  id: string
+  nombre_iniciativa: string
+  squad_id: string
+  horas_aproximadas: number
+  fecha_tentativa_inicio: string | null
+  estado: string
+  volvio_acta: boolean
+  acta_id: string | null
 }
 
 // --- Transversal ---

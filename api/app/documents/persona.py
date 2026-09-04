@@ -1,4 +1,6 @@
 """Colección operativa: personas (directorio del dominio, por aplicación)."""
+from datetime import datetime
+
 from pymongo import ASCENDING, IndexModel
 
 from app.documents.base import DocumentoOperativo
@@ -15,6 +17,7 @@ class Persona(DocumentoOperativo):
     rol_operativo: str = "DEV"
     tipo_contratacion: str | None = None
     activo: bool = True
+    fecha_desactivacion: datetime | None = None
     squads: list[str] = []
     es_lider_tecnico: bool = False
     permite_sobrecarga: bool = False

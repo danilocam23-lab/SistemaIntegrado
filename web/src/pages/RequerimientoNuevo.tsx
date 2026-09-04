@@ -26,6 +26,7 @@ export default function RequerimientoNuevo() {
   const [ltHitssId, setLtHitssId] = useState('')
   const [ltEpmId, setLtEpmId] = useState('')
   const [scrumId, setScrumId] = useState('')
+  const [analistaId, setAnalistaId] = useState('')
   const [horas, setHoras] = useState('')
   const [fechaSolicitud, setFechaSolicitud] = useState('')
   const [seguimiento, setSeguimiento] = useState('')
@@ -35,8 +36,8 @@ export default function RequerimientoNuevo() {
   const [aviso, setAviso] = useState('')
 
   // Líderes técnicos por rol; el Scrum se filtra por el squad seleccionado.
-  const ltHitss = personas.filter((p) => p.rol_operativo === 'LT_HITSS')
-  const ltEpm = personas.filter((p) => p.rol_operativo === 'LT_EPM')
+  const ltHitss = personas.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS')
+  const ltEpm = personas.filter((p) => p.activo && p.rol_operativo === 'LT_EPM')
   const squadNombre = squads.find((s) => s.codigo === squadId)?.nombre
 
   // `personas` (useLista('/personas')) solo trae quienes pertenecen al squad
@@ -56,12 +57,18 @@ export default function RequerimientoNuevo() {
   }, [squadId])
 
   const scrums = (personasSquad.length > 0 ? personasSquad : personas).filter(
-    (p) => p.rol_operativo === 'SCRUM' && (!squadNombre || (p.squads ?? []).includes(squadNombre)),
+    (p) => p.activo && p.rol_operativo === 'SCRUM' && (!squadNombre || (p.squads ?? []).includes(squadNombre)),
+  )
+
+  // Analistas de requerimientos: personas activas con rol Scrum o AR/QA del squad seleccionado.
+  const analistas = (personasSquad.length > 0 ? personasSquad : personas).filter(
+    (p) => p.activo && (p.rol_operativo === 'SCRUM' || p.rol_operativo === 'AR/QA') && (!squadNombre || (p.squads ?? []).includes(squadNombre)),
   )
 
   function cambiarSquad(valor: string): void {
     setSquadId(valor)
     setScrumId('')
+    setAnalistaId('')
   }
 
   async function crear(e: FormEvent): Promise<void> {
@@ -92,6 +99,7 @@ export default function RequerimientoNuevo() {
           lt_hitss_id: ltHitssId || null,
           lt_epm_id: ltEpmId || null,
           scrum_id: scrumId || null,
+          analista_requerimientos_id: analistaId || null,
         },
         estado: estadosReq[0],
         total_horas_estimadas: horas ? Number(horas) : null,
@@ -205,6 +213,15 @@ export default function RequerimientoNuevo() {
               className="campo w-full">
               <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
               {scrums.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
+            <select value={analistaId} onChange={(e) => setAnalistaId(e.target.value)}
+              disabled={!squadId}
+              className="campo w-full">
+              <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
+              {analistas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </label>
           <label className="text-sm">

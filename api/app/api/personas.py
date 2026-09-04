@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.documents.aplicacion import Aplicacion
 from app.documents.asignacion import Asignacion
 from app.documents.azdo import AzdoWorkItem
+from app.documents.base import ahora
 from app.documents.capacidad import Capacidad
 from app.documents.persona import Persona
 from app.documents.squad import Squad
@@ -275,6 +276,8 @@ async def crear(
     app_id = await _resolver_app_id(datos, ctx, usuario)
     data = datos.model_dump(exclude={"aplicacion_id"})
     persona = Persona(aplicacion_id=app_id, **data)
+    if not persona.activo:
+        persona.fecha_desactivacion = ahora()
     await persona.insert()
     return persona
 
@@ -289,9 +292,17 @@ async def actualizar(
     persona = await Persona.get(persona_id)
     if persona is None or not _persona_visible(persona, ctx):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
+    activo_previo = persona.activo
     # Actualiza campos operativos
     for campo, valor in datos.model_dump(exclude={"aplicacion_id"}).items():
         setattr(persona, campo, valor)
+    # `fecha_desactivacion` se calcula automáticamente al cambiar el estado `activo`
+    # (no es editable directamente desde el body): se marca al desactivar y se limpia
+    # al reactivar.
+    if activo_previo and not persona.activo:
+        persona.fecha_desactivacion = ahora()
+    elif not activo_previo and persona.activo:
+        persona.fecha_desactivacion = None
     # Si cambió el squad, actualizar aplicacion_id al código de la primera app que coincida
     if datos.squads:
         app_doc = await Aplicacion.find_one({"nombre": datos.squads[0]})

@@ -199,6 +199,7 @@ async def actualizar(
             "codigo_sc": "Código SC", "tipo_costo": "Tipo costo",
             "squad_id": "Squad", "lt_hitss_id": "LT HITSS",
             "lt_epm_id": "LT EPM", "scrum_id": "Scrum",
+            "analista_requerimientos_id": "Analista de requerimientos",
         }
         for k, label in _SOL_ETIQUETAS.items():
             v_old = str(sol_vieja.get(k) or "")

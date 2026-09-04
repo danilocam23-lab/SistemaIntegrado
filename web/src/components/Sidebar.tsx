@@ -34,6 +34,7 @@ const GRUPOS: Grupo[] = [
       { to: '/requerimientos/detalle-ans', label: 'Detalle ANS', permiso: 'requerimientos.ver' },
       { to: '/entregas-actas', label: 'Entregas de Actas', permiso: 'entregas_actas.ver' },
       { to: '/predictivos', label: 'Predictivos', permiso: 'predictivos.ver' },
+      { to: '/backlog-futuro', label: 'Backlog futuro', permiso: 'backlog_futuro.ver' },
     ],
   },
   {
@@ -54,6 +55,7 @@ const GRUPOS: Grupo[] = [
     icono: '💰',
     items: [
       { to: '/facturacion/general', label: 'General', permiso: 'facturacion.ver' },
+      { to: '/facturacion/ans-descontados', label: 'Ans descontados', permiso: 'facturacion.ans_descontados.ver' },
       { to: '/facturacion/valores-proyecto', label: 'Valores de proyecto', permiso: 'facturacion.ver' },
     ],
   },

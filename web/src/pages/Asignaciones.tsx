@@ -398,7 +398,18 @@ export default function Asignaciones() {
     setRequerimientoId(opcion.id)
     setBusquedaReq(opcion.label)
     setDropdownReqAbierto(false)
-  }, [])
+    // Si el requerimiento tiene un analista de requerimientos configurado y aún no se
+    // eligió una persona, se preselecciona ese analista con 0% de carga, para dejarlo
+    // asignado de una vez mientras luego se le define la capacidad/porcentaje real.
+    if (!modoEdicion && !personaId) {
+      const req = requerimientos.find((r) => r.id === opcion.id)
+      const analistaId = req?.solicitud?.analista_requerimientos_id
+      if (analistaId) {
+        setPersonaId(analistaId)
+        setPorcentaje('0')
+      }
+    }
+  }, [modoEdicion, personaId, requerimientos])
 
   const cambiarBusquedaReq = useCallback((value: string) => {
     setBusquedaReq(value)

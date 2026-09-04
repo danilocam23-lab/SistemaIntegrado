@@ -178,6 +178,7 @@ export const REQUERIMIENTOS_COLUMNAS: EntregasActasCampo[] = [
 
   // ── Campos adicionales de Solicitud (desactivados por defecto) ──
   { key: 'ltEpm', label: 'LT_EPM', grupo: 'Solicitud' },
+  { key: 'analista', label: 'Analista de requerimientos', grupo: 'Solicitud' },
   { key: 'tipoCosto', label: 'Tipo de costo', grupo: 'Solicitud' },
   { key: 'tecnologia', label: 'Tecnología', grupo: 'Solicitud' },
   { key: 'solicitudEstado', label: 'Estado de la solicitud', grupo: 'Solicitud' },

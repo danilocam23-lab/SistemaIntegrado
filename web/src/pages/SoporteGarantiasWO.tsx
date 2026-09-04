@@ -31,6 +31,14 @@ interface WOBusqueda {
   estado: string
 }
 
+interface WODetalle {
+  work_order_id: string
+  aplicacion_id: string
+  squad: string | null
+  lider: string | null
+  datos: Record<string, unknown>
+}
+
 export default function SoporteGarantiasWO() {
   const [garantias, setGarantias] = useState<GarantiaWOItem[]>([])
   const [cargando, setCargando] = useState(true)
@@ -38,6 +46,10 @@ export default function SoporteGarantiasWO() {
   const [resultados, setResultados] = useState<WOBusqueda[]>([])
   const [buscando, setBuscando] = useState(false)
   const [editandoObs, setEditandoObs] = useState<Record<string, { obs: string; res: string }>>({})
+  const [detalleWo, setDetalleWo] = useState<WODetalle | null>(null)
+  const [cargandoDetalle, setCargandoDetalle] = useState(false)
+  const [errorDetalle, setErrorDetalle] = useState('')
+  const [mostrarDetalleModal, setMostrarDetalleModal] = useState(false)
   const [guardando, setGuardando] = useState<Set<string>>(new Set())
 
   const cargar = useCallback(async () => {
@@ -69,6 +81,20 @@ export default function SoporteGarantiasWO() {
     } catch (e: any) {
       alert(e.response?.data?.detail || 'Error al agregar')
     }
+  }
+
+  async function verDetalleWo(woId: string) {
+    setDetalleWo(null)
+    setErrorDetalle('')
+    setMostrarDetalleModal(true)
+    setCargandoDetalle(true)
+    try {
+      const { data } = await client.get(`/garantias-wo/detalle-wo/${encodeURIComponent(woId)}`)
+      setDetalleWo(data)
+    } catch (e: any) {
+      setErrorDetalle(e.response?.data?.detail || `No se pudo cargar el detalle de la WO '${woId}'`)
+    }
+    setCargandoDetalle(false)
   }
 
   async function guardarObservaciones(id: string) {
@@ -136,7 +162,6 @@ export default function SoporteGarantiasWO() {
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-3 py-2">Work Order ID</th>
-                  <th className="px-3 py-2">Aplicación</th>
                   <th className="px-3 py-2">Squad</th>
                   <th className="px-3 py-2">Líder</th>
                   <th className="px-3 py-2">Descripción</th>
@@ -147,8 +172,15 @@ export default function SoporteGarantiasWO() {
               <tbody>
                 {(resultados ?? []).map((r) => (
                   <tr key={r.work_order_id} className="border-t hover:bg-slate-50">
-                    <td className="px-3 py-2 font-mono font-semibold">{r.work_order_id}</td>
-                    <td className="px-3 py-2">{r.aplicacion_id}</td>
+                    <td className="px-3 py-2 font-mono font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => verDetalleWo(r.work_order_id)}
+                        className="text-blue-600 underline decoration-dotted hover:text-blue-800"
+                      >
+                        {r.work_order_id}
+                      </button>
+                    </td>
                     <td className="px-3 py-2">{r.squad}</td>
                     <td className="px-3 py-2">{r.lider}</td>
                     <td className="px-3 py-2 max-w-xs truncate">{r.descripcion}</td>
@@ -180,7 +212,6 @@ export default function SoporteGarantiasWO() {
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-3 py-2">Work Order ID</th>
-                  <th className="px-3 py-2">Aplicación</th>
                   <th className="px-3 py-2">Squad</th>
                   <th className="px-3 py-2">Líder</th>
                   <th className="px-3 py-2">Descripción</th>
@@ -195,8 +226,15 @@ export default function SoporteGarantiasWO() {
                   const edicion = editandoObs[getId(g)]
                   return (
                     <tr key={getId(g)} className="border-t align-top">
-                      <td className="px-3 py-2 font-mono font-semibold">{g.work_order_id}</td>
-                      <td className="px-3 py-2">{g.aplicacion_id}</td>
+                      <td className="px-3 py-2 font-mono font-semibold">
+                        <button
+                          type="button"
+                          onClick={() => verDetalleWo(g.work_order_id)}
+                          className="text-blue-600 underline decoration-dotted hover:text-blue-800"
+                        >
+                          {g.work_order_id}
+                        </button>
+                      </td>
                       <td className="px-3 py-2">{g.squad ?? '—'}</td>
                       <td className="px-3 py-2">{g.lider ?? '—'}</td>
                       <td className="px-3 py-2 max-w-xs truncate">{g.descripcion ?? '—'}</td>
@@ -261,6 +299,60 @@ export default function SoporteGarantiasWO() {
           </div>
         )}
       </div>
+
+      {mostrarDetalleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+              <div>
+                <h2 className="titulo-seccion">Detalle Work Order</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {detalleWo?.work_order_id ?? 'Información completa de la WO en soporte.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarDetalleModal(false)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Cerrar detalle de WO"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-auto p-6">
+              {cargandoDetalle && (
+                <p className="py-8 text-center text-sm text-slate-400">Cargando detalle…</p>
+              )}
+              {!cargandoDetalle && errorDetalle && (
+                <p className="py-8 text-center text-sm text-red-500">{errorDetalle}</p>
+              )}
+              {!cargandoDetalle && !errorDetalle && detalleWo && (
+                <table className="w-full text-sm">
+                  <tbody className="divide-y divide-slate-100">
+                    <tr>
+                      <td className="w-56 px-3 py-2 font-semibold text-slate-600">Squad</td>
+                      <td className="px-3 py-2">{detalleWo.squad ?? '—'}</td>
+                    </tr>
+                    <tr>
+                      <td className="w-56 px-3 py-2 font-semibold text-slate-600">Líder</td>
+                      <td className="px-3 py-2">{detalleWo.lider ?? '—'}</td>
+                    </tr>
+                    {Object.entries(detalleWo.datos ?? {}).map(([clave, valor]) => (
+                      <tr key={clave}>
+                        <td className="w-56 px-3 py-2 font-semibold text-slate-600 align-top">{clave}</td>
+                        <td className="px-3 py-2 whitespace-pre-wrap break-words">
+                          {valor === null || valor === undefined || valor === '' ? '—' : String(valor)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

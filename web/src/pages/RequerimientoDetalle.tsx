@@ -58,6 +58,7 @@ export default function RequerimientoDetalle() {
   const [ltHitssId, setLtHitssId] = useState('')
   const [ltEpmId, setLtEpmId] = useState('')
   const [scrumId, setScrumId] = useState('')
+  const [analistaId, setAnalistaId] = useState('')
   const [horas, setHoras] = useState('')
   const [fechaSolicitudActa, setFechaSolicitudActa] = useState('')
   const [fechaRealEntregaEst, setFechaRealEntregaEst] = useState('')
@@ -157,6 +158,7 @@ export default function RequerimientoDetalle() {
       setLtHitssId(data.solicitud?.lt_hitss_id ?? '')
       setLtEpmId(data.solicitud?.lt_epm_id ?? '')
       setScrumId(data.solicitud?.scrum_id ?? '')
+      setAnalistaId(data.solicitud?.analista_requerimientos_id ?? '')
       setHoras(data.total_horas_estimadas != null ? String(data.total_horas_estimadas) : '')
       setFechaSolicitudActa(data.fecha_solicitud_acta ? data.fecha_solicitud_acta.slice(0, 16) : '')
       setFechaRealEntregaEst(data.fecha_real_entrega_estimacion ? data.fecha_real_entrega_estimacion.slice(0, 16) : '')
@@ -180,8 +182,8 @@ export default function RequerimientoDetalle() {
     recargar()
   }, [recargar])
 
-  const ltHitss = personas.filter((p) => p.rol_operativo === 'LT_HITSS')
-  const ltEpm = personas.filter((p) => p.rol_operativo === 'LT_EPM')
+  const ltHitss = personas.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS')
+  const ltEpm = personas.filter((p) => p.activo && p.rol_operativo === 'LT_EPM')
 
   // Resuelve nombre del squad desde ambas fuentes:
   // - Aplicaciones (para registros creados manualmente: squad_id = codigo de app)
@@ -224,7 +226,14 @@ export default function RequerimientoDetalle() {
   // aplicacion_id o squads), no hace falta repetir el filtro por nombre de squad; solo
   // se re-aplica como respaldo si el fetch específico falló y se usa la lista ambiente.
   const scrums = (personasSquad.length > 0 ? personasSquad : personas).filter(
-    (p) => p.rol_operativo === 'SCRUM' && (
+    (p) => p.activo && p.rol_operativo === 'SCRUM' && (
+      personasSquad.length > 0 || !squadNombre || squadNombre === '—' || (p.squads ?? []).includes(squadNombre)
+    ),
+  )
+
+  // Analistas de requerimientos: personas activas con rol Scrum o AR/QA del squad seleccionado.
+  const analistas = (personasSquad.length > 0 ? personasSquad : personas).filter(
+    (p) => p.activo && (p.rol_operativo === 'SCRUM' || p.rol_operativo === 'AR/QA') && (
       personasSquad.length > 0 || !squadNombre || squadNombre === '—' || (p.squads ?? []).includes(squadNombre)
     ),
   )
@@ -246,6 +255,22 @@ export default function RequerimientoDetalle() {
       .then((r) => setScrumAsignado(r.data))
       .catch(() => setScrumAsignado(null))
   }, [scrumId, personas, personasSquad])
+
+  // Respaldo equivalente para el analista de requerimientos asignado.
+  const [analistaAsignado, setAnalistaAsignado] = useState<Persona | null>(null)
+  useEffect(() => {
+    if (!analistaId) {
+      setAnalistaAsignado(null)
+      return
+    }
+    if (personas.some((p) => p.id === analistaId) || personasSquad.some((p) => p.id === analistaId)) {
+      setAnalistaAsignado(null)
+      return
+    }
+    client.get<Persona>(`/personas/${analistaId}`, { headers: { 'X-Aplicacion': '__todas__' } })
+      .then((r) => setAnalistaAsignado(r.data))
+      .catch(() => setAnalistaAsignado(null))
+  }, [analistaId, personas, personasSquad])
 
   // En modo consolidado el cliente envía __todas__; las escrituras necesitan
   // el código real de la aplicación. Se obtiene del propio requerimiento
@@ -276,6 +301,7 @@ export default function RequerimientoDetalle() {
           lt_hitss_id: ltHitssId || null,
           lt_epm_id: ltEpmId || null,
           scrum_id: scrumId || null,
+          analista_requerimientos_id: analistaId || null,
         },
         total_horas_estimadas: horas ? Number(horas) : null,
         fecha_solicitud_acta: fechaSolicitudActa || null,
@@ -456,7 +482,7 @@ export default function RequerimientoDetalle() {
             {puedeEditarReq && (
               <select
                 value={squadId}
-                onChange={(e) => { setSquadId(e.target.value); setScrumId('') }}
+                onChange={(e) => { setSquadId(e.target.value); setScrumId(''); setAnalistaId('') }}
                 className="campo w-full"
               >
                 <option value="">— Cambiar squad —</option>
@@ -495,6 +521,23 @@ export default function RequerimientoDetalle() {
                 </option>
               )}
               {scrums.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
+            <select value={analistaId} onChange={(e) => setAnalistaId(e.target.value)}
+              disabled={!squadId}
+              className="campo w-full">
+              <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
+              {analistaId && !analistas.some((p) => p.id === analistaId) && (
+                <option value={analistaId}>
+                  {personas.find((p) => p.id === analistaId)?.nombre
+                    ?? personasSquad.find((p) => p.id === analistaId)?.nombre
+                    ?? analistaAsignado?.nombre
+                    ?? analistaId}
+                </option>
+              )}
+              {analistas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </label>
           <label className="text-sm">

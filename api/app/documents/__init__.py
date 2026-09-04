@@ -8,6 +8,7 @@ from app.documents.aplicativo import Aplicativo
 from app.documents.asignacion import Asignacion
 from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
+from app.documents.backlog_futuro import BacklogFuturo
 from app.documents.bitacora import Bitacora
 from app.documents.capacidad import Capacidad
 from app.documents.categoria import Categoria
@@ -61,6 +62,7 @@ ALL_DOCUMENTS = [
     ControlHoras,
     EndpointAdmin,
     PlanAccion,
+    BacklogFuturo,
 ]
 
 __all__ = [
@@ -91,4 +93,5 @@ __all__ = [
     "ControlHoras",
     "EndpointAdmin",
     "PlanAccion",
+    "BacklogFuturo",
 ]

@@ -23,6 +23,31 @@ async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     """Listar todas las garantías WO filtradas por aplicación activa."""
     filtro = ctx.filtro()
     docs = await GarantiaWO.find(filtro).sort("-creado_en").to_list()
+
+    # Autocompletar registros antiguos que quedaron sin descripción/estado
+    # (creados antes de que se corrigiera el mapeo de columnas de soporte).
+    for doc in docs:
+        if doc.descripcion and doc.estado_wo:
+            continue
+        wo = await SoporteSolicitudFabrica.find_one({"datos.Work Order ID": doc.work_order_id})
+        if not wo:
+            continue
+        datos = wo.datos or {}
+        cambio = False
+        if not doc.descripcion:
+            nueva_desc = datos.get("Detailed Description") or datos.get("Summary") or None
+            if nueva_desc:
+                doc.descripcion = nueva_desc
+                cambio = True
+        if not doc.estado_wo:
+            nuevo_estado = datos.get("Status WO") or None
+            if nuevo_estado:
+                doc.estado_wo = nuevo_estado
+                cambio = True
+        if cambio:
+            doc.marcar_actualizado()
+            await doc.save()
+
     return [{**doc.dict(by_alias=True), "_id": str(doc.id)} for doc in docs]
 
 
@@ -48,9 +73,9 @@ async def agregar(
         aplicacion_id=wo.aplicacion_id,
         squad=wo.squad,
         lider=wo.lider,
-        descripcion=datos.get("Descripción") or datos.get("Descripcion") or datos.get("Description") or None,
+        descripcion=datos.get("Detailed Description") or datos.get("Summary") or None,
         fecha_creacion_wo=datos.get("Fecha Creación") or datos.get("Fecha_Creacion") or datos.get("Created Date") or None,
-        estado_wo=datos.get("Estado") or datos.get("State") or None,
+        estado_wo=datos.get("Status WO") or None,
     )
     await doc.insert()
     return doc.dict(by_alias=True)
@@ -99,8 +124,28 @@ async def buscar_wo(
             "aplicacion_id": r.aplicacion_id,
             "squad": r.squad,
             "lider": r.lider,
-            "descripcion": r.datos.get("Descripción") or r.datos.get("Descripcion") or r.datos.get("Description") or "",
-            "estado": r.datos.get("Estado") or r.datos.get("State") or "",
+            "descripcion": r.datos.get("Detailed Description") or r.datos.get("Summary") or "",
+            "estado": r.datos.get("Status WO") or "",
         }
         for r in resultados
     ]
+
+
+@router.get("/detalle-wo/{work_order_id}")
+async def detalle_wo(
+    work_order_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+):
+    """Devuelve toda la información disponible de una WO en soporte (todas las columnas)."""
+    wo = await SoporteSolicitudFabrica.find_one(
+        {"datos.Work Order ID": work_order_id, **ctx.filtro()}
+    )
+    if not wo:
+        raise HTTPException(404, f"No se encontró la WO '{work_order_id}' en soporte")
+    return {
+        "work_order_id": work_order_id,
+        "aplicacion_id": wo.aplicacion_id,
+        "squad": wo.squad,
+        "lider": wo.lider,
+        "datos": wo.datos or {},
+    }

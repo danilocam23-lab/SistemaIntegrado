@@ -331,6 +331,7 @@ export default function Requerimientos() {
       case 'estado': valor = req.estado; break
       case 'lt_hitss_id': valor = req.solicitud?.lt_hitss_id ?? ''; break
       case 'scrum_id': valor = req.solicitud?.scrum_id ?? ''; break
+      case 'analista_requerimientos_id': valor = req.solicitud?.analista_requerimientos_id ?? ''; break
       case 'total_horas_estimadas': valor = req.total_horas_estimadas != null ? String(req.total_horas_estimadas) : ''; break
       case 'cantidad_entregas': valor = String(req.cantidad_entregas ?? 0); break
     }
@@ -350,7 +351,7 @@ export default function Requerimientos() {
 
     try {
       const payload: any = {}
-      if (campo === 'codigo_sc' || campo === 'lt_hitss_id' || campo === 'scrum_id') {
+      if (campo === 'codigo_sc' || campo === 'lt_hitss_id' || campo === 'scrum_id' || campo === 'analista_requerimientos_id') {
         payload.solicitud = { ...req.solicitud, [campo]: editValue || null }
       } else if (campo === 'total_horas_estimadas') {
         payload.total_horas_estimadas = editValue ? Number(editValue) : null
@@ -398,7 +399,7 @@ export default function Requerimientos() {
   const isEditing = (reqId: string, campo: string): boolean =>
     editCell?.id === reqId && editCell?.campo === campo
 
-  function renderCelda(req: Requerimiento, campo: string, displayValue: string, type?: 'select' | 'select-persona' | 'number', rolFiltro?: string): JSX.Element {
+  function renderCelda(req: Requerimiento, campo: string, displayValue: string, type?: 'select' | 'select-persona' | 'number', rolFiltro?: string | string[]): JSX.Element {
     if (isEditing(req.id, campo)) {
       if (type === 'select') {
         return (
@@ -410,7 +411,8 @@ export default function Requerimientos() {
         )
       }
       if (type === 'select-persona') {
-        const lista = rolFiltro ? personas.filter((p) => p.rol_operativo === rolFiltro) : personas
+        const roles = rolFiltro ? (Array.isArray(rolFiltro) ? rolFiltro : [rolFiltro]) : []
+        const lista = (roles.length > 0 ? personas.filter((p) => roles.includes(p.rol_operativo)) : personas).filter((p) => p.activo)
         return (
           <select value={editValue} onChange={(e) => { setEditValue(e.target.value) }}
             onBlur={() => guardarCelda(req)} autoFocus
@@ -502,7 +504,7 @@ export default function Requerimientos() {
   }, [datos, squadPorId])
 
   const lideresDisponibles = useMemo(() =>
-    personas.filter((p) => p.rol_operativo === 'LT_HITSS'),
+    personas.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS'),
     [personas])
 
   const personaPorId = useMemo(() => {
@@ -648,6 +650,7 @@ export default function Requerimientos() {
     fechaInicio: (r) => (r.fecha_inicio ? r.fecha_inicio.slice(0, 10) : ''),
     fechaFin: (r) => (r.fecha_fin ? r.fecha_fin.slice(0, 10) : ''),
     ltEpm: (r) => nombrePersona(r.solicitud?.lt_epm_id ?? null),
+    analista: (r) => nombrePersona(r.solicitud?.analista_requerimientos_id ?? null),
     tipoCosto: (r) => r.solicitud?.tipo_costo ?? '',
     tecnologia: (r) => r.solicitud?.tecnologia ?? '',
     solicitudEstado: (r) => r.solicitud?.estado ?? '',

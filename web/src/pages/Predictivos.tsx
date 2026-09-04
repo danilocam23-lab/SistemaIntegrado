@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { useLista } from '../api/hooks'
-import type { Aplicacion, Requerimiento, Squad } from '../types'
+import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
 
 interface FilaPredictiva {
   reqId: string
@@ -13,6 +13,7 @@ interface FilaPredictiva {
   fechaComprometida: string
   estado: string
   diasRestantes: number
+  analista: string
 }
 
 const ESTADOS_INCLUIDOS = ['PENDIENTE', 'RECHAZADA']
@@ -29,6 +30,7 @@ function diasRestantes(fechaISO: string): number {
 export default function Predictivos() {
   const { datos: requerimientos, error, cargando } = useLista<Requerimiento>('/requerimientos')
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
+  const { datos: personas } = useLista<Persona>('/personas')
   const [squadsCol, setSquadsCol] = useState<Squad[]>([])
 
   useEffect(() => {
@@ -50,12 +52,20 @@ export default function Predictivos() {
     return m
   }, [squadsCol, aplicaciones])
 
+  const personaPorId = useMemo(() => {
+    const m = new Map<string, string>()
+    personas.forEach((p) => m.set(String(p.id), p.nombre))
+    return m
+  }, [personas])
+
   const filas = useMemo<FilaPredictiva[]>(() => {
     const resultado: FilaPredictiva[] = []
     for (const req of requerimientos) {
       const squadNombre = req.solicitud?.squad_id
         ? (squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id))
         : ''
+      const analistaId = req.solicitud?.analista_requerimientos_id
+      const analistaNombre = analistaId ? (personaPorId.get(String(analistaId)) ?? String(analistaId)) : '—'
       for (const en of req.entregas ?? []) {
         const estado = (en.estado ?? '').toUpperCase()
         if (!ESTADOS_INCLUIDOS.includes(estado)) continue
@@ -71,11 +81,12 @@ export default function Predictivos() {
           fechaComprometida: en.fecha_comprometida,
           estado: en.estado ?? '',
           diasRestantes: dias,
+          analista: analistaNombre,
         })
       }
     }
     return resultado.sort((a, b) => a.diasRestantes - b.diasRestantes)
-  }, [requerimientos, squadPorId])
+  }, [requerimientos, squadPorId, personaPorId])
 
   const badgeDias = (dias: number) => {
     if (dias < 0) return 'bg-red-100 text-red-700'
@@ -121,6 +132,7 @@ export default function Predictivos() {
                   <th className="p-2 text-left">Código Req</th>
                   <th className="p-2 text-left">Squad</th>
                   <th className="p-2 text-left">Acta de trabajo</th>
+                  <th className="p-2 text-left">Analista</th>
                   <th className="p-2 text-center"># Entrega</th>
                   <th className="p-2 text-center">F. Comprometida</th>
                   <th className="p-2 text-center">Estado</th>
@@ -137,6 +149,7 @@ export default function Predictivos() {
                     </td>
                     <td className="p-2">{f.squad}</td>
                     <td className="p-2">{f.nombreActa}</td>
+                    <td className="p-2">{f.analista}</td>
                     <td className="p-2 text-center">{f.entregaNum}</td>
                     <td className="p-2 text-center">{f.fechaComprometida}</td>
                     <td className="p-2 text-center">

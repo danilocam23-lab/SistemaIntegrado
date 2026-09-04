@@ -157,6 +157,8 @@ export default function DashboardSquad() {
   const [soporteResumen, setSoporteResumen] = useState<RegistroSoporteResumen[]>([])
   const [mostrarDetalleWo, setMostrarDetalleWo] = useState(false)
   const [busquedaDetalleWo, setBusquedaDetalleWo] = useState('')
+  const [mostrarDetallePersonas, setMostrarDetallePersonas] = useState(false)
+  const [busquedaDetallePersonas, setBusquedaDetallePersonas] = useState('')
 
   useEffect(() => {
     client.get<Squad[]>('/squads', { headers: { 'X-Aplicacion': '__todas__' } })
@@ -207,9 +209,12 @@ export default function DashboardSquad() {
   const filas = useMemo<FilaSquad[]>(() => {
     const mapa = new Map<string, FilaSquad>()
     for (const req of requerimientos) {
-      const squadId = req.solicitud?.squad_id ?? null
-      const key = squadId ?? '__sin_squad__'
+      // aplicacion_id es el campo autoritativo de pertenencia al squad (consistente con el
+      // filtro de squad activo). solicitud.squad_id puede estar desactualizado en datos legados
+      // y no debe usarse para agrupar/mostrar cuando aplicacion_id está presente.
+      const squadId = req.aplicacion_id || req.solicitud?.squad_id || null
       const squad = resolverNombreSquad(squadId)
+      const key = squad
       const actual = mapa.get(key) ?? {
         squadId,
         squad,
@@ -344,6 +349,76 @@ export default function DashboardSquad() {
     resolverNombreSquad,
     squadsDoc,
   ])
+
+  const detallePersonasCapacidad = useMemo(() => {
+    const mapa = new Map<string, { personaId: string; nombre: string; squad: string; horas: number; personalizada: boolean; predeterminada: boolean }>()
+
+    for (const periodo of periodosCapacidadSeleccionados) {
+      const festivosMesSeleccionado = festivosPorMes.get(periodo) ?? new Set<string>()
+      const diasLaborables = contarDiasHabiles(periodo, new Set())
+      const diasHabiles = contarDiasHabiles(periodo, festivosMesSeleccionado)
+      const factorMes = diasLaborables > 0 ? diasHabiles / diasLaborables : 1
+      const horasDefaultMes = horasMesDefault * factorMes
+
+      for (const persona of personas) {
+        if (!persona.activo || persona.rol_operativo === 'LT_EPM') continue
+        const squadsNormalizados = (persona.squads ?? []).map((squad) => squadCodigoPorNombre.get(squad) ?? squad)
+        const squadActivaNombre = activa && activa !== CONSOLIDADO ? resolverNombreSquad(activa) : ''
+        const perteneceActiva =
+          activa !== CONSOLIDADO &&
+          !!activa &&
+          (
+            squadsNormalizados.length === 0 ||
+            squadsNormalizados.includes(activa) ||
+            (squadActivaNombre ? (persona.squads ?? []).includes(squadActivaNombre) : false)
+          )
+
+        const squadsPersona = activa !== CONSOLIDADO && activa
+          ? (perteneceActiva ? [activa] : [])
+          : squadsNormalizados
+
+        for (const squadId of squadsPersona) {
+          const squad = resolverNombreSquad(squadId)
+          const claveCapacidad = `${persona.id}|${periodo}`
+          const tieneConfigPersonalizada = capacidadPorPersonaMes.has(claveCapacidad)
+          const capacidadPersona = capacidadPorPersonaMes.get(claveCapacidad) ?? horasDefaultMes
+          const key = `${persona.id}|${squadId}`
+          const actual = mapa.get(key) ?? {
+            personaId: persona.id,
+            nombre: persona.nombre,
+            squad,
+            horas: 0,
+            personalizada: false,
+            predeterminada: false,
+          }
+          actual.horas += capacidadPersona
+          if (tieneConfigPersonalizada) actual.personalizada = true
+          else actual.predeterminada = true
+          mapa.set(key, actual)
+        }
+      }
+    }
+
+    return Array.from(mapa.values()).sort((a, b) => b.horas - a.horas || a.nombre.localeCompare(b.nombre))
+  }, [
+    activa,
+    capacidadPorPersonaMes,
+    festivosPorMes,
+    horasMesDefault,
+    personas,
+    periodosCapacidadSeleccionados,
+    squadCodigoPorNombre,
+    resolverNombreSquad,
+    squadsDoc,
+  ])
+
+  const detallePersonasCapacidadFiltrado = useMemo(() => {
+    const busqueda = busquedaDetallePersonas.trim().toLowerCase()
+    if (!busqueda) return detallePersonasCapacidad
+    return detallePersonasCapacidad.filter(
+      (fila) => fila.nombre.toLowerCase().includes(busqueda) || fila.squad.toLowerCase().includes(busqueda),
+    )
+  }, [busquedaDetallePersonas, detallePersonasCapacidad])
 
   const resumenCapacidad = useMemo(() => {
     const totalHoras = filasCapacidadSquad.reduce((sum, fila) => sum + fila.horas, 0)
@@ -710,6 +785,20 @@ export default function DashboardSquad() {
           <ChartCardPremium
             titulo="Capacidad por Squad"
             descripcion={`Distribución de horas disponibles · ${periodosCapacidadSeleccionados.length} periodo(s) · Festivos: ${festivosPorMes.size}`}
+            action={
+              detallePersonasCapacidad.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBusquedaDetallePersonas('')
+                    setMostrarDetallePersonas(true)
+                  }}
+                  className="btn btn-secundario btn-sm"
+                >
+                  Ver detalle
+                </button>
+              ) : null
+            }
           >
             {filasCapacidadSquad.length === 0 ? (
               <EmptyState />
@@ -766,7 +855,7 @@ export default function DashboardSquad() {
                   <tbody className="divide-y divide-slate-100">
                     {filas.map((fila) => (
                       <tr
-                        key={fila.squadId ?? 'sin-squad'}
+                        key={fila.squad}
                         className="hover:bg-blue-50/40 transition-colors duration-200 group"
                       >
                         <td className="px-6 py-4 font-semibold text-slate-900 group-hover:text-blue-700">{fila.squad}</td>
@@ -857,6 +946,88 @@ export default function DashboardSquad() {
                     <td className="px-4 py-3 text-right">
                       {fmtNumero(detalleWoSoporteFiltrado.reduce((sum, fila) => sum + fila.horasAprobadas, 0))}h
                     </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarDetallePersonas && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+              <div>
+                <h2 className="titulo-seccion">Detalle capacidad por persona</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Horas configuradas por persona y squad · {periodosCapacidadSeleccionados.length} periodo(s) seleccionados.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarDetallePersonas(false)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Cerrar detalle de capacidad por persona"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="border-b border-slate-100 px-6 py-4">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor="buscar-persona-detalle">
+                Buscar por persona o squad
+              </label>
+              <input
+                id="buscar-persona-detalle"
+                type="search"
+                value={busquedaDetallePersonas}
+                onChange={(event) => setBusquedaDetallePersonas(event.target.value)}
+                placeholder="Ej: José Danilo"
+                className="campo mt-2 w-full"
+              />
+            </div>
+
+            <div className="max-h-[62vh] overflow-auto p-6">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Persona</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Squad</th>
+                    <th className="px-4 py-3 text-right font-semibold text-slate-900">Horas</th>
+                    <th className="px-4 py-3 text-center font-semibold text-slate-900">Origen</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {detallePersonasCapacidadFiltrado.map((fila) => (
+                    <tr key={`${fila.personaId}-${fila.squad}`} className="hover:bg-blue-50/40">
+                      <td className="px-4 py-3 font-medium text-slate-800">{fila.nombre}</td>
+                      <td className="px-4 py-3 text-slate-600">{fila.squad}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-amber-700">{fmtNumero(fila.horas)}h</td>
+                      <td className="px-4 py-3 text-center">
+                        {fila.personalizada ? (
+                          <Badge variant="blue" value={fila.predeterminada ? 'Mixto' : 'Configurada'} />
+                        ) : (
+                          <Badge variant="green" value="Por defecto" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {detallePersonasCapacidadFiltrado.length === 0 && (
+                    <tr>
+                      <td className="px-4 py-8 text-center text-sm text-slate-400" colSpan={4}>
+                        No se encontraron personas con esa búsqueda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold text-slate-900">
+                    <td className="px-4 py-3" colSpan={2}>Total</td>
+                    <td className="px-4 py-3 text-right">
+                      {fmtNumero(detallePersonasCapacidadFiltrado.reduce((sum, fila) => sum + fila.horas, 0))}h
+                    </td>
+                    <td className="px-4 py-3" />
                   </tr>
                 </tfoot>
               </table>

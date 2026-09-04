@@ -22,12 +22,14 @@ import AzureDevOps from './pages/AzureDevOps'
 import Configuracion from './pages/Configuracion'
 import EntregasActas from './pages/EntregasActas'
 import Predictivos from './pages/Predictivos'
+import BacklogFuturo from './pages/BacklogFuturo'
 import RequerimientosDetalleANS from './pages/RequerimientosDetalleANS'
 import DashboardEstados from './pages/DashboardEstados'
 import DashboardSquad from './pages/DashboardSquad'
 import AdminEndpoints from './pages/AdminEndpoints'
 import Importacion from './pages/Importacion'
 import FacturacionGeneral from './pages/FacturacionGeneral'
+import FacturacionAnsDescontados from './pages/FacturacionAnsDescontados'
 import FacturacionValoresProyecto from './pages/FacturacionValoresProyecto'
 import SoporteSolicitudesFabrica from './pages/SoporteSolicitudesFabrica'
 import SoporteDetalleANS from './pages/SoporteDetalleANS'
@@ -59,6 +61,7 @@ export default function App() {
               <Route path="requerimientos/:reqId" element={<RoleRoute permiso="requerimientos.ver"><RequerimientoDetalle /></RoleRoute>} />
               <Route path="entregas-actas" element={<RoleRoute permiso="entregas_actas.ver"><EntregasActas /></RoleRoute>} />
               <Route path="predictivos" element={<RoleRoute permiso="predictivos.ver"><Predictivos /></RoleRoute>} />
+              <Route path="backlog-futuro" element={<RoleRoute permiso="backlog_futuro.ver"><BacklogFuturo /></RoleRoute>} />
               <Route path="tarifas" element={<Navigate to="/configuracion" replace />} />
               <Route path="personas" element={<Personas />} />
               <Route path="categorias" element={<Navigate to="/configuracion" replace />} />
@@ -84,6 +87,7 @@ export default function App() {
                 element={<RoleRoute permiso="admin.importacion.ver"><Importacion /></RoleRoute>}
               />
               <Route path="facturacion/general" element={<RoleRoute permiso="facturacion.ver"><FacturacionGeneral /></RoleRoute>} />
+              <Route path="facturacion/ans-descontados" element={<RoleRoute permiso="facturacion.ans_descontados.ver"><FacturacionAnsDescontados /></RoleRoute>} />
               <Route path="facturacion/valores-proyecto" element={<RoleRoute permiso="facturacion.ver"><FacturacionValoresProyecto /></RoleRoute>} />
               <Route path="soporte/solicitudes-fabrica" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteSolicitudesFabrica /></RoleRoute>} />
               <Route path="soporte/detalle-ans" element={<RoleRoute permiso="soporte.solicitudes_fabrica.ver"><SoporteDetalleANS /></RoleRoute>} />

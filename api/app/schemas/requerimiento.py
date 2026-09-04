@@ -20,6 +20,7 @@ class SolicitudIn(BaseModel):
     lt_hitss_id: str | None = None
     lt_epm_id: str | None = None
     scrum_id: str | None = None
+    analista_requerimientos_id: str | None = None
     tipo_costo: TipoCosto | None = None
     estado: str | None = None
     anio_tarifa: int | None = None
