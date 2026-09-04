@@ -4,6 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
+import { TablaScroll } from '../components/ui/primitivos'
 import type { Aplicacion, Rol, Usuario } from '../types'
 
 type Tab = 'usuarios' | 'roles'
@@ -392,7 +393,8 @@ export default function Usuarios() {
             <div className="aviso aviso-error mb-3">{aviso || error}</div>
           )}
 
-          <table className="tabla-scroll text-sm">
+          <TablaScroll>
+          <table className="text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Nombre</th>
@@ -446,6 +448,7 @@ export default function Usuarios() {
               )}
             </tbody>
           </table>
+          </TablaScroll>
         </>
       )}
 
@@ -482,7 +485,8 @@ export default function Usuarios() {
             </form>
           )}
 
-          <table className="tabla-scroll text-sm">
+          <TablaScroll>
+          <table className="text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Rol</th>
@@ -522,6 +526,7 @@ export default function Usuarios() {
               )}
             </tbody>
           </table>
+          </TablaScroll>
         </div>
       )}
 

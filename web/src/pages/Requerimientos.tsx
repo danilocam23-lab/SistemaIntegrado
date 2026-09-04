@@ -6,6 +6,7 @@ import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import { REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../constantes'
 import type { Aplicacion, Categoria, Configuracion as ConfigItem, Estimacion, EstimacionConResumen, FilaEstimacion, Persona, Requerimiento, Squad } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 export default function Requerimientos() {
   const { tienePermiso } = useAuth()
@@ -893,8 +894,8 @@ export default function Requerimientos() {
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="tabla-scroll text-sm">
+      <TablaScroll>
+        <table className="text-sm">
           <thead className="bg-marca-osc text-white">
             <tr>
               <th className="w-8 p-2"></th>
@@ -1261,7 +1262,7 @@ export default function Requerimientos() {
             )
           })()}
         </table>
-      </div>
+      </TablaScroll>
 
       {estModalReqId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" onClick={() => setEstModalReqId(null)}>

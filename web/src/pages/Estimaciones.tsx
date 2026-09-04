@@ -4,6 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Estimacion } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 export default function Estimaciones() {
   const { tienePermiso } = useAuth()
@@ -112,7 +113,8 @@ export default function Estimaciones() {
         <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="tabla-scroll text-sm">
+      <TablaScroll>
+      <table className="text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Título</th>
@@ -226,6 +228,7 @@ export default function Estimaciones() {
           )}
         </tbody>
       </table>
+      </TablaScroll>
     </div>
   )
 }

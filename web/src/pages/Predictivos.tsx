@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { useLista } from '../api/hooks'
+import { TablaScroll } from '../components/ui/primitivos'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
 
 interface FilaPredictiva {
@@ -125,7 +126,7 @@ export default function Predictivos() {
             <p className="text-sm">No hay entregas próximas a vencer en este momento.</p>
           </div>
         ) : (
-          <div className="tabla-scroll">
+          <TablaScroll>
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -166,7 +167,7 @@ export default function Predictivos() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TablaScroll>
         )
       )}
     </div>

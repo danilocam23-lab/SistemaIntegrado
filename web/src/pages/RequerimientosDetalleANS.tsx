@@ -4,6 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 interface FilaRequerimiento {
   id: string
@@ -362,7 +363,7 @@ export default function RequerimientosDetalleANS() {
         </div>
       </div>
 
-      <section className="tabla-scroll">
+      <section className="w-full rounded-xl border border-slate-200 bg-white shadow-sm">
         <button
           type="button"
           onClick={() => setMostrarRequerimientos((v) => !v)}
@@ -390,6 +391,7 @@ export default function RequerimientosDetalleANS() {
             onYearChange={setAnoLimite} onMonthChange={setMesLimite} />
         </div>
         {mostrarRequerimientos && (
+          <TablaScroll plano>
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-700">
             <tr>
@@ -500,10 +502,11 @@ export default function RequerimientosDetalleANS() {
               </tr>
             </tfoot>
           </table>
+          </TablaScroll>
         )}
       </section>
 
-      <section className="tabla-scroll">
+      <section className="w-full rounded-xl border border-slate-200 bg-white shadow-sm">
         <button
           type="button"
           onClick={() => setMostrarEntregas((v) => !v)}
@@ -531,6 +534,7 @@ export default function RequerimientosDetalleANS() {
             onYearChange={setAnoComprometida} onMonthChange={setMesComprometida} />
         </div>
         {mostrarEntregas && (
+          <TablaScroll plano>
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-700">
             <tr>
@@ -641,6 +645,7 @@ export default function RequerimientosDetalleANS() {
               </tr>
             </tfoot>
           </table>
+          </TablaScroll>
         )}
       </section>
     </div>

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -245,8 +246,62 @@ export function Kpi({
   )
 }
 
-export function TablaScroll({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('tabla-scroll', className)}>{children}</div>
+/**
+ * Contenedor de tablas anchas: agrega scroll horizontal abajo (nativo) y, cuando
+ * el contenido excede el ancho visible, también una barra de scroll sincronizada
+ * arriba de la tabla, para no tener que bajar hasta el final para desplazarse.
+ */
+export function TablaScroll({ children, className, plano }: { children: ReactNode; className?: string; plano?: boolean }) {
+  const topRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const innerRef = useRef<HTMLDivElement>(null)
+  const [ancho, setAncho] = useState(0)
+  const [necesitaScroll, setNecesitaScroll] = useState(false)
+
+  useEffect(() => {
+    const inner = innerRef.current
+    const outer = bottomRef.current
+    if (!inner || !outer) return
+    function medir() {
+      const anchoContenido = inner!.scrollWidth
+      setAncho(anchoContenido)
+      setNecesitaScroll(anchoContenido > outer!.clientWidth + 1)
+    }
+    medir()
+    const ro = new ResizeObserver(medir)
+    ro.observe(inner)
+    ro.observe(outer)
+    return () => ro.disconnect()
+  }, [children])
+
+  return (
+    <div>
+      {necesitaScroll && (
+        <div
+          ref={topRef}
+          onScroll={(e) => {
+            if (bottomRef.current) bottomRef.current.scrollLeft = e.currentTarget.scrollLeft
+          }}
+          className={cx(
+            'overflow-x-auto overflow-y-hidden',
+            plano ? '' : 'rounded-t-xl border border-b-0 border-slate-200 bg-white',
+          )}
+          aria-hidden="true"
+        >
+          <div style={{ width: ancho, height: 1 }} />
+        </div>
+      )}
+      <div
+        ref={bottomRef}
+        onScroll={(e) => {
+          if (topRef.current) topRef.current.scrollLeft = e.currentTarget.scrollLeft
+        }}
+        className={cx(plano ? 'w-full overflow-x-auto' : 'tabla-scroll', necesitaScroll && !plano && 'rounded-t-none', className)}
+      >
+        <div ref={innerRef}>{children}</div>
+      </div>
+    </div>
+  )
 }
 
 const TONOS_AVISO = {

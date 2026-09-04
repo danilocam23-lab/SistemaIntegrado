@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Categoria } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 export default function Categorias() {
   const { datos, error, recargar } = useLista<Categoria>('/categorias')
@@ -82,7 +83,8 @@ export default function Categorias() {
         <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="tabla-scroll text-sm">
+      <TablaScroll>
+      <table className="text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Orden</th>
@@ -206,6 +208,7 @@ export default function Categorias() {
           )}
         </tbody>
       </table>
+      </TablaScroll>
     </div>
   )
 }

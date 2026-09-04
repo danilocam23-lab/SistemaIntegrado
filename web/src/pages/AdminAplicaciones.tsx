@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 export default function AdminAplicaciones() {
   const { usuario, tienePermiso } = useAuth()
@@ -85,7 +86,8 @@ export default function AdminAplicaciones() {
         </form>
       )}
 
-      <table className="tabla-scroll text-sm">
+      <TablaScroll>
+      <table className="text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Código</th>
@@ -113,6 +115,7 @@ export default function AdminAplicaciones() {
           ))}
         </tbody>
       </table>
+      </TablaScroll>
       {puedeCrear && (
         <p className="mt-3 text-xs text-slate-400">
           Al crear un squad se provisiona su estructura base (categorías, estados,

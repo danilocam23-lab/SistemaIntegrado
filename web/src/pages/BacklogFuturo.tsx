@@ -4,6 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
+import { TablaScroll } from '../components/ui/primitivos'
 import type { Aplicacion, BacklogFuturo, Requerimiento } from '../types'
 
 const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADO', 'CANCELADO']
@@ -76,6 +77,12 @@ export default function BacklogFuturoPage() {
     return m
   }, [requerimientos])
 
+  const totales = useMemo(() => {
+    const totalHoras = datos.reduce((acc, item) => acc + (item.horas_aproximadas ?? 0), 0)
+    const totalConActa = datos.filter((item) => item.volvio_acta).length
+    return { registros: datos.length, horas: totalHoras, conActa: totalConActa }
+  }, [datos])
+
   function abrirNuevo(): void {
     setForm(FORM_VACIO)
     setAviso('')
@@ -132,10 +139,11 @@ export default function BacklogFuturoPage() {
       acta_id: form.volvioActa ? (form.actaId || null) : null,
     }
     try {
+      const headers = { headers: { 'X-Aplicacion': form.squadId } }
       if (form.id) {
-        await client.put(`/backlog-futuro/${form.id}`, payload)
+        await client.put(`/backlog-futuro/${form.id}`, payload, headers)
       } else {
-        await client.post('/backlog-futuro', payload)
+        await client.post('/backlog-futuro', payload, headers)
       }
       cerrar()
       recargar()
@@ -147,7 +155,7 @@ export default function BacklogFuturoPage() {
   async function eliminar(item: BacklogFuturo): Promise<void> {
     if (!puedeEditar) return
     if (!window.confirm('¿Eliminar este registro del backlog futuro?')) return
-    await client.delete(`/backlog-futuro/${item.id}`)
+    await client.delete(`/backlog-futuro/${item.id}`, { headers: { 'X-Aplicacion': item.squad_id } })
     recargar()
   }
 
@@ -164,7 +172,7 @@ export default function BacklogFuturoPage() {
 
       {error && <div className="aviso aviso-error mb-3">{error}</div>}
 
-      <div className="tabla-scroll">
+      <TablaScroll>
         <table className="min-w-full text-sm">
           <thead className="bg-marca-osc text-white">
             <tr>
@@ -220,8 +228,21 @@ export default function BacklogFuturoPage() {
               <tr><td colSpan={9} className="p-4 text-center text-slate-400">Sin registros de backlog futuro.</td></tr>
             )}
           </tbody>
+          {datos.length > 0 && (
+            <tfoot>
+              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
+                <td className="p-2" colSpan={3}>Totales ({totales.registros} registro{totales.registros !== 1 ? 's' : ''})</td>
+                <td className="p-2 text-right">{totales.horas}</td>
+                <td className="p-2"></td>
+                <td className="p-2"></td>
+                <td className="p-2 text-center">{totales.conActa} con acta</td>
+                <td className="p-2"></td>
+                <td className="p-2"></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
-      </div>
+      </TablaScroll>
 
       <Modal
         titulo={form.id ? 'Editar registro' : 'Nuevo registro de backlog futuro'}

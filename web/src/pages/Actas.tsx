@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Acta } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 export default function Actas() {
   const { datos, error, recargar } = useLista<Acta>('/actas')
@@ -86,7 +87,8 @@ export default function Actas() {
         <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="tabla-scroll text-sm">
+      <TablaScroll>
+      <table className="text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Código</th>
@@ -199,6 +201,7 @@ export default function Actas() {
           )}
         </tbody>
       </table>
+      </TablaScroll>
     </div>
   )
 }

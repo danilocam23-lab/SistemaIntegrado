@@ -5,6 +5,7 @@ import { mensajeError, useLista } from '../api/hooks'
 import { ESTADOS_ENTREGA, ESTADOS_REQUERIMIENTO, ENTREGAS_ACTAS_CONFIG_CLAVES, ENTREGAS_ACTAS_COLUMNAS, ENTREGAS_ACTAS_FILTROS, REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../constantes'
 import type { EntregasActasCampo } from '../constantes'
 import type { Configuracion as Config, Festivo, Tarifa, Categoria } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'estados' | 'entregas_actas' | 'requerimientos'
 
@@ -568,7 +569,8 @@ export default function Configuracion() {
 
           {tAviso && <div className="aviso aviso-error mb-3">{tAviso}</div>}
 
-          <table className="tabla-scroll text-sm">
+          <TablaScroll>
+          <table className="text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Año</th>
@@ -596,6 +598,7 @@ export default function Configuracion() {
               )}
             </tbody>
           </table>
+          </TablaScroll>
 
           {/* Modal edición tarifa */}
           {tEditItem && (
@@ -655,7 +658,8 @@ export default function Configuracion() {
 
           {cAviso && <div className="aviso aviso-error mb-3">{cAviso}</div>}
 
-          <table className="tabla-scroll text-sm">
+          <TablaScroll>
+          <table className="text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Orden</th>
@@ -712,6 +716,7 @@ export default function Configuracion() {
               )}
             </tbody>
           </table>
+          </TablaScroll>
         </div>
       )}
 
@@ -825,7 +830,8 @@ export default function Configuracion() {
           {(aviso || error) && <div className="aviso aviso-error mb-3">{aviso || error}</div>}
           {ok && <div className="aviso aviso-exito mb-3">{ok}</div>}
 
-          <table className="tabla-scroll text-sm">
+          <TablaScroll>
+          <table className="text-sm">
             <thead className="bg-marca-osc text-white">
               <tr>
                 <th className="p-2 text-left">Clave</th>
@@ -860,6 +866,7 @@ export default function Configuracion() {
               )}
             </tbody>
           </table>
+          </TablaScroll>
 
           {/* Modal edición parámetro */}
           {editItem && (

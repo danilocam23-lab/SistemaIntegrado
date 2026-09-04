@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
+import { TablaScroll } from '../components/ui/primitivos'
 import type { Capacidad, Persona } from '../types'
 
 const ROLES_EXCLUIDOS_CAPACIDAD_PERSONA = ['LT_EPM']
@@ -134,7 +135,8 @@ export default function Capacidades() {
         <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <table className="tabla-scroll text-sm">
+      <TablaScroll>
+      <table className="text-sm">
         <thead className="bg-marca-osc text-white">
           <tr>
             <th className="p-2 text-left">Persona</th>
@@ -194,6 +196,7 @@ export default function Capacidades() {
           )}
         </tbody>
       </table>
+      </TablaScroll>
     </div>
   )
 }
