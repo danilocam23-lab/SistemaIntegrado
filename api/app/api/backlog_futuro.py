@@ -12,6 +12,7 @@ router = APIRouter(prefix="/backlog-futuro", tags=["backlog_futuro"])
 
 class BacklogFuturoIn(BaseModel):
     nombre_iniciativa: str
+    tipo_demanda: str | None = None
     squad_id: str
     horas_aproximadas: float = 0
     fecha_tentativa_inicio: str | None = None

@@ -237,6 +237,7 @@ export interface PlanAccion {
 export interface BacklogFuturo {
   id: string
   nombre_iniciativa: string
+  tipo_demanda: string | null
   squad_id: string
   horas_aproximadas: number
   fecha_tentativa_inicio: string | null

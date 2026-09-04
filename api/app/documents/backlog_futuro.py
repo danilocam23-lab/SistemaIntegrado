@@ -6,6 +6,7 @@ from app.documents.base import DocumentoOperativo
 
 class BacklogFuturo(DocumentoOperativo):
     nombre_iniciativa: str
+    tipo_demanda: str | None = None
     squad_id: str
     horas_aproximadas: float = 0
     fecha_tentativa_inicio: str | None = None  # 'YYYY-MM-DD'

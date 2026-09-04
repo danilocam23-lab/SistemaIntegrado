@@ -25,6 +25,7 @@ const ESTADO_BADGE: Record<string, string> = {
 interface FormState {
   id: string | null
   nombreIniciativa: string
+  tipoDemanda: string
   squadId: string
   horasAproximadas: string
   fechaTentativaInicio: string
@@ -36,6 +37,7 @@ interface FormState {
 const FORM_VACIO: FormState = {
   id: null,
   nombreIniciativa: '',
+  tipoDemanda: '',
   squadId: '',
   horasAproximadas: '',
   fechaTentativaInicio: '',
@@ -85,6 +87,7 @@ export default function BacklogFuturoPage() {
     setForm({
       id: item.id,
       nombreIniciativa: item.nombre_iniciativa ?? '',
+      tipoDemanda: item.tipo_demanda ?? '',
       squadId: item.squad_id,
       horasAproximadas: String(item.horas_aproximadas ?? ''),
       fechaTentativaInicio: item.fecha_tentativa_inicio ?? '',
@@ -120,6 +123,7 @@ export default function BacklogFuturoPage() {
     }
     const payload = {
       nombre_iniciativa: form.nombreIniciativa.trim(),
+      tipo_demanda: form.tipoDemanda.trim() || null,
       squad_id: form.squadId,
       horas_aproximadas: form.horasAproximadas ? Number(form.horasAproximadas) : 0,
       fecha_tentativa_inicio: form.fechaTentativaInicio || null,
@@ -165,6 +169,7 @@ export default function BacklogFuturoPage() {
           <thead className="bg-marca-osc text-white">
             <tr>
               <th className="p-2 text-left">Nombre de la iniciativa</th>
+              <th className="p-2 text-left">Tipo de demanda</th>
               <th className="p-2 text-left">Squad</th>
               <th className="p-2 text-right">Horas aproximadas</th>
               <th className="p-2 text-center">F. tentativa de inicio</th>
@@ -178,6 +183,7 @@ export default function BacklogFuturoPage() {
             {datos.map((item) => (
               <tr key={item.id} className="border-t">
                 <td className="p-2">{item.nombre_iniciativa}</td>
+                <td className="p-2">{item.tipo_demanda || '—'}</td>
                 <td className="p-2">{squadPorCodigo.get(item.squad_id) ?? item.squad_id}</td>
                 <td className="p-2 text-right">{item.horas_aproximadas ?? 0}</td>
                 <td className="p-2 text-center">{item.fecha_tentativa_inicio || '—'}</td>
@@ -211,7 +217,7 @@ export default function BacklogFuturoPage() {
               </tr>
             ))}
             {datos.length === 0 && (
-              <tr><td colSpan={8} className="p-4 text-center text-slate-400">Sin registros de backlog futuro.</td></tr>
+              <tr><td colSpan={9} className="p-4 text-center text-slate-400">Sin registros de backlog futuro.</td></tr>
             )}
           </tbody>
         </table>
@@ -231,6 +237,15 @@ export default function BacklogFuturoPage() {
               value={form.nombreIniciativa}
               onChange={(e) => setForm({ ...form, nombreIniciativa: e.target.value })}
               required
+              className="campo w-full"
+            />
+          </label>
+
+          <label className="block text-sm">
+            <span className="mb-1 block text-slate-600">Tipo de demanda</span>
+            <input
+              value={form.tipoDemanda}
+              onChange={(e) => setForm({ ...form, tipoDemanda: e.target.value })}
               className="campo w-full"
             />
           </label>
