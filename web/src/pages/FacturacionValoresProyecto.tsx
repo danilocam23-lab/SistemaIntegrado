@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Requerimiento, Tarifa } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 interface RegistroSoporte {
   Work_Order_ID: string
@@ -213,6 +214,7 @@ export default function FacturacionValoresProyecto() {
         </div>
       </div>
       <div className="tarjeta overflow-hidden">
+        <TablaScroll plano>
         <table className="w-full text-sm">
           <thead className="bg-marca-osc text-left text-white">
             <tr>
@@ -264,6 +266,7 @@ export default function FacturacionValoresProyecto() {
             </tfoot>
           )}
         </table>
+        </TablaScroll>
       </div>
       <p className="text-xs text-slate-500">
         Nota: los registros sin año se conservan en la fila <strong>Sin fecha</strong> y usan la tarifa del año actual.
@@ -271,6 +274,7 @@ export default function FacturacionValoresProyecto() {
       <div>
         <h2 className="titulo-seccion mb-2">Valores de entregas</h2>
         <div className="tarjeta overflow-hidden">
+          <TablaScroll plano>
           <table className="w-full text-sm">
             <thead className="bg-marca-osc text-left text-white">
               <tr>
@@ -318,6 +322,7 @@ export default function FacturacionValoresProyecto() {
               </tfoot>
             )}
           </table>
+          </TablaScroll>
         </div>
         <p className="mt-2 text-xs text-slate-500">
           Nota: el año de las entregas se toma de <strong>F. Comprometida</strong>; las entregas sin fecha se conservan en <strong>Sin fecha</strong>.
@@ -326,6 +331,7 @@ export default function FacturacionValoresProyecto() {
       <div>
         <h2 className="titulo-seccion mb-2">Entregas por estado</h2>
         <div className="tarjeta overflow-hidden">
+          <TablaScroll plano>
           <table className="w-full text-sm">
             <thead className="bg-marca-osc text-left text-white">
               <tr>
@@ -375,6 +381,7 @@ export default function FacturacionValoresProyecto() {
               </tfoot>
             )}
           </table>
+          </TablaScroll>
         </div>
       </div>
     </div>

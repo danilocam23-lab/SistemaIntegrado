@@ -15,7 +15,7 @@ import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import client from '../api/client'
 import type { Aplicacion, Capacidad, Configuracion, Festivo, Persona, Requerimiento, Squad } from '../types'
-import { Boton, EncabezadoPagina, FiltroDesplegable } from '../components/ui'
+import { Boton, EncabezadoPagina, FiltroDesplegable, TablaScroll } from '../components/ui'
 
 // Paleta de colores premium
 const PALETA = {
@@ -840,7 +840,7 @@ export default function DashboardSquad() {
             {filas.length === 0 ? (
               <EmptyState />
             ) : (
-              <div className="overflow-x-auto">
+              <TablaScroll>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/50">
@@ -876,7 +876,7 @@ export default function DashboardSquad() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TablaScroll>
             )}
           </ChartCardPremium>
         </div>

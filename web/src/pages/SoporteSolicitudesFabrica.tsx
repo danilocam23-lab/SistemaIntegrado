@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
+import { TablaScroll } from '../components/ui/primitivos'
 import { useAuth } from '../context/AuthContext'
 
 interface RegistroSoporte {
@@ -467,7 +468,7 @@ export default function SoporteSolicitudesFabrica() {
         </div>
       )}
 
-      <div className="w-full max-w-full max-h-[65vh] overflow-x-auto overflow-y-auto rounded-xl border bg-white">
+      <TablaScroll className="w-full max-w-full max-h-[65vh] overflow-y-auto">
         <table className="min-w-max text-sm">
           <thead className="sticky top-0 z-10 bg-marca-osc text-white">
             <tr>
@@ -507,7 +508,7 @@ export default function SoporteSolicitudesFabrica() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TablaScroll>
 
       <Modal
         titulo="Validación previa — Solicitudes Fábrica"

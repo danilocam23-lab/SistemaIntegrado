@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { FiltroDesplegable } from '../components/ui'
+import { FiltroDesplegable, TablaScroll } from '../components/ui'
 
 interface RegistroSoporte {
   id: string
@@ -465,7 +465,7 @@ function DetalleTablaANS({
         </span>
       </button>
       {abierta && (
-        <div className="overflow-x-auto">
+        <TablaScroll plano>
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-700">
               <tr>
@@ -548,7 +548,7 @@ function DetalleTablaANS({
               </button>
             </div>
           )}
-        </div>
+        </TablaScroll>
       )}
     </div>
   )

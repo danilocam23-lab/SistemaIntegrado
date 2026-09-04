@@ -12,6 +12,7 @@ import {
   leerCamposActivos,
 } from '../constantes'
 import type { Aplicacion, Categoria, Configuracion as ConfigItem, Persona, Requerimiento, Squad } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 const MESES_NOMBRES: Record<string, string> = {
   ene: 'Enero', feb: 'Febrero', mar: 'Marzo', abr: 'Abril', may: 'Mayo', jun: 'Junio',
@@ -736,7 +737,7 @@ export default function EntregasActas() {
 
       {error && <div className="aviso aviso-error">{error}</div>}
 
-      <div className="overflow-x-auto rounded-xl border bg-white">
+      <TablaScroll>
         <table className="w-full text-sm">
           <thead className="bg-marca-osc text-white">
             <tr>
@@ -794,7 +795,7 @@ export default function EntregasActas() {
             )
           })()}
         </table>
-      </div>
+      </TablaScroll>
     </div>
   )
 }

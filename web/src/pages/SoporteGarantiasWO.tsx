@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import client from '../api/client'
+import { TablaScroll } from '../components/ui/primitivos'
 
 function getId(item: any): string {
   if (!item._id) return ''
@@ -157,7 +158,7 @@ export default function SoporteGarantiasWO() {
         </div>
 
         {(resultados ?? []).length > 0 && (
-          <div className="mt-3 max-h-48 overflow-auto rounded border">
+          <TablaScroll className="max-h-48 overflow-y-auto">
             <table className="min-w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
@@ -195,7 +196,7 @@ export default function SoporteGarantiasWO() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TablaScroll>
         )}
       </div>
 
@@ -207,7 +208,7 @@ export default function SoporteGarantiasWO() {
         {(garantias ?? []).length === 0 ? (
           <p className="py-8 text-center text-sm text-slate-400">No hay garantías registradas</p>
         ) : (
-          <div className="overflow-auto rounded border">
+          <TablaScroll>
             <table className="min-w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
@@ -296,7 +297,7 @@ export default function SoporteGarantiasWO() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TablaScroll>
         )}
       </div>
 

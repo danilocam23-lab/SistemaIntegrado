@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Aplicacion, EndpointAdmin } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 const HEADER_CONSOLIDADO = { headers: { 'X-Aplicacion': '__todas__' } }
 
@@ -753,7 +754,7 @@ export default function AdminEndpoints() {
           </div>
         )}
 
-        <div className="overflow-auto rounded-lg border">
+        <TablaScroll>
           <table className="min-w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
@@ -787,7 +788,7 @@ export default function AdminEndpoints() {
               )}
             </tbody>
           </table>
-        </div>
+        </TablaScroll>
       </section>
 
       <section className="tarjeta tarjeta-pad">
@@ -811,7 +812,7 @@ export default function AdminEndpoints() {
           </div>
         </div>
 
-        <div className="overflow-auto rounded-lg border">
+        <TablaScroll>
           <table className="min-w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
@@ -844,7 +845,7 @@ export default function AdminEndpoints() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TablaScroll>
       </section>
     </div>
   )

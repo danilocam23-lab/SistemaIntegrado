@@ -16,7 +16,7 @@ import { CONSOLIDADO } from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import type { Aplicacion, Requerimiento } from '../types'
-import { EncabezadoPagina } from '../components/ui'
+import { EncabezadoPagina, TablaScroll } from '../components/ui'
 
 // Paleta de colores premium
 const PALETA = {
@@ -514,10 +514,11 @@ export default function DashboardEstados() {
               </button>
             </div>
 
-            <div className="max-h-[70vh] overflow-auto p-6">
+            <div className="p-6">
               {detalleGarantias.filas.length === 0 ? (
                 <EmptyState />
               ) : (
+                <TablaScroll className="max-h-[70vh] overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50">
@@ -546,6 +547,7 @@ export default function DashboardEstados() {
                     ))}
                   </tbody>
                 </table>
+                </TablaScroll>
               )}
             </div>
           </div>

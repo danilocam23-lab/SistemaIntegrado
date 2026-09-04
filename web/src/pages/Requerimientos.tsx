@@ -1396,7 +1396,7 @@ export default function Requerimientos() {
                         </svg>
                       </button>
                       {expandedSections.type && (
-                        <div className="overflow-x-auto border-t border-slate-200">
+                        <TablaScroll plano className="border-t border-slate-200">
                           <table className="min-w-full text-sm">
                             <thead className="bg-slate-50 text-slate-600">
                               <tr>
@@ -1423,7 +1423,7 @@ export default function Requerimientos() {
                               ))}
                             </tbody>
                           </table>
-                        </div>
+                        </TablaScroll>
                       )}
                     </section>
 
@@ -1438,7 +1438,7 @@ export default function Requerimientos() {
                         </svg>
                       </button>
                       {expandedSections.sprint && (
-                        <div className="overflow-x-auto border-t border-slate-200">
+                        <TablaScroll plano className="border-t border-slate-200">
                           <table className="min-w-full text-sm">
                             <thead className="bg-slate-50 text-slate-600">
                               <tr>
@@ -1465,7 +1465,7 @@ export default function Requerimientos() {
                               ))}
                             </tbody>
                           </table>
-                        </div>
+                        </TablaScroll>
                       )}
                     </section>
 
@@ -1480,7 +1480,7 @@ export default function Requerimientos() {
                         </svg>
                       </button>
                       {expandedSections.complexity && (
-                        <div className="overflow-x-auto border-t border-slate-200">
+                        <TablaScroll plano className="border-t border-slate-200">
                           <table className="min-w-full text-sm">
                             <thead className="bg-slate-50 text-slate-600">
                               <tr>
@@ -1503,7 +1503,7 @@ export default function Requerimientos() {
                               ))}
                             </tbody>
                           </table>
-                        </div>
+                        </TablaScroll>
                       )}
                     </section>
                   </div>
@@ -1515,7 +1515,7 @@ export default function Requerimientos() {
                       </h3>
                       <p className="text-sm text-slate-600">Haz clic en una fila para expandir y ver las tareas individuales</p>
                     </div>
-                    <div className="overflow-x-auto">
+                    <TablaScroll plano>
                       <table className="min-w-[1100px] text-sm">
                         <thead className="bg-slate-50 text-slate-600">
                           <tr>
@@ -1634,7 +1634,7 @@ export default function Requerimientos() {
                           })}
                         </tbody>
                       </table>
-                    </div>
+                    </TablaScroll>
                   </section>
                 </div>
               )}

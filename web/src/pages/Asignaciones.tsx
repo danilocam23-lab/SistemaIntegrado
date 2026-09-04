@@ -5,6 +5,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
+import { TablaScroll } from '../components/ui/primitivos'
 import type {
   Asignacion,
   Capacidad,
@@ -926,7 +927,7 @@ export default function Asignaciones() {
               </div>
 
               {expandido && (
-                <div className="overflow-x-auto">
+                <TablaScroll plano>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50 text-slate-700">
@@ -1012,7 +1013,7 @@ export default function Asignaciones() {
                       })}
                     </tbody>
                   </table>
-                </div>
+                </TablaScroll>
               )}
             </section>
           )
@@ -1054,7 +1055,7 @@ export default function Asignaciones() {
               </div>
               {expandida && (
                 <div className="space-y-0">
-                  <div className="overflow-x-auto">
+                  <TablaScroll plano>
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-50 text-slate-600">
                         <tr>
@@ -1079,11 +1080,11 @@ export default function Asignaciones() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </TablaScroll>
                   {(wosPorPersonaMap.get(gp.persona.id)?.length ?? 0) > 0 && (
                     <div className="border-t bg-emerald-50/50 px-3 py-2">
                       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Solicitudes Soporte WO ({wosPorPersonaMap.get(gp.persona.id)!.length})</p>
-                      <div className="overflow-x-auto">
+                      <TablaScroll plano>
                         <table className="w-full text-left text-xs">
                           <thead className="text-emerald-700">
                             <tr>
@@ -1106,7 +1107,7 @@ export default function Asignaciones() {
                             ))}
                           </tbody>
                         </table>
-                      </div>
+                      </TablaScroll>
                     </div>
                   )}
                 </div>

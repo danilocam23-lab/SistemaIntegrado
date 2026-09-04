@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
+import { TablaScroll } from '../components/ui/primitivos'
 import type { Persona } from '../types'
 
 interface Fila {
@@ -372,7 +373,7 @@ export default function ControlHorasFacturable() {
         </button>
       </div>
 
-      <div className="w-full max-h-[70vh] overflow-auto rounded-xl border bg-white">
+      <TablaScroll className="max-h-[70vh] overflow-y-auto">
         <table className="min-w-full text-sm">
           <thead className="sticky top-0 z-10 bg-marca-osc text-white">
             <tr>
@@ -649,7 +650,7 @@ export default function ControlHorasFacturable() {
             </tr>
           </tfoot>
         </table>
-      </div>
+      </TablaScroll>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLista } from '../api/hooks'
+import { TablaScroll } from '../components/ui/primitivos'
 import type { Asignacion, Categoria, Persona, Requerimiento } from '../types'
 
 /* ─── helpers de fecha ─── */
@@ -507,7 +508,7 @@ export default function Roadmap() {
       </div>
 
       {/* Timeline */}
-      <div className="overflow-x-auto border rounded-b-xl border-zinc-200 bg-white">
+      <TablaScroll plano className="border rounded-b-xl border-zinc-200 bg-white">
         <div className="min-w-[1200px]">
           {/* Encabezado de meses */}
           <div className="flex border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-700 sticky top-0 z-10">
@@ -652,7 +653,7 @@ export default function Roadmap() {
           <div className="pointer-events-none absolute top-0 bottom-0 z-20" style={{ left: `calc(220px + ${posicionPct(new Date())}% * (100% - 340px) / 100%)` }}>
           </div>
         </div>
-      </div>
+      </TablaScroll>
     </div>
   )
 }

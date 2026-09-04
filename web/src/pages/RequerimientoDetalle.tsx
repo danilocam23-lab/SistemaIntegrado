@@ -7,6 +7,7 @@ import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import { TIPOS_COSTO, ESTADOS_ENTREGA } from '../constantes'
 import type { Aplicacion, EventoBitacora, Liquidacion, Persona, Requerimiento, Squad } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 const MESES_ES = [
   'Enero',
@@ -663,6 +664,7 @@ export default function RequerimientoDetalle() {
             </>
           )}
         </p>
+        <TablaScroll>
         <table className="mb-3 w-full text-sm">
           <thead className="text-left text-slate-500">
             <tr>
@@ -778,6 +780,7 @@ export default function RequerimientoDetalle() {
             )}
           </tbody>
         </table>
+        </TablaScroll>
         {puedeEditarReq && (
         <form onSubmit={agregarEntrega} className={`flex flex-wrap items-end gap-3 border-t pt-3 ${eEditando ? 'rounded-lg bg-amber-50 p-3' : ''}`}>
           {eEditando && (

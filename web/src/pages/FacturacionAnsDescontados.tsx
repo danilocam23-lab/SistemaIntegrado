@@ -3,6 +3,7 @@ import client from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Configuracion } from '../types'
+import { TablaScroll } from '../components/ui/primitivos'
 
 interface FilaGeneral {
   id: string
@@ -192,7 +193,7 @@ export default function FacturacionAnsDescontados() {
       {mensaje === 'ok' && <div className="aviso aviso-exito">Cambios guardados.</div>}
       {mensaje === 'error' && <div className="aviso aviso-error">Error al guardar.</div>}
 
-      <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
+      <TablaScroll>
         <table className="w-full min-w-[800px] text-sm">
           <thead className="bg-marca-osc text-white">
             <tr>
@@ -306,7 +307,7 @@ export default function FacturacionAnsDescontados() {
             </tfoot>
           )}
         </table>
-      </div>
+      </TablaScroll>
     </div>
   )
 }
