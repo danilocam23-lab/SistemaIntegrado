@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { TablaScroll } from '../components/ui/primitivos'
-import type { Persona } from '../types'
+import type { Festivo, Persona } from '../types'
 
 interface Fila {
   key: string
@@ -36,8 +36,27 @@ interface ControlHorasGuardado {
 
 const _MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
+/** Calcula las horas hábiles del mes: lunes a jueves 8.5h, viernes 8h, excluyendo festivos. */
+function calcularHorasMeta(anio: number, mes: number, festivos: Festivo[]): number {
+  const festivosSet = new Set(
+    festivos.map((f) => (f.fecha ?? '').slice(0, 10)),
+  )
+  const diasEnMes = new Date(anio, mes, 0).getDate()
+  let horas = 0
+  for (let dia = 1; dia <= diasEnMes; dia++) {
+    const fecha = new Date(anio, mes - 1, dia)
+    const diaSemana = fecha.getDay() // 0=domingo, 1=lunes ... 6=sábado
+    if (diaSemana === 0 || diaSemana === 6) continue // fin de semana
+    const iso = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+    if (festivosSet.has(iso)) continue // festivo
+    horas += diaSemana === 5 ? 8 : 8.5 // viernes=8, lunes-jueves=8.5
+  }
+  return horas
+}
+
 export default function ControlHorasFacturable() {
   const { datos: personas, cargando } = useLista<Persona>('/personas')
+  const { datos: festivos } = useLista<Festivo>('/festivos')
   const hoy = new Date()
   const [anio, setAnio] = useState(hoy.getFullYear())
   const [mes, setMes] = useState(hoy.getMonth() + 1)
@@ -192,6 +211,9 @@ export default function ControlHorasFacturable() {
       .filter((f) => !eliminadas.has(f.key))
       .filter((f) => !q || f.nombre.toLowerCase().includes(q) || f.squad.toLowerCase().includes(q))
   }, [filasBase, eliminadas, busqueda])
+
+  // Meta de horas facturables del período: días hábiles del mes (lun-jue 8.5h, vie 8h), sin festivos
+  const horasMeta = useMemo(() => calcularHorasMeta(anio, mes, festivos), [anio, mes, festivos])
 
   function ltSeleccionado(fila: Fila): string {
     return seleccionLt[fila.key] ?? fila.opcionesLt[0] ?? '—'
@@ -386,7 +408,7 @@ export default function ControlHorasFacturable() {
               <th className="p-2 text-right">Horas Soporte Proy.</th>
               <th className="p-2 text-right">Horas Desarrollo Proy.</th>
               <th className="p-2 text-right">Total Horas Fact. Proy.</th>
-              <th className="p-2 text-right">Validación Meta 200</th>
+              <th className="p-2 text-right">Validación Meta {horasMeta}</th>
               <th className="p-2 text-right">Horas Soporte Cerrado</th>
               <th className="p-2 text-right">Horas Desarrollo Cerrado</th>
               <th className="p-2 text-right">Total Horas Fact. Cerrado</th>
@@ -463,7 +485,7 @@ export default function ControlHorasFacturable() {
                     </span>
                   </td>
                   <td className="p-2 text-slate-600">{f.tipoContratacion}</td>
-                  <td className="p-2 text-right font-mono text-slate-700">200</td>
+                  <td className="p-2 text-right font-mono text-slate-700">{horasMeta}</td>
                   <td className="p-2">
                     <input
                       type="number"
@@ -487,7 +509,7 @@ export default function ControlHorasFacturable() {
                   </td>
                   {(() => {
                     const total = (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0);
-                    const diff = total - 200;
+                    const diff = total - horasMeta;
                     return (
                       <td className={`p-2 text-right font-mono font-semibold ${
                         diff === 0 ? 'text-blue-600' : diff > 0 ? 'text-green-600' : 'text-red-600'
@@ -519,7 +541,7 @@ export default function ControlHorasFacturable() {
                   </td>
                   {(() => {
                     const totalCerrado = (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0);
-                    const pct = Math.round((totalCerrado / 200) * 100);
+                    const pct = Math.round((totalCerrado / horasMeta) * 100);
                     return (
                       <td className={`p-2 text-right font-mono font-semibold ${
                         pct >= 100 ? 'text-green-600' : pct >= 75 ? 'text-yellow-600' : 'text-red-600'
@@ -624,7 +646,7 @@ export default function ControlHorasFacturable() {
           <tfoot>
             <tr className="bg-slate-100 font-bold text-sm sticky bottom-0">
               <td className="p-2" colSpan={5}>Totales</td>
-              <td className="p-2 text-right font-mono">{filas.length * 200}</td>
+              <td className="p-2 text-right font-mono">{filas.length * horasMeta}</td>
               <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0), 0)}</td>
               <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasDesarrollo[f.key] ?? 0), 0)}</td>
               <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0), 0)}</td>
