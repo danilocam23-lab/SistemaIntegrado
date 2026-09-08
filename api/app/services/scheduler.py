@@ -13,6 +13,7 @@ from app.documents.aplicacion import Aplicacion
 from app.documents.asignacion import Asignacion
 from app.documents.azdo import AzdoSyncLog
 from app.services.azdo_sync import leer_config_azdo, sincronizar_iteracion
+from app.services.soporte_solicitudes_fabrica_service import SoporteSolicitudesFabricaService
 
 _log = logging.getLogger("scheduler")
 _scheduler: AsyncIOScheduler | None = None
@@ -63,6 +64,23 @@ async def _tarea_sync_azdo() -> None:
                         _log.warning("[scheduler] sync AzDO falló (%s): %s", app.codigo, exc)
 
 
+async def _tarea_carga_excel_solicitudes_fabrica() -> None:
+    """Carga automática (3 veces al día) del Excel de Solicitudes Fábrica desde
+    la ruta local configurada en Configuración > Carga de Excel. No pide
+    confirmación: carga los registros sin error y omite (dejando registrado en
+    el log) los que tengan error, para que se revisen manualmente en la vista."""
+    try:
+        resultado = await SoporteSolicitudesFabricaService.sincronizar_automatico()
+        if resultado is not None:
+            _log.info(
+                "[scheduler] Carga automática Solicitudes Fábrica: %s cargados, %s omitidos por error",
+                resultado.get("registros_creados"),
+                resultado.get("registros_omitidos"),
+            )
+    except Exception as exc:  # noqa: BLE001
+        _log.warning("[scheduler] Carga automática Solicitudes Fábrica falló: %s", exc)
+
+
 def iniciar_scheduler() -> None:
     """Arranca el scheduler. Se llama desde el lifespan de la aplicación."""
     global _scheduler
@@ -70,8 +88,15 @@ def iniciar_scheduler() -> None:
         return
     _scheduler = AsyncIOScheduler()
     _scheduler.add_job(_tarea_sync_azdo, "interval", minutes=30, id="azdo_sync")
+    _scheduler.add_job(
+        _tarea_carga_excel_solicitudes_fabrica,
+        "cron",
+        hour="6,12,18",
+        id="carga_excel_solicitudes_fabrica",
+    )
     _scheduler.start()
     _log.info("Scheduler de Azure DevOps iniciado (revisión cada 30 min)")
+    _log.info("Scheduler de carga automática de Solicitudes Fábrica iniciado (6:00, 12:00 y 18:00)")
 
 
 def detener_scheduler() -> None:

@@ -59,5 +59,18 @@ if _DIST.exists():
 
     @app.get("/{ruta:path}", include_in_schema=False)
     async def spa(ruta: str) -> FileResponse:
-        """Cualquier ruta no-API devuelve index.html (enrutado del lado del cliente)."""
-        return FileResponse(str(_DIST / "index.html"))
+        """Cualquier ruta no-API devuelve index.html (enrutado del lado del cliente).
+
+        Se fuerza no-cache porque index.html referencia los nombres (con hash)
+        de los bundles JS/CSS actuales: si el navegador lo cachea, el usuario
+        puede quedar atrapado indefinidamente en una versión vieja del sitio
+        (página en blanco o funciones/botones faltantes) tras cada despliegue.
+        """
+        return FileResponse(
+            str(_DIST / "index.html"),
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
+            },
+        )

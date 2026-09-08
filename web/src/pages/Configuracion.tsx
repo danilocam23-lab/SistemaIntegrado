@@ -7,7 +7,9 @@ import type { EntregasActasCampo } from '../constantes'
 import type { Configuracion as Config, Festivo, Tarifa, Categoria } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
 
-type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'estados' | 'entregas_actas' | 'requerimientos'
+type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'estados' | 'entregas_actas' | 'requerimientos' | 'carga_excel'
+
+const CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA = 'soporte.solicitudes_fabrica.ruta_carga_local'
 
 /** Agrupa una lista de campos configurables por su `grupo`, en un orden fijo legible. */
 function agruparCampos(campos: EntregasActasCampo[]): { grupo: string; items: EntregasActasCampo[] }[] {
@@ -33,6 +35,54 @@ export default function Configuracion() {
   const [grupo, setGrupo] = useState('general')
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
+
+  // ── Carga de Excel (Solicitudes Fábrica automática) ──
+  const [rutaCargaExcel, setRutaCargaExcel] = useState('')
+  const [rutaCargaExcelAviso, setRutaCargaExcelAviso] = useState('')
+  const [rutaCargaExcelOk, setRutaCargaExcelOk] = useState('')
+  const [probandoCargaExcel, setProbandoCargaExcel] = useState(false)
+  const [resultadoPruebaCargaExcel, setResultadoPruebaCargaExcel] = useState('')
+
+  useEffect(() => {
+    const cfg = datos.find((d) => d.clave === CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA)
+    setRutaCargaExcel(cfg?.valor ?? '')
+  }, [datos])
+
+  async function guardarRutaCargaExcel(e: FormEvent): Promise<void> {
+    e.preventDefault()
+    setRutaCargaExcelAviso('')
+    setRutaCargaExcelOk('')
+    try {
+      await client.put(`/configuracion/${encodeURIComponent(CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA)}`, {
+        valor: rutaCargaExcel.trim(),
+        grupo: 'soporte_solicitudes_fabrica',
+      })
+      setRutaCargaExcelOk('Ruta guardada.')
+      recargar()
+    } catch (err) {
+      setRutaCargaExcelAviso(mensajeError(err))
+    }
+  }
+
+  async function probarCargaAutomatica(): Promise<void> {
+    setProbandoCargaExcel(true)
+    setResultadoPruebaCargaExcel('')
+    try {
+      const { data } = await client.post('/soporte/solicitudes-fabrica/ejecutar-carga-automatica')
+      if (!data.ejecutado) {
+        setResultadoPruebaCargaExcel(`⚠️ ${data.mensaje}`)
+      } else {
+        setResultadoPruebaCargaExcel(
+          `✅ Archivo "${data.archivo}" procesado: ${data.total_encontrados} filas encontradas, ` +
+            `${data.cargados} cargadas, ${data.con_error} con error.`
+        )
+      }
+    } catch (err) {
+      setResultadoPruebaCargaExcel(`❌ ${mensajeError(err)}`)
+    } finally {
+      setProbandoCargaExcel(false)
+    }
+  }
 
   // ── Estado Tarifas ──
   const RAMIFICACIONES = ['Fábrica', 'Soporte']
@@ -529,6 +579,7 @@ export default function Configuracion() {
           { id: 'estados',    label: '🔖 Estados' },
           { id: 'entregas_actas', label: '📋 Entregas de Actas' },
           { id: 'requerimientos', label: '🧾 Requerimientos' },
+          { id: 'carga_excel', label: '📂 Carga de Excel' },
         ] as { id: Tab; label: string }[]).map(({ id, label }) => (
           <button
             key={id}
@@ -1138,6 +1189,54 @@ export default function Configuracion() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ TAB: Carga de Excel ═══ */}
+      {tab === 'carga_excel' && (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-500">
+            Ruta local (en el servidor) donde el proceso automático busca el archivo
+            <code className="mx-1 rounded bg-slate-100 px-1">Solicitudes Fabrica soporte.xlsx</code>
+            y lo sincroniza 3 veces al día (6:00, 12:00 y 18:00), sin pedir confirmación. Solo se cargan
+            los registros sin error; si hay registros con error, quedan disponibles para revisión y carga
+            manual desde la vista "Soporte — Solicitudes Fábrica".
+          </p>
+
+          <form onSubmit={guardarRutaCargaExcel} className="tarjeta tarjeta-pad flex flex-wrap items-end gap-3">
+            <label className="min-w-[320px] flex-1 text-sm">
+              <span className="mb-1 block text-slate-600">Ruta de la carpeta</span>
+              <input
+                value={rutaCargaExcel}
+                onChange={(e) => setRutaCargaExcel(e.target.value)}
+                placeholder="C:\Users\usuario\HITSS\Storage 01 Colombia - Sabana de seguimiento"
+                className="campo w-full"
+              />
+            </label>
+            <button className="btn btn-primario">Guardar</button>
+          </form>
+
+          {rutaCargaExcelAviso && <div className="aviso aviso-error">{rutaCargaExcelAviso}</div>}
+          {rutaCargaExcelOk && <div className="aviso aviso-exito">{rutaCargaExcelOk}</div>}
+
+          <div className="tarjeta tarjeta-pad space-y-2">
+            <p className="text-sm text-slate-600">
+              Probar ahora: ejecuta manualmente el mismo proceso automático (buscar el archivo en la ruta
+              guardada y sincronizarlo) sin esperar al próximo horario. Útil para confirmar que la ruta y
+              el archivo están correctamente configurados.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secundario"
+              onClick={probarCargaAutomatica}
+              disabled={probandoCargaExcel}
+            >
+              {probandoCargaExcel ? 'Ejecutando…' : '▶️ Probar ahora'}
+            </button>
+            {resultadoPruebaCargaExcel && (
+              <div className="aviso aviso-info">{resultadoPruebaCargaExcel}</div>
+            )}
           </div>
         </div>
       )}

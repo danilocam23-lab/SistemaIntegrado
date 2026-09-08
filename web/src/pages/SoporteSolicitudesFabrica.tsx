@@ -32,6 +32,21 @@ interface ErrorValidacion {
   motivo: string
 }
 
+interface UltimaSincronizacion {
+  sync_id: string
+  estado: string
+  archivo: string | null
+  total_encontrados: number
+  validos: number
+  con_error: number
+  cargados: number
+  omitidos: number
+  iniciado_en: string
+  finalizado_en: string | null
+  error_general: string | null
+  errores: ErrorValidacion[]
+}
+
 interface PreviewResponse {
   fuente_url: string
   archivo: string
@@ -185,6 +200,9 @@ export default function SoporteSolicitudesFabrica() {
   const [pagina, setPagina] = useState(1)
   const [tamanio] = useState(100)
   const filtroTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [ultimaSync, setUltimaSync] = useState<UltimaSincronizacion | null>(null)
+  const [mostrarErroresUltimaSync, setMostrarErroresUltimaSync] = useState(false)
+  const ultimaSyncIdRef = useRef<string | null>(null)
 
   async function cargar(pag?: number, filtro?: string): Promise<void> {
     setCargando(true)
@@ -203,9 +221,51 @@ export default function SoporteSolicitudesFabrica() {
     }
   }
 
+  const verificarUltimaSync = useCallback(async (forzarRecarga: boolean): Promise<void> => {
+    try {
+      const { data: resp } = await client.get<UltimaSincronizacion | null>(
+        '/soporte/solicitudes-fabrica/ultima-sincronizacion',
+      )
+      setUltimaSync(resp)
+      // Si cambió el id de la última sincronización (automática o manual desde
+      // otra pantalla), refrescamos también el listado y "Última actualización".
+      if (resp?.sync_id && resp.sync_id !== ultimaSyncIdRef.current) {
+        const esPrimera = ultimaSyncIdRef.current === null
+        ultimaSyncIdRef.current = resp.sync_id
+        if (!esPrimera || forzarRecarga) {
+          await cargar()
+        }
+      }
+    } catch {
+      // No es crítico si falla; simplemente no se muestra el aviso.
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     void cargar(1)
-  }, [])
+    void verificarUltimaSync(false)
+
+    // Refresca solo el estado de sincronización cada 60s (liviano) para
+    // detectar si corrió el proceso automático (3x/día) o "Probar ahora"
+    // desde Configuración mientras esta página sigue abierta.
+    const intervalo = window.setInterval(() => {
+      void verificarUltimaSync(false)
+    }, 60_000)
+
+    // Al volver a esta pestaña/ventana, refresca de inmediato.
+    function onVisible(): void {
+      if (document.visibilityState === 'visible') {
+        void verificarUltimaSync(false)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      window.clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [verificarUltimaSync])
+
 
   function onFiltroChange(valor: string): void {
     setFiltroWorkOrderID(valor)
@@ -359,6 +419,45 @@ export default function SoporteSolicitudesFabrica() {
           </>
         )}
       </div>
+
+      {puedeActualizar && ultimaSync && ultimaSync.con_error > 0 && (
+        <div className="aviso aviso-alerta space-y-2">
+          <div>
+            La última carga ({ultimaSync.finalizado_en ? new Date(ultimaSync.finalizado_en).toLocaleString() : '—'})
+            {ultimaSync.archivo ? ` del archivo "${ultimaSync.archivo}"` : ''} encontró{' '}
+            <b>{ultimaSync.con_error}</b> registro(s) con error que no se cargaron automáticamente.
+            Revíselos y cargue el archivo manualmente si hace falta corregirlos.
+          </div>
+          <button
+            onClick={() => setMostrarErroresUltimaSync((v) => !v)}
+            className="enlace-accion"
+          >
+            {mostrarErroresUltimaSync ? 'Ocultar detalle' : 'Ver detalle de errores'}
+          </button>
+          {mostrarErroresUltimaSync && (
+            <div className="max-h-56 overflow-auto rounded border bg-white">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-100 text-slate-700">
+                  <tr>
+                    <th className="p-2 text-left">Fila</th>
+                    <th className="p-2 text-left">Líder</th>
+                    <th className="p-2 text-left">Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ultimaSync.errores.map((e, i) => (
+                    <tr key={`${e.fila}-${i}`} className="border-t">
+                      <td className="p-2">{e.fila}</td>
+                      <td className="p-2">{e.lider ?? '—'}</td>
+                      <td className="p-2 text-red-700">{e.motivo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {aviso && <div className="aviso aviso-error">{aviso}</div>}
 

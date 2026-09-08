@@ -125,6 +125,41 @@ async def sincronizar(
         raise HTTPException(status_code=500, detail=f"No se pudo sincronizar: {exc}") from exc
 
 
+@router.get("/ultima-sincronizacion")
+async def ultima_sincronizacion(
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
+) -> dict | None:
+    """Resultado de la última sincronización (manual o automática 3x/día),
+    para avisar en la vista si quedaron registros con error por revisar."""
+    return await SoporteSolicitudesFabricaService.ultima_sincronizacion(ctx)
+
+
+@router.post("/ejecutar-carga-automatica")
+async def ejecutar_carga_automatica(
+    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.actualizar")),
+) -> dict:
+    """Dispara manualmente el mismo proceso que corre el scheduler 3x/día
+    (Configuración > Carga de Excel), para poder probar que la ruta/archivo
+    configurados funcionan sin tener que esperar al próximo horario."""
+    resultado = await SoporteSolicitudesFabricaService.sincronizar_automatico()
+    if resultado is None:
+        return {
+            "ejecutado": False,
+            "mensaje": "No se encontró un archivo para cargar. Verifique la ruta configurada y que el archivo exista con el nombre esperado.",
+        }
+    from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabricaSyncLog
+
+    log = await SoporteSolicitudFabricaSyncLog.get(resultado["sync_id"])
+    return {
+        "ejecutado": True,
+        "archivo": log.archivo if log else None,
+        "total_encontrados": log.total_encontrados if log else resultado.get("total_procesados"),
+        "cargados": log.cargados if log else resultado.get("registros_creados"),
+        "con_error": log.con_error if log else resultado.get("registros_omitidos"),
+    }
+
+
 @router.get("/wo-por-persona")
 async def wo_por_persona(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),

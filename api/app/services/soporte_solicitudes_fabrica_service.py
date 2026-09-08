@@ -8,11 +8,14 @@ import re
 import time
 import unicodedata
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urlparse, urlunparse
 
 import httpx
 import openpyxl
+from beanie.operators import In
 
+from app.documents.aplicacion import Aplicacion
 from app.documents.configuracion import Configuracion
 from app.documents.persona import Persona
 from app.documents.soporte_solicitud_fabrica import (
@@ -27,6 +30,11 @@ from app.repositories.soporte_solicitudes_fabrica_repository import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Clave de configuración (Configuración > Carga de Excel) con la ruta local de
+# la carpeta donde el proceso automático busca el Excel de Solicitudes Fábrica.
+CLAVE_RUTA_CARGA_LOCAL = "soporte.solicitudes_fabrica.ruta_carga_local"
+
 
 DEFAULT_FUENTE_URL = (
     "https://globalhitss-my.sharepoint.com/:f:/r/personal/storage01_col_hitss_com/Documents/"
@@ -829,6 +837,73 @@ class SoporteSolicitudesFabricaService:
             )
             await log.insert()
             raise
+
+    @staticmethod
+    async def sincronizar_automatico() -> dict | None:
+        """Ejecutada por el scheduler (3 veces al día): busca el Excel en la
+        carpeta configurada en Configuración > Carga de Excel y lo sincroniza
+        sin pedir confirmación. Los registros con error simplemente se omiten
+        (igual que `sincronizar`); quedan registrados en el log para que la
+        persona los revise y haga una carga manual si hace falta.
+
+        Devuelve None si no hay ruta configurada o no se encontró el archivo
+        (no se considera un error: simplemente no había nada que cargar).
+        """
+        cfg = await Configuracion.find_one(Configuracion.clave == CLAVE_RUTA_CARGA_LOCAL)
+        ruta = (cfg.valor or "").strip() if cfg else ""
+        if not ruta:
+            return None
+
+        carpeta = Path(ruta)
+        archivo_encontrado: Path | None = None
+        for nombre in DEFAULT_ARCHIVO_CANDIDATOS:
+            candidato = carpeta / nombre
+            if candidato.exists():
+                archivo_encontrado = candidato
+                break
+        if archivo_encontrado is None:
+            logger.warning(
+                "Carga automática de Solicitudes Fábrica: no se encontró '%s' en %s",
+                DEFAULT_ARCHIVO_CANDIDATOS[0],
+                ruta,
+            )
+            return None
+
+        contenido = archivo_encontrado.read_bytes()
+        apps = await Aplicacion.find(Aplicacion.activa == True).to_list()  # noqa: E712
+        codigos = [a.codigo for a in apps]
+        if not codigos:
+            return None
+        ctx = ContextoAplicacion(codigos, modo_consolidado=True)
+        return await SoporteSolicitudesFabricaService.sincronizar(
+            ctx, contenido_excel=contenido, nombre_archivo=archivo_encontrado.name
+        )
+
+    @staticmethod
+    async def ultima_sincronizacion(ctx: ContextoAplicacion) -> dict | None:
+        """Última sincronización (manual o automática) visible desde este contexto."""
+        codigos_validos = ["__todas__", *ctx.codigos]
+        log = (
+            await SoporteSolicitudFabricaSyncLog.find(In(SoporteSolicitudFabricaSyncLog.aplicacion_id, codigos_validos))
+            .sort("-iniciado_en")
+            .first_or_none()
+        )
+        if log is None:
+            return None
+        return {
+            "sync_id": str(log.id),
+            "estado": log.estado,
+            "archivo": log.archivo,
+            "total_encontrados": log.total_encontrados,
+            "validos": log.validos,
+            "con_error": log.con_error,
+            "cargados": log.cargados,
+            "omitidos": log.omitidos,
+            "iniciado_en": log.iniciado_en,
+            "finalizado_en": log.finalizado_en,
+            "error_general": log.error_general,
+            "errores": [e.model_dump() for e in log.errores],
+        }
 
     @staticmethod
     async def descargar_errores_csv(ctx: ContextoAplicacion, sync_id: str) -> bytes:
