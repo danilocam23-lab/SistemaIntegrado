@@ -969,12 +969,15 @@ export default function RequerimientoDetalle() {
           <button className="btn btn-primario">
             {eEditando ? 'Guardar cambios' : 'Guardar entrega'}
           </button>
-          {eNumero && (
-            <button type="button" onClick={verHistorialEstadosEntrega}
-              className="btn btn-secundario">
-              Historial de estados
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={verHistorialEstadosEntrega}
+            disabled={!eNumero}
+            title={!eNumero ? 'Ingresa o selecciona un N° de entrega primero' : undefined}
+            className="btn btn-secundario disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Historial de estados
+          </button>
           {eEditando && (
             <button type="button" onClick={cancelarEdicionEntrega}
               className="btn btn-secundario">
