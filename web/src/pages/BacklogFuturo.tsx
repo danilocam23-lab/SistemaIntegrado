@@ -5,7 +5,7 @@ import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
 import { TablaScroll } from '../components/ui/primitivos'
-import type { Aplicacion, BacklogFuturo, Requerimiento } from '../types'
+import type { Aplicacion, BacklogFuturo, Persona, Requerimiento } from '../types'
 
 const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADO', 'CANCELADO']
 
@@ -33,6 +33,7 @@ interface FormState {
   estado: string
   volvioActa: boolean
   actaId: string
+  responsableId: string
 }
 
 const FORM_VACIO: FormState = {
@@ -45,12 +46,14 @@ const FORM_VACIO: FormState = {
   estado: 'PENDIENTE',
   volvioActa: false,
   actaId: '',
+  responsableId: '',
 }
 
 export default function BacklogFuturoPage() {
   const { datos, error, recargar } = useLista<BacklogFuturo>('/backlog-futuro')
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
   const { datos: requerimientos } = useLista<Requerimiento>('/requerimientos')
+  const { datos: personas } = useLista<Persona>('/personas')
   const { tienePermiso } = useAuth()
   const puedeEditar = tienePermiso('backlog_futuro.editar')
 
@@ -63,6 +66,13 @@ export default function BacklogFuturoPage() {
     aplicaciones.forEach((a) => m.set(a.codigo, a.nombre))
     return m
   }, [aplicaciones])
+
+  const personasActivas = useMemo(() => personas.filter((p) => p.activo), [personas])
+
+  const personaPorId = useMemo(
+    () => new Map(personas.map((p) => [p.id, p.nombre])),
+    [personas],
+  )
 
   const actasOrdenadas = useMemo(
     () => requerimientos
@@ -101,6 +111,7 @@ export default function BacklogFuturoPage() {
       estado: item.estado,
       volvioActa: item.volvio_acta,
       actaId: item.acta_id ?? '',
+      responsableId: item.responsable_id ?? '',
     })
     setAviso('')
     setModalAbierto(true)
@@ -137,6 +148,7 @@ export default function BacklogFuturoPage() {
       estado: form.estado,
       volvio_acta: form.volvioActa,
       acta_id: form.volvioActa ? (form.actaId || null) : null,
+      responsable_id: form.responsableId || null,
     }
     try {
       const headers = { headers: { 'X-Aplicacion': form.squadId } }
@@ -179,6 +191,7 @@ export default function BacklogFuturoPage() {
               <th className="p-2 text-left">Nombre de la iniciativa</th>
               <th className="p-2 text-left">Tipo de demanda</th>
               <th className="p-2 text-left">Squad</th>
+              <th className="p-2 text-left">AR/AQ</th>
               <th className="p-2 text-right">Horas aproximadas</th>
               <th className="p-2 text-center">F. tentativa de inicio</th>
               <th className="p-2 text-center">Estado</th>
@@ -193,6 +206,7 @@ export default function BacklogFuturoPage() {
                 <td className="p-2">{item.nombre_iniciativa}</td>
                 <td className="p-2">{item.tipo_demanda || '—'}</td>
                 <td className="p-2">{squadPorCodigo.get(item.squad_id) ?? item.squad_id}</td>
+                <td className="p-2">{personaPorId.get(item.responsable_id ?? '') ?? '—'}</td>
                 <td className="p-2 text-right">{item.horas_aproximadas ?? 0}</td>
                 <td className="p-2 text-center">{item.fecha_tentativa_inicio || '—'}</td>
                 <td className="p-2 text-center">
@@ -225,13 +239,13 @@ export default function BacklogFuturoPage() {
               </tr>
             ))}
             {datos.length === 0 && (
-              <tr><td colSpan={9} className="p-4 text-center text-slate-400">Sin registros de backlog futuro.</td></tr>
+              <tr><td colSpan={10} className="p-4 text-center text-slate-400">Sin registros de backlog futuro.</td></tr>
             )}
           </tbody>
           {datos.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
-                <td className="p-2" colSpan={3}>Totales ({totales.registros} registro{totales.registros !== 1 ? 's' : ''})</td>
+                <td className="p-2" colSpan={4}>Totales ({totales.registros} registro{totales.registros !== 1 ? 's' : ''})</td>
                 <td className="p-2 text-right">{totales.horas}</td>
                 <td className="p-2"></td>
                 <td className="p-2"></td>
@@ -282,6 +296,20 @@ export default function BacklogFuturoPage() {
               <option value="">— Selecciona —</option>
               {aplicaciones.map((a) => (
                 <option key={a.codigo} value={a.codigo}>{a.nombre}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block text-sm">
+            <span className="mb-1 block text-slate-600">AR/AQ</span>
+            <select
+              value={form.responsableId}
+              onChange={(e) => setForm({ ...form, responsableId: e.target.value })}
+              className="campo w-full"
+            >
+              <option value="">— Sin asignar —</option>
+              {personasActivas.map((p) => (
+                <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
             </select>
           </label>

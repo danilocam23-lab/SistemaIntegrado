@@ -13,6 +13,7 @@ class BacklogFuturo(DocumentoOperativo):
     estado: str = "PENDIENTE"  # 'PENDIENTE' | 'EN_PROGRESO' | 'COMPLETADO' | 'CANCELADO'
     volvio_acta: bool = False
     acta_id: str | None = None  # id del Requerimiento en el que se formalizó (si volvio_acta=True)
+    responsable_id: str | None = None  # id de la Persona responsable del ítem (AR/AQ)
 
     class Settings:
         name = "backlog_futuro"

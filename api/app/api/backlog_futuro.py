@@ -19,6 +19,7 @@ class BacklogFuturoIn(BaseModel):
     estado: str = "PENDIENTE"
     volvio_acta: bool = False
     acta_id: str | None = None
+    responsable_id: str | None = None
 
 
 @router.get("")

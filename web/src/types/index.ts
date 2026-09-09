@@ -244,6 +244,7 @@ export interface BacklogFuturo {
   estado: string
   volvio_acta: boolean
   acta_id: string | null
+  responsable_id: string | null
 }
 
 // --- Transversal ---
