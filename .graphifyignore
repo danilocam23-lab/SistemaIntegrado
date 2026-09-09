@@ -1,0 +1,9 @@
+_to_delete/
+graphify-out/
+# Visualizaciones HTML autogeneradas (~2.8 MB de JS/SVG embebido, no son fuente)
+docs/arquitectura.html
+docs/modelo-datos.html
+docs/diagrama-desarrollo.html
+docs/grafo-llamadas.html
+docs/mapa-llamadas.html
+docs/referencia-desarrollo.html

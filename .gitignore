@@ -24,3 +24,9 @@ dump/
 .idea/
 Thumbs.db
 .DS_Store
+
+# graphify — grafo de conocimiento generado (regenerar con `/graphify .`)
+graphify-out/
+
+# Pendiente de borrar (node_modules incompleto)
+_to_delete/
