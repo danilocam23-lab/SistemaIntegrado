@@ -1047,33 +1047,41 @@ export default function RequerimientoDetalle() {
         {historialCargando && <p className="text-sm text-slate-400">Cargando…</p>}
         {historialError && <p className="text-sm text-red-600">{historialError}</p>}
         {!historialCargando && !historialError && (
-          <ul className="space-y-2 text-sm">
-            {historialSegmentos.map((seg, i) => (
-              <li key={i} className="rounded border p-2">
-                <div className="flex items-center justify-between gap-2">
-                  <b>{seg.estado ?? '—'}</b>
-                  {seg.en_curso ? (
-                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                      En curso
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-400">Finalizado</span>
-                  )}
-                </div>
-                <p className="mt-1 text-slate-600">
-                  Desde: {fmtFechaCo(seg.desde)}
-                  {!seg.en_curso && <> · Hasta: {fmtFechaCo(seg.hasta)}</>}
-                </p>
-                <p className="text-slate-600">
-                  Duración: <b>{fmtDuracion(seg.duracion_segundos)}</b>
-                  {seg.en_curso ? ' (y sigue corriendo)' : ''}
-                </p>
-              </li>
-            ))}
-            {historialSegmentos.length === 0 && (
-              <li className="text-slate-400">Sin historial disponible.</li>
-            )}
-          </ul>
+          <TablaScroll>
+          <table className="w-full text-sm">
+            <thead className="text-left text-slate-500">
+              <tr>
+                <th className="py-1 pr-2">Estado</th>
+                <th className="py-1 pr-2">Desde</th>
+                <th className="py-1 pr-2">Hasta</th>
+                <th className="py-1 pr-2">Duración</th>
+                <th className="py-1">Situación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historialSegmentos.map((seg, i) => (
+                <tr key={i} className="border-t align-top">
+                  <td className="py-1 pr-2 font-semibold">{seg.estado ?? '—'}</td>
+                  <td className="py-1 pr-2 whitespace-nowrap">{fmtFechaCo(seg.desde)}</td>
+                  <td className="py-1 pr-2 whitespace-nowrap">{seg.en_curso ? '—' : fmtFechaCo(seg.hasta)}</td>
+                  <td className="py-1 pr-2 whitespace-nowrap">{fmtDuracion(seg.duracion_segundos)}</td>
+                  <td className="py-1">
+                    {seg.en_curso ? (
+                      <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                        En curso
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">Finalizado</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {historialSegmentos.length === 0 && (
+                <tr><td colSpan={5} className="py-2 text-slate-400">Sin historial disponible.</td></tr>
+              )}
+            </tbody>
+          </table>
+          </TablaScroll>
         )}
       </Modal>
     </div>
