@@ -11,6 +11,27 @@ type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos
 
 const CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA = 'soporte.solicitudes_fabrica.ruta_carga_local'
 
+interface UltimaSincronizacionResumen {
+  sync_id: string
+  estado: string
+  archivo: string | null
+  total_encontrados: number
+  cargados: number
+  con_error: number
+  iniciado_en: string | null
+  finalizado_en: string | null
+  error_general: string | null
+}
+
+/** Formatea una fecha ISO (guardada en UTC, sin sufijo de zona) en hora de Colombia. */
+function fmtFechaCo(fecha: string | null): string {
+  if (!fecha) return '—'
+  const iso = /[zZ]|[+-]\d{2}:\d{2}$/.test(fecha) ? fecha : `${fecha}Z`
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return fecha
+  return d.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
+}
+
 /** Agrupa una lista de campos configurables por su `grupo`, en un orden fijo legible. */
 function agruparCampos(campos: EntregasActasCampo[]): { grupo: string; items: EntregasActasCampo[] }[] {
   const orden = ['Entrega', 'Requerimiento', 'Solicitud', 'Facturación']
@@ -42,11 +63,31 @@ export default function Configuracion() {
   const [rutaCargaExcelOk, setRutaCargaExcelOk] = useState('')
   const [probandoCargaExcel, setProbandoCargaExcel] = useState(false)
   const [resultadoPruebaCargaExcel, setResultadoPruebaCargaExcel] = useState('')
+  const [ultimaEjecucionAuto, setUltimaEjecucionAuto] = useState<UltimaSincronizacionResumen | null>(null)
+  const [cargandoUltimaEjecucion, setCargandoUltimaEjecucion] = useState(false)
 
   useEffect(() => {
     const cfg = datos.find((d) => d.clave === CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA)
     setRutaCargaExcel(cfg?.valor ?? '')
   }, [datos])
+
+  async function consultarUltimaEjecucionAuto(): Promise<void> {
+    setCargandoUltimaEjecucion(true)
+    try {
+      const { data } = await client.get<UltimaSincronizacionResumen | null>(
+        '/soporte/solicitudes-fabrica/ultima-sincronizacion',
+      )
+      setUltimaEjecucionAuto(data)
+    } catch {
+      // No es crítico si falla; simplemente no se muestra el estado.
+    } finally {
+      setCargandoUltimaEjecucion(false)
+    }
+  }
+
+  useEffect(() => {
+    void consultarUltimaEjecucionAuto()
+  }, [])
 
   async function guardarRutaCargaExcel(e: FormEvent): Promise<void> {
     e.preventDefault()
@@ -81,6 +122,7 @@ export default function Configuracion() {
       setResultadoPruebaCargaExcel(`❌ ${mensajeError(err)}`)
     } finally {
       setProbandoCargaExcel(false)
+      void consultarUltimaEjecucionAuto()
     }
   }
 
@@ -1219,6 +1261,59 @@ export default function Configuracion() {
 
           {rutaCargaExcelAviso && <div className="aviso aviso-error">{rutaCargaExcelAviso}</div>}
           {rutaCargaExcelOk && <div className="aviso aviso-exito">{rutaCargaExcelOk}</div>}
+
+          <div className="tarjeta tarjeta-pad space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="etiqueta-sup">Estado de la última ejecución (automática o manual)</h2>
+              <button
+                type="button"
+                className="btn btn-secundario"
+                onClick={() => void consultarUltimaEjecucionAuto()}
+                disabled={cargandoUltimaEjecucion}
+              >
+                🔄 {cargandoUltimaEjecucion ? 'Consultando…' : 'Consultar estado'}
+              </button>
+            </div>
+            {!ultimaEjecucionAuto && (
+              <p className="text-sm text-slate-500">
+                {cargandoUltimaEjecucion ? 'Consultando…' : 'Todavía no se ha ejecutado ninguna carga.'}
+              </p>
+            )}
+            {ultimaEjecucionAuto && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded border p-3 text-sm">
+                  <div className="text-slate-500">Archivo</div>
+                  <div className="font-semibold text-slate-700">{ultimaEjecucionAuto.archivo ?? '—'}</div>
+                </div>
+                <div className="rounded border p-3 text-sm">
+                  <div className="text-slate-500">Estado</div>
+                  <div className={`font-semibold ${ultimaEjecucionAuto.estado === 'exitoso' ? 'text-emerald-700' : 'text-red-700'}`}>
+                    {ultimaEjecucionAuto.estado === 'exitoso' ? '✅ Exitoso' : `❌ ${ultimaEjecucionAuto.estado}`}
+                  </div>
+                </div>
+                <div className="rounded border p-3 text-sm">
+                  <div className="text-slate-500">Ejecutado</div>
+                  <div className="font-semibold text-slate-700">{fmtFechaCo(ultimaEjecucionAuto.finalizado_en)}</div>
+                </div>
+                <div className="rounded border p-3 text-sm">
+                  <div className="text-slate-500">Filas</div>
+                  <div className="font-semibold text-slate-700">
+                    {ultimaEjecucionAuto.total_encontrados} encontradas, {ultimaEjecucionAuto.cargados} cargadas,{' '}
+                    {ultimaEjecucionAuto.con_error} con error
+                  </div>
+                </div>
+                {ultimaEjecucionAuto.error_general && (
+                  <div className="sm:col-span-2 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {ultimaEjecucionAuto.error_general}
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-slate-400">
+              Este estado se actualiza automáticamente 3 veces al día (6:00, 12:00 y 18:00, hora Colombia) y
+              también cada vez que uses "Probar ahora" más abajo.
+            </p>
+          </div>
 
           <div className="tarjeta tarjeta-pad space-y-2">
             <p className="text-sm text-slate-600">

@@ -8,6 +8,39 @@ import { useAuth } from '../context/AuthContext'
 import { TIPOS_COSTO, ESTADOS_ENTREGA } from '../constantes'
 import type { Aplicacion, EventoBitacora, Liquidacion, Persona, Requerimiento, Squad } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
+import Modal from '../components/Modal'
+
+interface SegmentoHistorial {
+  estado: string | null
+  desde: string | null
+  hasta: string | null
+  duracion_segundos: number | null
+  en_curso: boolean
+}
+
+/** Da formato legible (ej. "2 días 3 horas 10 min") a una duración en segundos. */
+function fmtDuracion(segundos: number | null): string {
+  if (segundos == null) return '—'
+  if (segundos < 60) return `${segundos} seg`
+  const dias = Math.floor(segundos / 86400)
+  const horas = Math.floor((segundos % 86400) / 3600)
+  const minutos = Math.floor((segundos % 3600) / 60)
+  const partes: string[] = []
+  if (dias > 0) partes.push(`${dias} día${dias === 1 ? '' : 's'}`)
+  if (horas > 0) partes.push(`${horas} hora${horas === 1 ? '' : 's'}`)
+  if (minutos > 0 || partes.length === 0) partes.push(`${minutos} min`)
+  return partes.join(' ')
+}
+
+/** Interpreta fechas de Mongo sin sufijo de zona horaria como UTC y las
+ * muestra en hora de Colombia (mismo patrón usado en SoporteSolicitudesFabrica). */
+function fmtFechaCo(fecha: string | null): string {
+  if (!fecha) return '—'
+  const conZona = /[zZ]|[+-]\d{2}:?\d{2}$/.test(fecha) ? fecha : `${fecha}Z`
+  const d = new Date(conZona)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
+}
 
 const MESES_ES = [
   'Enero',
@@ -88,6 +121,49 @@ export default function RequerimientoDetalle() {
   // tengan requerimientos.editar completo).
   const [tipifEdicion, setTipifEdicion] = useState<Record<number, { obs: string; tip: string }>>({})
   const [guardandoTipif, setGuardandoTipif] = useState<Set<number>>(new Set())
+
+  // Historial de estados (popup con cuánto tiempo estuvo en cada estado y a
+  // cuál pasó) tanto del requerimiento como de una entrega puntual.
+  const [historialAbierto, setHistorialAbierto] = useState<'req' | 'entrega' | null>(null)
+  const [historialCargando, setHistorialCargando] = useState(false)
+  const [historialError, setHistorialError] = useState('')
+  const [historialSegmentos, setHistorialSegmentos] = useState<SegmentoHistorial[]>([])
+  const [historialTitulo, setHistorialTitulo] = useState('')
+
+  async function verHistorialEstadosReq(): Promise<void> {
+    setHistorialAbierto('req')
+    setHistorialTitulo('Historial de estados del requerimiento')
+    setHistorialCargando(true)
+    setHistorialError('')
+    try {
+      const { data } = await client.get<{ segmentos: SegmentoHistorial[] }>(
+        `/requerimientos/${reqId}/historial-estados`,
+      )
+      setHistorialSegmentos(data.segmentos)
+    } catch (err) {
+      setHistorialError(mensajeError(err))
+    } finally {
+      setHistorialCargando(false)
+    }
+  }
+
+  async function verHistorialEstadosEntrega(): Promise<void> {
+    if (!eNumero) return
+    setHistorialAbierto('entrega')
+    setHistorialTitulo(`Historial de estados de la entrega N° ${eNumero}`)
+    setHistorialCargando(true)
+    setHistorialError('')
+    try {
+      const { data } = await client.get<{ segmentos: SegmentoHistorial[] }>(
+        `/requerimientos/${reqId}/entregas/${eNumero}/historial-estados`,
+      )
+      setHistorialSegmentos(data.segmentos)
+    } catch (err) {
+      setHistorialError(mensajeError(err))
+    } finally {
+      setHistorialCargando(false)
+    }
+  }
 
   function iniciarEdicionTipifEntrega(en: Requerimiento['entregas'][number]): void {
     setTipifEdicion((p) => ({
@@ -644,6 +720,12 @@ export default function RequerimientoDetalle() {
             Guardar Seguimiento Hitss / Tipificación
           </button>
         )}
+        <div>
+          <button type="button" onClick={verHistorialEstadosReq}
+            className="btn btn-secundario mt-3">
+            Historial de estados
+          </button>
+        </div>
       </div>
 
       {/* Entregas */}
@@ -887,6 +969,12 @@ export default function RequerimientoDetalle() {
           <button className="btn btn-primario">
             {eEditando ? 'Guardar cambios' : 'Guardar entrega'}
           </button>
+          {eNumero && (
+            <button type="button" onClick={verHistorialEstadosEntrega}
+              className="btn btn-secundario">
+              Historial de estados
+            </button>
+          )}
           {eEditando && (
             <button type="button" onClick={cancelarEdicionEntrega}
               className="btn btn-secundario">
@@ -950,6 +1038,44 @@ export default function RequerimientoDetalle() {
           {eventos.length === 0 && <li className="text-slate-400">Sin eventos.</li>}
         </ul>
       </div>
+
+      <Modal
+        titulo={historialTitulo}
+        abierto={historialAbierto !== null}
+        onCerrar={() => setHistorialAbierto(null)}
+      >
+        {historialCargando && <p className="text-sm text-slate-400">Cargando…</p>}
+        {historialError && <p className="text-sm text-red-600">{historialError}</p>}
+        {!historialCargando && !historialError && (
+          <ul className="space-y-2 text-sm">
+            {historialSegmentos.map((seg, i) => (
+              <li key={i} className="rounded border p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <b>{seg.estado ?? '—'}</b>
+                  {seg.en_curso ? (
+                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                      En curso
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">Finalizado</span>
+                  )}
+                </div>
+                <p className="mt-1 text-slate-600">
+                  Desde: {fmtFechaCo(seg.desde)}
+                  {!seg.en_curso && <> · Hasta: {fmtFechaCo(seg.hasta)}</>}
+                </p>
+                <p className="text-slate-600">
+                  Duración: <b>{fmtDuracion(seg.duracion_segundos)}</b>
+                  {seg.en_curso ? ' (y sigue corriendo)' : ''}
+                </p>
+              </li>
+            ))}
+            {historialSegmentos.length === 0 && (
+              <li className="text-slate-400">Sin historial disponible.</li>
+            )}
+          </ul>
+        )}
+      </Modal>
     </div>
   )
 }

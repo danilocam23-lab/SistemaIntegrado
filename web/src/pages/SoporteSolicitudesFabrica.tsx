@@ -68,9 +68,14 @@ interface SyncResponse {
 
 function fmtFecha(fecha: string | null): string {
   if (!fecha) return '—'
-  const d = new Date(fecha)
+  // El backend guarda las fechas en UTC pero las serializa sin sufijo de zona
+  // horaria (p. ej. "2026-09-08T21:10:17"), así que si no trae 'Z' ni offset
+  // se le agrega para que no se interprete por error como hora local del
+  // navegador. Luego se formatea explícitamente en hora de Colombia.
+  const iso = /[zZ]|[+-]\d{2}:\d{2}$/.test(fecha) ? fecha : `${fecha}Z`
+  const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return fecha
-  return d.toLocaleString('es-CO')
+  return d.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
 }
 
 interface FilaProps {
@@ -423,7 +428,7 @@ export default function SoporteSolicitudesFabrica() {
       {puedeActualizar && ultimaSync && ultimaSync.con_error > 0 && (
         <div className="aviso aviso-alerta space-y-2">
           <div>
-            La última carga ({ultimaSync.finalizado_en ? new Date(ultimaSync.finalizado_en).toLocaleString() : '—'})
+            La última carga ({ultimaSync.finalizado_en ? fmtFecha(ultimaSync.finalizado_en) : '—'})
             {ultimaSync.archivo ? ` del archivo "${ultimaSync.archivo}"` : ''} encontró{' '}
             <b>{ultimaSync.con_error}</b> registro(s) con error que no se cargaron automáticamente.
             Revíselos y cargue el archivo manualmente si hace falta corregirlos.

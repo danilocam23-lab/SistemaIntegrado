@@ -4,6 +4,7 @@ Cada 30 minutos revisa las aplicaciones con auto-sync activo (configuración
 ``azdo_sync_interval`` = hourly | daily) y sincroniza las iteraciones mapeadas
 en los sprints de sus asignaciones.
 """
+import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -17,6 +18,12 @@ from app.services.soporte_solicitudes_fabrica_service import SoporteSolicitudesF
 
 _log = logging.getLogger("scheduler")
 _scheduler: AsyncIOScheduler | None = None
+
+# Horarios de la carga automática de Solicitudes Fábrica en hora de Colombia
+# (UTC-5, sin horario de verano) expresados en horas UTC, para poder detectar
+# si el proceso se reinició y se "saltó" alguno de ellos (ver
+# ``_verificar_y_recuperar_carga_excel``).
+_HORAS_UTC_CARGA_EXCEL = [11, 17, 23]  # 6:00, 12:00, 18:00 hora Colombia
 
 
 def _toca_sincronizar(ultima: datetime | None, intervalo: str) -> bool:
@@ -81,6 +88,41 @@ async def _tarea_carga_excel_solicitudes_fabrica() -> None:
         _log.warning("[scheduler] Carga automática Solicitudes Fábrica falló: %s", exc)
 
 
+async def _verificar_y_recuperar_carga_excel() -> None:
+    """Si el proceso backend se reinició (p. ej. por reciclaje del pool de IIS
+    por inactividad) y con eso se perdió el horario programado más reciente
+    (6:00, 12:00 o 18:00 hora Colombia), ejecuta la carga una sola vez al
+    arrancar para autorecuperarse, en vez de esperar en silencio al siguiente
+    horario."""
+    from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabricaSyncLog
+
+    ahora_utc = datetime.now(timezone.utc)
+    hoy = ahora_utc.date()
+    slot_objetivo: datetime | None = None
+    for h in sorted(_HORAS_UTC_CARGA_EXCEL, reverse=True):
+        candidato = datetime(hoy.year, hoy.month, hoy.day, h, 0, 0, tzinfo=timezone.utc)
+        if candidato <= ahora_utc:
+            slot_objetivo = candidato
+            break
+    if slot_objetivo is None:
+        return  # Todavía no ha pasado ningún horario programado hoy.
+
+    ultimo = (
+        await SoporteSolicitudFabricaSyncLog.find(SoporteSolicitudFabricaSyncLog.aplicacion_id == "__todas__")
+        .sort("-iniciado_en")
+        .first_or_none()
+    )
+    if ultimo is not None and ultimo.iniciado_en is not None and ultimo.iniciado_en.replace(tzinfo=timezone.utc) >= slot_objetivo:
+        return  # Ya se ejecutó para este horario, nada que recuperar.
+
+    _log.info(
+        "[scheduler] No se encontró carga automática de Solicitudes Fábrica para el horario %s UTC "
+        "(probablemente el proceso se reinició antes de que corriera). Recuperando ahora.",
+        slot_objetivo.isoformat(),
+    )
+    await _tarea_carga_excel_solicitudes_fabrica()
+
+
 def iniciar_scheduler() -> None:
     """Arranca el scheduler. Se llama desde el lifespan de la aplicación."""
     global _scheduler
@@ -97,6 +139,7 @@ def iniciar_scheduler() -> None:
     _scheduler.start()
     _log.info("Scheduler de Azure DevOps iniciado (revisión cada 30 min)")
     _log.info("Scheduler de carga automática de Solicitudes Fábrica iniciado (6:00, 12:00 y 18:00)")
+    asyncio.create_task(_verificar_y_recuperar_carga_excel())
 
 
 def detener_scheduler() -> None:

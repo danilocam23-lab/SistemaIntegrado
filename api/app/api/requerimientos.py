@@ -1,6 +1,8 @@
 """Router de requerimientos — núcleo del dominio de liquidación."""
+from datetime import datetime, timezone
 from decimal import Decimal
 
+from beanie.operators import In
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError
@@ -43,6 +45,96 @@ async def _registrar_bitacora(
         datos_antes=datos_antes,
         datos_despues=datos_despues,
     ).insert()
+
+
+def _asegurar_utc(fecha: datetime) -> datetime:
+    return fecha if fecha.tzinfo is not None else fecha.replace(tzinfo=timezone.utc)
+
+
+def _calcular_duracion(segmentos: list[dict]) -> list[dict]:
+    ahora = datetime.now(timezone.utc)
+    for seg in segmentos:
+        inicio = seg.get("desde")
+        if inicio is None:
+            seg["duracion_segundos"] = None
+            seg["en_curso"] = seg.get("hasta") is None
+            continue
+        fin = seg.get("hasta") or ahora
+        seg["duracion_segundos"] = int((_asegurar_utc(fin) - _asegurar_utc(inicio)).total_seconds())
+        seg["en_curso"] = seg.get("hasta") is None
+    return segmentos
+
+
+async def _historial_estados_requerimiento(
+    entidad_id: str, estado_actual: str, creado_en: datetime
+) -> list[dict]:
+    """Reconstruye, a partir de la bitácora, cuánto tiempo estuvo el
+    requerimiento en cada estado y a cuál pasó. Solo se pueden distinguir
+    tramos a partir de que se empezó a guardar el estado antes/después de
+    forma estructurada en la bitácora (creación, transición y actualización);
+    para requerimientos más antiguos sin esos datos se muestra un único
+    tramo desde su creación con el estado actual."""
+    registros = await Bitacora.find(
+        Bitacora.entidad_tipo == "requerimiento",
+        Bitacora.entidad_id == entidad_id,
+        In(Bitacora.accion, ["crear", "actualizar", "transicion"]),
+    ).sort("+creado_en").to_list()
+
+    segmentos: list[dict] = []
+    estado_seg: str | None = None
+    inicio_seg: datetime | None = None
+    for r in registros:
+        nuevo = (r.datos_despues or {}).get("estado")
+        if nuevo is None:
+            continue
+        if estado_seg is None:
+            estado_seg, inicio_seg = nuevo, r.creado_en
+            continue
+        if nuevo != estado_seg:
+            segmentos.append({"estado": estado_seg, "desde": inicio_seg, "hasta": r.creado_en})
+            estado_seg, inicio_seg = nuevo, r.creado_en
+
+    if estado_seg is not None and inicio_seg is not None:
+        segmentos.append({"estado": estado_seg, "desde": inicio_seg, "hasta": None})
+    else:
+        segmentos.append({"estado": estado_actual, "desde": creado_en, "hasta": None})
+
+    return _calcular_duracion(segmentos)
+
+
+async def _historial_estados_entrega(entidad_id: str, numero: int, entrega: Entrega | None) -> list[dict]:
+    """Igual que ``_historial_estados_requerimiento`` pero para una entrega
+    puntual (por número), usando los eventos crear_entrega/actualizar_entrega
+    de la bitácora, que ya guardan el estado completo de la entrega."""
+    registros = await Bitacora.find(
+        Bitacora.entidad_tipo == "requerimiento",
+        Bitacora.entidad_id == entidad_id,
+        In(Bitacora.accion, ["crear_entrega", "actualizar_entrega"]),
+    ).sort("+creado_en").to_list()
+
+    segmentos: list[dict] = []
+    estado_seg: str | None = None
+    inicio_seg: datetime | None = None
+    for r in registros:
+        despues = r.datos_despues or {}
+        if despues.get("numero") != numero:
+            continue
+        nuevo = despues.get("estado")
+        if nuevo is None:
+            continue
+        if estado_seg is None:
+            estado_seg, inicio_seg = nuevo, r.creado_en
+            continue
+        if nuevo != estado_seg:
+            segmentos.append({"estado": estado_seg, "desde": inicio_seg, "hasta": r.creado_en})
+            estado_seg, inicio_seg = nuevo, r.creado_en
+
+    if estado_seg is not None and inicio_seg is not None:
+        segmentos.append({"estado": estado_seg, "desde": inicio_seg, "hasta": None})
+    elif entrega is not None:
+        segmentos.append({"estado": entrega.estado, "desde": None, "hasta": None})
+
+    return _calcular_duracion(segmentos)
 
 
 async def _buscar(ctx: ContextoAplicacion, codigo_req: str) -> Requerimiento:
@@ -155,7 +247,12 @@ async def crear(
             "Ya existe un requerimiento con el mismo Código REQ, Squad y SC",
         )
     await _registrar_bitacora(
-        ctx.codigo, str(req.id), "crear", f"Requerimiento {req.codigo_req} creado", usuario
+        ctx.codigo,
+        str(req.id),
+        "crear",
+        f"Requerimiento {req.codigo_req} creado",
+        usuario,
+        datos_despues={"estado": req.estado},
     )
     return req
 
@@ -193,6 +290,11 @@ async def actualizar(
         "estado": "Estado",
     }
     detalle_cambios: list[str] = []
+    estado_antes: str | None = None
+    estado_despues: str | None = None
+    if "estado" in cambios and str(req.estado or "") != str(cambios.get("estado") or ""):
+        estado_antes = req.estado
+        estado_despues = cambios.get("estado")
     if solicitud is not None:
         sol_vieja = req.solicitud.model_dump()
         _SOL_ETIQUETAS = {
@@ -238,7 +340,15 @@ async def actualizar(
     desc = f"Requerimiento {req.codigo_req} actualizado"
     if detalle_cambios:
         desc += ": " + "; ".join(detalle_cambios)
-    await _registrar_bitacora(ctx.codigo, str(req.id), "actualizar", desc, usuario)
+    await _registrar_bitacora(
+        ctx.codigo,
+        str(req.id),
+        "actualizar",
+        desc,
+        usuario,
+        datos_antes={"estado": estado_antes} if estado_antes is not None else None,
+        datos_despues={"estado": estado_despues} if estado_despues is not None else None,
+    )
     return req
 
 
@@ -263,6 +373,8 @@ async def transicion(
         "transicion",
         datos.descripcion or f"Estado {anterior} -> {datos.nuevo_estado}",
         usuario,
+        datos_antes={"estado": anterior},
+        datos_despues={"estado": datos.nuevo_estado},
     )
     return req
 
@@ -388,6 +500,33 @@ async def liquidacion(
         detalle.append({"numero": entrega.numero, "valor": float(valor)})
         total += valor
     return {"codigo_req": req.codigo_req, "total": float(total), "entregas": detalle}
+
+
+@router.get("/{codigo_req}/historial-estados")
+async def historial_estados(
+    codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
+) -> dict:
+    """Historial de estados del requerimiento: cuánto tiempo estuvo en cada uno
+    y a cuál pasó (el último tramo aparece como "en curso")."""
+    req = await _buscar(ctx, codigo_req)
+    segmentos = await _historial_estados_requerimiento(str(req.id), req.estado, req.creado_en)
+    return {"codigo_req": req.codigo_req, "estado_actual": req.estado, "segmentos": segmentos}
+
+
+@router.get("/{codigo_req}/entregas/{numero}/historial-estados")
+async def historial_estados_entrega(
+    codigo_req: str, numero: int, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
+) -> dict:
+    """Historial de estados de una entrega puntual del requerimiento."""
+    req = await _buscar(ctx, codigo_req)
+    entrega = next((e for e in req.entregas if e.numero == numero), None)
+    segmentos = await _historial_estados_entrega(str(req.id), numero, entrega)
+    return {
+        "codigo_req": req.codigo_req,
+        "numero": numero,
+        "estado_actual": entrega.estado if entrega else None,
+        "segmentos": segmentos,
+    }
 
 
 @router.delete("/{codigo_req}", status_code=status.HTTP_204_NO_CONTENT)
