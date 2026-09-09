@@ -147,15 +147,16 @@ export default function RequerimientoDetalle() {
     }
   }
 
-  async function verHistorialEstadosEntrega(): Promise<void> {
-    if (!eNumero) return
+  async function verHistorialEstadosEntrega(numero?: number | string): Promise<void> {
+    const num = numero ?? eNumero
+    if (!num) return
     setHistorialAbierto('entrega')
-    setHistorialTitulo(`Historial de estados de la entrega N° ${eNumero}`)
+    setHistorialTitulo(`Historial de estados de la entrega N° ${num}`)
     setHistorialCargando(true)
     setHistorialError('')
     try {
       const { data } = await client.get<{ segmentos: SegmentoHistorial[] }>(
-        `/requerimientos/${reqId}/entregas/${eNumero}/historial-estados`,
+        `/requerimientos/${reqId}/entregas/${num}/historial-estados`,
       )
       setHistorialSegmentos(data.segmentos)
     } catch (err) {
@@ -804,24 +805,33 @@ export default function RequerimientoDetalle() {
                   <td className="py-1">{en.garantia ? 'Sí' : 'No'}</td>
                   <td className="py-1">{en.numero_garantia ?? '—'}</td>
                   <td className="py-1">
-                    {puedeEditarReq && (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => cargarEntregaEnFormulario(en)}
-                          className="enlace-accion"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => eliminarEntrega(en.numero)}
-                          className="enlace-accion enlace-accion-peligro"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => verHistorialEstadosEntrega(en.numero)}
+                        className="enlace-accion enlace-accion-sutil"
+                      >
+                        Historial
+                      </button>
+                      {puedeEditarReq && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => cargarEntregaEnFormulario(en)}
+                            className="enlace-accion"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => eliminarEntrega(en.numero)}
+                            className="enlace-accion enlace-accion-peligro"
+                          >
+                            Eliminar
+                          </button>
+                        </>
+                      )}
+                    </div>
                     {!puedeEditarReq && puedeEditarTipificacion && (
                       <div className="flex gap-2">
                         {tipifEdicion[en.numero] ? (
@@ -969,15 +979,15 @@ export default function RequerimientoDetalle() {
           <button className="btn btn-primario">
             {eEditando ? 'Guardar cambios' : 'Guardar entrega'}
           </button>
-          <button
-            type="button"
-            onClick={verHistorialEstadosEntrega}
-            disabled={!eNumero}
-            title={!eNumero ? 'Ingresa o selecciona un N° de entrega primero' : undefined}
-            className="btn btn-secundario disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Historial de estados
-          </button>
+          {eEditando && (
+            <button
+              type="button"
+              onClick={() => verHistorialEstadosEntrega()}
+              className="btn btn-secundario"
+            >
+              Historial de estados
+            </button>
+          )}
           {eEditando && (
             <button type="button" onClick={cancelarEdicionEntrega}
               className="btn btn-secundario">
