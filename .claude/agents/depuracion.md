@@ -11,7 +11,8 @@ description: >-
   raíz de este error".
   NO usar para: revisar un diff ya escrito (usar verificacion);
   construir una funcionalidad (usar frontend o backend);
-  un fallo con arreglo obvio de una línea (resolver en el hilo principal);
+  un fallo con causa ya evidente (no hace falta perseguirlo: pasa el arreglo directo a
+  frontend / backend según la capa);
   una decisión de diseño (usar arquitectura).
 tools: Read, Grep, Glob, Bash, Edit
 model: opus

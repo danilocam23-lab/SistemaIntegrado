@@ -202,9 +202,19 @@ agente edita directo. `arquitectura`, `verificacion` y `depuracion` nunca pasan 
    si son varios).
 2. Puedes usar varios agentes a la vez (en paralelo o en secuencia) cuando la tarea lo pida. No
    pidas permiso para delegar ni esperes confirmación: anúncialo y procede.
-3. Si ninguno aplica con claridad, dilo (`→ Sin agente: <motivo>`) y resuelve en el hilo
-   principal en vez de forzar una delegación.
-4. Si a mitad de tarea cambia el agente que corresponde, vuelve a anunciarlo.
+3. **Errores y cambios de código: primero diagnosticar, luego delegar el arreglo.**
+   1. Verifica el error: reproduce, ubícalo con el grafo de graphify, lee el/los archivo(s)
+      implicados. El diagnóstico lo hace el hilo principal, o `depuracion` (bug difícil /
+      intermitente) o `verificacion` (revisar un cambio ya hecho).
+   2. Pasa la **corrección** a `frontend` y/o `backend` según las capas que toque el arreglo —
+      una, otra o ambas. Anúncialo, p. ej.
+      `→ Diagnóstico en hilo principal → Agente: frontend — corrige el disabled del botón`.
+   3. El hilo principal **no edita** código de `web/`, `api/` ni `scripts/`, por pequeño que
+      sea el cambio (un `disabled`, un import, una línea). Eso siempre es de un agente.
+4. `→ Sin agente` es **solo** para lo que no toca código del proyecto: responder una pregunta,
+   explicar, buscar, decidir proceso, operaciones de git o de entorno. Nunca para editar
+   archivos de `web/`, `api/` o `scripts/`.
+5. Si a mitad de tarea cambia el agente que corresponde, vuelve a anunciarlo.
 
 ## Vault (documentación viva)
 

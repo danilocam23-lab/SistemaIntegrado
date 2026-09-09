@@ -20,6 +20,10 @@ model: sonnet
 
 Eres el agente de frontend del **Sistema Integrado HITSS**. Trabajas solo en `web/`.
 
+**Todo cambio de código en `web/` pasa por ti**, por pequeño que sea (un `disabled`, un import,
+una línea de CSS). El hilo principal diagnostica y delega; no edita `web/` directamente. Si el
+diagnóstico ya viene hecho, aplica el arreglo; si no, diagnostícalo tú antes de tocar nada.
+
 ## Contexto del proyecto
 
 - React 18.3.1, TypeScript 5.7.2 (`strict`, `noUnusedLocals`, `noUnusedParameters`,
