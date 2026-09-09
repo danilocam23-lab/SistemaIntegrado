@@ -134,6 +134,22 @@ Las clases utilitarias propias están en español y viven en el `safelist` de
 redefinidos en el mismo config. Al crear UI, reutilizar estas clases antes de
 escribir Tailwind crudo.
 
+### Selección de personas por rol
+
+`Persona.rol_operativo` (distinto del rol RBAC) identifica la función en el dominio.
+La lista es configurable (`Configuracion.clave == "roles_persona"`); el default de
+código es `DEV, LT_HITSS, LT_EPM, SCRUM, EPM, COORD, LECTOR`, pero el despliegue
+real añade otros — p. ej. **`AR/QA`** (analista de requerimientos / QA).
+
+Un selector de "persona a cargo de X" **nunca** usa la lista cruda de `/personas`:
+filtra `p.activo && p.rol_operativo === '<ROL>'` (o `[...].includes(p.rol_operativo)`
+para un conjunto). Para **mostrar** el nombre en tablas usa la lista completa (así
+un responsable que se desactiva o cambia de rol sigue viéndose). Ejemplos vigentes:
+`RequerimientoDetalle.tsx` / `RequerimientoNuevo.tsx` (`LT_HITSS`, `LT_EPM`, `SCRUM`,
+`SCRUM || AR/QA`), `PlanesAccion.tsx` (`ROLES_RESPONSABLE = ['LT_HITSS','SCRUM']`),
+`Asignaciones.tsx` / `Capacidades.tsx` (excluyen `LT_EPM`). Detalle en el vault:
+`10-arquitectura/roles-operativos-persona.md`.
+
 ## Deploy
 
 IIS con HttpPlatformHandler. Ejecutar `deploy\publicar-iis.bat` como

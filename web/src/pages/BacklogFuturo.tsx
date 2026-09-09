@@ -67,7 +67,10 @@ export default function BacklogFuturoPage() {
     return m
   }, [aplicaciones])
 
-  const personasActivas = useMemo(() => personas.filter((p) => p.activo), [personas])
+  const personasArQa = useMemo(
+    () => personas.filter((p) => p.activo && p.rol_operativo === 'AR/QA'),
+    [personas],
+  )
 
   const personaPorId = useMemo(
     () => new Map(personas.map((p) => [p.id, p.nombre])),
@@ -191,7 +194,7 @@ export default function BacklogFuturoPage() {
               <th className="p-2 text-left">Nombre de la iniciativa</th>
               <th className="p-2 text-left">Tipo de demanda</th>
               <th className="p-2 text-left">Squad</th>
-              <th className="p-2 text-left">AR/AQ</th>
+              <th className="p-2 text-left">AR/QA</th>
               <th className="p-2 text-right">Horas aproximadas</th>
               <th className="p-2 text-center">F. tentativa de inicio</th>
               <th className="p-2 text-center">Estado</th>
@@ -301,14 +304,14 @@ export default function BacklogFuturoPage() {
           </label>
 
           <label className="block text-sm">
-            <span className="mb-1 block text-slate-600">AR/AQ</span>
+            <span className="mb-1 block text-slate-600">AR/QA</span>
             <select
               value={form.responsableId}
               onChange={(e) => setForm({ ...form, responsableId: e.target.value })}
               className="campo w-full"
             >
               <option value="">— Sin asignar —</option>
-              {personasActivas.map((p) => (
+              {personasArQa.map((p) => (
                 <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
             </select>
