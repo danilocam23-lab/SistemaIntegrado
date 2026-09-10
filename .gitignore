@@ -30,5 +30,12 @@ Thumbs.db
 # graphify — grafo de conocimiento generado (regenerar con `/graphify .`)
 graphify-out/
 
+# Skill managers (Claude Code) — artefactos locales, no son del proyecto.
+# El monorepo NO tiene package.json en la raíz (ver CLAUDE.md).
+/package.json
+/package-lock.json
+/skills-lock.json
+/.agents/
+
 # Pendiente de borrar (node_modules incompleto)
 _to_delete/
