@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 import type { Capacidad, Persona } from '../types'
 
 const ROLES_EXCLUIDOS_CAPACIDAD_PERSONA = ['LT_EPM']
@@ -105,7 +105,7 @@ export default function Capacidades() {
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-4">Capacidades mensuales</h1>
+      <EncabezadoPagina icono={<Icono nombre="grafico-barras" />} titulo="Capacidades mensuales" />
 
       {puedeEditarCapacidades && (
       <form onSubmit={crear} className="barra-filtros mb-4">
@@ -127,7 +127,7 @@ export default function Capacidades() {
           <input value={horas} onChange={(e) => setHoras(e.target.value)} type="number" required
             className="campo w-32" />
         </label>
-        <button className="btn btn-primario">Crear</button>
+        <Boton variante="primario" type="submit">Crear</Boton>
       </form>
       )}
 
@@ -136,22 +136,22 @@ export default function Capacidades() {
       )}
 
       <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="p-2 text-left">Persona</th>
-            <th className="p-2 text-left">Mes</th>
-            <th className="p-2 text-right">Horas disponibles</th>
-            <th className="p-2"></th>
+            <th>Persona</th>
+            <th>Mes</th>
+            <th className="text-right">Horas disponibles</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {capacidadesPersona.map((c) => (
-            <tr key={c.id} className="border-t">
-              <td className="p-2">{nombrePersona(c.persona_id)}</td>
-              <td className="p-2">{c.mes}</td>
+            <tr key={c.id}>
+              <td>{nombrePersona(c.persona_id)}</td>
+              <td>{c.mes}</td>
               <td
-                className={`p-2 text-right ${puedeEditarCapacidades ? 'cursor-pointer' : ''}`}
+                className={`text-right ${puedeEditarCapacidades ? 'cursor-pointer' : ''}`}
                 title={puedeEditarCapacidades ? 'Doble clic para editar' : undefined}
                 onDoubleClick={() => iniciarEdicion(c.id, 'horas_disponibles', String(c.horas_disponibles))}
               >
@@ -182,7 +182,7 @@ export default function Capacidades() {
                   />
                 ) : c.horas_disponibles}
               </td>
-              <td className="p-2 text-center">
+              <td className="text-center">
                 {puedeEditarCapacidades && (
                   <button onClick={() => eliminar(c)} className="enlace-accion enlace-accion-peligro">
                     Eliminar

@@ -166,6 +166,38 @@ const ICONOS = {
   'chevron-abajo': <path d="m6 9 6 6 6-6" />,
   /** Cheurón hacia arriba */
   'chevron-arriba': <path d="m18 15-6-6-6 6" />,
+  /** Flecha hacia abajo */
+  'flecha-abajo': (
+    <>
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
+    </>
+  ),
+  /** Guardar / disquete */
+  guardar: (
+    <>
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+      <path d="M17 21v-8H7v8" />
+      <path d="M7 3v5h8" />
+    </>
+  ),
+  /** Papelera / eliminar */
+  papelera: (
+    <>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" x2="10" y1="11" y2="17" />
+      <line x1="14" x2="14" y1="11" y2="17" />
+    </>
+  ),
+  /** Equis / cerrar */
+  x: (
+    <>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </>
+  ),
 } as const
 
 export type NombreIcono = keyof typeof ICONOS
