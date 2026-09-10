@@ -5,13 +5,15 @@ import client from '../api/client'
 import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
-import { TIPOS_COSTO, ESTADOS_ENTREGA, MESES_ES } from '../constantes'
+import { TIPOS_COSTO } from '../constantes'
 import type { Aplicacion, EventoBitacora, Liquidacion, Persona, Requerimiento, Squad } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
 import { useHistorialEstados } from './requerimiento-detalle/useHistorialEstados'
 import ModalHistorialEstados from './requerimiento-detalle/ModalHistorialEstados'
 import SeccionLiquidacion from './requerimiento-detalle/SeccionLiquidacion'
 import SeccionBitacora from './requerimiento-detalle/SeccionBitacora'
+import SeccionEntregas from './requerimiento-detalle/SeccionEntregas'
+import FormularioEntrega from './requerimiento-detalle/FormularioEntrega'
+import { useFormularioEntrega } from './requerimiento-detalle/useFormularioEntrega'
 
 export default function RequerimientoDetalle() {
   const { reqId } = useParams<{ reqId: string }>()
@@ -58,19 +60,8 @@ export default function RequerimientoDetalle() {
   const [motivoCierre, setMotivoCierre] = useState('')
   const [actaTrabajo, setActaTrabajo] = useState('')
 
-  // Formulario de entrega
-  const [eNumero, setENumero] = useState('')
-  const [eHoras, setEHoras] = useState('')
-  const [eFecha, setEFecha] = useState('')
-  const [eFechaReal, setEFechaReal] = useState('')
-  const [eEstado, setEEstado] = useState(ESTADOS_ENTREGA[0])
-  const [eMesAprobacion, setEMesAprobacion] = useState('')
-  const [eObservaciones, setEObservaciones] = useState('')
-  const [eObservacionesHitss, setEObservacionesHitss] = useState('')
-  const [eTipificacion, setETipificacion] = useState('')
-  const [eGarantia, setEGarantia] = useState(false)
-  const [eNumGarantia, setENumGarantia] = useState<number | null>(null)
-  const [eEditando, setEEditando] = useState(false)
+  // Formulario de entrega (estados + lógica de cargar/cancelar/limpiar)
+  const form = useFormularioEntrega(estadosEnt)
 
   // Edición inline de Observaciones Hitss / Tipificación por entrega
   // (visible para quienes tengan requerimientos.tipificacion.editar aunque no
@@ -110,34 +101,12 @@ export default function RequerimientoDetalle() {
     }
   }
 
-  function cargarEntregaEnFormulario(en: Requerimiento['entregas'][number]): void {
-    setENumero(String(en.numero))
-    setEHoras(en.horas != null ? String(en.horas) : '')
-    setEFecha(en.fecha_comprometida ? en.fecha_comprometida.slice(0, 10) : '')
-    setEFechaReal(en.fecha_recepcion ? en.fecha_recepcion.slice(0, 10) : '')
-    setEEstado(en.estado ?? estadosEnt[0])
-    setEMesAprobacion(en.mes_aprobacion ?? '')
-    setEObservaciones(en.observaciones ?? '')
-    setEObservacionesHitss(en.observaciones_hitss ?? '')
-    setETipificacion(en.tipificacion ?? '')
-    setEGarantia(en.garantia ?? false)
-    setENumGarantia(en.numero_garantia ?? (en.garantia ? 1 : null))
-    setEEditando(true)
+  function cambiarTipifEntregaInline(numero: number, campo: 'obs' | 'tip', valor: string): void {
+    setTipifEdicion((p) => ({ ...p, [numero]: { ...p[numero], [campo]: valor } }))
   }
 
-  function cancelarEdicionEntrega(): void {
-    setENumero('')
-    setEHoras('')
-    setEFecha('')
-    setEFechaReal('')
-    setEEstado(estadosEnt[0])
-    setEMesAprobacion('')
-    setEObservaciones('')
-    setEObservacionesHitss('')
-    setETipificacion('')
-    setEGarantia(false)
-    setENumGarantia(null)
-    setEEditando(false)
+  function cancelarTipifEntregaInline(numero: number): void {
+    setTipifEdicion((p) => { const n = { ...p }; delete n[numero]; return n })
   }
 
   const recargar = useCallback(async () => {
@@ -359,28 +328,8 @@ export default function RequerimientoDetalle() {
       return
     }
     try {
-      await client.post(`/requerimientos/${reqId}/entregas`, {
-        numero: Number(eNumero),
-        horas: eHoras ? Number(eHoras) : null,
-        fecha_comprometida: eFecha || null,
-        fecha_recepcion: eFechaReal || null,
-        estado: eEstado,
-        mes_aprobacion: eEstado.toUpperCase() === 'APROBADA' ? (eMesAprobacion || null) : null,
-        observaciones: eObservaciones || null,
-        observaciones_hitss: eObservacionesHitss || null,
-        tipificacion: eTipificacion || null,
-        garantia: eGarantia,
-        numero_garantia: eGarantia ? (eNumGarantia ?? 1) : null,
-      }, writeConfig())
-      setENumero('')
-      setEHoras('')
-      setEFecha('')
-      setEFechaReal('')
-      setEMesAprobacion('')
-      setEObservaciones('')
-      setEObservacionesHitss('')
-      setETipificacion('')
-      setEEditando(false)
+      await client.post(`/requerimientos/${reqId}/entregas`, form.cuerpoEntrega(), writeConfig())
+      form.limpiarTrasGuardar()
       recargar()
     } catch (err) {
       setAviso(mensajeError(err))
@@ -646,273 +595,31 @@ export default function RequerimientoDetalle() {
       </div>
 
       {/* Entregas */}
-      <div className="tarjeta tarjeta-pad">
-        <h2 className="etiqueta-sup mb-1">
-          Entregas ({req.entregas.length})
-        </h2>
-        <p className="mb-3 text-xs text-slate-500">
-          Horas estimadas: <b>{req.total_horas_estimadas ?? '—'}</b> · Asignadas en entregas:{' '}
-          <b>{req.entregas.reduce((s, e) => s + Number(e.horas ?? 0), 0)}</b>
-          {req.total_horas_estimadas != null && (
-            <>
-              {' '}· Disponibles:{' '}
-              <b>
-                {Number(req.total_horas_estimadas) -
-                  req.entregas.reduce((s, e) => s + Number(e.horas ?? 0), 0)}
-              </b>
-            </>
-          )}
-        </p>
-        <TablaScroll>
-        <table className="mb-3 w-full text-sm">
-          <thead className="text-left text-slate-500">
-            <tr>
-              <th className="py-1">N°</th><th className="py-1">Horas</th>
-              <th className="py-1">% Avance</th><th className="py-1">F. Comprometida</th>
-              <th className="py-1">F. Real</th><th className="py-1">Estado</th><th className="py-1">Mes aprobación</th>
-              <th className="py-1">Observaciones EPM</th><th className="py-1">Observaciones Hitss</th>
-              <th className="py-1">Tipificación</th>
-              <th className="py-1">ANS</th><th className="py-1">Garantía</th><th className="py-1">N° Garantía</th>
-              <th className="py-1"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {req.entregas.map((en) => {
-              const porcentaje = en.horas != null && req.total_horas_estimadas
-                ? ((Number(en.horas) * 100) / Number(req.total_horas_estimadas)).toFixed(1)
-                : '—'
-              const ansLabel = en.ans_entrega === 'CUMPLE' ? 'Cumple'
-                : en.ans_entrega === 'NO_CUMPLE' ? 'No cumple' : '—'
-              const ansColor = en.ans_entrega === 'CUMPLE' ? 'text-emerald-600'
-                : en.ans_entrega === 'NO_CUMPLE' ? 'text-red-600' : ''
-              return (
-                <tr key={en.numero} className="border-t">
-                  <td className="py-1">{en.numero}</td>
-                  <td className="py-1">{en.horas ?? '—'}</td>
-                  <td className="py-1">{porcentaje}{porcentaje !== '—' ? '%' : ''}</td>
-                  <td className="py-1">{en.fecha_comprometida?.slice(0, 10) ?? '—'}</td>
-                  <td className="py-1">{en.fecha_recepcion?.slice(0, 10) ?? '—'}</td>
-                  <td className="py-1">{en.estado ?? '—'}</td>
-                  <td className="py-1">{en.mes_aprobacion ?? '—'}</td>
-                  <td className="py-1">{en.observaciones ?? '—'}</td>
-                  <td className="py-1">
-                    {tipifEdicion[en.numero] ? (
-                      <input
-                        value={tipifEdicion[en.numero].obs}
-                        onChange={(ev) => setTipifEdicion((p) => ({ ...p, [en.numero]: { ...p[en.numero], obs: ev.target.value } }))}
-                        className="campo campo-sm w-full"
-                      />
-                    ) : (en.observaciones_hitss ?? '—')}
-                  </td>
-                  <td className="py-1">
-                    {tipifEdicion[en.numero] ? (
-                      <select
-                        value={tipifEdicion[en.numero].tip}
-                        onChange={(ev) => setTipifEdicion((p) => ({ ...p, [en.numero]: { ...p[en.numero], tip: ev.target.value } }))}
-                        className="campo campo-sm"
-                      >
-                        <option value="">— Seleccionar —</option>
-                        <option value="HITSS">Hitss</option>
-                        <option value="EPM">EPM</option>
-                      </select>
-                    ) : (en.tipificacion ?? '—')}
-                  </td>
-                  <td className={`py-1 font-medium ${ansColor}`}>{ansLabel}</td>
-                  <td className="py-1">{en.garantia ? 'Sí' : 'No'}</td>
-                  <td className="py-1">{en.numero_garantia ?? '—'}</td>
-                  <td className="py-1">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => historial.verHistorialEntrega(en.numero)}
-                        className="enlace-accion enlace-accion-sutil"
-                      >
-                        Historial
-                      </button>
-                      {puedeEditarReq && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => cargarEntregaEnFormulario(en)}
-                            className="enlace-accion"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => eliminarEntrega(en.numero)}
-                            className="enlace-accion enlace-accion-peligro"
-                          >
-                            Eliminar
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    {!puedeEditarReq && puedeEditarTipificacion && (
-                      <div className="flex gap-2">
-                        {tipifEdicion[en.numero] ? (
-                          <>
-                            <button
-                              type="button"
-                              disabled={guardandoTipif.has(en.numero)}
-                              onClick={() => guardarTipifEntregaInline(en.numero)}
-                              className="text-marca hover:underline disabled:opacity-50"
-                            >
-                              Guardar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setTipifEdicion((p) => { const n = { ...p }; delete n[en.numero]; return n })}
-                              className="text-slate-500 hover:underline"
-                            >
-                              Cancelar
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => iniciarEdicionTipifEntrega(en)}
-                            className="enlace-accion"
-                          >
-                            Editar Hitss
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-            {req.entregas.length === 0 && (
-              <tr><td colSpan={13} className="py-2 text-slate-400">Sin entregas.</td></tr>
-            )}
-          </tbody>
-        </table>
-        </TablaScroll>
+      <SeccionEntregas
+        entregas={req.entregas}
+        totalHorasEstimadas={req.total_horas_estimadas}
+        puedeEditarReq={puedeEditarReq}
+        puedeEditarTipificacion={puedeEditarTipificacion}
+        tipifEdicion={tipifEdicion}
+        guardandoTipif={guardandoTipif}
+        onIniciarEdicionTipif={iniciarEdicionTipifEntrega}
+        onCambiarTipif={cambiarTipifEntregaInline}
+        onCancelarTipif={cancelarTipifEntregaInline}
+        onGuardarTipif={guardarTipifEntregaInline}
+        onVerHistorialEntrega={historial.verHistorialEntrega}
+        onEditarEntrega={form.cargarEntrega}
+        onEliminarEntrega={eliminarEntrega}
+      >
         {puedeEditarReq && (
-        <form onSubmit={agregarEntrega} className={`flex flex-wrap items-end gap-3 border-t pt-3 ${eEditando ? 'rounded-lg bg-amber-50 p-3' : ''}`}>
-          {eEditando && (
-            <div className="w-full text-xs font-semibold text-amber-700">
-              ✏️ Editando entrega N° {eNumero} — los cambios reemplazarán la entrega existente
-            </div>
-          )}
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">N° entrega</span>
-            <input value={eNumero} onChange={(e) => setENumero(e.target.value)} type="number" required
-              readOnly={eEditando}
-              className={`w-24 rounded border px-3 py-2 ${eEditando ? 'bg-slate-100 text-slate-500' : ''}`} />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Horas</span>
-            <input value={eHoras} onChange={(e) => setEHoras(e.target.value)} type="number" step="any"
-              className="campo w-28" />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">
-              Fecha comprometida
-              {req?.estado?.toUpperCase() !== 'CONTROL DE CAMBIOS' && (
-                <span className="ml-1 text-red-500">*</span>
-              )}
-            </span>
-            <input
-              value={eFecha}
-              onChange={(e) => setEFecha(e.target.value)}
-              type="date"
-              required={req?.estado?.toUpperCase() !== 'CONTROL DE CAMBIOS'}
-              className="campo"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Fecha real entrega</span>
-            <input value={eFechaReal} onChange={(e) => setEFechaReal(e.target.value)} type="date"
-              className="campo" />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Estado</span>
-            <select value={eEstado} onChange={(e) => {
-              const nuevoEstado = e.target.value
-              setEEstado(nuevoEstado)
-              if (nuevoEstado.toUpperCase() !== 'APROBADA') setEMesAprobacion('')
-            }}
-              className="campo">
-              {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
-          {eEstado.toUpperCase() === 'APROBADA' && (
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-600">Mes de aprobación</span>
-              <select
-                value={eMesAprobacion}
-                onChange={(e) => setEMesAprobacion(e.target.value)}
-                className="campo"
-              >
-                <option value="">— Seleccionar —</option>
-                {MESES_ES.map((mes) => <option key={mes} value={mes}>{mes}</option>)}
-              </select>
-            </label>
-          )}
-          <label className="min-w-[280px] flex-1 text-sm">
-            <span className="mb-1 block text-slate-600">Observaciones EPM</span>
-            <input
-              value={eObservaciones}
-              onChange={(e) => setEObservaciones(e.target.value)}
-              placeholder="Notas de la entrega (EPM)"
-              className="campo w-full"
-            />
-          </label>
-          <label className="min-w-[280px] flex-1 text-sm">
-            <span className="mb-1 block text-slate-600">Observaciones Hitss</span>
-            <input
-              value={eObservacionesHitss}
-              onChange={(e) => setEObservacionesHitss(e.target.value)}
-              placeholder="Notas de la entrega (Hitss)"
-              className="campo w-full"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Tipificación</span>
-            <select
-              value={eTipificacion}
-              onChange={(e) => setETipificacion(e.target.value)}
-              className="campo"
-            >
-              <option value="">— Seleccionar —</option>
-              <option value="HITSS">Hitss</option>
-              <option value="EPM">EPM</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={eGarantia} onChange={(e) => { setEGarantia(e.target.checked); if (e.target.checked && !eNumGarantia) setENumGarantia(1) }} />
-            <span className="text-slate-600">Garantía</span>
-          </label>
-          {eGarantia && (
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-600">N° Garantía</span>
-              <input type="number" min={1} value={eNumGarantia ?? ''} onChange={(e) => setENumGarantia(e.target.value ? Number(e.target.value) : null)}
-                className="campo campo-sm w-20" />
-            </label>
-          )}
-          <button className="btn btn-primario">
-            {eEditando ? 'Guardar cambios' : 'Guardar entrega'}
-          </button>
-          {eEditando && (
-            <button
-              type="button"
-              onClick={() => historial.verHistorialEntrega(eNumero)}
-              className="btn btn-secundario"
-            >
-              Historial de estados
-            </button>
-          )}
-          {eEditando && (
-            <button type="button" onClick={cancelarEdicionEntrega}
-              className="btn btn-secundario">
-              Cancelar
-            </button>
-          )}
-        </form>
+          <FormularioEntrega
+            form={form}
+            estadosEnt={estadosEnt}
+            estadoRequerimiento={req?.estado ?? ''}
+            onSubmit={agregarEntrega}
+            onVerHistorial={() => historial.verHistorialEntrega(form.valores.numero)}
+          />
         )}
-      </div>
+      </SeccionEntregas>
 
       {/* Liquidación */}
       <SeccionLiquidacion liquidacion={liquidacion} />
