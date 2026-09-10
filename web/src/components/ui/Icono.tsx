@@ -138,6 +138,34 @@ const ICONOS = {
       <path d="M7 18h1" />
     </>
   ),
+  /** Caja / paquete */
+  caja: (
+    <>
+      <path d="m7.5 4.27 9 5.15" />
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+    </>
+  ),
+  /** Lupa / búsqueda */
+  lupa: (
+    <>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </>
+  ),
+  /** Alerta / triángulo de advertencia */
+  alerta: (
+    <>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </>
+  ),
+  /** Cheurón hacia abajo */
+  'chevron-abajo': <path d="m6 9 6 6 6-6" />,
+  /** Cheurón hacia arriba */
+  'chevron-arriba': <path d="m18 15-6-6-6 6" />,
 } as const
 
 export type NombreIcono = keyof typeof ICONOS

@@ -4,7 +4,9 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+
+type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 
 interface FilaRequerimiento {
   id: string
@@ -53,11 +55,11 @@ function normalizarAns(valor: string | null | undefined): string {
   return v || '—'
 }
 
-function badgeAns(valor: string | null | undefined): string {
+function tonoAns(valor: string | null | undefined): TonoChip {
   const v = (valor ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
-  if (v === 'CUMPLE') return 'bg-emerald-100 text-emerald-700'
-  if (v === 'NO CUMPLE') return 'bg-red-100 text-red-700'
-  return 'bg-slate-100 text-slate-600'
+  if (v === 'CUMPLE') return 'exito'
+  if (v === 'NO CUMPLE') return 'error'
+  return 'neutro'
 }
 
 function calcularDiasTranscurridos(fechaLimite: string | null, fechaReal: string | null): { dias: number; esNegativo: boolean } | null {
@@ -294,14 +296,11 @@ export default function RequerimientosDetalleANS() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="titulo-pagina">Detalle ANS</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Vista consolidada de requerimientos y entregas con sus estados ANS.
-          </p>
-        </div>
-      </div>
+      <EncabezadoPagina
+        icono={<Icono nombre="check-circulo" />}
+        titulo="Detalle ANS"
+        descripcion="Vista consolidada de requerimientos y entregas con sus estados ANS."
+      />
 
       {error && <div className="aviso aviso-error">{error}</div>}
       {aviso && <div className="aviso aviso-alerta">{aviso}</div>}
@@ -338,7 +337,7 @@ export default function RequerimientosDetalleANS() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="tarjeta tarjeta-pad flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-lg">📋</span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-lg text-indigo-600"><Icono nombre="portafolio" /></span>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Requerimientos con ANS incumplido</p>
             <p className="text-2xl font-bold text-slate-900">{resumenReq.total}</p>
@@ -346,7 +345,7 @@ export default function RequerimientosDetalleANS() {
           </div>
         </div>
         <div className="tarjeta tarjeta-pad flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-lg">📦</span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-lg text-amber-600"><Icono nombre="caja" /></span>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Entregas con ANS incumplido</p>
             <p className="text-2xl font-bold text-slate-900">{resumenEnt.total}</p>
@@ -354,7 +353,7 @@ export default function RequerimientosDetalleANS() {
           </div>
         </div>
         <div className="tarjeta tarjeta-pad flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-lg">🔍</span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-lg text-emerald-600"><Icono nombre="lupa" /></span>
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Filtros aplicados</p>
             <p className="text-2xl font-bold text-slate-900">{filtroTexto ? 'Activo' : 'Ninguno'}</p>
@@ -371,7 +370,10 @@ export default function RequerimientosDetalleANS() {
           className="flex w-full flex-col items-start gap-3 border-b border-slate-200 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex min-w-0 items-center gap-3">
-            <span className="shrink-0 text-xs font-semibold text-marca">{mostrarRequerimientos ? '▲ Ocultar' : '▼ Mostrar'}</span>
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-marca">
+              <Icono nombre={mostrarRequerimientos ? 'chevron-arriba' : 'chevron-abajo'} />
+              {mostrarRequerimientos ? 'Ocultar' : 'Mostrar'}
+            </span>
             <div className="min-w-0">
               <h2 className="titulo-seccion text-sm">Requerimientos y su cumplimiento ANS</h2>
               <p className="text-xs text-slate-400">Estimaciones frente a la fecha límite pactada</p>
@@ -392,56 +394,54 @@ export default function RequerimientosDetalleANS() {
         </div>
         {mostrarRequerimientos && (
           <TablaScroll plano>
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-700">
+          <table className="tabla">
+            <thead>
             <tr>
-                <th className="p-2">Código REQ</th>
-                <th className="p-2">SC</th>
-                <th className="p-2">Nombre</th>
-                <th className="p-2">Squad</th>
-                <th className="p-2">LT HITSS</th>
-                <th className="p-2">Estado</th>
-                <th className="p-2">Cumplimiento ANS (Acta)</th>
-                <th className="p-2 text-right">Horas estimadas</th>
-                <th className="p-2">Fecha límite</th>
-                <th className="p-2">F. Real entrega estimación</th>
-                <th className="p-2 text-right">Días de atraso/adelanto</th>
-                <th className="p-2 text-center">¿Incumplió ANS?</th>
-                <th className="p-2">Observaciones</th>
-                <th className="p-2">Seguimiento Hitss</th>
-                <th className="p-2">Seguimiento EPM</th>
-                <th className="p-2">Tipificación</th>
+                <th>Código REQ</th>
+                <th>SC</th>
+                <th>Nombre</th>
+                <th>Squad</th>
+                <th>LT HITSS</th>
+                <th>Estado</th>
+                <th>Cumplimiento ANS (Acta)</th>
+                <th className="text-right">Horas estimadas</th>
+                <th>Fecha límite</th>
+                <th>F. Real entrega estimación</th>
+                <th className="text-right">Días de atraso/adelanto</th>
+                <th className="text-center">¿Incumplió ANS?</th>
+                <th>Observaciones</th>
+                <th>Seguimiento Hitss</th>
+                <th>Seguimiento EPM</th>
+                <th>Tipificación</th>
               </tr>
             </thead>
             <tbody>
               {requerimientosFiltrados.length === 0 ? (
-                <tr className="border-t">
+                <tr>
                     <td className="p-4 text-center text-slate-400" colSpan={16}>Sin registros</td>
                   </tr>
                 ) : (
                   requerimientosFiltrados.map((r) => (
-                  <tr key={r.id} className="border-t">
-                    <td className="p-2">
+                  <tr key={r.id}>
+                    <td>
                       <Link to={`/requerimientos/${r.id}`} className="font-medium text-marca hover:underline">
                         {r.codigoReq}
                       </Link>
                     </td>
-                    <td className="p-2 text-slate-600">{r.sc || '—'}</td>
-                    <td className="p-2">{r.nombre || '—'}</td>
-                    <td className="p-2">{r.squad || '—'}</td>
-                    <td className="p-2">{r.ltHitss || '—'}</td>
-                    <td className="p-2">{r.estado || '—'}</td>
-                    <td className="p-2">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeAns(r.ansActa)}`}>
-                        {normalizarAns(r.ansActa)}
-                      </span>
+                    <td className="text-slate-600">{r.sc || '—'}</td>
+                    <td>{r.nombre || '—'}</td>
+                    <td>{r.squad || '—'}</td>
+                    <td>{r.ltHitss || '—'}</td>
+                    <td>{r.estado || '—'}</td>
+                    <td>
+                      <Chip tono={tonoAns(r.ansActa)}>{normalizarAns(r.ansActa)}</Chip>
                     </td>
-                    <td className="p-2 text-right">{r.horasEstimadas ?? '—'}</td>
-                    <td className="p-2">{r.fechaLimite ? r.fechaLimite.slice(0, 10) : '—'}</td>
-                    <td className="p-2">
+                    <td className="text-right">{r.horasEstimadas ?? '—'}</td>
+                    <td>{r.fechaLimite ? r.fechaLimite.slice(0, 10) : '—'}</td>
+                    <td>
                       {r.fechaRealEntregaEstimacion ? r.fechaRealEntregaEstimacion.slice(0, 10) : '—'}
                     </td>
-                    <td className="p-2 text-right">
+                    <td className="text-right">
                       {(() => {
                         const result = calcularDiasTranscurridos(r.fechaLimite, r.fechaRealEntregaEstimacion)
                         if (!result) return '—'
@@ -453,7 +453,7 @@ export default function RequerimientosDetalleANS() {
                         )
                       })()}
                     </td>
-                    <td className="p-2 text-center">
+                    <td className="text-center">
                       <label className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold ${
                         r.seLevanto ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-slate-50 text-slate-600'
                       }`}>
@@ -467,7 +467,7 @@ export default function RequerimientosDetalleANS() {
                         {guardandoCheck.has(r.id) ? '…' : r.seLevanto ? 'Sí' : 'No'}
                       </label>
                     </td>
-                    <td className="p-2">
+                    <td>
                       <div className="flex min-w-[220px] gap-1.5">
                         <input
                           value={obsEdicion[r.id] ?? r.observacionesAns}
@@ -477,17 +477,17 @@ export default function RequerimientosDetalleANS() {
                           placeholder={puedeEditar ? 'Observaciones…' : ''}
                         />
                         {puedeEditar && (
-                          <button type="button" onClick={() => void guardarObservacion('requerimiento', r.id)}
-                            disabled={guardandoObs.has(r.id)}
-                            className="btn btn-primario btn-sm shrink-0">
+                          <Boton variante="primario" tamano="sm" className="shrink-0" type="button"
+                            onClick={() => void guardarObservacion('requerimiento', r.id)}
+                            disabled={guardandoObs.has(r.id)}>
                             {guardandoObs.has(r.id) ? '…' : 'Guardar'}
-                          </button>
+                          </Boton>
                         )}
                       </div>
                     </td>
-                      <td className="p-2 max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{r.seguimientoHitss || '—'}</td>
-                      <td className="p-2 max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{r.seguimientoEpm || '—'}</td>
-                      <td className="p-2">{r.tipificacion === 'HITSS' ? 'Hitss' : r.tipificacion === 'EPM' ? 'EPM' : '—'}</td>
+                      <td className="max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{r.seguimientoHitss || '—'}</td>
+                      <td className="max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{r.seguimientoEpm || '—'}</td>
+                      <td>{r.tipificacion === 'HITSS' ? 'Hitss' : r.tipificacion === 'EPM' ? 'EPM' : '—'}</td>
                     </tr>
                 ))
               )}
@@ -514,7 +514,10 @@ export default function RequerimientosDetalleANS() {
           className="flex w-full flex-col items-start gap-3 border-b border-slate-200 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex min-w-0 items-center gap-3">
-            <span className="shrink-0 text-xs font-semibold text-marca">{mostrarEntregas ? '▲ Ocultar' : '▼ Mostrar'}</span>
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-marca">
+              <Icono nombre={mostrarEntregas ? 'chevron-arriba' : 'chevron-abajo'} />
+              {mostrarEntregas ? 'Ocultar' : 'Mostrar'}
+            </span>
             <div className="min-w-0">
               <h2 className="titulo-seccion text-sm">Entregas y su cumplimiento ANS</h2>
               <p className="text-xs text-slate-400">Fecha comprometida frente a fecha real de entrega</p>
@@ -535,50 +538,50 @@ export default function RequerimientosDetalleANS() {
         </div>
         {mostrarEntregas && (
           <TablaScroll plano>
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-700">
+          <table className="tabla">
+            <thead>
             <tr>
-              <th className="p-2">Código REQ</th>
-              <th className="p-2">N° Entrega</th>
-              <th className="p-2">SC</th>
-              <th className="p-2">Squad</th>
-              <th className="p-2">LT HITSS</th>
-              <th className="p-2">Horas</th>
-              <th className="p-2 text-right">% Avance</th>
-              <th className="p-2">F. Comprometida</th>
-              <th className="p-2">F. Real</th>
-              <th className="p-2 text-right">Días de atraso/adelanto</th>
-              <th className="p-2">Estado</th>
-              <th className="p-2">Cumplimiento ANS (Entrega)</th>
-              <th className="p-2 text-center">¿Incumplió ANS?</th>
-              <th className="p-2">Observaciones</th>
-              <th className="p-2">Observaciones EPM</th>
-              <th className="p-2">Observaciones Hitss</th>
-              <th className="p-2">Tipificación</th>
+              <th>Código REQ</th>
+              <th>N° Entrega</th>
+              <th>SC</th>
+              <th>Squad</th>
+              <th>LT HITSS</th>
+              <th>Horas</th>
+              <th className="text-right">% Avance</th>
+              <th>F. Comprometida</th>
+              <th>F. Real</th>
+              <th className="text-right">Días de atraso/adelanto</th>
+              <th>Estado</th>
+              <th>Cumplimiento ANS (Entrega)</th>
+              <th className="text-center">¿Incumplió ANS?</th>
+              <th>Observaciones</th>
+              <th>Observaciones EPM</th>
+              <th>Observaciones Hitss</th>
+              <th>Tipificación</th>
             </tr>
             </thead>
             <tbody>
               {entregasFiltradas.length === 0 ? (
-                <tr className="border-t">
+                <tr>
                   <td className="p-4 text-center text-slate-400" colSpan={17}>Sin entregas</td>
                 </tr>
               ) : (
                 entregasFiltradas.map((e) => (
-                  <tr key={e.id} className="border-t">
-                    <td className="p-2">
+                  <tr key={e.id}>
+                    <td>
                       <Link to={`/requerimientos/${e.reqId}`} className="font-medium text-marca hover:underline">
                         {e.codigoReq}
                       </Link>
                     </td>
-                    <td className="p-2 text-center">{e.numero}</td>
-                    <td className="p-2 text-slate-600">{e.sc || '—'}</td>
-                    <td className="p-2">{e.squad || '—'}</td>
-                    <td className="p-2">{e.ltHitss}</td>
-                    <td className="p-2">{e.horas ?? '—'}</td>
-                    <td className="p-2 text-right">{e.porcentaje != null ? `${e.porcentaje}%` : '—'}</td>
-                    <td className="p-2">{e.fechaComprometida ? e.fechaComprometida.slice(0, 10) : '—'}</td>
-                    <td className="p-2">{e.fechaReal ? e.fechaReal.slice(0, 10) : '—'}</td>
-                    <td className="p-2 text-right">
+                    <td className="text-center">{e.numero}</td>
+                    <td className="text-slate-600">{e.sc || '—'}</td>
+                    <td>{e.squad || '—'}</td>
+                    <td>{e.ltHitss}</td>
+                    <td>{e.horas ?? '—'}</td>
+                    <td className="text-right">{e.porcentaje != null ? `${e.porcentaje}%` : '—'}</td>
+                    <td>{e.fechaComprometida ? e.fechaComprometida.slice(0, 10) : '—'}</td>
+                    <td>{e.fechaReal ? e.fechaReal.slice(0, 10) : '—'}</td>
+                    <td className="text-right">
                       {(() => {
                         const result = calcularDiasTranscurridos(e.fechaComprometida, e.fechaReal)
                         if (!result) return '—'
@@ -590,13 +593,11 @@ export default function RequerimientosDetalleANS() {
                         )
                       })()}
                     </td>
-                    <td className="p-2">{e.estado || '—'}</td>
-                    <td className="p-2">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeAns(e.ansEntrega)}`}>
-                        {normalizarAns(e.ansEntrega)}
-                      </span>
+                    <td>{e.estado || '—'}</td>
+                    <td>
+                      <Chip tono={tonoAns(e.ansEntrega)}>{normalizarAns(e.ansEntrega)}</Chip>
                     </td>
-                    <td className="p-2 text-center">
+                    <td className="text-center">
                       <label className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold ${
                         e.seLevanto ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-slate-50 text-slate-600'
                       }`}>
@@ -610,7 +611,7 @@ export default function RequerimientosDetalleANS() {
                         {guardandoCheck.has(e.id) ? '…' : e.seLevanto ? 'Sí' : 'No'}
                       </label>
                     </td>
-                    <td className="p-2">
+                    <td>
                       <div className="flex min-w-[220px] gap-1.5">
                         <input
                           value={obsEdicion[e.id] ?? e.observacionesAns}
@@ -620,17 +621,17 @@ export default function RequerimientosDetalleANS() {
                           placeholder={puedeEditar ? 'Observaciones…' : ''}
                         />
                         {puedeEditar && (
-                          <button type="button" onClick={() => void guardarObservacion('entrega', e.reqId, e.entregaNumero)}
-                            disabled={guardandoObs.has(e.id)}
-                            className="btn btn-primario btn-sm shrink-0">
+                          <Boton variante="primario" tamano="sm" className="shrink-0" type="button"
+                            onClick={() => void guardarObservacion('entrega', e.reqId, e.entregaNumero)}
+                            disabled={guardandoObs.has(e.id)}>
                             {guardandoObs.has(e.id) ? '…' : 'Guardar'}
-                          </button>
+                          </Boton>
                         )}
                       </div>
                     </td>
-                    <td className="p-2 max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{e.observacionesEpm || '—'}</td>
-                    <td className="p-2 max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{e.observacionesHitss || '—'}</td>
-                    <td className="p-2">{e.tipificacion === 'HITSS' ? 'Hitss' : e.tipificacion === 'EPM' ? 'EPM' : '—'}</td>
+                    <td className="max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{e.observacionesEpm || '—'}</td>
+                    <td className="max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{e.observacionesHitss || '—'}</td>
+                    <td>{e.tipificacion === 'HITSS' ? 'Hitss' : e.tipificacion === 'EPM' ? 'EPM' : '—'}</td>
                   </tr>
                 ))
               )}
@@ -700,13 +701,13 @@ function DateFilter({
       </label>
       <div className="relative text-sm" ref={ref}>
         <span className="mb-1 block text-slate-600">{label} - mes</span>
-        <button
-          type="button"
+        <Boton
+          variante="secundario"
           onClick={() => setAbierto((v) => !v)}
-          className="btn btn-secundario min-w-[160px] text-left"
+          className="min-w-[160px] text-left"
         >
           {resumenMeses}
-        </button>
+        </Boton>
         {abierto && (
           <div className="absolute z-50 mt-1 max-h-64 w-48 overflow-y-auto rounded border bg-white p-2 shadow-lg">
             <label className="flex items-center gap-2 border-b pb-1 text-xs">

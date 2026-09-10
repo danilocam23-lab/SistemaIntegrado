@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Estimacion } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Estimaciones() {
   const { tienePermiso } = useAuth()
@@ -81,15 +81,15 @@ export default function Estimaciones() {
   }
 
   return (
-    <div>
-      <h1 className="titulo-pagina mb-1">Estimaciones</h1>
-      <p className="mb-4 text-sm text-slate-500">
-        Crea la cabecera de una estimación. La carga masiva de filas desde Excel
-        se habilitará con el importador (pendiente).
-      </p>
+    <div className="space-y-4">
+      <EncabezadoPagina
+        icono={<Icono nombre="grafico-barras" />}
+        titulo="Estimaciones"
+        descripcion="Crea la cabecera de una estimación. La carga masiva de filas desde Excel se habilitará con el importador (pendiente)."
+      />
 
       {puedeGestionarEstimaciones && (
-        <form onSubmit={crear} className="barra-filtros mb-4">
+        <form onSubmit={crear} className="barra-filtros">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Título</span>
             <input value={titulo} onChange={(e) => setTitulo(e.target.value)} required
@@ -105,31 +105,31 @@ export default function Estimaciones() {
             <input value={iniciativa} onChange={(e) => setIniciativa(e.target.value)}
               className="campo" />
           </label>
-          <button className="btn btn-primario">Crear</button>
+          <Boton variante="primario" type="submit">Crear</Boton>
         </form>
       )}
 
       {(aviso || error) && (
-        <div className="aviso aviso-error mb-3">{aviso || error}</div>
+        <div className="aviso aviso-error">{aviso || error}</div>
       )}
 
       <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="p-2 text-left">Título</th>
-            <th className="p-2 text-left">Cliente</th>
-            <th className="p-2 text-left">Iniciativa</th>
-            <th className="p-2 text-right">Filas</th>
-            <th className="p-2 text-right">Horas totales</th>
-            <th className="p-2"></th>
+            <th>Título</th>
+            <th>Cliente</th>
+            <th>Iniciativa</th>
+            <th className="text-right">Filas</th>
+            <th className="text-right">Horas totales</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {datos.map((es) => (
-            <tr key={es.id} className="border-t">
+            <tr key={es.id}>
               <td
-                className={`p-2 ${puedeGestionarEstimaciones ? 'cursor-pointer' : ''}`}
+                className={puedeGestionarEstimaciones ? 'cursor-pointer' : undefined}
                 title={puedeGestionarEstimaciones ? 'Doble clic para editar' : undefined}
                 onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'titulo', es.titulo ?? '') : undefined}
               >
@@ -157,7 +157,7 @@ export default function Estimaciones() {
                 )}
               </td>
               <td
-                className={`p-2 ${puedeGestionarEstimaciones ? 'cursor-pointer' : ''}`}
+                className={puedeGestionarEstimaciones ? 'cursor-pointer' : undefined}
                 title={puedeGestionarEstimaciones ? 'Doble clic para editar' : undefined}
                 onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'cliente', es.cliente ?? '') : undefined}
               >
@@ -185,7 +185,7 @@ export default function Estimaciones() {
                 )}
               </td>
               <td
-                className={`p-2 ${puedeGestionarEstimaciones ? 'cursor-pointer' : ''}`}
+                className={puedeGestionarEstimaciones ? 'cursor-pointer' : undefined}
                 title={puedeGestionarEstimaciones ? 'Doble clic para editar' : undefined}
                 onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'iniciativa', es.iniciativa ?? '') : undefined}
               >
@@ -212,9 +212,9 @@ export default function Estimaciones() {
                   es.iniciativa ?? '—'
                 )}
               </td>
-              <td className="p-2 text-right">{es.total_filas}</td>
-              <td className="p-2 text-right">{es.total_horas}</td>
-              <td className="p-2 text-center">
+              <td className="text-right">{es.total_filas}</td>
+              <td className="text-right">{es.total_horas}</td>
+              <td className="text-center">
                 {puedeGestionarEstimaciones && (
                   <button onClick={() => eliminar(es)} className="enlace-accion enlace-accion-peligro">
                     Eliminar

@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 import type { Aplicacion, BacklogFuturo, Persona, Requerimiento } from '../types'
 
 const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADO', 'CANCELADO']
@@ -16,11 +16,11 @@ const ESTADO_LABEL: Record<string, string> = {
   CANCELADO: 'Cancelado',
 }
 
-const ESTADO_BADGE: Record<string, string> = {
-  PENDIENTE: 'bg-amber-100 text-amber-700',
-  EN_PROGRESO: 'bg-blue-100 text-blue-700',
-  COMPLETADO: 'bg-emerald-100 text-emerald-700',
-  CANCELADO: 'bg-slate-200 text-slate-600',
+const ESTADO_TONO: Record<string, 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'> = {
+  PENDIENTE: 'alerta',
+  EN_PROGRESO: 'marca',
+  COMPLETADO: 'exito',
+  CANCELADO: 'neutro',
 }
 
 interface FormState {
@@ -175,59 +175,62 @@ export default function BacklogFuturoPage() {
   }
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="titulo-pagina">Backlog futuro</h1>
-        {puedeEditar && (
-          <button onClick={abrirNuevo} className="btn btn-primario">
-            + Agregar registro
-          </button>
-        )}
-      </div>
+    <div className="space-y-4">
+      <EncabezadoPagina
+        icono={<Icono nombre="portafolio" />}
+        titulo="Backlog futuro"
+        acciones={
+          puedeEditar ? (
+            <Boton variante="primario" onClick={abrirNuevo}>
+              + Agregar registro
+            </Boton>
+          ) : undefined
+        }
+      />
 
-      {error && <div className="aviso aviso-error mb-3">{error}</div>}
+      {error && <div className="aviso aviso-error">{error}</div>}
 
       <TablaScroll>
-        <table className="min-w-full text-sm">
-          <thead className="bg-marca-osc text-white">
+        <table className="tabla">
+          <thead>
             <tr>
-              <th className="p-2 text-left">Nombre de la iniciativa</th>
-              <th className="p-2 text-left">Tipo de demanda</th>
-              <th className="p-2 text-left">Squad</th>
-              <th className="p-2 text-left">AR/QA</th>
-              <th className="p-2 text-right">Horas aproximadas</th>
-              <th className="p-2 text-center">F. tentativa de inicio</th>
-              <th className="p-2 text-center">Estado</th>
-              <th className="p-2 text-center">¿Volvió acta?</th>
-              <th className="p-2 text-left">Acta</th>
-              <th className="p-2"></th>
+              <th>Nombre de la iniciativa</th>
+              <th>Tipo de demanda</th>
+              <th>Squad</th>
+              <th>AR/QA</th>
+              <th className="text-right">Horas aproximadas</th>
+              <th className="text-center">F. tentativa de inicio</th>
+              <th className="text-center">Estado</th>
+              <th className="text-center">¿Volvió acta?</th>
+              <th>Acta</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {datos.map((item) => (
-              <tr key={item.id} className="border-t">
-                <td className="p-2">{item.nombre_iniciativa}</td>
-                <td className="p-2">{item.tipo_demanda || '—'}</td>
-                <td className="p-2">{squadPorCodigo.get(item.squad_id) ?? item.squad_id}</td>
-                <td className="p-2">{personaPorId.get(item.responsable_id ?? '') ?? '—'}</td>
-                <td className="p-2 text-right">{item.horas_aproximadas ?? 0}</td>
-                <td className="p-2 text-center">{item.fecha_tentativa_inicio || '—'}</td>
-                <td className="p-2 text-center">
-                  <span className={`chip ${ESTADO_BADGE[item.estado] ?? 'bg-slate-100 text-slate-700'}`}>
+              <tr key={item.id}>
+                <td>{item.nombre_iniciativa}</td>
+                <td>{item.tipo_demanda || '—'}</td>
+                <td>{squadPorCodigo.get(item.squad_id) ?? item.squad_id}</td>
+                <td>{personaPorId.get(item.responsable_id ?? '') ?? '—'}</td>
+                <td className="text-right">{item.horas_aproximadas ?? 0}</td>
+                <td className="text-center">{item.fecha_tentativa_inicio || '—'}</td>
+                <td className="text-center">
+                  <Chip tono={ESTADO_TONO[item.estado] ?? 'neutro'}>
                     {ESTADO_LABEL[item.estado] ?? item.estado}
-                  </span>
+                  </Chip>
                 </td>
-                <td className="p-2 text-center">
+                <td className="text-center">
                   {item.volvio_acta
-                    ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Sí</span>
-                    : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">No</span>}
+                    ? <Chip tono="exito">Sí</Chip>
+                    : <Chip tono="neutro">No</Chip>}
                 </td>
-                <td className="p-2">
+                <td>
                   {item.volvio_acta && item.acta_id
                     ? (actaPorId.get(item.acta_id)?.codigo_req ?? item.acta_id)
                     : '—'}
                 </td>
-                <td className="p-2 text-center whitespace-nowrap">
+                <td className="text-center whitespace-nowrap">
                   {puedeEditar && (
                     <>
                       <button onClick={() => abrirEditar(item)} className="enlace-accion mr-3">
@@ -384,12 +387,12 @@ export default function BacklogFuturoPage() {
           )}
 
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={cerrar} className="btn btn-secundario">
+            <Boton variante="secundario" onClick={cerrar}>
               Cancelar
-            </button>
-            <button className="btn btn-primario">
+            </Boton>
+            <Boton variante="primario" type="submit">
               {form.id ? 'Guardar' : 'Crear'}
-            </button>
+            </Boton>
           </div>
         </form>
       </Modal>

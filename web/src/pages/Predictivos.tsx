@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { useLista } from '../api/hooks'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
+
+type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 
 interface FilaPredictiva {
   reqId: string
@@ -137,30 +139,29 @@ export default function Predictivos() {
     return resultado.sort((a, b) => a.estado.localeCompare(b.estado) || a.codigoReq.localeCompare(b.codigoReq))
   }, [requerimientos, squadPorId, personaPorId])
 
-  const badgeEstadoReq = (estado: string) => {
-    if (estado === 'Estimación rechazada') return 'bg-red-100 text-red-700'
-    if (estado === 'En curso por Hitss') return 'bg-sky-100 text-sky-700'
-    return 'bg-slate-100 text-slate-700'
+  const tonoEstadoReq = (estado: string): TonoChip => {
+    if (estado === 'Estimación rechazada') return 'error'
+    if (estado === 'En curso por Hitss') return 'marca'
+    return 'neutro'
   }
 
-  const badgeDias = (dias: number) => {
-    if (dias < 0) return 'bg-red-100 text-red-700'
-    if (dias <= 2) return 'bg-orange-100 text-orange-700'
-    return 'bg-amber-100 text-amber-700'
+  const tonoDias = (dias: number): TonoChip => {
+    if (dias < 0) return 'error'
+    return 'alerta'
   }
 
-  const badgeEstado = (estado: string) => {
+  const tonoEstado = (estado: string): TonoChip => {
     const s = estado.toUpperCase()
-    if (s === 'RECHAZADA') return 'bg-red-100 text-red-700'
-    if (s === 'PENDIENTE') return 'bg-amber-100 text-amber-700'
-    return 'bg-slate-100 text-slate-700'
+    if (s === 'RECHAZADA') return 'error'
+    if (s === 'PENDIENTE') return 'alerta'
+    return 'neutro'
   }
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-4">Predictivos</h1>
+      <EncabezadoPagina icono={<Icono nombre="tendencia" />} titulo="Predictivos" />
 
-      <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="mb-4 mt-4 rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="titulo-seccion text-sm mb-1">
           Entregas próximas a vencer (≤ 5 días)
         </h2>
@@ -176,46 +177,44 @@ export default function Predictivos() {
       {!cargando && !error && (
         filas.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white p-16 text-center text-slate-500">
-            <span className="text-4xl">✅</span>
+            <Icono nombre="check-circulo" className="h-10 w-10 text-emerald-500" />
             <p className="text-sm">No hay entregas próximas a vencer en este momento.</p>
           </div>
         ) : (
           <TablaScroll>
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <table className="tabla">
+              <thead>
                 <tr>
-                  <th className="p-2 text-left">Código Req</th>
-                  <th className="p-2 text-left">Squad</th>
-                  <th className="p-2 text-left">Acta de trabajo</th>
-                  <th className="p-2 text-left">Analista</th>
-                  <th className="p-2 text-center"># Entrega</th>
-                  <th className="p-2 text-center">F. Comprometida</th>
-                  <th className="p-2 text-center">Estado</th>
-                  <th className="p-2 text-center">Días restantes</th>
+                  <th>Código Req</th>
+                  <th>Squad</th>
+                  <th>Acta de trabajo</th>
+                  <th>Analista</th>
+                  <th className="text-center"># Entrega</th>
+                  <th className="text-center">F. Comprometida</th>
+                  <th className="text-center">Estado</th>
+                  <th className="text-center">Días restantes</th>
                 </tr>
               </thead>
               <tbody>
                 {filas.map((f) => (
-                  <tr key={`${f.reqId}-${f.entregaNum}`} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="p-2">
+                  <tr key={`${f.reqId}-${f.entregaNum}`}>
+                    <td>
                       <Link to={`/requerimientos/${f.reqId}`} className="enlace-accion">
                         {f.codigoReq}
                       </Link>
                     </td>
-                    <td className="p-2">{f.squad}</td>
-                    <td className="p-2">{f.nombreActa}</td>
-                    <td className="p-2">{f.analista}</td>
-                    <td className="p-2 text-center">{f.entregaNum}</td>
-                    <td className="p-2 text-center">{f.fechaComprometida}</td>
-                    <td className="p-2 text-center">
-                      <span className={`chip ${badgeEstado(f.estado)}`}>
-                        {f.estado}
-                      </span>
+                    <td>{f.squad}</td>
+                    <td>{f.nombreActa}</td>
+                    <td>{f.analista}</td>
+                    <td className="text-center">{f.entregaNum}</td>
+                    <td className="text-center">{f.fechaComprometida}</td>
+                    <td className="text-center">
+                      <Chip tono={tonoEstado(f.estado)}>{f.estado}</Chip>
                     </td>
-                    <td className="p-2 text-center">
-                      <span className={`chip ${badgeDias(f.diasRestantes)}`}>
+                    <td className="text-center">
+                      <Chip tono={tonoDias(f.diasRestantes)}>
                         {f.diasRestantes < 0 ? `Vencida (${Math.abs(f.diasRestantes)}d)` : `${f.diasRestantes}d`}
-                      </span>
+                      </Chip>
                     </td>
                   </tr>
                 ))}
@@ -237,38 +236,36 @@ export default function Predictivos() {
       {!cargando && !error && (
         filasEstadoReq.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white p-16 text-center text-slate-500">
-            <span className="text-4xl">✅</span>
+            <Icono nombre="check-circulo" className="h-10 w-10 text-emerald-500" />
             <p className="text-sm">No hay requerimientos en estos estados en este momento.</p>
           </div>
         ) : (
           <TablaScroll>
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <table className="tabla">
+              <thead>
                 <tr>
-                  <th className="p-2 text-left">Código Req</th>
-                  <th className="p-2 text-left">Squad</th>
-                  <th className="p-2 text-left">Acta de trabajo</th>
-                  <th className="p-2 text-left">Analista</th>
-                  <th className="p-2 text-center">F. Solicitud</th>
-                  <th className="p-2 text-center">Estado</th>
+                  <th>Código Req</th>
+                  <th>Squad</th>
+                  <th>Acta de trabajo</th>
+                  <th>Analista</th>
+                  <th className="text-center">F. Solicitud</th>
+                  <th className="text-center">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {filasEstadoReq.map((f) => (
-                  <tr key={f.reqId} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="p-2">
+                  <tr key={f.reqId}>
+                    <td>
                       <Link to={`/requerimientos/${f.reqId}`} className="enlace-accion">
                         {f.codigoReq}
                       </Link>
                     </td>
-                    <td className="p-2">{f.squad}</td>
-                    <td className="p-2">{f.nombreActa}</td>
-                    <td className="p-2">{f.analista}</td>
-                    <td className="p-2 text-center">{f.fechaSolicitud ? f.fechaSolicitud.slice(0, 10) : '—'}</td>
-                    <td className="p-2 text-center">
-                      <span className={`chip ${badgeEstadoReq(f.estado)}`}>
-                        {f.estado}
-                      </span>
+                    <td>{f.squad}</td>
+                    <td>{f.nombreActa}</td>
+                    <td>{f.analista}</td>
+                    <td className="text-center">{f.fechaSolicitud ? f.fechaSolicitud.slice(0, 10) : '—'}</td>
+                    <td className="text-center">
+                      <Chip tono={tonoEstadoReq(f.estado)}>{f.estado}</Chip>
                     </td>
                   </tr>
                 ))}

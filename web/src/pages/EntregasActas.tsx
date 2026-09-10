@@ -12,7 +12,9 @@ import {
   leerCamposActivos,
 } from '../constantes'
 import type { Aplicacion, Categoria, Configuracion as ConfigItem, Persona, Requerimiento, Squad } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+
+type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 
 const MESES_NOMBRES: Record<string, string> = {
   ene: 'Enero', feb: 'Febrero', mar: 'Marzo', abr: 'Abril', may: 'Mayo', jun: 'Junio',
@@ -374,15 +376,15 @@ export default function EntregasActas() {
 
   const estadoBadge = (estado: string | null) => {
     const s = estado ?? ''
-    const cls =
-      s.toUpperCase() === 'PENDIENTE' ? 'bg-amber-100 text-amber-700' :
-      s.toUpperCase() === 'APROBADA' ? 'bg-green-100 text-green-700' :
-      s.toUpperCase() === 'RECHAZADA' ? 'bg-red-100 text-red-700' :
-      s.toUpperCase() === 'ENTREGA CARGADA' ? 'bg-blue-100 text-blue-700' :
-      s.toUpperCase() === 'ENTREGA NO CARGADA' ? 'bg-orange-100 text-orange-700' :
-      s.toUpperCase() === 'EN GARANTIA' ? 'bg-purple-100 text-purple-700' :
-      'bg-slate-100 text-slate-600'
-    return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>{s || '—'}</span>
+    const u = s.toUpperCase()
+    const tono: TonoChip =
+      u === 'PENDIENTE' ? 'alerta' :
+      u === 'APROBADA' ? 'exito' :
+      u === 'RECHAZADA' ? 'error' :
+      u === 'ENTREGA CARGADA' ? 'marca' :
+      u === 'ENTREGA NO CARGADA' ? 'alerta' :
+      'neutro'
+    return <Chip tono={tono}>{s || '—'}</Chip>
   }
 
   const calcularDiasTranscurridos = (fechaComprometida: string | null, fechaReal: string | null): { dias: number; esNegativo: boolean } | null => {
@@ -495,7 +497,7 @@ export default function EntregasActas() {
     switch (key) {
       case 'codigoReq':
         return {
-          className: 'p-2',
+          className: '',
           content: (
             <Link to={`/requerimientos/${f.reqId}`} className="text-marca hover:underline font-medium">
               {f.codigoReq}
@@ -504,7 +506,7 @@ export default function EntregasActas() {
         }
       case 'porcentaje':
         return {
-          className: 'p-2 text-right',
+          className: 'text-right',
           content:
             f.porcentaje != null ? (
               <span className="inline-flex items-center gap-1">
@@ -522,17 +524,17 @@ export default function EntregasActas() {
         }
       case 'fechaComprometida':
         return {
-          className: `p-2 font-medium ${vencida ? 'text-red-700' : ''}`,
+          className: `font-medium ${vencida ? 'text-red-700' : ''}`,
           content: (
             <>
               {f.fechaComprometida ? f.fechaComprometida.slice(0, 10) : '—'}
-              {vencida && <span className="ml-1 text-xs">⚠</span>}
+              {vencida && <Icono nombre="alerta" className="ml-1 inline-block h-3.5 w-3.5 align-text-bottom" />}
             </>
           ),
         }
       case 'diasTranscurridos':
         return {
-          className: 'p-2 text-right',
+          className: 'text-right',
           content: diasInfo ? (
             <span className={diasInfo.esNegativo ? 'text-red-600 font-semibold' : 'text-emerald-600'}>
               {diasInfo.esNegativo ? '-' : '+'}{diasInfo.dias}
@@ -542,13 +544,13 @@ export default function EntregasActas() {
           ),
         }
       case 'estado':
-        return { className: 'p-2 text-center', content: estadoBadge(f.estado) }
+        return { className: 'text-center', content: estadoBadge(f.estado) }
       case 'mesAprobacion':
-        return { className: 'p-2', content: f.mesAprobacion ? normalizarMes(f.mesAprobacion) : '—' }
+        return { className: '', content: f.mesAprobacion ? normalizarMes(f.mesAprobacion) : '—' }
       default: {
         const align = THEAD_ALIGN[key] ?? ''
         const valor = CAMPO_ACCESOR[key]?.(f)
-        return { className: `p-2 ${align}`, content: valor != null && valor !== '' ? valor : '—' }
+        return { className: align, content: valor != null && valor !== '' ? valor : '—' }
       }
     }
   }
@@ -574,24 +576,23 @@ export default function EntregasActas() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="titulo-pagina">Entregas de Actas</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Entregas ordenadas de la más próxima a la más lejana.
-          </p>
-        </div>
-        {puedeExportar && (
-          <button
-            onClick={exportarExcel}
-            disabled={filasFiltradas.length === 0}
-            title="Exporta a Excel el listado con los filtros actualmente aplicados"
-            className="btn btn-exito items-center gap-1"
-          >
-            Exportar a Excel
-          </button>
-        )}
-      </div>
+      <EncabezadoPagina
+        icono={<Icono nombre="portafolio" />}
+        titulo="Entregas de Actas"
+        descripcion="Entregas ordenadas de la más próxima a la más lejana."
+        acciones={
+          puedeExportar ? (
+            <Boton
+              variante="exito"
+              onClick={exportarExcel}
+              disabled={filasFiltradas.length === 0}
+              title="Exporta a Excel el listado con los filtros actualmente aplicados"
+            >
+              Exportar a Excel
+            </Boton>
+          ) : undefined
+        }
+      />
 
       {/* Filtros */}
       <div className="barra-filtros">
@@ -738,11 +739,11 @@ export default function EntregasActas() {
       {error && <div className="aviso aviso-error">{error}</div>}
 
       <TablaScroll>
-        <table className="w-full text-sm">
-          <thead className="bg-marca-osc text-white">
+        <table className="tabla">
+          <thead>
             <tr>
               {columnasVisibles.map((c) => (
-                <th key={c.key} className={`p-2 ${THEAD_ALIGN[c.key] ?? 'text-left'}`}>{c.label}</th>
+                <th key={c.key} className={THEAD_ALIGN[c.key] ?? 'text-left'}>{c.label}</th>
               ))}
             </tr>
           </thead>
@@ -762,7 +763,7 @@ export default function EntregasActas() {
               const vencida = diasInfo?.esNegativo ?? false
               return (
               <tr key={`${f.codigoReq}-${f.entregaNum}-${i}`}
-                className={`border-t ${vencida ? '[&>td]:bg-[#fecfcf]' : '[&>td]:hover:bg-slate-50'}`}>
+                className={vencida ? '[&>td]:bg-[#fecfcf]' : undefined}>
                 {columnasVisibles.map((c) => {
                   const { className, content } = celdaEntrega(c.key, f, diasInfo, vencida)
                   return <td key={c.key} className={className}>{content}</td>
