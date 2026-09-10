@@ -7,7 +7,7 @@ export default {
     'btn', 'btn-primario', 'btn-secundario', 'btn-suave', 'btn-fantasma',
     'btn-peligro', 'btn-peligro-suave', 'btn-exito', 'btn-sm', 'btn-lg',
     'btn-icono', 'btn-bloque', 'btn-alerta',
-    'enlace-accion', 'enlace-accion-peligro', 'enlace-accion-alerta', 'enlace-accion-sutil',
+    'enlace-accion', 'enlace-accion-peligro', 'enlace-accion-alerta', 'enlace-accion-exito', 'enlace-accion-sutil',
     'pestanas', 'pestana', 'pestana-activa',
     'campo', 'campo-sm', 'etiqueta', 'etiqueta-sup', 'ayuda',
     'tarjeta', 'tarjeta-pad', 'tarjeta-encabezado', 'tarjeta-titulo',

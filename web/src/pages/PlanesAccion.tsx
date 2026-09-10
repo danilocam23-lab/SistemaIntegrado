@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Persona, PlanAccion } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADO', 'CANCELADO']
 
@@ -15,11 +15,11 @@ const ESTADO_LABEL: Record<string, string> = {
   CANCELADO: 'Cancelado',
 }
 
-const ESTADO_BADGE: Record<string, string> = {
-  PENDIENTE: 'bg-amber-100 text-amber-700',
-  EN_PROGRESO: 'bg-blue-100 text-blue-700',
-  COMPLETADO: 'bg-emerald-100 text-emerald-700',
-  CANCELADO: 'bg-slate-200 text-slate-600',
+const ESTADO_TONO: Record<string, 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'> = {
+  PENDIENTE: 'alerta',
+  EN_PROGRESO: 'marca',
+  COMPLETADO: 'exito',
+  CANCELADO: 'neutro',
 }
 
 const ROLES_RESPONSABLE = ['LT_HITSS', 'SCRUM']
@@ -119,7 +119,7 @@ export default function PlanesAccion() {
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-4">Planes de acción</h1>
+      <EncabezadoPagina icono={<Icono nombre="portafolio" />} titulo="Planes de acción" />
 
       {puedeEditar && (
         <form onSubmit={guardar} className="barra-filtros mb-4">
@@ -174,13 +174,13 @@ export default function PlanesAccion() {
               ))}
             </select>
           </label>
-          <button className="btn btn-primario">
+          <Boton variante="primario" type="submit">
             {form.id ? 'Guardar' : 'Crear'}
-          </button>
+          </Boton>
           {form.id && (
-            <button type="button" onClick={cancelarEdicion} className="btn btn-secundario">
+            <Boton variante="secundario" type="button" onClick={cancelarEdicion}>
               Cancelar
-            </button>
+            </Boton>
           )}
         </form>
       )}
@@ -204,30 +204,30 @@ export default function PlanesAccion() {
       )}
 
       <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="p-2 text-left">Título</th>
-            <th className="p-2 text-left">Descripción</th>
-            <th className="p-2 text-left">Responsable</th>
-            <th className="p-2 text-center">Fecha límite</th>
-            <th className="p-2 text-center">Estado</th>
-            <th className="p-2"></th>
+            <th>Título</th>
+            <th>Descripción</th>
+            <th>Responsable</th>
+            <th className="text-center">Fecha límite</th>
+            <th className="text-center">Estado</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {planesFiltrados.map((p) => (
-            <tr key={p.id} className="border-t">
-              <td className="p-2">{p.titulo}</td>
-              <td className="p-2">{p.descripcion || '—'}</td>
-              <td className="p-2">{(p.responsable_id && personasPorId.get(p.responsable_id)?.nombre) || '—'}</td>
-              <td className="p-2 text-center">{p.fecha_limite || '—'}</td>
-              <td className="p-2 text-center">
-                <span className={`chip ${ESTADO_BADGE[p.estado] ?? 'bg-slate-100 text-slate-700'}`}>
+            <tr key={p.id}>
+              <td>{p.titulo}</td>
+              <td>{p.descripcion || '—'}</td>
+              <td>{(p.responsable_id && personasPorId.get(p.responsable_id)?.nombre) || '—'}</td>
+              <td className="text-center">{p.fecha_limite || '—'}</td>
+              <td className="text-center">
+                <Chip tono={ESTADO_TONO[p.estado] ?? 'neutro'}>
                   {ESTADO_LABEL[p.estado] ?? p.estado}
-                </span>
+                </Chip>
               </td>
-              <td className="p-2 text-center whitespace-nowrap">
+              <td className="text-center whitespace-nowrap">
                 {puedeEditar && (
                   <>
                     <button onClick={() => editar(p)} className="enlace-accion mr-3">

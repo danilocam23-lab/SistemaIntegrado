@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import Modal from '../components/Modal'
+import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona } from '../types'
@@ -276,29 +277,31 @@ export default function Personas() {
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-4">Personas</h1>
+      <EncabezadoPagina icono={<Icono nombre="personas" />} titulo="Personas" />
 
       {/* Banner de duplicados */}
       {duplicados.length > 0 && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
           <span>
-            ⚠️ Se encontraron <strong>{duplicados.length}</strong> grupo(s) con personas duplicadas.
+            <Icono nombre="alerta" className="mr-1 inline align-text-bottom" /> Se encontraron <strong>{duplicados.length}</strong> grupo(s) con personas duplicadas.
           </span>
           <div className="flex gap-2">
-            <button
+            <Boton
+              variante="secundario"
+              tamano="sm"
               onClick={() => setModalDupAbierto(true)}
-              className="btn btn-secundario btn-sm"
             >
               Ver detalle
-            </button>
+            </Boton>
             {puedeEditarPersonas && (
-              <button
+              <Boton
+                variante="alerta"
+                tamano="sm"
                 onClick={deduplicar}
                 disabled={deduplicando}
-                className="btn btn-alerta btn-sm"
               >
                 {deduplicando ? 'Fusionando…' : 'Fusionar duplicados'}
-              </button>
+              </Boton>
             )}
           </div>
         </div>
@@ -306,7 +309,7 @@ export default function Personas() {
 
       {resultadoDedup && (
         <div className="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-          ✅ Deduplicación completada: <strong>{resultadoDedup.fusionados}</strong> persona(s) fusionadas,{' '}
+          <Icono nombre="check-circulo" className="mr-1 inline align-text-bottom" /> Deduplicación completada: <strong>{resultadoDedup.fusionados}</strong> persona(s) fusionadas,{' '}
           <strong>{resultadoDedup.referencias_actualizadas}</strong> referencia(s) actualizadas.
         </div>
       )}
@@ -319,12 +322,9 @@ export default function Personas() {
           className="campo w-72"
         />
         {puedeCrearPersonas && (
-          <button
-            onClick={abrirNuevo}
-            className="btn btn-primario"
-          >
+          <Boton variante="primario" onClick={abrirNuevo}>
             + Nueva persona
-          </button>
+          </Boton>
         )}
       </div>
 
@@ -360,38 +360,38 @@ export default function Personas() {
                 </div>
               </button>
               {!collapsed && (
-                <table className="w-full table-fixed text-sm">
-                  <thead className="bg-slate-50 text-slate-600 text-xs">
+                <table className="tabla table-fixed">
+                  <thead>
                     <tr>
-                     <th className="p-2 text-left">Nombre</th>
-                     <th className="p-2 text-left">Correo</th>
-                     <th className="p-2 text-left">Squad</th>
-                    {rol !== 'LT_EPM' && <th className="p-2 text-left">Tipo de contratación</th>}
-                    {esGerente && rol !== 'LT_EPM' && <th className="p-2 text-right whitespace-nowrap">Valor persona</th>}
-                    {esGerente && rol !== 'LT_EPM' && <th className="p-2 text-right whitespace-nowrap">Valor periféricos</th>}
-                    <th className="p-2 text-center">Activo</th>
-                    <th className="p-2 text-center whitespace-nowrap">F. desactivación</th>
-                    <th className="p-2 text-center">Acciones</th>
+                     <th>Nombre</th>
+                     <th>Correo</th>
+                     <th>Squad</th>
+                    {rol !== 'LT_EPM' && <th>Tipo de contratación</th>}
+                    {esGerente && rol !== 'LT_EPM' && <th className="text-right whitespace-nowrap">Valor persona</th>}
+                    {esGerente && rol !== 'LT_EPM' && <th className="text-right whitespace-nowrap">Valor periféricos</th>}
+                    <th className="text-center">Activo</th>
+                    <th className="text-center whitespace-nowrap">F. desactivación</th>
+                    <th className="text-center">Acciones</th>
                    </tr>
                   </thead>
                   <tbody>
                     {personas.map((p) => (
-                     <tr key={p.id} className="border-t">
-                       <td className="p-2 truncate">{p.nombre}</td>
-                       <td className="p-2 truncate">{p.email ?? '—'}</td>
-                       <td className="p-2 truncate">{(p.squads ?? []).join(', ') || '—'}</td>
-                       {rol !== 'LT_EPM' && <td className="p-2 truncate">{p.tipo_contratacion ?? '—'}</td>}
-                       {esGerente && rol !== 'LT_EPM' && <td className="p-2 text-right font-mono text-xs">${(p.valor_persona ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
-                       {esGerente && rol !== 'LT_EPM' && <td className="p-2 text-right font-mono text-xs">${(p.valor_perifericos ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
-                        <td className="p-2 text-center">
+                     <tr key={p.id}>
+                       <td className="truncate">{p.nombre}</td>
+                       <td className="truncate">{p.email ?? '—'}</td>
+                       <td className="truncate">{(p.squads ?? []).join(', ') || '—'}</td>
+                       {rol !== 'LT_EPM' && <td className="truncate">{p.tipo_contratacion ?? '—'}</td>}
+                       {esGerente && rol !== 'LT_EPM' && <td className="text-right font-mono text-xs">${(p.valor_persona ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
+                       {esGerente && rol !== 'LT_EPM' && <td className="text-right font-mono text-xs">${(p.valor_perifericos ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
+                        <td className="text-center">
                           {p.activo
-                            ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Sí</span>
-                            : <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">No</span>}
+                            ? <Chip tono="exito">Sí</Chip>
+                            : <Chip tono="error">No</Chip>}
                         </td>
-                        <td className="p-2 text-center whitespace-nowrap text-xs text-slate-600">
+                        <td className="text-center whitespace-nowrap text-xs text-slate-600">
                           {p.fecha_desactivacion ? p.fecha_desactivacion.slice(0, 10) : '—'}
                         </td>
-                        <td className="p-2 text-center whitespace-nowrap">
+                        <td className="text-center whitespace-nowrap">
                           {puedeEditarPersonas && (
                             <button onClick={() => abrirEditar(p)} className="enlace-accion text-xs mr-2">
                               Editar
@@ -421,7 +421,7 @@ export default function Personas() {
                                 })
                                 recargar()
                               }}
-                              className={`text-xs ${p.activo ? 'text-amber-600 hover:underline' : 'text-emerald-600 hover:underline'}`}
+                              className={`enlace-accion text-xs ${p.activo ? 'enlace-accion-alerta' : 'enlace-accion-exito'}`}
                             >
                               {p.activo ? 'Desactivar' : 'Activar'}
                             </button>
@@ -525,14 +525,13 @@ export default function Personas() {
             <span className="text-slate-600">Activo</span>
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={cerrar}
-              className="btn btn-secundario">
+            <Boton variante="secundario" type="button" onClick={cerrar}>
               Cancelar
-            </button>
+            </Boton>
             {((editando && puedeEditarPersonas) || (!editando && puedeCrearPersonas)) && (
-              <button className="btn btn-primario">
+              <Boton variante="primario" type="submit">
                 {editando ? 'Guardar cambios' : 'Crear'}
-              </button>
+              </Boton>
             )}
           </div>
         </form>
@@ -556,51 +555,56 @@ export default function Personas() {
                   {g.nombre} <span className="ml-2 text-xs font-normal text-slate-500">[{g.rol}]</span>
                   <span className="ml-2 text-xs text-amber-600">{g.total} registros</span>
                 </div>
-                <table className="w-full border-collapse text-xs">
+                <TablaScroll>
+                <table className="tabla">
                   <thead>
-                    <tr className="bg-slate-200">
-                      <th className="border px-1 py-0.5 text-left">Nombre</th>
-                      <th className="border px-1 py-0.5 text-left">Email</th>
-                      <th className="border px-1 py-0.5 text-left">Squads</th>
-                      <th className="border px-1 py-0.5 text-left">App</th>
-                      <th className="border px-1 py-0.5 text-center">Acción</th>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Email</th>
+                      <th>Squads</th>
+                      <th>App</th>
+                      <th className="text-center">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="bg-emerald-50">
-                      <td className="border px-1 py-0.5 font-medium text-emerald-700">✅ {g.ganador.nombre}</td>
-                      <td className="border px-1 py-0.5">{g.ganador.email ?? '—'}</td>
-                      <td className="border px-1 py-0.5">{g.ganador.squads.join(', ') || '—'}</td>
-                      <td className="border px-1 py-0.5">{g.ganador.aplicacion_id}</td>
-                      <td className="border px-1 py-0.5 text-center text-emerald-700">Conservar</td>
+                      <td className="font-medium text-emerald-700">
+                        <span className="inline-flex items-center gap-1"><Icono nombre="check-circulo" /> {g.ganador.nombre}</span>
+                      </td>
+                      <td>{g.ganador.email ?? '—'}</td>
+                      <td>{g.ganador.squads.join(', ') || '—'}</td>
+                      <td>{g.ganador.aplicacion_id}</td>
+                      <td className="text-center text-emerald-700">Conservar</td>
                     </tr>
                     {g.duplicados.map((d) => (
                       <tr key={d.id} className="bg-red-50">
-                        <td className="border px-1 py-0.5 text-red-700">🗑 {d.nombre}</td>
-                        <td className="border px-1 py-0.5">{d.email ?? '—'}</td>
-                        <td className="border px-1 py-0.5">{d.squads.join(', ') || '—'}</td>
-                        <td className="border px-1 py-0.5">{d.aplicacion_id}</td>
-                        <td className="border px-1 py-0.5 text-center text-red-600">Eliminar</td>
+                        <td className="text-red-700">
+                          <span className="inline-flex items-center gap-1"><Icono nombre="papelera" /> {d.nombre}</span>
+                        </td>
+                        <td>{d.email ?? '—'}</td>
+                        <td>{d.squads.join(', ') || '—'}</td>
+                        <td>{d.aplicacion_id}</td>
+                        <td className="text-center text-red-600">Eliminar</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </TablaScroll>
               </div>
             ))}
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button onClick={cerrarModalDup}
-              className="btn btn-secundario">
+            <Boton variante="secundario" onClick={cerrarModalDup}>
               Cancelar
-            </button>
+            </Boton>
             {puedeEditarPersonas && (
-              <button
+              <Boton
+                variante="alerta"
                 onClick={() => { cerrarModalDup(); deduplicar() }}
                 disabled={deduplicando}
-                className="rounded bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-700 disabled:opacity-60"
               >
                 {deduplicando ? 'Fusionando…' : 'Confirmar fusión'}
-              </button>
+              </Boton>
             )}
           </div>
         </div>

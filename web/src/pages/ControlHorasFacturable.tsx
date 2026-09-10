@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 import type { Festivo, Persona } from '../types'
 
 interface Fila {
@@ -35,6 +35,12 @@ interface ControlHorasGuardado {
 }
 
 const _MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+const ROL_TONO: Record<string, 'neutro' | 'marca' | 'exito'> = {
+  LT_HITSS: 'marca',
+  SCRUM: 'neutro',
+  DEV: 'exito',
+}
 
 /** Calcula las horas hábiles del mes: lunes a jueves 8.5h, viernes 8h, excluyendo festivos. */
 function calcularHorasMeta(anio: number, mes: number, festivos: Festivo[]): number {
@@ -314,12 +320,11 @@ export default function ControlHorasFacturable() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="titulo-pagina">Control de Horas Facturable</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Listado de personas con su líder técnico HITSS. Use el selector o el botón ↓ para aplicar en bloque.
-        </p>
-      </div>
+      <EncabezadoPagina
+        icono={<Icono nombre="facturacion" />}
+        titulo="Control de Horas Facturable"
+        descripcion="Listado de personas con su líder técnico HITSS. Use el selector o el botón ↓ para aplicar en bloque."
+      />
 
       <div className="barra-filtros">
         <label className="text-sm">
@@ -385,50 +390,50 @@ export default function ControlHorasFacturable() {
       {avisoOk && <div className="aviso aviso-exito">{avisoOk}</div>}
 
       <div className="flex justify-end">
-        <button
+        <Boton
+          variante="primario"
           type="button"
           onClick={() => void guardarTodos()}
           disabled={guardandoTodos || filas.length === 0}
-          className="btn btn-primario"
         >
-          {guardandoTodos ? 'Guardando…' : `💾 Guardar todos (${filas.length})`}
-        </button>
+          {guardandoTodos ? 'Guardando…' : <><Icono nombre="guardar" /> Guardar todos ({filas.length})</>}
+        </Boton>
       </div>
 
       <TablaScroll className="max-h-[70vh] overflow-y-auto">
-        <table className="min-w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-marca-osc text-white">
+        <table className="tabla">
+          <thead className="sticky top-0 z-10">
             <tr>
-              <th className="p-2 text-left">Nombre</th>
-              <th className="p-2 text-left">LT HITSS</th>
-              <th className="p-2 text-left">Squad</th>
-              <th className="p-2 text-left">Rol</th>
-              <th className="p-2 text-left">Tipo Contratación</th>
-              <th className="p-2 text-right">Horas Facturables</th>
-              <th className="p-2 text-right">Horas Soporte Proy.</th>
-              <th className="p-2 text-right">Horas Desarrollo Proy.</th>
-              <th className="p-2 text-right">Total Horas Fact. Proy.</th>
-              <th className="p-2 text-right">Validación Meta {horasMeta}</th>
-              <th className="p-2 text-right">Horas Soporte Cerrado</th>
-              <th className="p-2 text-right">Horas Desarrollo Cerrado</th>
-              <th className="p-2 text-right">Total Horas Fact. Cerrado</th>
-              <th className="p-2 text-right">% Cumplimiento Fact.</th>
-              <th className="p-2 text-right">Horas Vacaciones</th>
-              <th className="p-2 text-right">Horas Incapacidades</th>
-              <th className="p-2 text-right">Horas Licencias / Ley</th>
-              <th className="p-2 text-right">Horas Permisos / Cap.</th>
-              <th className="p-2 text-right">Otras Novedades Adm.</th>
-              <th className="p-2 text-right">Total Novedades Adm.</th>
-              <th className="p-2 text-right">Horas Errores Analista</th>
-              <th className="p-2 text-right">Horas Garantías</th>
-              <th className="p-2 text-right">Horas Reprocesos</th>
-              <th className="p-2 text-right">Otras Nov. Calidad</th>
-              <th className="p-2 text-right">Total Nov. Calidad</th>
-              <th className="p-2 text-right">Total Horas Registradas</th>
-              <th className="p-2 text-right">Horas Backfill / Refuerzo</th>
-              <th className="p-2 text-left min-w-[200px]">Observaciones / Riesgos</th>
-              <th className="p-2 w-20"></th>
-              <th className="p-2 w-10"></th>
+              <th>Nombre</th>
+              <th>LT HITSS</th>
+              <th>Squad</th>
+              <th>Rol</th>
+              <th>Tipo Contratación</th>
+              <th className="text-right">Horas Facturables</th>
+              <th className="text-right">Horas Soporte Proy.</th>
+              <th className="text-right">Horas Desarrollo Proy.</th>
+              <th className="text-right">Total Horas Fact. Proy.</th>
+              <th className="text-right">Validación Meta {horasMeta}</th>
+              <th className="text-right">Horas Soporte Cerrado</th>
+              <th className="text-right">Horas Desarrollo Cerrado</th>
+              <th className="text-right">Total Horas Fact. Cerrado</th>
+              <th className="text-right">% Cumplimiento Fact.</th>
+              <th className="text-right">Horas Vacaciones</th>
+              <th className="text-right">Horas Incapacidades</th>
+              <th className="text-right">Horas Licencias / Ley</th>
+              <th className="text-right">Horas Permisos / Cap.</th>
+              <th className="text-right">Otras Novedades Adm.</th>
+              <th className="text-right">Total Novedades Adm.</th>
+              <th className="text-right">Horas Errores Analista</th>
+              <th className="text-right">Horas Garantías</th>
+              <th className="text-right">Horas Reprocesos</th>
+              <th className="text-right">Otras Nov. Calidad</th>
+              <th className="text-right">Total Nov. Calidad</th>
+              <th className="text-right">Total Horas Registradas</th>
+              <th className="text-right">Horas Backfill / Refuerzo</th>
+              <th className="text-left min-w-[200px]">Observaciones / Riesgos</th>
+              <th className="w-20"></th>
+              <th className="w-10"></th>
             </tr>
           </thead>
           <tbody>
@@ -446,9 +451,9 @@ export default function ControlHorasFacturable() {
               const valor = ltSeleccionado(f)
               const tieneOpciones = f.opcionesLt.length > 1
               return (
-                <tr key={f.key} className="border-t hover:bg-slate-50">
-                  <td className="p-2 font-medium text-slate-800">{f.nombre}</td>
-                  <td className="p-2">
+                <tr key={f.key}>
+                  <td className="font-medium text-slate-800">{f.nombre}</td>
+                  <td>
                     <div className="flex items-center gap-1">
                       {tieneOpciones ? (
                         <select
@@ -463,30 +468,25 @@ export default function ControlHorasFacturable() {
                       ) : (
                         <span className="text-slate-600">{valor}</span>
                       )}
-                      <button
+                      <Boton
+                        variante="fantasma"
+                        tamano="sm"
                         type="button"
                         onClick={() => jalarAbajo(idx)}
                         title="Aplicar este LT HITSS a todas las filas de abajo"
-                        className="ml-1 rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                        className="ml-1"
                       >
-                        ↓
-                      </button>
+                        <Icono nombre="flecha-abajo" />
+                      </Boton>
                     </div>
                   </td>
-                  <td className="p-2 text-slate-600">{f.squad}</td>
-                  <td className="p-2">
-                    <span className={`chip ${
-                      f.rol === 'LT_HITSS' ? 'bg-blue-100 text-blue-700'
-                      : f.rol === 'SCRUM' ? 'bg-purple-100 text-purple-700'
-                      : f.rol === 'DEV' ? 'bg-green-100 text-green-700'
-                      : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {f.rol}
-                    </span>
+                  <td className="text-slate-600">{f.squad}</td>
+                  <td>
+                    <Chip tono={ROL_TONO[f.rol] ?? 'neutro'}>{f.rol}</Chip>
                   </td>
-                  <td className="p-2 text-slate-600">{f.tipoContratacion}</td>
-                  <td className="p-2 text-right font-mono text-slate-700">{horasMeta}</td>
-                  <td className="p-2">
+                  <td className="text-slate-600">{f.tipoContratacion}</td>
+                  <td className="text-right font-mono text-slate-700">{horasMeta}</td>
+                  <td>
                     <input
                       type="number"
                       value={horasSoporte[f.key] ?? 0}
@@ -495,7 +495,7 @@ export default function ControlHorasFacturable() {
                       min={0}
                     />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input
                       type="number"
                       value={horasDesarrollo[f.key] ?? 0}
@@ -504,21 +504,21 @@ export default function ControlHorasFacturable() {
                       min={0}
                     />
                   </td>
-                  <td className="p-2 text-right font-mono font-semibold text-marca-osc">
+                  <td className="text-right font-mono font-semibold text-marca-osc">
                     {(horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0)}
                   </td>
                   {(() => {
                     const total = (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0);
                     const diff = total - horasMeta;
                     return (
-                      <td className={`p-2 text-right font-mono font-semibold ${
+                      <td className={`text-right font-mono font-semibold ${
                         diff === 0 ? 'text-blue-600' : diff > 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
                         {diff === 0 ? '✓ OK' : diff > 0 ? `+${diff}` : `${diff}`}
                       </td>
                     );
                   })()}
-                  <td className="p-2">
+                  <td>
                     <input
                       type="number"
                       value={horasSopCerrado[f.key] ?? 0}
@@ -527,7 +527,7 @@ export default function ControlHorasFacturable() {
                       min={0}
                     />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input
                       type="number"
                       value={horasDesCerrado[f.key] ?? 0}
@@ -536,81 +536,81 @@ export default function ControlHorasFacturable() {
                       min={0}
                     />
                   </td>
-                  <td className="p-2 text-right font-mono font-semibold text-marca-osc">
+                  <td className="text-right font-mono font-semibold text-marca-osc">
                     {(horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0)}
                   </td>
                   {(() => {
                     const totalCerrado = (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0);
                     const pct = Math.round((totalCerrado / horasMeta) * 100);
                     return (
-                      <td className={`p-2 text-right font-mono font-semibold ${
+                      <td className={`text-right font-mono font-semibold ${
                         pct >= 100 ? 'text-green-600' : pct >= 75 ? 'text-yellow-600' : 'text-red-600'
                       }`}>
                         {pct}%
                       </td>
                     );
                   })()}
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={horasVac[f.key] ?? 0}
                       onChange={(e) => setHorasVac((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={horasInc[f.key] ?? 0}
                       onChange={(e) => setHorasInc((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={horasLic[f.key] ?? 0}
                       onChange={(e) => setHorasLic((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={horasPerm[f.key] ?? 0}
                       onChange={(e) => setHorasPerm((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={otrasNov[f.key] ?? 0}
                       onChange={(e) => setOtrasNov((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2 text-right font-mono font-semibold text-marca-osc">
+                  <td className="text-right font-mono font-semibold text-marca-osc">
                     {(horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)}
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={horasErr[f.key] ?? 0}
                       onChange={(e) => setHorasErr((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={horasGar[f.key] ?? 0}
                       onChange={(e) => setHorasGar((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={horasRep[f.key] ?? 0}
                       onChange={(e) => setHorasRep((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2">
+                  <td>
                     <input type="number" value={otrasNovCal[f.key] ?? 0}
                       onChange={(e) => setOtrasNovCal((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
                       className="campo campo-sm w-20 text-right" min={0} />
                   </td>
-                  <td className="p-2 text-right font-mono font-semibold text-marca-osc">
+                  <td className="text-right font-mono font-semibold text-marca-osc">
                     {(horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
                   </td>
-                  <td className="p-2 text-right font-mono font-bold text-slate-800">
+                  <td className="text-right font-mono font-bold text-slate-800">
                     {(horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0)
                       + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)
                       + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
                   </td>
-                  <td className="p-2 text-right font-mono font-semibold text-orange-600">
+                  <td className="text-right font-mono font-semibold text-orange-600">
                     {(horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)
                       + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
                   </td>
-                  <td className="p-2">
+                  <td>
                     <textarea
                       value={observaciones[f.key] ?? ''}
                       onChange={(e) => setObservaciones((prev) => ({ ...prev, [f.key]: e.target.value }))}
@@ -618,26 +618,27 @@ export default function ControlHorasFacturable() {
                       rows={2}
                     />
                   </td>
-                  <td className="p-2 text-center">
-                    <button
+                  <td className="text-center">
+                    <Boton
+                      variante="primario"
+                      tamano="sm"
                       type="button"
                       onClick={() => void guardarUno(f)}
                       disabled={guardandoFila.has(f.key)}
                       title="Guardar este registro"
-                      className="btn btn-primario btn-sm"
                     >
-                      {guardandoFila.has(f.key) ? '…' : '💾'}
-                    </button>
+                      {guardandoFila.has(f.key) ? '…' : <Icono nombre="guardar" />}
+                    </Boton>
                   </td>
-                  <td className="p-2 text-center">
-                    <button
+                  <td className="text-center">
+                    <Boton
+                      variante="peligro"
                       type="button"
                       onClick={() => eliminarFila(f.key)}
                       title="Quitar este registro"
-                      className="btn btn-peligro"
                     >
-                      ✕
-                    </button>
+                      <Icono nombre="x" />
+                    </Boton>
                   </td>
                 </tr>
               )
@@ -645,30 +646,30 @@ export default function ControlHorasFacturable() {
           </tbody>
           <tfoot>
             <tr className="bg-slate-100 font-bold text-sm sticky bottom-0">
-              <td className="p-2" colSpan={5}>Totales</td>
-              <td className="p-2 text-right font-mono">{filas.length * horasMeta}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasDesarrollo[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0), 0)}</td>
-              <td className="p-2"></td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasDesCerrado[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0), 0)}</td>
-              <td className="p-2"></td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasInc[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasLic[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasPerm[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (otrasNov[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasErr[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasGar[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasRep[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (otrasNovCal[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono font-bold">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0) + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0) + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
-              <td className="p-2 text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0) + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
-              <td className="p-2" colSpan={3}></td>
+              <td colSpan={5}>Totales</td>
+              <td className="text-right font-mono">{filas.length * horasMeta}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasDesarrollo[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0), 0)}</td>
+              <td></td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasDesCerrado[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0), 0)}</td>
+              <td></td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasInc[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasLic[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasPerm[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (otrasNov[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasErr[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasGar[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasRep[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (otrasNovCal[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono font-bold">{filas.reduce((s, f) => s + (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0) + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0) + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
+              <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0) + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0), 0)}</td>
+              <td colSpan={3}></td>
             </tr>
           </tfoot>
         </table>

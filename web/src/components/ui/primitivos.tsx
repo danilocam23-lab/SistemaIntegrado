@@ -28,6 +28,7 @@ export type VarianteBoton =
   | 'peligro'
   | 'peligro-suave'
   | 'exito'
+  | 'alerta'
 
 export type TamanoBoton = 'sm' | 'md' | 'lg'
 
@@ -39,6 +40,7 @@ const VARIANTES: Record<VarianteBoton, string> = {
   peligro: 'btn-peligro',
   'peligro-suave': 'btn-peligro-suave',
   exito: 'btn-exito',
+  alerta: 'btn-alerta',
 }
 
 const TAMANOS: Record<TamanoBoton, string> = {

@@ -159,6 +159,9 @@
   .enlace-accion-alerta {
     @apply text-amber-600 hover:text-amber-700;
   }
+  .enlace-accion-exito {
+    @apply text-emerald-600 hover:text-emerald-700;
+  }
   .enlace-accion-sutil {
     @apply text-xs font-medium text-slate-500 hover:text-slate-700;
   }
@@ -304,6 +307,9 @@
   }
   .tabla tbody tr:hover {
     @apply bg-slate-50/70;
+  }
+  .tabla tfoot td {
+    @apply border-t border-slate-200 px-3 py-2 align-middle text-slate-700;
   }
 
   /* ---- Avisos --------------------------------------------------- */
