@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
+import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 interface Persona {
   id: string
@@ -175,7 +176,7 @@ function PanelAzdo({ titulo, target, personas }: {
       {/* ── Conexión ── */}
       <div className="tarjeta tarjeta-pad">
         <div className="mb-1 flex items-center gap-2">
-          <span className="text-xl text-marca">☁</span>
+          <Icono nombre="nube" className="text-xl text-marca" />
           <h2 className="titulo-seccion">{titulo}</h2>
         </div>
         <p className="mb-5 text-xs text-slate-500">
@@ -225,13 +226,13 @@ function PanelAzdo({ titulo, target, personas }: {
               placeholder={patGuardado ? '••••••••••••••••••••' : 'Ingresa tu PAT'}
               className="campo flex-1"
             />
-            <button
-              type="button"
+            <Boton
+              variante="secundario"
+              tamano="sm"
               onClick={() => setMostrarPat(!mostrarPat)}
-              className="btn btn-secundario btn-sm"
             >
               {mostrarPat ? 'Ocultar' : 'Mostrar'}
-            </button>
+            </Boton>
           </div>
           <p className="mt-1 text-xs text-slate-400">
             El PAT se almacena de forma segura y no se muestra una vez guardado.
@@ -240,14 +241,15 @@ function PanelAzdo({ titulo, target, personas }: {
 
         {/* Probar conexión */}
         <div className="mb-4">
-          <button
+          <Boton
+            variante="secundario"
+            tamano="sm"
             onClick={probar}
             disabled={probando}
-            className="btn btn-secundario btn-sm items-center gap-1.5"
+            icono={<Icono nombre="recargar" />}
           >
-            <span className="text-sm">🔄</span>
             {probando ? 'Probando…' : 'Probar conexión'}
-          </button>
+          </Boton>
           {conexion && (
             <span className={`ml-2 text-xs ${conexion.startsWith('✓') ? 'text-emerald-600' : 'text-red-600'}`}>
               {conexion}
@@ -284,21 +286,21 @@ function PanelAzdo({ titulo, target, personas }: {
 
         {/* Guardar */}
         {puedeEditar && (
-          <button
+          <Boton
+            variante="primario"
             onClick={guardarConfig}
             disabled={guardando}
-            className="btn btn-primario items-center gap-2"
+            icono={<Icono nombre="guardar" />}
           >
-            <span>💾</span>
             {guardando ? 'Guardando…' : 'Guardar configuración'}
-          </button>
+          </Boton>
         )}
       </div>
 
       {/* ── Campos Requeridos ── */}
       <div className="tarjeta tarjeta-pad">
         <div className="mb-1 flex items-center gap-2">
-          <span className="text-xl text-marca">📋</span>
+          <Icono nombre="portafolio" className="text-xl text-marca" />
           <h3 className="text-base font-bold text-slate-800">Campos Requeridos</h3>
         </div>
         <p className="mb-3 text-xs text-slate-500">
@@ -306,14 +308,16 @@ function PanelAzdo({ titulo, target, personas }: {
         </p>
 
         {puedeEditar && (
-          <button
+          <Boton
+            variante="secundario"
+            tamano="sm"
+            className="mb-3"
             onClick={descubrirCampos}
             disabled={descubriendo || !proyecto}
-            className="btn btn-secundario btn-sm mb-3 items-center gap-1.5"
+            icono={<Icono nombre="lupa" />}
           >
-            <span className="text-sm">🔍</span>
             {descubriendo ? 'Descubriendo…' : 'Descubrir campos'}
-          </button>
+          </Boton>
         )}
 
         {!proyecto && (
@@ -327,40 +331,40 @@ function PanelAzdo({ titulo, target, personas }: {
               {WIT_LABELS[witKey] ?? witKey}
               <span className="font-normal text-slate-400">({fieldsList.length})</span>
             </h4>
-            <div className="overflow-hidden rounded-lg border border-slate-200">
-              <table className="w-full text-xs">
+            <TablaScroll>
+              <table className="tabla">
                 <thead>
-                  <tr className="bg-slate-50 text-left text-[10px] text-slate-500 uppercase">
-                    <th className="px-3 py-1.5">Campo</th>
-                    <th className="px-3 py-1.5">Ref</th>
-                    <th className="px-3 py-1.5">Tipo</th>
-                    <th className="px-3 py-1.5">Default</th>
-                    <th className="px-3 py-1.5">Origen</th>
+                  <tr>
+                    <th>Campo</th>
+                    <th>Ref</th>
+                    <th>Tipo</th>
+                    <th>Default</th>
+                    <th>Origen</th>
                   </tr>
                 </thead>
                 <tbody>
                   {fieldsList.map((campo) => (
-                    <tr key={campo.ref} className="border-t border-slate-100">
-                      <td className="px-3 py-1.5 font-medium text-slate-700">{campo.name}</td>
-                      <td className="px-3 py-1.5 font-mono text-[10px] text-slate-500">{campo.ref}</td>
-                      <td className="px-3 py-1.5">
+                    <tr key={campo.ref}>
+                      <td>{campo.name}</td>
+                      <td className="font-mono">{campo.ref}</td>
+                      <td>
                         <span className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${typeColors[campo.type] ?? 'bg-slate-100 text-slate-600'}`}>
                           {campo.type}
                         </span>
                       </td>
-                      <td className="px-3 py-1.5 text-slate-600">{String(campo.default_value ?? '—')}</td>
-                      <td className="px-3 py-1.5">
+                      <td>{String(campo.default_value ?? '—')}</td>
+                      <td>
                         {campo.source === 'discovered' ? (
-                          <span className="inline-flex rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">Custom</span>
+                          <Chip tono="alerta">Custom</Chip>
                         ) : (
-                          <span className="inline-flex rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">Estándar</span>
+                          <Chip tono="neutro">Estándar</Chip>
                         )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TablaScroll>
           </div>
         ))}
       </div>
@@ -374,14 +378,13 @@ export default function AzureDevOps() {
   const listaPersonas = personas ?? []
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-2xl text-marca">☁</span>
-        <h1 className="titulo-pagina">Integración Azure DevOps</h1>
-      </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PanelAzdo titulo="Azure DevOps — HITSS" target="hitss" personas={listaPersonas} />
-        <PanelAzdo titulo="Azure DevOps — EPM" target="epm" personas={listaPersonas} />
+    <div>
+      <EncabezadoPagina icono={<Icono nombre="nube" />} titulo="Integración Azure DevOps" />
+      <div className="mx-auto max-w-7xl pt-4">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <PanelAzdo titulo="Azure DevOps — HITSS" target="hitss" personas={listaPersonas} />
+          <PanelAzdo titulo="Azure DevOps — EPM" target="epm" personas={listaPersonas} />
+        </div>
       </div>
     </div>
   )

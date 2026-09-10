@@ -198,6 +198,41 @@ const ICONOS = {
       <path d="m6 6 12 12" />
     </>
   ),
+  /** Nube (integración en la nube / Azure DevOps) */
+  nube: (
+    <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+  ),
+  /** Recargar / sincronizar (flechas circulares) */
+  recargar: (
+    <>
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M3 21v-5h5" />
+    </>
+  ),
+  /** Edificio / squad / organización */
+  edificio: (
+    <>
+      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+      <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+      <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+      <path d="M10 6h4" />
+      <path d="M10 10h4" />
+      <path d="M10 14h4" />
+      <path d="M10 18h4" />
+    </>
+  ),
+  /** Información (círculo con i) */
+  info: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </>
+  ),
+  /** Check simple (sin círculo) */
+  check: <path d="M20 6 9 17l-5-5" />,
 } as const
 
 export type NombreIcono = keyof typeof ICONOS

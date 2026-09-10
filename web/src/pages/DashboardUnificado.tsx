@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { useAplicacion } from '../context/AplicacionContext'
-import { EncabezadoPagina, Icono } from '../components/ui'
+import { Chip, EncabezadoPagina, Icono } from '../components/ui'
 
 const COLORES_SQUAD = ['#2563eb', '#7c3aed', '#16a34a', '#f59e0b', '#dc2626', '#0891b2', '#06b6d4', '#8b5cf6']
 
@@ -49,21 +49,19 @@ export default function DashboardUnificado() {
       {/* Main Content */}
       <div className="pagina">
         {error && (
-          <div className="aviso aviso-alerta mb-6">
-            ⚠️ {error}
+          <div className="aviso aviso-alerta mb-6 flex items-center gap-2">
+            <Icono nombre="alerta" /> {error}
           </div>
         )}
 
         {data && (
           <>
             <div className="mb-6 flex items-center gap-2 text-sm text-slate-600">
-              <span className="inline-block px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-semibold">
-                {data.total_aplicaciones} Squad(s)
-              </span>
+              <Chip tono="marca">{data.total_aplicaciones} Squad(s)</Chip>
               <span className="text-slate-400">•</span>
-              <span className="inline-block px-4 py-2 rounded-full bg-slate-100 text-slate-700 font-semibold">
+              <Chip tono="neutro">
                 {modoConsolidado ? 'Modo consolidado' : 'Modo operativo'}
-              </span>
+              </Chip>
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -84,12 +82,10 @@ export default function DashboardUnificado() {
                       {/* Header con icono y badge */}
                       <div className="flex items-start justify-between mb-4">
                         <div className="h-12 w-12 rounded-xl p-3 flex items-center justify-center text-lg" style={{ backgroundColor: `${color}15`, color }}>
-                          🏢
+                          <Icono nombre="edificio" />
                         </div>
                         {isInactive && (
-                          <span className="inline-block px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
-                            Inactivo
-                          </span>
+                          <Chip tono="neutro">Inactivo</Chip>
                         )}
                       </div>
 
@@ -102,7 +98,7 @@ export default function DashboardUnificado() {
                       </div>
 
                       {/* Divider */}
-                      <div className="my-4 h-px bg-gradient-to-r from-slate-200 via-slate-200 to-transparent" />
+                      <hr className="my-4 border-slate-200" />
 
                       {/* Métricas */}
                       <div className="grid grid-cols-2 gap-4">
@@ -118,8 +114,14 @@ export default function DashboardUnificado() {
 
                       {/* Footer info */}
                       <div className="mt-4 pt-4 border-t border-slate-100">
-                        <p className="text-xs text-slate-400">
-                          {a.activa ? '✓ Squad activo en el sistema' : 'Squad inactivo'}
+                        <p className="flex items-center gap-1 text-xs text-slate-400">
+                          {a.activa ? (
+                            <>
+                              <Icono nombre="check" /> Squad activo en el sistema
+                            </>
+                          ) : (
+                            'Squad inactivo'
+                          )}
                         </p>
                       </div>
                     </div>
@@ -130,7 +132,9 @@ export default function DashboardUnificado() {
 
             <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-sm text-slate-600">
-                <p className="font-semibold text-slate-900 mb-2">ℹ️ Próximas mejoras</p>
+                <p className="mb-2 flex items-center gap-1.5 font-semibold text-slate-900">
+                  <Icono nombre="info" /> Próximas mejoras
+                </p>
                 <p className="text-slate-500">
                   Al portar el dominio (fases 3–5), este tablero incorporará gráficas de requerimientos por estado, ANS, horas, 
                   facturación y carga del equipo, por squad.

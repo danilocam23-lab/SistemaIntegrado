@@ -6,6 +6,7 @@ import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import { TIPOS_COSTO } from '../constantes'
+import { Boton } from '../components/ui'
 import type { Aplicacion, Persona } from '../types'
 
 export default function RequerimientoNuevo() {
@@ -258,9 +259,9 @@ export default function RequerimientoNuevo() {
           La cantidad de entregas inicia en 0 y se calcula automáticamente al registrar
           entregas en el requerimiento.
         </p>
-        <button className="btn btn-primario mt-4">
+        <Boton variante="primario" type="submit" className="mt-4">
           Crear requerimiento
-        </button>
+        </Boton>
         </fieldset>
       </form>
     </div>
