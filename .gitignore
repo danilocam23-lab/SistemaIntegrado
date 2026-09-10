@@ -9,6 +9,8 @@ __pycache__/
 
 # Entorno
 .env
+.env.local
+.env.*.local
 
 # Node
 node_modules/
