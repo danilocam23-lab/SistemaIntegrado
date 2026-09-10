@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { Link } from 'react-router-dom'
-import client from '../api/client'
-import { mensajeError } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import { TablaScroll } from '../components/ui/primitivos'
-import { cabecerasAplicacion } from '../utilidades/aplicacion'
 import { claseBadgeEstado } from './asignaciones/estados'
-import type { AsignacionItem, OpcionReq } from './asignaciones/tipos'
+import type { AsignacionItem } from './asignaciones/tipos'
+import { FormularioAsignacion } from './asignaciones/FormularioAsignacion'
 import { useDatosAsignaciones } from './asignaciones/useDatosAsignaciones'
 import { useDerivadosAsignaciones } from './asignaciones/useDerivadosAsignaciones'
+import { useEscriturasAsignaciones } from './asignaciones/useEscriturasAsignaciones'
+import { useFormularioAsignacion } from './asignaciones/useFormularioAsignacion'
 import { useWorkOrdersPorPersona } from './asignaciones/useWorkOrdersPorPersona'
 
 export default function Asignaciones() {
@@ -22,35 +22,13 @@ export default function Asignaciones() {
 
   const puedeEditarAsignaciones = tienePermiso('asignaciones.editar')
 
-  const [editandoAsig, setEditandoAsig] = useState<AsignacionItem | null>(null)
-  const [personaId, setPersonaId] = useState('')
-  const [categoriaId, setCategoriaId] = useState('')
-  const [porcentaje, setPorcentaje] = useState('')
-  const [requerimientoId, setRequerimientoId] = useState('')
   const [aviso, setAviso] = useState('')
-  const [busquedaReq, setBusquedaReq] = useState('')
-  const [dropdownReqAbierto, setDropdownReqAbierto] = useState(false)
   const [gruposExpandidos, setGruposExpandidos] = useState<Set<string | null>>(new Set())
-  const [edicionInlineId, setEdicionInlineId] = useState<string | null>(null)
-  const [edicionInlineValor, setEdicionInlineValor] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<string>('__todos__')
   const [filtroPersona, setFiltroPersona] = useState<string>('__todos__')
   const [busquedaPersona, setBusquedaPersona] = useState('')
   const [vistaActiva, setVistaActiva] = useState<'actas' | 'personas'>('actas')
-  const reqBoxRef = useRef<HTMLDivElement | null>(null)
-  const autoFixedRef = useRef(false)
-  const modoEdicion = editandoAsig !== null
-
-  useEffect(() => {
-    function cerrarDropdown(event: MouseEvent) {
-      if (reqBoxRef.current && !reqBoxRef.current.contains(event.target as Node)) {
-        setDropdownReqAbierto(false)
-      }
-    }
-
-    document.addEventListener('mousedown', cerrarDropdown)
-    return () => document.removeEventListener('mousedown', cerrarDropdown)
-  }, [])
+  const [personasExpandidas, setPersonasExpandidas] = useState<Set<string>>(new Set())
 
   const {
     personasDisponibles,
@@ -78,310 +56,38 @@ export default function Asignaciones() {
     busquedaPersona,
   })
 
-  const opcionReqSeleccionada = useMemo(
-    () => opcionesReq.find((opcion) => opcion.id === requerimientoId) ?? null,
-    [opcionesReq, requerimientoId],
-  )
+  const formulario = useFormularioAsignacion({
+    opcionesReq,
+    requerimientos,
+    etiquetaReq,
+    calcularPctSugerido,
+    activa,
+    modoConsolidado,
+    puedeEditar: puedeEditarAsignaciones,
+    setAviso,
+  })
 
-  const opcionesReqFiltradas = useMemo(() => {
-    const filtro = busquedaReq.trim().toLocaleLowerCase('es')
-    const lista = filtro
-      ? opcionesReq.filter((opcion) => opcion.label.toLocaleLowerCase('es').includes(filtro))
-      : opcionesReq
-    return lista.slice(0, 15)
-  }, [busquedaReq, opcionesReq])
-
-  const porcentajeSugerido = useMemo(
-    () => (!modoEdicion && personaId ? calcularPctSugerido(personaId) : ''),
-    [calcularPctSugerido, modoEdicion, personaId],
-  )
-
-  const [personasExpandidas, setPersonasExpandidas] = useState<Set<string>>(new Set())
+  const escrituras = useEscriturasAsignaciones({
+    asignaciones,
+    requerimientos,
+    reqIdsActivos,
+    capacidadUsada,
+    activa,
+    puedeEditar: puedeEditarAsignaciones,
+    setAviso,
+    recargar,
+    formulario,
+    etiquetaReq,
+  })
 
   useEffect(() => {
     setGruposExpandidos(new Set(gruposReq.map((grupo) => grupo.reqId)))
   }, [gruposReq])
 
-  const limpiarFormulario = useCallback(() => {
-    setEditandoAsig(null)
-    setPersonaId('')
-    setCategoriaId('')
-    setPorcentaje('')
-    setRequerimientoId('')
-    setBusquedaReq('')
-    setDropdownReqAbierto(false)
-    setAviso('')
-  }, [])
-
-  const resolverAppCreacion = useCallback(() => {
-    if (opcionReqSeleccionada?.aplicacionId) return opcionReqSeleccionada.aplicacionId
-    if (modoConsolidado) return ''
-    return activa
-  }, [activa, modoConsolidado, opcionReqSeleccionada])
-
-  const resolverAppAsignacion = useCallback((asig: AsignacionItem) => {
-    if (asig.aplicacion_id) return asig.aplicacion_id
-    const reqId = asig.proyectos.find((p) => p.requerimiento_id)?.requerimiento_id
-    const req = reqId ? requerimientos.find((item) => item.id === reqId) : null
-    return req?.aplicacion_id ?? activa
-  }, [activa, requerimientos])
-
   const abrirEdicion = useCallback((asig: AsignacionItem) => {
-    if (!puedeEditarAsignaciones) return
-    const primerReq = asig.proyectos.find((p) => p.requerimiento_id)?.requerimiento_id ?? ''
-    setEditandoAsig(asig)
-    setPersonaId(asig.persona_id)
-    setCategoriaId(asig.categoria_id)
-    setPorcentaje(String(asig.total_porcentaje))
-    setRequerimientoId(primerReq)
-    setBusquedaReq(primerReq ? etiquetaReq(primerReq) : '')
-    setDropdownReqAbierto(false)
-    setAviso('')
-    setEdicionInlineId(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [etiquetaReq, puedeEditarAsignaciones])
-
-  const seleccionarReq = useCallback((opcion: OpcionReq) => {
-    setRequerimientoId(opcion.id)
-    setBusquedaReq(opcion.label)
-    setDropdownReqAbierto(false)
-    // Si el requerimiento tiene un analista de requerimientos configurado y aún no se
-    // eligió una persona, se preselecciona ese analista con 0% de carga, para dejarlo
-    // asignado de una vez mientras luego se le define la capacidad/porcentaje real.
-    if (!modoEdicion && !personaId) {
-      const req = requerimientos.find((r) => r.id === opcion.id)
-      const analistaId = req?.solicitud?.analista_requerimientos_id
-      if (analistaId) {
-        setPersonaId(analistaId)
-        setPorcentaje('0')
-      }
-    }
-  }, [modoEdicion, personaId, requerimientos])
-
-  const cambiarBusquedaReq = useCallback((value: string) => {
-    setBusquedaReq(value)
-    setDropdownReqAbierto(true)
-    if (!value.trim()) setRequerimientoId('')
-    else if (opcionReqSeleccionada?.label !== value) setRequerimientoId('')
-  }, [opcionReqSeleccionada])
-
-  const validarCapacidad = useCallback((pid: string, nuevoPct: number, excluyendoId?: string) => {
-    const usado = capacidadUsada(pid, excluyendoId)
-    if (usado + nuevoPct > 100) {
-      setAviso(`La persona ya tiene ${usado}% asignado en requerimientos activos. Agregar ${nuevoPct}% superaría el 100%.`)
-      return false
-    }
-    return true
-  }, [capacidadUsada])
-
-  /** Actualiza el % de todas las asignaciones activas de una persona a distribución equitativa */
-  const redistribuirPct = useCallback(async (pid: string, excluyendoId?: string) => {
-    const activas = asignaciones.filter((a) =>
-      a.persona_id === pid &&
-      a.id !== excluyendoId &&
-      a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id)),
-    )
-    if (activas.length === 0) return
-    const pct = Math.round(100 / activas.length)
-    await Promise.allSettled(
-      activas.map((a) =>
-        client.put(
-          `/asignaciones/${a.id}`,
-          { persona_id: a.persona_id, categoria_id: a.categoria_id, total_porcentaje: pct,
-            estado: a.estado ?? 'active', activo: a.activo ?? true, proyectos: a.proyectos },
-          cabecerasAplicacion(resolverAppAsignacion(a)),
-        )
-      ),
-    )
-  }, [asignaciones, reqIdsActivos, resolverAppAsignacion])
-
-  // Al cargar, auto-corrige si alguna persona supera el 100%
-  useEffect(() => {
-    if (autoFixedRef.current || asignaciones.length === 0 || reqIdsActivos.size === 0) return
-    const totalesPorPersona = new Map<string, number>()
-    for (const a of asignaciones) {
-      if (a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id))) {
-        totalesPorPersona.set(a.persona_id, (totalesPorPersona.get(a.persona_id) ?? 0) + a.total_porcentaje)
-      }
-    }
-    const conExceso = [...totalesPorPersona.entries()]
-      .filter(([, total]) => Math.round(total) > 100)
-      .map(([pid]) => pid)
-    autoFixedRef.current = true
-    if (conExceso.length > 0) {
-      Promise.allSettled(conExceso.map((pid) => redistribuirPct(pid)))
-        .then(() => recargar())
-        .catch(() => {})
-    }
-  }, [asignaciones, reqIdsActivos, redistribuirPct, recargar])
-
-  const crear = useCallback(async (e: FormEvent) => {
-    e.preventDefault()
-    if (!puedeEditarAsignaciones) return
-    setAviso('')
-
-    const nuevoPct = porcentaje ? Number(porcentaje) : 0
-    if (!validarCapacidad(personaId, nuevoPct)) return
-
-    const duplicado = requerimientoId && asignaciones.some((a) =>
-      a.persona_id === personaId &&
-      a.proyectos.some((p) => p.requerimiento_id === requerimientoId),
-    )
-    if (duplicado) {
-      setAviso('Esta persona ya tiene una asignación para ese requerimiento')
-      return
-    }
-
-    const aplicacionId = resolverAppCreacion()
-    if (!aplicacionId) {
-      setAviso('En modo consolidado debes seleccionar primero un requerimiento para crear la asignación.')
-      return
-    }
-
-    try {
-      // Usar el porcentaje ingresado por el usuario
-      await client.post(
-        '/asignaciones',
-        {
-          persona_id: personaId,
-          categoria_id: categoriaId,
-          total_porcentaje: nuevoPct,
-          estado: 'active',
-          activo: true,
-          proyectos: requerimientoId
-            ? [{ nombre: opcionReqSeleccionada?.label ?? '', estado: 'active', requerimiento_id: requerimientoId }]
-            : [],
-        },
-        cabecerasAplicacion(aplicacionId),
-      )
-      limpiarFormulario()
-      await recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }, [asignaciones, categoriaId, limpiarFormulario, opcionReqSeleccionada, personaId, porcentaje, puedeEditarAsignaciones, recargar, requerimientoId, reqIdsActivos, redistribuirPct, resolverAppCreacion, validarCapacidad])
-
-  const actualizar = useCallback(async (e: FormEvent) => {
-    e.preventDefault()
-    if (!puedeEditarAsignaciones) return
-    if (!editandoAsig) return
-    setAviso('')
-
-    const nuevoPct = porcentaje ? Number(porcentaje) : 0
-    if (!validarCapacidad(personaId, nuevoPct, editandoAsig.id)) return
-
-    const aplicacionId = resolverAppAsignacion(editandoAsig)
-    if (!aplicacionId) {
-      setAviso('No fue posible determinar la aplicación de la asignación.')
-      return
-    }
-
-    try {
-      await client.put(
-        `/asignaciones/${editandoAsig.id}`,
-        {
-          persona_id: personaId,
-          categoria_id: categoriaId,
-          total_porcentaje: nuevoPct,
-          estado: editandoAsig.estado ?? 'active',
-          activo: editandoAsig.activo ?? true,
-          proyectos: requerimientoId
-            ? [{ nombre: opcionReqSeleccionada?.label ?? etiquetaReq(requerimientoId), estado: 'active', requerimiento_id: requerimientoId }]
-            : [],
-        },
-        cabecerasAplicacion(aplicacionId),
-      )
-      limpiarFormulario()
-      await recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }, [categoriaId, editandoAsig, etiquetaReq, limpiarFormulario, opcionReqSeleccionada, personaId, porcentaje, puedeEditarAsignaciones, recargar, requerimientoId, resolverAppAsignacion, validarCapacidad])
-
-  const eliminar = useCallback(async (asig: AsignacionItem) => {
-    if (!puedeEditarAsignaciones) return
-    if (!window.confirm('¿Eliminar esta asignación?')) return
-    setAviso('')
-
-    const aplicacionId = resolverAppAsignacion(asig)
-    if (!aplicacionId) {
-      setAviso('No fue posible determinar la aplicación de la asignación.')
-      return
-    }
-
-    try {
-      await client.delete(`/asignaciones/${asig.id}`, cabecerasAplicacion(aplicacionId))
-      if (editandoAsig?.id === asig.id) limpiarFormulario()
-      // Redistribuir % entre las asignaciones restantes
-      await redistribuirPct(asig.persona_id, asig.id)
-      await recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }, [editandoAsig?.id, limpiarFormulario, puedeEditarAsignaciones, recargar, redistribuirPct, resolverAppAsignacion])
-
-  const iniciarEdicionInline = useCallback((asig: AsignacionItem) => {
-    if (!puedeEditarAsignaciones) return
-    setAviso('')
-    setEdicionInlineId(asig.id)
-    setEdicionInlineValor(String(asig.total_porcentaje))
-  }, [puedeEditarAsignaciones])
-
-  const cancelarEdicionInline = useCallback(() => {
-    setEdicionInlineId(null)
-    setEdicionInlineValor('')
-  }, [])
-
-  const guardarEdicionInline = useCallback(async (asig: AsignacionItem) => {
-    if (!puedeEditarAsignaciones) return
-    if (edicionInlineId !== asig.id) return
-
-    const nuevoPct = edicionInlineValor ? Number(edicionInlineValor) : 0
-    setAviso('')
-    if (!validarCapacidad(asig.persona_id, nuevoPct, asig.id)) return
-
-    const aplicacionId = resolverAppAsignacion(asig)
-    if (!aplicacionId) {
-      setAviso('No fue posible determinar la aplicación de la asignación.')
-      return
-    }
-
-    try {
-      await client.put(
-        `/asignaciones/${asig.id}`,
-        {
-          persona_id: asig.persona_id,
-          categoria_id: asig.categoria_id,
-          total_porcentaje: nuevoPct,
-          estado: asig.estado ?? 'active',
-          activo: asig.activo ?? true,
-          proyectos: asig.proyectos,
-        },
-        cabecerasAplicacion(aplicacionId),
-      )
-      cancelarEdicionInline()
-      await recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }, [cancelarEdicionInline, edicionInlineId, edicionInlineValor, puedeEditarAsignaciones, recargar, resolverAppAsignacion, validarCapacidad])
-
-  const cambiarPrioridad = useCallback(async (asig: AsignacionItem) => {
-    if (!puedeEditarAsignaciones) return
-    const aplicacionId = resolverAppAsignacion(asig)
-    if (!aplicacionId) return
-    try {
-      await client.patch(`/asignaciones/${asig.id}/prioridad`, {}, cabecerasAplicacion(aplicacionId))
-      await recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }, [puedeEditarAsignaciones, recargar, resolverAppAsignacion])
-
-  const onPersonaChange = useCallback((value: string) => {
-    setPersonaId(value)
-    if (!modoEdicion) setPorcentaje(value ? calcularPctSugerido(value) : '')
-  }, [calcularPctSugerido, modoEdicion])
+    escrituras.cancelarEdicionInline()
+    formulario.abrirEdicion(asig)
+  }, [escrituras, formulario])
 
   const alternarGrupo = useCallback((reqId: string | null) => {
     setGruposExpandidos((prev) => {
@@ -397,150 +103,21 @@ export default function Asignaciones() {
     alternarGrupo(reqId)
   }, [alternarGrupo])
 
-  const onInlineKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      event.currentTarget.blur()
-    }
-    if (event.key === 'Escape') cancelarEdicionInline()
-  }, [cancelarEdicionInline])
-
   return (
     <div>
       <h1 className="titulo-pagina mb-4">Asignaciones de carga</h1>
 
       {puedeEditarAsignaciones && (
-      <form onSubmit={modoEdicion ? actualizar : crear} className="mb-4 rounded-xl border bg-white p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <span className="text-sm font-semibold text-slate-600">
-            {modoEdicion ? '✏️ Editando asignación' : 'Nueva asignación'}
-          </span>
-          {modoEdicion && (
-            <button
-              type="button"
-              onClick={limpiarFormulario}
-              className="enlace-accion-sutil"
-            >
-              Cancelar edición ✕
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Persona</span>
-            <select
-              value={personaId}
-              onChange={(e) => onPersonaChange(e.target.value)}
-              required
-              className="campo"
-            >
-              <option value="">— Seleccionar —</option>
-              {personasDisponibles.map((persona) => (
-                <option key={persona.id} value={persona.id}>
-                  {persona.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Categoría</span>
-            <select
-              value={categoriaId}
-              onChange={(e) => setCategoriaId(e.target.value)}
-              required
-              className="campo"
-            >
-              <option value="">— Seleccionar —</option>
-              {categorias
-                .slice()
-                .sort((a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es'))
-                .map((categoria) => (
-                  <option key={categoria.id} value={categoria.id}>
-                    {categoria.nombre}
-                  </option>
-                ))}
-            </select>
-          </label>
-
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">% de carga</span>
-            <input
-              value={porcentaje}
-              onChange={(e) => setPorcentaje(e.target.value)}
-              type="number"
-              min="0"
-              max="100"
-              required
-              className="campo w-28"
-            />
-            {!modoEdicion && personaId && porcentaje === porcentajeSugerido && porcentaje && (
-              <span className="mt-1 block text-xs text-emerald-700">{porcentajeSugerido}% (sugerido)</span>
-            )}
-          </label>
-
-          <div ref={reqBoxRef} className="relative min-w-0 flex-1 basis-full text-sm sm:min-w-[320px]">
-            <span className="mb-1 block text-slate-600">
-              Requerimiento <span className="text-slate-400">(opcional)</span>
-            </span>
-            <input
-              value={busquedaReq}
-              onChange={(e) => cambiarBusquedaReq(e.target.value)}
-              onFocus={() => setDropdownReqAbierto(true)}
-              placeholder="Buscar SC - REQ - Nombre"
-              className="campo w-full"
-            />
-            {busquedaReq && (
-              <button
-                type="button"
-                onClick={() => {
-                  setBusquedaReq('')
-                  setRequerimientoId('')
-                  setDropdownReqAbierto(false)
-                }}
-                className="absolute right-3 top-[34px] text-slate-400 hover:text-slate-700"
-                aria-label="Limpiar requerimiento"
-              >
-                ✕
-              </button>
-            )}
-            {dropdownReqAbierto && (
-              <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border bg-white shadow-lg">
-                {opcionesReqFiltradas.length > 0 ? (
-                  opcionesReqFiltradas.map((opcion) => (
-                    <button
-                      key={opcion.id}
-                      type="button"
-                      onClick={() => seleccionarReq(opcion)}
-                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 ${requerimientoId === opcion.id ? 'bg-marca/10 text-marca-osc' : ''}`}
-                    >
-                      <span className="truncate">{opcion.label}</span>
-                      {opcion.estado && (
-                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${claseBadgeEstado(opcion.estado)}`}>
-                          {opcion.estado.length > 20 ? opcion.estado.slice(0, 20) + '…' : opcion.estado}
-                        </span>
-                      )}
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-3 py-2 text-sm text-slate-500">Sin coincidencias.</div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <button
-            disabled={!puedeEditarAsignaciones}
-            className={`btn ${modoEdicion ? 'btn-exito' : 'btn-primario'}`}
-          >
-            {modoEdicion ? 'Actualizar' : 'Crear'}
-          </button>
-        </div>
-      </form>
+        <FormularioAsignacion
+          form={formulario}
+          onSubmit={formulario.modoEdicion ? escrituras.actualizar : escrituras.crear}
+          categorias={categorias}
+          personasDisponibles={personasDisponibles}
+          puedeEditar={puedeEditarAsignaciones}
+        />
       )}
 
-      {modoConsolidado && !requerimientoId && !modoEdicion && (
+      {modoConsolidado && !formulario.requerimientoId && !formulario.modoEdicion && (
         <div className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
           {'Modo consolidado: selecciona un requerimiento para crear la asignación en la aplicación correcta.'}
         </div>
@@ -586,7 +163,7 @@ export default function Asignaciones() {
             </button>
           )}
         </div>
-        
+
         <div className="flex items-center gap-3">
           <label className="text-sm text-slate-600">Buscar persona:</label>
           <input
@@ -682,16 +259,16 @@ export default function Asignaciones() {
                     </thead>
                     <tbody>
                       {grupo.items.map(({ asig, horasCarga }) => {
-                        const enEdicionInline = edicionInlineId === asig.id
+                        const enEdicionInline = escrituras.edicionInlineId === asig.id
                         return (
-                          <tr key={asig.id} className={`border-t ${editandoAsig?.id === asig.id ? 'bg-amber-50' : ''}`}>
+                          <tr key={asig.id} className={`border-t ${formulario.editandoAsig?.id === asig.id ? 'bg-amber-50' : ''}`}>
                             <td className="p-3">{personaPorId.get(asig.persona_id)?.nombre ?? asig.persona_id}</td>
                             <td className="p-3">{categoriaPorId.get(asig.categoria_id)?.nombre ?? asig.categoria_id}</td>
                             <td className="p-3 text-center">
                               <input
                                 type="checkbox"
                                 checked={asig.prioridad === true}
-                                onChange={() => void cambiarPrioridad(asig)}
+                                onChange={() => void escrituras.cambiarPrioridad(asig)}
                                 title="Marcar como prioridad"
                                 className={`h-4 w-4 accent-marca ${puedeEditarAsignaciones ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
                                 disabled={!puedeEditarAsignaciones}
@@ -704,10 +281,10 @@ export default function Asignaciones() {
                                   type="number"
                                   min="0"
                                   max="100"
-                                  value={edicionInlineValor}
-                                  onChange={(e) => setEdicionInlineValor(e.target.value)}
-                                  onBlur={() => void guardarEdicionInline(asig)}
-                                  onKeyDown={onInlineKeyDown}
+                                  value={escrituras.edicionInlineValor}
+                                  onChange={(e) => escrituras.setEdicionInlineValor(e.target.value)}
+                                  onBlur={() => void escrituras.guardarEdicionInline(asig)}
+                                  onKeyDown={escrituras.onInlineKeyDown}
                                   className="campo campo-sm w-20 text-right"
                                 />
                               ) : (
@@ -718,7 +295,7 @@ export default function Asignaciones() {
                                   {puedeEditarAsignaciones && (
                                     <button
                                       type="button"
-                                      onClick={() => iniciarEdicionInline(asig)}
+                                      onClick={() => escrituras.iniciarEdicionInline(asig)}
                                       title="Editar %"
                                       className="text-slate-400 hover:text-marca"
                                     >
@@ -741,7 +318,7 @@ export default function Asignaciones() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => void eliminar(asig)}
+                                    onClick={() => void escrituras.eliminar(asig)}
                                     className="text-xs text-red-600 hover:underline"
                                   >
                                     Eliminar
