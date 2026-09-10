@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { FiltroDesplegable, Icono, Kpi, TablaScroll } from '../components/ui'
+import { Boton, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, TablaScroll } from '../components/ui'
 import { COLOR_GRAFICA } from '../components/ui/graficas'
 
 interface RegistroSoporte {
@@ -201,8 +201,11 @@ export default function SoporteDetalleANS() {
 
   return (
     <div className="space-y-4">
-      <h1 className="titulo-pagina">Detalle ANS</h1>
-      <p className="text-sm text-slate-500">Vista de seguimiento ANS para solicitudes de soporte.</p>
+      <EncabezadoPagina
+        icono={<Icono nombre="soporte" />}
+        titulo="Detalle ANS"
+        descripcion="Vista de seguimiento ANS para solicitudes de soporte."
+      />
 
       {aviso && <div className="aviso aviso-error">{aviso}</div>}
 
@@ -252,7 +255,8 @@ export default function SoporteDetalleANS() {
         {/* Filtros Año / Mes por Fecha_Fin_Real */}
         <div className="border-t border-slate-100 pt-3">
           <p className="etiqueta-sup">
-            📅 Filtrar por Fecha Fin Real
+            <Icono nombre="calendario" className="mr-1 inline-block h-3.5 w-3.5 align-text-bottom" />
+            Filtrar por Fecha Fin Real
           </p>
           <div className="flex flex-wrap items-start gap-3">
             <FiltroDesplegable
@@ -274,10 +278,14 @@ export default function SoporteDetalleANS() {
             />
 
             {hayFiltroFecha && (
-              <button type="button" onClick={() => { setAnosActivos(new Set()); setMesesActivos(new Set()) }}
-                className="btn btn-secundario btn-sm">
-                ✕ Limpiar fechas
-              </button>
+              <Boton
+                variante="secundario"
+                tamano="sm"
+                icono={<Icono nombre="x" />}
+                onClick={() => { setAnosActivos(new Set()); setMesesActivos(new Set()) }}
+              >
+                Limpiar fechas
+              </Boton>
             )}
           </div>
         </div>
@@ -469,7 +477,10 @@ function DetalleTablaANS({
         className="flex w-full flex-col items-start gap-3 border-b border-slate-200 px-4 py-3 text-left hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="shrink-0 text-xs font-semibold text-marca">{abierta ? '▲ Ocultar' : '▼ Mostrar'}</span>
+          <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-marca">
+            <Icono nombre={abierta ? 'chevron-arriba' : 'chevron-abajo'} className="h-3.5 w-3.5" />
+            {abierta ? 'Ocultar' : 'Mostrar'}
+          </span>
           <span className="truncate text-sm font-semibold text-slate-800">{titulo}</span>
         </div>
         <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
@@ -483,31 +494,31 @@ function DetalleTablaANS({
       </button>
       {abierta && (
         <TablaScroll plano>
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-700">
+          <table className="tabla">
+            <thead>
               <tr>
-                <th className="p-2">Work Order ID</th>
-                <th className="p-2 text-center">Se levantó ANS</th>
-                <th className="min-w-[320px] p-2">Observaciones</th>
-                <th className="p-2">Líder</th>
-                <th className="p-2">Assigned To</th>
-                <th className="p-2">Squad</th>
-                <th className="p-2">Fecha Fin Real</th>
-                <th className="p-2">{estadoLabel}</th>
+                <th>Work Order ID</th>
+                <th className="text-center">Se levantó ANS</th>
+                <th className="min-w-[320px]">Observaciones</th>
+                <th>Líder</th>
+                <th>Assigned To</th>
+                <th>Squad</th>
+                <th>Fecha Fin Real</th>
+                <th>{estadoLabel}</th>
               </tr>
             </thead>
             <tbody>
               {registros.length === 0 ? (
-                <tr className="border-t">
+                <tr>
                   <td className="p-4 text-center text-slate-400" colSpan={8}>Sin registros</td>
                 </tr>
               ) : (
                 registros.slice(0, visibles).map((r) => {
                   const levantado = seLevantoAns(r, tipo)
                   return (
-                    <tr key={r.id} className="border-t">
-                      <td className="p-2 font-medium text-slate-800">{r.datos?.['Work Order ID'] ?? '—'}</td>
-                      <td className="p-2 text-center">
+                    <tr key={r.id}>
+                      <td className="font-medium text-slate-800">{r.datos?.['Work Order ID'] ?? '—'}</td>
+                      <td className="text-center">
                         <label className={`inline-flex items-center justify-center gap-2 rounded-lg border px-2 py-1 text-xs font-semibold ${
                           levantado ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-slate-50 text-slate-600'
                         }`}>
@@ -521,7 +532,7 @@ function DetalleTablaANS({
                           {guardandoCheck.has(r.id) ? 'Guardando…' : levantado ? 'Sí' : 'No'}
                         </label>
                       </td>
-                      <td className="p-2">
+                      <td>
                         <div className="flex min-w-[300px] gap-2">
                           <textarea
                             value={observaciones[r.id] ?? observacionesAns(r, tipo)}
@@ -532,22 +543,23 @@ function DetalleTablaANS({
                             placeholder={puedeActualizar ? 'Agregar observaciones…' : 'Sin observaciones'}
                           />
                           {puedeActualizar && (
-                            <button
-                              type="button"
+                            <Boton
+                              variante="primario"
+                              tamano="sm"
+                              className="self-start"
                               onClick={() => void guardarObservacion(r)}
                               disabled={guardandoObservacion.has(r.id)}
-                              className="btn btn-primario btn-sm self-start"
                             >
                               {guardandoObservacion.has(r.id) ? 'Guardando…' : 'Guardar'}
-                            </button>
+                            </Boton>
                           )}
                         </div>
                       </td>
-                      <td className="p-2">{r.lider || '—'}</td>
-                      <td className="p-2">{r.datos?.['Assigned To'] || '—'}</td>
-                      <td className="p-2">{r.squad || '—'}</td>
-                      <td className="p-2">{r.datos?.['Fecha_Fin_Real'] || '—'}</td>
-                      <td className="p-2">{r.datos?.[estadoKey] || '—'}</td>
+                      <td>{r.lider || '—'}</td>
+                      <td>{r.datos?.['Assigned To'] || '—'}</td>
+                      <td>{r.squad || '—'}</td>
+                      <td>{r.datos?.['Fecha_Fin_Real'] || '—'}</td>
+                      <td>{r.datos?.[estadoKey] || '—'}</td>
                     </tr>
                   )
                 })
@@ -556,13 +568,13 @@ function DetalleTablaANS({
           </table>
           {visibles < registros.length && (
             <div className="flex justify-center border-t p-3">
-              <button
-                type="button"
+              <Boton
+                variante="secundario"
+                tamano="sm"
                 onClick={() => setVisibles((v) => v + 50)}
-                className="rounded bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
               >
                 Mostrar más ({registros.length - visibles} restantes)
-              </button>
+              </Boton>
             </div>
           )}
         </TablaScroll>

@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 
 interface RegistroSoporte {
@@ -126,61 +126,65 @@ const FilaRegistro = memo(function FilaRegistro({ registro: r, headers, onVerDes
   const tieneTask20 = CAMPOS_TASK20.some((c) => r.datos?.[c])
   const tieneTask30 = CAMPOS_TASK30.some((c) => r.datos?.[c])
   return (
-    <tr className="border-t">
-      <td className="p-2">{r.fila_origen}</td>
-      <td className="p-2">{r.lider}</td>
-      <td className="p-2">{r.squad}</td>
-      <td className="p-2">
+    <tr>
+      <td>{r.fila_origen}</td>
+      <td>{r.lider}</td>
+      <td>{r.squad}</td>
+      <td>
         {r.datos?.['Detailed Description'] ? (
-          <button
+          <Boton
+            variante="primario"
+            tamano="sm"
             onClick={() => onVerDescripcion(r.datos['Detailed Description'])}
-            className="btn btn-primario btn-sm"
             title="Ver descripción completa"
           >
             Ver detalle
-          </button>
+          </Boton>
         ) : (
           <span className="text-slate-400">—</span>
         )}
       </td>
-      <td className="p-2">
+      <td>
         {tieneTask10 ? (
-          <button
+          <Boton
+            variante="suave"
+            tamano="sm"
             onClick={() => onVerTask(r.datos, CAMPOS_TASK10, 'Detalle Task 10')}
-            className="rounded bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700 hover:bg-indigo-100"
           >
             Ver detalle
-          </button>
+          </Boton>
         ) : (
           <span className="text-slate-400">—</span>
         )}
       </td>
-      <td className="p-2">
+      <td>
         {tieneTask20 ? (
-          <button
+          <Boton
+            variante="suave"
+            tamano="sm"
             onClick={() => onVerTask(r.datos, CAMPOS_TASK20, 'Detalle Task 20')}
-            className="rounded bg-violet-50 px-2 py-0.5 text-xs text-violet-700 hover:bg-violet-100"
           >
             Ver detalle
-          </button>
+          </Boton>
         ) : (
           <span className="text-slate-400">—</span>
         )}
       </td>
-      <td className="p-2">
+      <td>
         {tieneTask30 ? (
-          <button
+          <Boton
+            variante="suave"
+            tamano="sm"
             onClick={() => onVerTask(r.datos, CAMPOS_TASK30, 'Detalle Task 30')}
-            className="rounded bg-teal-50 px-2 py-0.5 text-xs text-teal-700 hover:bg-teal-100"
           >
             Ver detalle
-          </button>
+          </Boton>
         ) : (
           <span className="text-slate-400">—</span>
         )}
       </td>
       {headers.map((h) => (
-        <td key={`${r.id}-${h}`} className="p-2 text-slate-700">{r.datos?.[h] ?? ''}</td>
+        <td key={`${r.id}-${h}`}>{r.datos?.[h] ?? ''}</td>
       ))}
     </tr>
   )
@@ -396,34 +400,35 @@ export default function SoporteSolicitudesFabrica() {
 
   return (
     <div className="min-w-0 w-full space-y-4 overflow-x-hidden">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="titulo-pagina">Soporte — Solicitudes Fábrica</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {puedeActualizar
-              ? 'Cargue el archivo Excel para validar y sincronizar, aplicando la regla Líder y Squad.'
-              : 'Consulta de solicitudes fábrica en modo solo lectura.'}
-          </p>
-        </div>
-        {puedeActualizar && (
-          <>
-            <input
-              ref={inputArchivoRef}
-              type="file"
-              accept=".xlsx,.xlsm"
-              className="hidden"
-              onChange={(e) => onArchivoSeleccionado(e.target.files?.[0] ?? null)}
-            />
-            <button
-              onClick={abrirSelectorArchivo}
-              disabled={actualizando || sincronizando}
-              className="btn btn-primario shrink-0"
-            >
-              {actualizando ? 'Cargando…' : 'Actualizar (cargar Excel)'}
-            </button>
-          </>
-        )}
-      </div>
+      <EncabezadoPagina
+        icono={<Icono nombre="fabrica" />}
+        titulo="Soporte — Solicitudes Fábrica"
+        descripcion={
+          puedeActualizar
+            ? 'Cargue el archivo Excel para validar y sincronizar, aplicando la regla Líder y Squad.'
+            : 'Consulta de solicitudes fábrica en modo solo lectura.'
+        }
+        acciones={
+          puedeActualizar ? (
+            <>
+              <input
+                ref={inputArchivoRef}
+                type="file"
+                accept=".xlsx,.xlsm"
+                className="hidden"
+                onChange={(e) => onArchivoSeleccionado(e.target.files?.[0] ?? null)}
+              />
+              <Boton
+                variante="primario"
+                onClick={abrirSelectorArchivo}
+                disabled={actualizando || sincronizando}
+              >
+                {actualizando ? 'Cargando…' : 'Actualizar (cargar Excel)'}
+              </Boton>
+            </>
+          ) : undefined
+        }
+      />
 
       {puedeActualizar && ultimaSync && ultimaSync.con_error > 0 && (
         <div className="aviso aviso-alerta space-y-2">
@@ -440,26 +445,26 @@ export default function SoporteSolicitudesFabrica() {
             {mostrarErroresUltimaSync ? 'Ocultar detalle' : 'Ver detalle de errores'}
           </button>
           {mostrarErroresUltimaSync && (
-            <div className="max-h-56 overflow-auto rounded border bg-white">
-              <table className="w-full text-xs">
-                <thead className="bg-slate-100 text-slate-700">
+            <TablaScroll className="max-h-56 overflow-y-auto">
+              <table className="tabla">
+                <thead>
                   <tr>
-                    <th className="p-2 text-left">Fila</th>
-                    <th className="p-2 text-left">Líder</th>
-                    <th className="p-2 text-left">Motivo</th>
+                    <th>Fila</th>
+                    <th>Líder</th>
+                    <th>Motivo</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ultimaSync.errores.map((e, i) => (
-                    <tr key={`${e.fila}-${i}`} className="border-t">
-                      <td className="p-2">{e.fila}</td>
-                      <td className="p-2">{e.lider ?? '—'}</td>
-                      <td className="p-2 text-red-700">{e.motivo}</td>
+                    <tr key={`${e.fila}-${i}`}>
+                      <td>{e.fila}</td>
+                      <td>{e.lider ?? '—'}</td>
+                      <td className="text-red-700">{e.motivo}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TablaScroll>
           )}
         </div>
       )}
@@ -500,12 +505,13 @@ export default function SoporteSolicitudesFabrica() {
           </div>
           {resultadoSync.registros_omitidos > 0 && (
             <div className="mt-3">
-              <button
+              <Boton
+                variante="primario"
+                tamano="sm"
                 onClick={() => void descargarErroresCsv()}
-                className="btn btn-primario btn-sm"
               >
                 Descargar errores (CSV)
-              </button>
+              </Boton>
             </div>
           )}
         </div>
@@ -538,53 +544,57 @@ export default function SoporteSolicitudesFabrica() {
       {/* Controles de paginación */}
       {data && data.total_paginas > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <button
+          <Boton
+            variante="secundario"
+            tamano="sm"
             onClick={() => irPagina(1)}
             disabled={pagina <= 1}
-            className="campo campo-sm disabled:opacity-40"
           >
             «
-          </button>
-          <button
+          </Boton>
+          <Boton
+            variante="secundario"
+            tamano="sm"
             onClick={() => irPagina(pagina - 1)}
             disabled={pagina <= 1}
-            className="campo campo-sm disabled:opacity-40"
           >
             ‹ Anterior
-          </button>
+          </Boton>
           <span className="text-sm font-medium text-slate-700">
             {pagina} / {data.total_paginas}
           </span>
-          <button
+          <Boton
+            variante="secundario"
+            tamano="sm"
             onClick={() => irPagina(pagina + 1)}
             disabled={pagina >= data.total_paginas}
-            className="campo campo-sm disabled:opacity-40"
           >
             Siguiente ›
-          </button>
-          <button
+          </Boton>
+          <Boton
+            variante="secundario"
+            tamano="sm"
             onClick={() => irPagina(data.total_paginas)}
             disabled={pagina >= data.total_paginas}
-            className="campo campo-sm disabled:opacity-40"
           >
             »
-          </button>
+          </Boton>
         </div>
       )}
 
       <TablaScroll className="w-full max-w-full max-h-[65vh] overflow-y-auto">
-        <table className="min-w-max text-sm">
-          <thead className="sticky top-0 z-10 bg-marca-osc text-white">
+        <table className="tabla min-w-max">
+          <thead className="sticky top-0 z-10">
             <tr>
-              <th className="p-2 text-left">Fila</th>
-              <th className="p-2 text-left">Líder</th>
-              <th className="p-2 text-left">Squad</th>
-              <th className="p-2 text-left">Descripción</th>
-              <th className="p-2 text-left">Task 10</th>
-              <th className="p-2 text-left">Task 20</th>
-              <th className="p-2 text-left">Task 30</th>
+              <th>Fila</th>
+              <th>Líder</th>
+              <th>Squad</th>
+              <th>Descripción</th>
+              <th>Task 10</th>
+              <th>Task 20</th>
+              <th>Task 30</th>
               {headers.map((h) => (
-                <th key={h} className="p-2 text-left">{h}</th>
+                <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -631,44 +641,46 @@ export default function SoporteSolicitudesFabrica() {
             </div>
 
             {(preview.errores?.length ?? 0) > 0 && (
-              <div className="max-h-56 overflow-auto rounded border">
-                <table className="w-full text-xs">
-                  <thead className="bg-slate-100 text-slate-700">
+              <TablaScroll className="max-h-56 overflow-y-auto">
+                <table className="tabla">
+                  <thead>
                     <tr>
-                      <th className="p-2 text-left">Fila</th>
-                      <th className="p-2 text-left">Líder</th>
-                      <th className="p-2 text-left">Motivo</th>
+                      <th>Fila</th>
+                      <th>Líder</th>
+                      <th>Motivo</th>
                     </tr>
                   </thead>
                   <tbody>
                     {preview.errores.map((e, i) => (
-                      <tr key={`${e.fila}-${i}`} className="border-t">
-                        <td className="p-2">{e.fila}</td>
-                        <td className="p-2">{e.lider ?? '—'}</td>
-                        <td className="p-2 text-red-700">{e.motivo}</td>
+                      <tr key={`${e.fila}-${i}`}>
+                        <td>{e.fila}</td>
+                        <td>{e.lider ?? '—'}</td>
+                        <td className="text-red-700">{e.motivo}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TablaScroll>
             )}
 
             <div className="flex justify-end gap-2">
-              <button
+              <Boton
+                variante="secundario"
+                tamano="sm"
                 onClick={() => setModalAbierto(false)}
                 disabled={sincronizando}
-                className="btn btn-secundario btn-sm"
               >
                 Cancelar
-              </button>
+              </Boton>
               {puedeActualizar && (
-                <button
+                <Boton
+                  variante="primario"
+                  tamano="sm"
                   onClick={() => void confirmarSincronizacion()}
                   disabled={sincronizando}
-                  className="btn btn-primario btn-sm"
                 >
                   {sincronizando ? 'Sincronizando…' : 'Confirmar'}
-                </button>
+                </Boton>
               )}
             </div>
           </div>
@@ -684,12 +696,13 @@ export default function SoporteSolicitudesFabrica() {
           {descripcionSeleccionada || '—'}
         </div>
         <div className="mt-4 flex justify-end">
-          <button
+          <Boton
+            variante="secundario"
+            tamano="sm"
             onClick={() => setDescripcionSeleccionada(null)}
-            className="btn btn-secundario btn-sm"
           >
             Cerrar
-          </button>
+          </Boton>
         </div>
       </Modal>
 
@@ -709,12 +722,13 @@ export default function SoporteSolicitudesFabrica() {
               ))}
             </dl>
             <div className="flex justify-end pt-1">
-              <button
+              <Boton
+                variante="secundario"
+                tamano="sm"
                 onClick={() => setTaskSeleccionada(null)}
-                className="btn btn-secundario btn-sm"
               >
                 Cerrar
-              </button>
+              </Boton>
             </div>
           </div>
         )}

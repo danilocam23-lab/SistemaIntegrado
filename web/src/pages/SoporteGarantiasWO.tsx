@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import client from '../api/client'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 function getId(item: any): string {
   if (!item._id) return ''
@@ -132,10 +132,11 @@ export default function SoporteGarantiasWO() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="titulo-pagina">Garantías de Work Orders</h1>
-        <p className="text-sm text-slate-500">Gestión de WO marcadas como garantía con observaciones</p>
-      </div>
+      <EncabezadoPagina
+        icono={<Icono nombre="soporte" />}
+        titulo="Garantías de Work Orders"
+        descripcion="Gestión de WO marcadas como garantía con observaciones"
+      />
 
       {/* Buscador */}
       <div className="tarjeta tarjeta-pad">
@@ -151,46 +152,44 @@ export default function SoporteGarantiasWO() {
               className="campo w-full"
             />
           </label>
-          <button onClick={buscarWO} disabled={buscando}
-            className="btn btn-primario">
+          <Boton variante="primario" onClick={buscarWO} disabled={buscando}>
             {buscando ? 'Buscando…' : 'Buscar'}
-          </button>
+          </Boton>
         </div>
 
         {(resultados ?? []).length > 0 && (
           <TablaScroll className="max-h-48 overflow-y-auto">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600">
+            <table className="tabla">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2">Work Order ID</th>
-                  <th className="px-3 py-2">Squad</th>
-                  <th className="px-3 py-2">Líder</th>
-                  <th className="px-3 py-2">Descripción</th>
-                  <th className="px-3 py-2">Estado</th>
-                  <th className="px-3 py-2"></th>
+                  <th>Work Order ID</th>
+                  <th>Squad</th>
+                  <th>Líder</th>
+                  <th>Descripción</th>
+                  <th>Estado</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {(resultados ?? []).map((r) => (
-                  <tr key={r.work_order_id} className="border-t hover:bg-slate-50">
-                    <td className="px-3 py-2 font-mono font-semibold">
+                  <tr key={r.work_order_id}>
+                    <td className="font-mono font-semibold">
                       <button
                         type="button"
                         onClick={() => verDetalleWo(r.work_order_id)}
-                        className="text-blue-600 underline decoration-dotted hover:text-blue-800"
+                        className="enlace-accion"
                       >
                         {r.work_order_id}
                       </button>
                     </td>
-                    <td className="px-3 py-2">{r.squad}</td>
-                    <td className="px-3 py-2">{r.lider}</td>
-                    <td className="px-3 py-2 max-w-xs truncate">{r.descripcion}</td>
-                    <td className="px-3 py-2">{r.estado}</td>
-                    <td className="px-3 py-2">
-                      <button onClick={() => agregarWO(r.work_order_id)}
-                        className="btn btn-exito btn-sm">
+                    <td>{r.squad}</td>
+                    <td>{r.lider}</td>
+                    <td className="max-w-xs truncate">{r.descripcion}</td>
+                    <td>{r.estado}</td>
+                    <td>
+                      <Boton variante="exito" tamano="sm" onClick={() => agregarWO(r.work_order_id)}>
                         + Agregar
-                      </button>
+                      </Boton>
                     </td>
                   </tr>
                 ))}
@@ -209,38 +208,38 @@ export default function SoporteGarantiasWO() {
           <p className="py-8 text-center text-sm text-slate-400">No hay garantías registradas</p>
         ) : (
           <TablaScroll>
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600">
+            <table className="tabla">
+              <thead>
                 <tr>
-                  <th className="px-3 py-2">Work Order ID</th>
-                  <th className="px-3 py-2">Squad</th>
-                  <th className="px-3 py-2">Líder</th>
-                  <th className="px-3 py-2">Descripción</th>
-                  <th className="px-3 py-2">Estado WO</th>
-                  <th className="px-3 py-2">Observaciones</th>
-                  <th className="px-3 py-2">Observaciones Resolución</th>
-                  <th className="px-3 py-2">Acciones</th>
+                  <th>Work Order ID</th>
+                  <th>Squad</th>
+                  <th>Líder</th>
+                  <th>Descripción</th>
+                  <th>Estado WO</th>
+                  <th>Observaciones</th>
+                  <th>Observaciones Resolución</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {(garantias ?? []).map((g) => {
                   const edicion = editandoObs[getId(g)]
                   return (
-                    <tr key={getId(g)} className="border-t align-top">
-                      <td className="px-3 py-2 font-mono font-semibold">
+                    <tr key={getId(g)} className="align-top">
+                      <td className="font-mono font-semibold">
                         <button
                           type="button"
                           onClick={() => verDetalleWo(g.work_order_id)}
-                          className="text-blue-600 underline decoration-dotted hover:text-blue-800"
+                          className="enlace-accion"
                         >
                           {g.work_order_id}
                         </button>
                       </td>
-                      <td className="px-3 py-2">{g.squad ?? '—'}</td>
-                      <td className="px-3 py-2">{g.lider ?? '—'}</td>
-                      <td className="px-3 py-2 max-w-xs truncate">{g.descripcion ?? '—'}</td>
-                      <td className="px-3 py-2">{g.estado_wo ?? '—'}</td>
-                      <td className="px-3 py-2 min-w-[180px]">
+                      <td>{g.squad ?? '—'}</td>
+                      <td>{g.lider ?? '—'}</td>
+                      <td className="max-w-xs truncate">{g.descripcion ?? '—'}</td>
+                      <td>{g.estado_wo ?? '—'}</td>
+                      <td className="min-w-[180px]">
                         {edicion ? (
                           <textarea
                             value={edicion.obs}
@@ -252,7 +251,7 @@ export default function SoporteGarantiasWO() {
                           <span>{g.observaciones || '—'}</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 min-w-[180px]">
+                      <td className="min-w-[180px]">
                         {edicion ? (
                           <textarea
                             value={edicion.res}
@@ -264,30 +263,34 @@ export default function SoporteGarantiasWO() {
                           <span>{g.observaciones_resolucion || '—'}</span>
                         )}
                       </td>
-                      <td className="px-3 py-2">
+                      <td>
                         <div className="flex flex-col gap-1">
                           {edicion ? (
                             <>
-                              <button onClick={() => guardarObservaciones(getId(g))}
+                              <Boton
+                                variante="primario"
+                                tamano="sm"
+                                onClick={() => guardarObservaciones(getId(g))}
                                 disabled={guardando.has(getId(g))}
-                                className="btn btn-primario btn-sm">
+                              >
                                 {guardando.has(getId(g)) ? 'Guardando…' : 'Guardar'}
-                              </button>
-                              <button onClick={() => setEditandoObs((p) => { const n = { ...p }; delete n[getId(g)]; return n })}
-                                className="btn btn-secundario btn-sm">
+                              </Boton>
+                              <Boton
+                                variante="secundario"
+                                tamano="sm"
+                                onClick={() => setEditandoObs((p) => { const n = { ...p }; delete n[getId(g)]; return n })}
+                              >
                                 Cancelar
-                              </button>
+                              </Boton>
                             </>
                           ) : (
                             <>
-                              <button onClick={() => iniciarEdicion(g)}
-                                className="btn btn-primario btn-sm">
+                              <Boton variante="primario" tamano="sm" onClick={() => iniciarEdicion(g)}>
                                 Editar
-                              </button>
-                              <button onClick={() => eliminar(getId(g))}
-                                className="btn btn-peligro btn-sm">
+                              </Boton>
+                              <Boton variante="peligro" tamano="sm" onClick={() => eliminar(getId(g))}>
                                 Eliminar
-                              </button>
+                              </Boton>
                             </>
                           )}
                         </div>
@@ -317,7 +320,7 @@ export default function SoporteGarantiasWO() {
                 className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
                 aria-label="Cerrar detalle de WO"
               >
-                ✕
+                <Icono nombre="x" />
               </button>
             </div>
 

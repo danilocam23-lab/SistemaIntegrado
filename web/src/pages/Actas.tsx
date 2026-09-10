@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Acta } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Actas() {
   const { datos, error, recargar } = useLista<Acta>('/actas')
@@ -61,10 +61,10 @@ export default function Actas() {
   }
 
   return (
-    <div>
-      <h1 className="titulo-pagina mb-4">Actas de trabajo</h1>
+    <div className="space-y-4">
+      <EncabezadoPagina titulo="Actas de trabajo" icono={<Icono nombre="portafolio" />} />
 
-      <form onSubmit={crear} className="barra-filtros mb-4">
+      <form onSubmit={crear} className="barra-filtros">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Código</span>
           <input value={codigo} onChange={(e) => setCodigo(e.target.value)} required
@@ -80,30 +80,30 @@ export default function Actas() {
           <input value={direccion} onChange={(e) => setDireccion(e.target.value)}
             className="campo" />
         </label>
-        <button className="btn btn-primario">Crear</button>
+        <Boton type="submit" variante="primario">Crear</Boton>
       </form>
 
       {(aviso || error) && (
-        <div className="aviso aviso-error mb-3">{aviso || error}</div>
+        <div className="aviso aviso-error">{aviso || error}</div>
       )}
 
       <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="p-2 text-left">Código</th>
-            <th className="p-2 text-left">Fecha</th>
-            <th className="p-2 text-left">Dirección</th>
-            <th className="p-2 text-right">Total horas</th>
-            <th className="p-2 text-right">Total valor</th>
-            <th className="p-2"></th>
+            <th>Código</th>
+            <th>Fecha</th>
+            <th>Dirección</th>
+            <th className="text-right">Total horas</th>
+            <th className="text-right">Total valor</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {datos.map((a) => (
-            <tr key={a.id} className="border-t">
+            <tr key={a.id}>
               <td
-                className="p-2 font-mono cursor-pointer"
+                className="font-mono cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(a.id, 'codigo', a.codigo)}
               >
@@ -131,7 +131,7 @@ export default function Actas() {
                 )}
               </td>
               <td
-                className="p-2 cursor-pointer"
+                className="cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(a.id, 'fecha', a.fecha?.slice(0, 10) ?? '')}
               >
@@ -160,7 +160,7 @@ export default function Actas() {
                 )}
               </td>
               <td
-                className="p-2 cursor-pointer"
+                className="cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(a.id, 'direccion', a.direccion ?? '')}
               >
@@ -187,9 +187,9 @@ export default function Actas() {
                   a.direccion ?? '—'
                 )}
               </td>
-              <td className="p-2 text-right">{a.total_horas ?? '—'}</td>
-              <td className="p-2 text-right">{a.total_valor ?? '—'}</td>
-              <td className="p-2 text-center">
+              <td className="text-right">{a.total_horas ?? '—'}</td>
+              <td className="text-right">{a.total_valor ?? '—'}</td>
+              <td className="text-center">
                 <button onClick={() => eliminar(a)} className="enlace-accion enlace-accion-peligro">
                   Eliminar
                 </button>
