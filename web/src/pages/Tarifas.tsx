@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Tarifa } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 const RAMIFICACIONES = ['Fábrica', 'Soporte']
 
@@ -91,7 +91,7 @@ export default function Tarifas() {
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-4">Tarifas</h1>
+      <EncabezadoPagina icono={<Icono nombre="facturacion" />} titulo="Tarifas" />
 
       <form onSubmit={crear} className="barra-filtros mb-4">
         <label className="text-sm">
@@ -111,7 +111,7 @@ export default function Tarifas() {
             {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </label>
-        <button className="btn btn-primario">Crear</button>
+        <Boton variante="primario" type="submit">Crear</Boton>
       </form>
 
       {(aviso || error) && (
@@ -119,20 +119,20 @@ export default function Tarifas() {
       )}
 
       <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="p-2 text-left">Año</th>
-            <th className="p-2 text-right">Valor hora</th>
-            <th className="p-2 text-left">Ramificación</th>
-            <th className="p-2"></th>
+            <th>Año</th>
+            <th className="text-right">Valor hora</th>
+            <th>Ramificación</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {datos.map((t) => (
-            <tr key={t.id} className="border-t">
+            <tr key={t.id}>
               <td
-                className="p-2 cursor-pointer"
+                className="cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(t.id, 'anio', String(t.anio))}
               >
@@ -161,7 +161,7 @@ export default function Tarifas() {
                 )}
               </td>
               <td
-                className="p-2 text-right cursor-pointer"
+                className="text-right cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(t.id, 'valor_hora', String(t.valor_hora))}
               >
@@ -190,7 +190,7 @@ export default function Tarifas() {
                 )}
               </td>
               <td
-                className="p-2 cursor-pointer"
+                className="cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(t.id, 'ramificacion', t.ramificacion ?? RAMIFICACIONES[0])}
               >
@@ -219,7 +219,7 @@ export default function Tarifas() {
                   t.ramificacion ?? '—'
                 )}
               </td>
-              <td className="p-2 text-center">
+              <td className="text-center">
                 <div className="flex justify-center gap-2">
                   <button onClick={() => abrirEdicion(t)} className="enlace-accion enlace-accion-alerta">
                     Editar
@@ -263,14 +263,12 @@ export default function Tarifas() {
               </select>
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setEditItem(null)}
-                className="btn btn-secundario">
+              <Boton variante="secundario" onClick={() => setEditItem(null)}>
                 Cancelar
-              </button>
-              <button onClick={guardarPopup}
-                className="btn btn-primario">
+              </Boton>
+              <Boton variante="primario" onClick={guardarPopup}>
                 Guardar
-              </button>
+              </Boton>
             </div>
           </div>
         </div>

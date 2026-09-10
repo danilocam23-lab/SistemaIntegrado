@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Requerimiento, Tarifa } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 interface RegistroSoporte {
   Work_Order_ID: string
@@ -185,10 +185,11 @@ export default function FacturacionValoresProyecto() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="titulo-pagina">Facturación — Valores de proyecto</h1>
-        <p className="mt-1 text-sm text-slate-500">Valores de proyecto.</p>
-      </div>
+      <EncabezadoPagina
+        icono={<Icono nombre="facturacion" />}
+        titulo="Facturación — Valores de proyecto"
+        descripcion="Valores de proyecto."
+      />
       {errorVisible && <div className="aviso aviso-error">{errorVisible}</div>}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="aviso aviso-exito">
@@ -215,37 +216,37 @@ export default function FacturacionValoresProyecto() {
       </div>
       <div className="tarjeta overflow-hidden">
         <TablaScroll plano>
-        <table className="w-full text-sm">
-          <thead className="bg-marca-osc text-left text-white">
+        <table className="tabla">
+          <thead>
             <tr>
-              <th className="p-3 text-center">Año</th>
-              <th className="p-3 text-center">Cantidad de WO</th>
-              <th className="p-3 text-center">Cantidad de horas</th>
-              <th className="p-3 text-center">Valor hora</th>
-              <th className="p-3 text-center">Valor total</th>
+              <th className="text-center">Año</th>
+              <th className="text-center">Cantidad de WO</th>
+              <th className="text-center">Cantidad de horas</th>
+              <th className="text-center">Valor hora</th>
+              <th className="text-center">Valor total</th>
             </tr>
           </thead>
           <tbody>
             {cargandoVisible ? (
-              <tr className="border-t">
+              <tr>
                 <td colSpan={5} className="p-3 text-center text-slate-400">Cargando…</td>
               </tr>
             ) : filasPorAno.length === 0 ? (
-              <tr className="border-t">
+              <tr>
                 <td colSpan={5} className="p-3 text-center text-slate-400">Sin registros</td>
               </tr>
             ) : (
               filasPorAno.map(([ano, valores]) => (
-                <tr key={ano} className="border-t text-center">
-                  <td className="p-3 font-semibold">{ano}</td>
-                  <td className="p-3">{valores.wo.size}</td>
-                  <td className="p-3">{valores.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
-                  <td className="p-3">
+                <tr key={ano} className="text-center">
+                  <td className="font-semibold">{ano}</td>
+                  <td>{valores.wo.size}</td>
+                  <td>{valores.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
+                  <td>
                     {valores.valorHora === null
                       ? '—'
                       : formatoMoneda(valores.valorHora)}
                   </td>
-                  <td className="p-3">
+                  <td>
                     {valores.valorHora === null
                       ? '—'
                       : formatoMoneda(valores.horas * valores.valorHora)}
@@ -257,11 +258,11 @@ export default function FacturacionValoresProyecto() {
           {!cargandoVisible && filasPorAno.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-marca-osc bg-slate-100 text-center font-bold">
-               <td className="p-3">Totales</td>
-               <td className="p-3">{totales.wo}</td>
-               <td className="p-3">{totales.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
-               <td className="p-3">—</td>
-               <td className="p-3">{formatoMoneda(totales.valorTotal)}</td>
+               <td>Totales</td>
+               <td>{totales.wo}</td>
+               <td>{totales.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
+               <td>—</td>
+               <td>{formatoMoneda(totales.valorTotal)}</td>
               </tr>
             </tfoot>
           )}
@@ -275,35 +276,35 @@ export default function FacturacionValoresProyecto() {
         <h2 className="titulo-seccion mb-2">Valores de entregas</h2>
         <div className="tarjeta overflow-hidden">
           <TablaScroll plano>
-          <table className="w-full text-sm">
-            <thead className="bg-marca-osc text-left text-white">
+          <table className="tabla">
+            <thead>
               <tr>
-                <th className="p-3 text-center">Año</th>
-                <th className="p-3 text-center">Cantidad de entregas</th>
-                <th className="p-3 text-center">Cantidad de horas</th>
-                <th className="p-3 text-center">Valor hora</th>
-                <th className="p-3 text-center">Valor total</th>
+                <th className="text-center">Año</th>
+                <th className="text-center">Cantidad de entregas</th>
+                <th className="text-center">Cantidad de horas</th>
+                <th className="text-center">Valor hora</th>
+                <th className="text-center">Valor total</th>
               </tr>
             </thead>
             <tbody>
               {cargandoVisible ? (
-                <tr className="border-t">
+                <tr>
                   <td colSpan={5} className="p-3 text-center text-slate-400">Cargando…</td>
                 </tr>
               ) : filasEntregasPorAno.length === 0 ? (
-                <tr className="border-t">
+                <tr>
                   <td colSpan={5} className="p-3 text-center text-slate-400">Sin registros</td>
                 </tr>
               ) : (
                 filasEntregasPorAno.map(([ano, valores]) => (
-                  <tr key={ano} className="border-t text-center">
-                    <td className="p-3 font-semibold">{ano}</td>
-                    <td className="p-3">{valores.entregas}</td>
-                    <td className="p-3">{valores.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
-                    <td className="p-3">
+                  <tr key={ano} className="text-center">
+                    <td className="font-semibold">{ano}</td>
+                    <td>{valores.entregas}</td>
+                    <td>{valores.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
+                    <td>
                       {valores.valorHora === null ? '—' : formatoMoneda(valores.valorHora)}
                     </td>
-                    <td className="p-3">
+                    <td>
                       {valores.valorHora === null ? '—' : formatoMoneda(valores.horas * valores.valorHora)}
                     </td>
                   </tr>
@@ -313,11 +314,11 @@ export default function FacturacionValoresProyecto() {
             {!cargandoVisible && filasEntregasPorAno.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-marca-osc bg-slate-100 text-center font-bold">
-                  <td className="p-3">Totales</td>
-                  <td className="p-3">{totalesEntregas.entregas}</td>
-                  <td className="p-3">{totalesEntregas.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
-                  <td className="p-3">—</td>
-                  <td className="p-3">{formatoMoneda(totalesEntregas.valorTotal)}</td>
+                  <td>Totales</td>
+                  <td>{totalesEntregas.entregas}</td>
+                  <td>{totalesEntregas.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
+                  <td>—</td>
+                  <td>{formatoMoneda(totalesEntregas.valorTotal)}</td>
                 </tr>
               </tfoot>
             )}
@@ -332,37 +333,37 @@ export default function FacturacionValoresProyecto() {
         <h2 className="titulo-seccion mb-2">Entregas por estado</h2>
         <div className="tarjeta overflow-hidden">
           <TablaScroll plano>
-          <table className="w-full text-sm">
-            <thead className="bg-marca-osc text-left text-white">
+          <table className="tabla">
+            <thead>
               <tr>
-                <th className="p-3 text-center">División</th>
-                <th className="p-3 text-center">Año</th>
-                <th className="p-3 text-center">Cantidad de entregas</th>
-                <th className="p-3 text-center">Cantidad de horas</th>
-                <th className="p-3 text-center">Valor hora</th>
-                <th className="p-3 text-center">Valor total</th>
+                <th className="text-center">División</th>
+                <th className="text-center">Año</th>
+                <th className="text-center">Cantidad de entregas</th>
+                <th className="text-center">Cantidad de horas</th>
+                <th className="text-center">Valor hora</th>
+                <th className="text-center">Valor total</th>
               </tr>
             </thead>
             <tbody>
               {cargandoVisible ? (
-                <tr className="border-t">
+                <tr>
                   <td colSpan={6} className="p-3 text-center text-slate-400">Cargando…</td>
                 </tr>
               ) : filasEntregasPorEstado.length === 0 ? (
-                <tr className="border-t">
+                <tr>
                   <td colSpan={6} className="p-3 text-center text-slate-400">Sin registros</td>
                 </tr>
               ) : (
                 filasEntregasPorEstado.map((valores) => (
-                  <tr key={`${valores.division}-${valores.ano}`} className="border-t text-center">
-                    <td className="p-3 font-semibold">{valores.division}</td>
-                    <td className="p-3">{valores.ano}</td>
-                    <td className="p-3">{valores.entregas}</td>
-                    <td className="p-3">{valores.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
-                    <td className="p-3">
+                  <tr key={`${valores.division}-${valores.ano}`} className="text-center">
+                    <td className="font-semibold">{valores.division}</td>
+                    <td>{valores.ano}</td>
+                    <td>{valores.entregas}</td>
+                    <td>{valores.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
+                    <td>
                       {valores.valorHora === null ? '—' : formatoMoneda(valores.valorHora)}
                     </td>
-                    <td className="p-3">
+                    <td>
                       {valores.valorHora === null ? '—' : formatoMoneda(valores.horas * valores.valorHora)}
                     </td>
                   </tr>
@@ -372,11 +373,11 @@ export default function FacturacionValoresProyecto() {
             {!cargandoVisible && filasEntregasPorEstado.length > 0 && (
               <tfoot>
                 <tr className="border-t-2 border-marca-osc bg-slate-100 text-center font-bold">
-                  <td className="p-3" colSpan={2}>Totales</td>
-                  <td className="p-3">{totalesEntregasEstado.entregas}</td>
-                  <td className="p-3">{totalesEntregasEstado.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
-                  <td className="p-3">—</td>
-                  <td className="p-3">{formatoMoneda(totalesEntregasEstado.valorTotal)}</td>
+                  <td colSpan={2}>Totales</td>
+                  <td>{totalesEntregasEstado.entregas}</td>
+                  <td>{totalesEntregasEstado.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
+                  <td>—</td>
+                  <td>{formatoMoneda(totalesEntregasEstado.valorTotal)}</td>
                 </tr>
               </tfoot>
             )}

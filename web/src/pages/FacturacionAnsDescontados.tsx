@@ -3,7 +3,7 @@ import client from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Configuracion } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 interface FilaGeneral {
   id: string
@@ -163,47 +163,44 @@ export default function FacturacionAnsDescontados() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="titulo-pagina">Facturación — ANS descontados</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Tabla manual: sin funciones automáticas en horas.
-          </p>
-        </div>
-        {puedeEditarFacturacion && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={agregarFila}
-              className="btn btn-primario btn-sm"
-            >
-              Agregar fila
-            </button>
-            <button
-              onClick={() => void guardarCambios()}
-              disabled={guardando || !inicializado}
-              className="btn btn-primario btn-sm"
-            >
-              {guardando ? 'Guardando…' : 'Guardar cambios'}
-            </button>
-          </div>
-        )}
-      </div>
+      <EncabezadoPagina
+        icono={<Icono nombre="facturacion" />}
+        titulo="Facturación — ANS descontados"
+        descripcion="Tabla manual: sin funciones automáticas en horas."
+        acciones={
+          puedeEditarFacturacion ? (
+            <>
+              <Boton variante="primario" tamano="sm" onClick={agregarFila}>
+                Agregar fila
+              </Boton>
+              <Boton
+                variante="primario"
+                tamano="sm"
+                onClick={() => void guardarCambios()}
+                disabled={guardando || !inicializado}
+              >
+                {guardando ? 'Guardando…' : 'Guardar cambios'}
+              </Boton>
+            </>
+          ) : undefined
+        }
+      />
 
       {error && <div className="aviso aviso-error">{error}</div>}
       {mensaje === 'ok' && <div className="aviso aviso-exito">Cambios guardados.</div>}
       {mensaje === 'error' && <div className="aviso aviso-error">Error al guardar.</div>}
 
       <TablaScroll>
-        <table className="w-full min-w-[800px] text-sm">
-          <thead className="bg-marca-osc text-white">
+        <table className="tabla min-w-[800px]">
+          <thead>
             <tr>
-              <th className="p-2 text-left">Periodo de incumplimiento</th>
-              <th className="p-2 text-right">Valor descuento</th>
-              <th className="p-2 text-right">Fábrica</th>
-              <th className="p-2 text-right">Soporte</th>
-              <th className="p-2 text-left">Fecha de Descuento</th>
-              <th className="p-2 text-left">Observaciones</th>
-              <th className="p-2" />
+              <th>Periodo de incumplimiento</th>
+              <th className="text-right">Valor descuento</th>
+              <th className="text-right">Fábrica</th>
+              <th className="text-right">Soporte</th>
+              <th>Fecha de Descuento</th>
+              <th>Observaciones</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -213,8 +210,8 @@ export default function FacturacionAnsDescontados() {
               </tr>
             )}
             {!cargando && inicializado && filas.map((f) => (
-              <tr key={f.id} className="border-t align-top">
-                <td className="p-2">
+              <tr key={f.id} className="align-top">
+                <td>
                   <input
                     value={f.periodo}
                     onChange={(e) => actualizar(f.id, 'periodo', e.target.value)}
@@ -223,7 +220,7 @@ export default function FacturacionAnsDescontados() {
                     className="campo campo-sm w-44"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={f.valorDescuento}
                     onChange={(e) => actualizar(f.id, 'valorDescuento', e.target.value)}
@@ -236,7 +233,7 @@ export default function FacturacionAnsDescontados() {
                     className="campo campo-sm w-32 text-right"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={f.fabrica}
                     onChange={(e) => actualizar(f.id, 'fabrica', e.target.value)}
@@ -249,7 +246,7 @@ export default function FacturacionAnsDescontados() {
                     className="campo campo-sm w-32 text-right"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={f.soporte}
                     onChange={(e) => actualizar(f.id, 'soporte', e.target.value)}
@@ -262,7 +259,7 @@ export default function FacturacionAnsDescontados() {
                     className="campo campo-sm w-32 text-right"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     type="date"
                     value={f.fechaDescuento}
@@ -271,7 +268,7 @@ export default function FacturacionAnsDescontados() {
                     className="campo campo-sm w-40"
                   />
                 </td>
-                <td className="p-2 min-w-[260px]">
+                <td className="min-w-[260px]">
                   <textarea
                     rows={2}
                     value={f.observacion}
@@ -280,14 +277,11 @@ export default function FacturacionAnsDescontados() {
                     className="campo campo-sm w-full resize-none"
                   />
                 </td>
-                <td className="p-2 text-center">
+                <td className="text-center">
                   {puedeEditarFacturacion && (
-                    <button
-                      onClick={() => eliminarFila(f.id)}
-                      className="btn btn-peligro btn-sm"
-                    >
+                    <Boton variante="peligro" tamano="sm" onClick={() => eliminarFila(f.id)}>
                       Quitar
-                    </button>
+                    </Boton>
                   )}
                 </td>
               </tr>
@@ -296,13 +290,13 @@ export default function FacturacionAnsDescontados() {
           {!cargando && inicializado && filas.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700">
-                <td className="p-2">Total</td>
-                <td className="p-2 text-right">{formatoCOP(totales.valorDescuento)}</td>
-                <td className="p-2 text-right">{formatoCOP(totales.fabrica)}</td>
-                <td className="p-2 text-right">{formatoCOP(totales.soporte)}</td>
-                <td className="p-2" />
-                <td className="p-2" />
-                <td className="p-2" />
+                <td>Total</td>
+                <td className="text-right">{formatoCOP(totales.valorDescuento)}</td>
+                <td className="text-right">{formatoCOP(totales.fabrica)}</td>
+                <td className="text-right">{formatoCOP(totales.soporte)}</td>
+                <td />
+                <td />
+                <td />
               </tr>
             </tfoot>
           )}

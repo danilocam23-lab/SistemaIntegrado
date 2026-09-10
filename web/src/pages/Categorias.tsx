@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Categoria } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Categorias() {
   const { datos, error, recargar } = useLista<Categoria>('/categorias')
@@ -63,7 +63,7 @@ export default function Categorias() {
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-4">Categorías</h1>
+      <EncabezadoPagina icono={<Icono nombre="administracion" />} titulo="Categorías" />
 
       <form onSubmit={crear} className="barra-filtros mb-4">
         <label className="text-sm">
@@ -76,7 +76,7 @@ export default function Categorias() {
           <input value={color} onChange={(e) => setColor(e.target.value)} type="color"
             className="h-10 w-16 rounded border" />
         </label>
-        <button className="btn btn-primario">Crear</button>
+        <Boton variante="primario" type="submit">Crear</Boton>
       </form>
 
       {(aviso || error) && (
@@ -84,20 +84,20 @@ export default function Categorias() {
       )}
 
       <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="p-2 text-left">Orden</th>
-            <th className="p-2 text-left">Categoría</th>
-            <th className="p-2 text-left">Color</th>
-            <th className="p-2"></th>
+            <th>Orden</th>
+            <th>Categoría</th>
+            <th>Color</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {datos.map((c) => (
-            <tr key={c.id} className="border-t">
+            <tr key={c.id}>
               <td
-                className="cursor-pointer p-2"
+                className="cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(c.id, 'orden', String(c.orden))}
               >
@@ -129,7 +129,7 @@ export default function Categorias() {
                 ) : c.orden}
               </td>
               <td
-                className="cursor-pointer p-2"
+                className="cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(c.id, 'nombre', c.nombre)}
               >
@@ -160,7 +160,7 @@ export default function Categorias() {
                 ) : c.nombre}
               </td>
               <td
-                className="cursor-pointer p-2"
+                className="cursor-pointer"
                 title="Doble clic para editar"
                 onDoubleClick={() => iniciarEdicion(c.id, 'color', c.color)}
               >
@@ -196,7 +196,7 @@ export default function Categorias() {
                   </span>
                 )}
               </td>
-              <td className="p-2 text-center">
+              <td className="text-center">
                 <button onClick={() => eliminar(c)} className="enlace-accion enlace-accion-peligro">
                   Eliminar
                 </button>

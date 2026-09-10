@@ -3,7 +3,7 @@ import client from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Configuracion, Tarifa } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 interface FilaGeneral {
   id: string
@@ -211,49 +211,46 @@ export default function FacturacionGeneral() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="titulo-pagina">Facturación — General</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Tabla manual: sin funciones automáticas en horas. El valor hora viene automático de configuración.
-          </p>
-        </div>
-        {puedeEditarFacturacion && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={agregarFila}
-              className="btn btn-primario btn-sm"
-            >
-              Agregar fila
-            </button>
-            <button
-              onClick={() => void guardarCambios()}
-              disabled={guardando || !inicializado}
-              className="btn btn-primario btn-sm"
-            >
-              {guardando ? 'Guardando…' : 'Guardar cambios'}
-            </button>
-          </div>
-        )}
-      </div>
+      <EncabezadoPagina
+        icono={<Icono nombre="facturacion" />}
+        titulo="Facturación — General"
+        descripcion="Tabla manual: sin funciones automáticas en horas. El valor hora viene automático de configuración."
+        acciones={
+          puedeEditarFacturacion ? (
+            <>
+              <Boton variante="primario" tamano="sm" onClick={agregarFila}>
+                Agregar fila
+              </Boton>
+              <Boton
+                variante="primario"
+                tamano="sm"
+                onClick={() => void guardarCambios()}
+                disabled={guardando || !inicializado}
+              >
+                {guardando ? 'Guardando…' : 'Guardar cambios'}
+              </Boton>
+            </>
+          ) : undefined
+        }
+      />
 
       {error && <div className="aviso aviso-error">{error}</div>}
       {mensaje === 'ok' && <div className="aviso aviso-exito">Cambios guardados.</div>}
       {mensaje === 'error' && <div className="aviso aviso-error">Error al guardar.</div>}
 
       <TablaScroll>
-        <table className="w-full min-w-[1200px] text-sm">
-          <thead className="bg-marca-osc text-white">
+        <table className="tabla min-w-[1200px]">
+          <thead>
             <tr>
-              <th className="p-2 text-left">Periodo (15 a 15)</th>
-              <th className="p-2 text-right">Valor hora</th>
-              <th className="p-2 text-right">Horas comprometidas</th>
-              <th className="p-2 text-right">Total comprometido</th>
-              <th className="p-2 text-right">Horas facturadas</th>
-              <th className="p-2 text-right">Total facturado</th>
-              <th className="p-2 text-right">Deuda</th>
-              <th className="p-2 text-left">Observaciones</th>
-              <th className="p-2" />
+              <th>Periodo (15 a 15)</th>
+              <th className="text-right">Valor hora</th>
+              <th className="text-right">Horas comprometidas</th>
+              <th className="text-right">Total comprometido</th>
+              <th className="text-right">Horas facturadas</th>
+              <th className="text-right">Total facturado</th>
+              <th className="text-right">Deuda</th>
+              <th>Observaciones</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -263,13 +260,13 @@ export default function FacturacionGeneral() {
               </tr>
             )}
             {!cargando && inicializado && filas.map((f) => (
-              <tr key={f.id} className="border-t align-top">
+              <tr key={f.id} className="align-top">
                 {(() => {
                   const totalComprometidoNum = aNumero(valorHoraAutomaticoTexto) * aNumero(f.horasComprometidas)
                   const totalFacturadoNum = aNumero(valorHoraAutomaticoTexto) * aNumero(f.horasFacturadas)
                   return (
                     <>
-                <td className="p-2">
+                <td>
                   <input
                     value={f.periodo}
                     onChange={(e) => actualizar(f.id, 'periodo', e.target.value)}
@@ -278,14 +275,14 @@ export default function FacturacionGeneral() {
                     className="campo campo-sm w-44"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={valorHoraAutomaticoTexto ? formatoCOP(aNumero(valorHoraAutomaticoTexto)) : ''}
                     readOnly
                     className="campo campo-sm w-32 text-right"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={f.horasComprometidas}
                     onChange={(e) => actualizar(f.id, 'horasComprometidas', e.target.value)}
@@ -293,14 +290,14 @@ export default function FacturacionGeneral() {
                     className="campo campo-sm w-32 text-right"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={formatoCOP(totalComprometidoNum)}
                     readOnly
                     className="campo campo-sm w-36 text-right"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={f.horasFacturadas}
                     onChange={(e) => actualizar(f.id, 'horasFacturadas', e.target.value)}
@@ -308,14 +305,14 @@ export default function FacturacionGeneral() {
                     className="campo campo-sm w-32 text-right"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={formatoCOP(totalFacturadoNum)}
                     readOnly
                     className="campo campo-sm w-36 text-right"
                   />
                 </td>
-                <td className="p-2">
+                <td>
                   <input
                     value={f.deuda}
                     onChange={(e) => actualizar(f.id, 'deuda', e.target.value)}
@@ -330,7 +327,7 @@ export default function FacturacionGeneral() {
                     }`}
                   />
                 </td>
-                <td className="p-2 min-w-[260px]">
+                <td className="min-w-[260px]">
                   <textarea
                     rows={2}
                     value={f.observacion}
@@ -339,14 +336,11 @@ export default function FacturacionGeneral() {
                     className="campo campo-sm w-full resize-none"
                   />
                 </td>
-                <td className="p-2 text-center">
+                <td className="text-center">
                   {puedeEditarFacturacion && (
-                    <button
-                      onClick={() => eliminarFila(f.id)}
-                      className="btn btn-peligro btn-sm"
-                    >
+                    <Boton variante="peligro" tamano="sm" onClick={() => eliminarFila(f.id)}>
                       Quitar
-                    </button>
+                    </Boton>
                   )}
                 </td>
                     </>
@@ -358,17 +352,17 @@ export default function FacturacionGeneral() {
           {!cargando && inicializado && filas.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700">
-                <td className="p-2">Total</td>
-                <td className="p-2 text-right">—</td>
-                <td className="p-2 text-right">{formatoNumero(totales.horasComprometidas)}</td>
-                <td className="p-2 text-right">{formatoCOP(totales.totalComprometido)}</td>
-                <td className="p-2 text-right">{formatoNumero(totales.horasFacturadas)}</td>
-                <td className="p-2 text-right">{formatoCOP(totales.totalFacturado)}</td>
-                <td className={`p-2 text-right ${totales.deuda < 0 ? 'text-emerald-700' : totales.deuda > 0 ? 'text-red-700' : ''}`}>
+                <td>Total</td>
+                <td className="text-right">—</td>
+                <td className="text-right">{formatoNumero(totales.horasComprometidas)}</td>
+                <td className="text-right">{formatoCOP(totales.totalComprometido)}</td>
+                <td className="text-right">{formatoNumero(totales.horasFacturadas)}</td>
+                <td className="text-right">{formatoCOP(totales.totalFacturado)}</td>
+                <td className={`text-right ${totales.deuda < 0 ? 'text-emerald-700' : totales.deuda > 0 ? 'text-red-700' : ''}`}>
                   {formatoCOP(Math.abs(totales.deuda))}
                 </td>
-                <td className="p-2" />
-                <td className="p-2" />
+                <td />
+                <td />
               </tr>
             </tfoot>
           )}
