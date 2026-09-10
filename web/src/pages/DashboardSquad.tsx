@@ -5,7 +5,6 @@ import {
   CartesianGrid,
   LabelList,
   Legend,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -15,24 +14,20 @@ import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import client from '../api/client'
 import type { Aplicacion, Capacidad, Configuracion, Festivo, Persona, Requerimiento, Squad } from '../types'
-import { Boton, EncabezadoPagina, FiltroDesplegable, TablaScroll } from '../components/ui'
+import { Boton, EncabezadoPagina, FiltroDesplegable, Tarjeta, TablaScroll } from '../components/ui'
+import {
+  COLOR_GRAFICA,
+  ContenedorGrafica,
+  PALETA_SERIES,
+  TooltipGrafica,
+  ejeCategoria,
+  ejeValor,
+  etiquetaBarra,
+  leyenda,
+  rejilla,
+} from '../components/ui/graficas'
 
-// Paleta de colores premium
-const PALETA = {
-  azul_profundo: '#0F172A',
-  azul_primario: '#2563EB',
-  azul_brillante: '#3B82F6',
-  morado: '#7C3AED',
-  verde: '#16A34A',
-  naranja: '#F59E0B',
-  rojo: '#DC2626',
-  gris_fondo: '#F8FAFC',
-  gris_borde: '#E2E8F0',
-  texto: '#0F172A',
-  texto_sec: '#64748B',
-}
-
-const MESES_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+const MESES_LABELS =['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 interface FilaSquad {
   squadId: string | null
@@ -677,54 +672,49 @@ export default function DashboardSquad() {
 
         {/* Charts Section */}
         <div className="space-y-6">
-          <ChartCardPremium titulo="Entregas por mes" descripcion="Cantidad de entregas y horas de entregas por periodo seleccionado">
-            {entregasPorMes.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <ResponsiveContainer width="100%" height={460}>
-                <BarChart data={entregasPorMes} margin={{ left: 20, right: 40, top: 60, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11, fill: PALETA.texto_sec }}
-                    angle={-20}
-                    textAnchor="end"
-                    height={60}
-                    interval={0}
-                  />
-                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
-                  <Tooltip content={<TooltipPersonalizado />} />
-                  <Legend verticalAlign="top" height={36} wrapperStyle={{ top: 0 }} />
-                  <Bar yAxisId="left" dataKey="entregas" name="Entregas" fill="#7C3AED" radius={[8, 8, 0, 0]} barSize={16}>
-                    <LabelList
-                      dataKey="entregas"
-                      position="top"
-                      formatter={(valor: unknown) => String(Number(valor ?? 0))}
-                      fill={PALETA.texto}
-                      fontSize={11}
-                      fontWeight={600}
-                    />
-                  </Bar>
-                  <Bar yAxisId="right" dataKey="horas" name="Horas entregas" fill="#2563EB" radius={[8, 8, 0, 0]} barSize={16}>
-                    <LabelList
-                      dataKey="horas"
-                      position="top"
-                      formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
-                      fill={PALETA.texto}
-                      fontSize={11}
-                      fontWeight={600}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCardPremium>
+          <ContenedorGrafica
+            titulo="Entregas por mes"
+            descripcion="Cantidad de entregas y horas de entregas por periodo seleccionado"
+            alto={460}
+            vacio={entregasPorMes.length === 0}
+          >
+            <BarChart data={entregasPorMes} margin={{ left: 20, right: 40, top: 60, bottom: 40 }}>
+              <CartesianGrid {...rejilla()} />
+              <XAxis
+                dataKey="label"
+                angle={-20}
+                textAnchor="end"
+                height={60}
+                interval={0}
+                {...ejeCategoria(11)}
+              />
+              <YAxis yAxisId="left" {...ejeValor(11)} />
+              <YAxis yAxisId="right" orientation="right" {...ejeValor(11)} />
+              <Tooltip content={<TooltipGrafica unidades={{ horas: 'h' }} />} />
+              <Legend verticalAlign="top" height={36} {...leyenda()} />
+              <Bar yAxisId="left" dataKey="entregas" name="Entregas" fill={PALETA_SERIES[0]} radius={[8, 8, 0, 0]} barSize={16}>
+                <LabelList
+                  dataKey="entregas"
+                  formatter={(valor: unknown) => String(Number(valor ?? 0))}
+                  {...etiquetaBarra('top', 11)}
+                />
+              </Bar>
+              <Bar yAxisId="right" dataKey="horas" name="Horas entregas" fill={PALETA_SERIES[1]} radius={[8, 8, 0, 0]} barSize={16}>
+                <LabelList
+                  dataKey="horas"
+                  formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
+                  {...etiquetaBarra('top', 11)}
+                />
+              </Bar>
+            </BarChart>
+          </ContenedorGrafica>
 
-          <ChartCardPremium
+          <ContenedorGrafica
             titulo="WO por mes"
             descripcion="Eje X: mes · Eje Y: cantidad de WO y suma de Horas_Aprobadas"
-            action={
+            alto={460}
+            vacio={woSoportePorMes.length === 0}
+            acciones={
               detalleWoSoporte.length > 0 ? (
                 <button
                   type="button"
@@ -739,53 +729,43 @@ export default function DashboardSquad() {
               ) : null
             }
           >
-            {woSoportePorMes.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <ResponsiveContainer width="100%" height={460}>
-                <BarChart data={woSoportePorMes} margin={{ left: 20, right: 40, top: 60, bottom: 50 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11, fill: PALETA.texto_sec }}
-                    angle={-20}
-                    textAnchor="end"
-                    height={60}
-                    interval={0}
-                  />
-                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: PALETA.texto_sec }} />
-                  <Tooltip content={<TooltipPersonalizado />} />
-                  <Legend verticalAlign="top" height={36} wrapperStyle={{ top: 0 }} />
-                  <Bar yAxisId="left" dataKey="wo" name="Cantidad WO" fill="#16A34A" radius={[8, 8, 0, 0]} barSize={18}>
-                    <LabelList
-                      dataKey="wo"
-                      position="top"
-                      formatter={(valor: unknown) => String(Number(valor ?? 0))}
-                      fill={PALETA.texto}
-                      fontSize={11}
-                      fontWeight={600}
-                    />
-                  </Bar>
-                  <Bar yAxisId="right" dataKey="woHoras" name="Horas aprobadas" fill="#F59E0B" radius={[8, 8, 0, 0]} barSize={18}>
-                    <LabelList
-                      dataKey="woHoras"
-                      position="top"
-                      formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
-                      fill={PALETA.texto}
-                      fontSize={11}
-                      fontWeight={600}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCardPremium>
+            <BarChart data={woSoportePorMes} margin={{ left: 20, right: 40, top: 60, bottom: 50 }}>
+              <CartesianGrid {...rejilla()} />
+              <XAxis
+                dataKey="label"
+                angle={-20}
+                textAnchor="end"
+                height={60}
+                interval={0}
+                {...ejeCategoria(11)}
+              />
+              <YAxis yAxisId="left" {...ejeValor(11)} />
+              <YAxis yAxisId="right" orientation="right" {...ejeValor(11)} />
+              <Tooltip content={<TooltipGrafica unidades={{ woHoras: 'h' }} />} />
+              <Legend verticalAlign="top" height={36} {...leyenda()} />
+              <Bar yAxisId="left" dataKey="wo" name="Cantidad WO" fill={PALETA_SERIES[0]} radius={[8, 8, 0, 0]} barSize={18}>
+                <LabelList
+                  dataKey="wo"
+                  formatter={(valor: unknown) => String(Number(valor ?? 0))}
+                  {...etiquetaBarra('top', 11)}
+                />
+              </Bar>
+              <Bar yAxisId="right" dataKey="woHoras" name="Horas aprobadas" fill={PALETA_SERIES[1]} radius={[8, 8, 0, 0]} barSize={18}>
+                <LabelList
+                  dataKey="woHoras"
+                  formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
+                  {...etiquetaBarra('top', 11)}
+                />
+              </Bar>
+            </BarChart>
+          </ContenedorGrafica>
 
-          <ChartCardPremium
+          <ContenedorGrafica
             titulo="Capacidad por Squad"
             descripcion={`Distribución de horas disponibles · ${periodosCapacidadSeleccionados.length} periodo(s) · Festivos: ${festivosPorMes.size}`}
-            action={
+            alto={400}
+            vacio={filasCapacidadSquad.length === 0}
+            acciones={
               detallePersonasCapacidad.length > 0 ? (
                 <button
                   type="button"
@@ -800,45 +780,34 @@ export default function DashboardSquad() {
               ) : null
             }
           >
-            {filasCapacidadSquad.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={filasCapacidadSquad} layout="vertical" margin={{ left: 140, right: 60, top: 20, bottom: 20 }}>
-                  <defs>
-                    <linearGradient id="gradientBar" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8} />
-                      <stop offset="100%" stopColor="#2563EB" stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                  <YAxis
-                    type="category"
-                    dataKey="squad"
-                    width={130}
-                    tick={{ fontSize: 12, fill: PALETA.texto_sec }}
-                  />
-                  <Tooltip content={<TooltipPersonalizado />} />
-                  <Bar dataKey="horas" fill="url(#gradientBar)" radius={[0, 12, 12, 0]} barSize={32}>
-                    <LabelList
-                      dataKey="horas"
-                      position="right"
-                      formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
-                      fill={PALETA.texto}
-                      fontSize={13}
-                      fontWeight={600}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCardPremium>
+            <BarChart data={filasCapacidadSquad} layout="vertical" margin={{ left: 140, right: 60, top: 20, bottom: 20 }}>
+              <CartesianGrid {...rejilla('vertical')} />
+              <XAxis type="number" {...ejeValor(12)} />
+              <YAxis type="category" dataKey="squad" width={130} {...ejeCategoria(12)} />
+              <Tooltip content={<TooltipGrafica unidades={{ horas: 'h' }} />} />
+              <Bar dataKey="horas" fill={COLOR_GRAFICA.serie} radius={[0, 12, 12, 0]} barSize={32}>
+                <LabelList
+                  dataKey="horas"
+                  formatter={(valor: unknown) => `${fmtNumero(Number(valor ?? 0))}h`}
+                  {...etiquetaBarra('right', 13)}
+                />
+              </Bar>
+            </BarChart>
+          </ContenedorGrafica>
 
           {/* Table Section */}
-          <ChartCardPremium titulo="Detalle Completo por Squad" descripcion="Resumen de métricas y cumplimiento">
+          <Tarjeta padding={false} className="min-w-0">
+            <div className="tarjeta-encabezado">
+              <div className="min-w-0">
+                <h3 className="titulo-seccion truncate">Detalle Completo por Squad</h3>
+                <p className="subtitulo-pagina">Resumen de métricas y cumplimiento</p>
+              </div>
+            </div>
+            <div className="tarjeta-pad">
             {filas.length === 0 ? (
-              <EmptyState />
+              <p className="py-10 text-center text-sm text-slate-400">
+                Sin datos para el filtro actual
+              </p>
             ) : (
               <TablaScroll>
                 <table className="w-full text-sm">
@@ -878,7 +847,8 @@ export default function DashboardSquad() {
                 </table>
               </TablaScroll>
             )}
-          </ChartCardPremium>
+            </div>
+          </Tarjeta>
         </div>
       </div>
 
@@ -1107,31 +1077,6 @@ function KpiCardPremium({
   )
 }
 
-function ChartCardPremium({
-  titulo,
-  descripcion,
-  action,
-  children,
-}: {
-  titulo: string
-  descripcion?: string
-  action?: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-300">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900">{titulo}</h3>
-          {descripcion && <p className="text-sm text-slate-500 mt-1">{descripcion}</p>}
-        </div>
-        {action}
-      </div>
-      <div className="relative">{children}</div>
-    </div>
-  )
-}
-
 function Badge({ variant, value }: { variant: 'blue' | 'amber' | 'green' | 'red'; value: string | number }) {
   const variants = {
     blue: 'bg-blue-100 text-blue-700',
@@ -1161,31 +1106,3 @@ function ProgressBadge({ percentage }: { percentage: number }) {
   )
 }
 
-function TooltipPersonalizado({ active, payload }: any) {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload
-    const value = payload[0].value
-
-    return (
-      <div className="rounded-lg bg-slate-900 p-3 shadow-xl border border-slate-700">
-        <p className="text-sm font-semibold text-slate-100">
-          {data.squad || 'Valor'}
-        </p>
-        <p className="text-base font-bold text-blue-300 mt-1">
-          {typeof value === 'number' ? fmtNumero(value) : value}{payload[0].dataKey === 'horas' ? 'h' : ''}
-        </p>
-      </div>
-    )
-  }
-  return null
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16">
-      <div className="text-6xl mb-4 opacity-20">📭</div>
-      <p className="text-slate-600 font-semibold">Sin datos disponibles</p>
-      <p className="text-slate-400 text-sm mt-1">No hay información para mostrar en este período</p>
-    </div>
-  )
-}

@@ -1,13 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   Legend, LabelList,
   LineChart, Line,
 } from 'recharts'
 import { useLista } from '../api/hooks'
 import client from '../api/client'
 import type { Persona, Requerimiento } from '../types'
-import { EncabezadoPagina, FiltroDesplegable } from '../components/ui'
+import { EncabezadoPagina, FiltroDesplegable, Tarjeta } from '../components/ui'
+import {
+  COLOR_GRAFICA,
+  ContenedorGrafica,
+  TooltipGrafica,
+  ejeCategoria,
+  ejePorcentaje,
+  ejeValor,
+  etiquetaBarra,
+  leyenda,
+  rejilla,
+} from '../components/ui/graficas'
 
 
 function normalizarTexto(v: string): string {
@@ -427,14 +438,11 @@ export default function DashboardRequerimientos() {
           {/* ════════════════════════════════════════════════════════════════════
               COLUMNA IZQUIERDA — Requerimientos & Actas
               ════════════════════════════════════════════════════════════════════ */}
-          <section className="relative flex flex-col gap-6 rounded-3xl border border-blue-200/60 bg-gradient-to-br from-white via-blue-50/30 to-white p-6 shadow-lg shadow-blue-100/40 ring-1 ring-blue-100/30">
-            {/* Accent line */}
-            <div className="absolute inset-x-6 top-0 h-1 rounded-b-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" />
-
+          <section className="flex flex-col gap-6">
             {/* Section header */}
-            <div className="flex items-center gap-3 pt-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md shadow-blue-200">
-                <span className="text-lg text-white">📋</span>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-marca-50 text-marca-700">
+                <span className="text-lg">📋</span>
               </div>
               <div>
                 <h2 className="titulo-seccion">Requerimientos &amp; Actas</h2>
@@ -482,133 +490,111 @@ export default function DashboardRequerimientos() {
             </div>
 
             {/* Gráfica: Requerimientos por mes */}
-            <GlassPanel titulo="Requerimientos por mes" icon="📊">
-              {porMesFiltrado.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={porMesFiltrado} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip formatter={(v) => [v, 'Requerimientos']} />
-                    <Bar dataKey="cantidad" fill="url(#gradReq)" radius={[6, 6, 0, 0]} barSize={24}>
-                      <LabelList dataKey="cantidad" position="top" style={{ fontSize: 10, fill: '#475569', fontWeight: 600 }} />
-                    </Bar>
-                    <defs>
-                      <linearGradient id="gradReq" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" />
-                        <stop offset="100%" stopColor="#6366f1" />
-                      </linearGradient>
-                    </defs>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="Requerimientos por mes" icono="📊" alto={240} vacio={porMesFiltrado.length === 0}>
+              <BarChart data={porMesFiltrado} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla('horizontal')} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejeValor(11)} />
+                <Tooltip content={<TooltipGrafica />} />
+                <Bar dataKey="cantidad" fill={COLOR_GRAFICA.serie} radius={[6, 6, 0, 0]} barSize={24}>
+                  <LabelList dataKey="cantidad" {...etiquetaBarra('top', 10)} />
+                </Bar>
+              </BarChart>
+            </ContenedorGrafica>
 
             {/* Equipo LT HITSS */}
-            <GlassPanel titulo={`Equipo LT HITSS (${equipo.length})`} icon="👥">
-              <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1">
-                {equipo.length === 0 ? <Empty /> : equipo.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white/80 px-4 py-2.5 shadow-sm transition-all hover:shadow-md hover:border-blue-200">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-sm">
-                      {m.nombre.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-slate-800">{m.nombre}</div>
-                      <div className="truncate text-xs text-slate-400">{m.email || '—'}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
-                        {m.reqs} Req
-                      </span>
-                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                        {woPorLt[m.nombreKey] ?? 0} WO
-                      </span>
-                    </div>
-                  </div>
-                ))}
+            <Tarjeta padding={false} className="min-w-0">
+              <div className="tarjeta-encabezado">
+                <h3 className="titulo-seccion">Equipo LT HITSS ({equipo.length})</h3>
               </div>
-            </GlassPanel>
+              <div className="tarjeta-pad">
+                <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1">
+                  {equipo.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-slate-400">Sin datos para el filtro actual</p>
+                  ) : equipo.map((m) => (
+                    <div key={m.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white/80 px-4 py-2.5 shadow-sm transition-all hover:shadow-md hover:border-blue-200">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marca-50 text-sm font-bold text-marca-700 shadow-sm">
+                        {m.nombre.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-slate-800">{m.nombre}</div>
+                        <div className="truncate text-xs text-slate-400">{m.email || '—'}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                          {m.reqs} Req
+                        </span>
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                          {woPorLt[m.nombreKey] ?? 0} WO
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Tarjeta>
 
             {/* Gráfica: Tendencia de entregas */}
-            <GlassPanel titulo="ANS de entregas" icon="📈">
-              {tendenciaFiltrada.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={tendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendPctTooltip />} />
-                    <Line type="monotone" dataKey="cumplePct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="noCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="ANS de entregas" icono="📈" alto={240} vacio={tendenciaFiltrada.length === 0}>
+              <LineChart data={tendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla()} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejePorcentaje(11)} />
+                <Tooltip content={<TrendPctTooltip />} />
+                <Line type="monotone" dataKey="cumplePct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="noCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                <Legend {...leyenda()} />
+              </LineChart>
+            </ContenedorGrafica>
 
             {/* Gráfica: Tendencia de entregas (Tipificación EPM cuenta como cumple) */}
-            <GlassPanel titulo="ANS de entregas (Hitss)" icon="📈">
-              {tendenciaEpmFiltrada.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={tendenciaEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendPctTooltip />} />
-                    <Line type="monotone" dataKey="cumplePct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="noCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="ANS de entregas (Hitss)" icono="📈" alto={240} vacio={tendenciaEpmFiltrada.length === 0}>
+              <LineChart data={tendenciaEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla()} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejePorcentaje(11)} />
+                <Tooltip content={<TrendPctTooltip />} />
+                <Line type="monotone" dataKey="cumplePct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="noCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                <Legend {...leyenda()} />
+              </LineChart>
+            </ContenedorGrafica>
 
             {/* Gráfica: Tendencia de estimación */}
-            <GlassPanel titulo="ANS de estimación" icon="📋">
-              {tendenciaReqsFiltrada.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={tendenciaReqsFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendPctTooltip />} />
-                    <Line type="monotone" dataKey="cumplePct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="noCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="ANS de estimación" icono="📋" alto={240} vacio={tendenciaReqsFiltrada.length === 0}>
+              <LineChart data={tendenciaReqsFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla()} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejePorcentaje(11)} />
+                <Tooltip content={<TrendPctTooltip />} />
+                <Line type="monotone" dataKey="cumplePct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="noCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                <Legend {...leyenda()} />
+              </LineChart>
+            </ContenedorGrafica>
 
             {/* Gráfica: Tendencia de estimación (Hitss) */}
-            <GlassPanel titulo="ANS de estimación (Hitss)" icon="📋">
-              {tendenciaReqsEpmFiltrada.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={tendenciaReqsEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendPctTooltip />} />
-                    <Line type="monotone" dataKey="cumplePct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="noCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="ANS de estimación (Hitss)" icono="📋" alto={240} vacio={tendenciaReqsEpmFiltrada.length === 0}>
+              <LineChart data={tendenciaReqsEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla()} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejePorcentaje(11)} />
+                <Tooltip content={<TrendPctTooltip />} />
+                <Line type="monotone" dataKey="cumplePct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="noCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                <Legend {...leyenda()} />
+              </LineChart>
+            </ContenedorGrafica>
           </section>
 
           {/* ════════════════════════════════════════════════════════════════════
               COLUMNA DERECHA — Soporte & WO
               ════════════════════════════════════════════════════════════════════ */}
-          <section className="relative flex flex-col gap-6 rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-white via-emerald-50/30 to-white p-6 shadow-lg shadow-emerald-100/40 ring-1 ring-emerald-100/30">
-            {/* Accent line */}
-            <div className="absolute inset-x-6 top-0 h-1 rounded-b-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400" />
-
+          <section className="flex flex-col gap-6">
             {/* Section header */}
-            <div className="flex items-center gap-3 pt-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 shadow-md shadow-emerald-200">
-                <span className="text-lg text-white">🛠️</span>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-marca-50 text-marca-700">
+                <span className="text-lg">🛠️</span>
               </div>
               <div>
                 <h2 className="titulo-seccion">Soporte &amp; Work Orders</h2>
@@ -659,78 +645,56 @@ export default function DashboardRequerimientos() {
             </div>
 
             {/* Gráfica: WO por mes */}
-            <GlassPanel titulo="Work Orders por mes" icon="📊">
-              {woPorMesFiltrado.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={woPorMesFiltrado} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip formatter={(v) => [v, 'WO']} />
-                    <Bar dataKey="wo" fill="url(#gradWo)" radius={[6, 6, 0, 0]} barSize={24}>
-                      <LabelList dataKey="wo" position="top" style={{ fontSize: 10, fill: '#475569', fontWeight: 600 }} />
-                    </Bar>
-                    <defs>
-                      <linearGradient id="gradWo" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" />
-                        <stop offset="100%" stopColor="#14b8a6" />
-                      </linearGradient>
-                    </defs>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="Work Orders por mes" icono="📊" alto={240} vacio={woPorMesFiltrado.length === 0}>
+              <BarChart data={woPorMesFiltrado} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla('horizontal')} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejeValor(11)} />
+                <Tooltip content={<TooltipGrafica />} />
+                <Bar dataKey="wo" fill={COLOR_GRAFICA.serie} radius={[6, 6, 0, 0]} barSize={24}>
+                  <LabelList dataKey="wo" {...etiquetaBarra('top', 10)} />
+                </Bar>
+              </BarChart>
+            </ContenedorGrafica>
 
             {/* Gráfica: ANS Oportunidad */}
-            <GlassPanel titulo="ANS Oportunidad" icon="🎯">
-              {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendPctTooltip />} />
-                    <Line type="monotone" dataKey="oportunidadPct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="oportunidadNoCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="ANS Oportunidad" icono="🎯" alto={240} vacio={ansTendenciaFiltrada.length === 0}>
+              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla()} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejePorcentaje(11)} />
+                <Tooltip content={<TrendPctTooltip />} />
+                <Line type="monotone" dataKey="oportunidadPct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="oportunidadNoCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                <Legend {...leyenda()} />
+              </LineChart>
+            </ContenedorGrafica>
 
             {/* Gráfica: ANS Cumplimiento */}
-            <GlassPanel titulo="ANS Cumplimiento" icon="✅">
-              {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendPctTooltip />} />
-                    <Line type="monotone" dataKey="cumplimientoPct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="cumplimientoNoCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="ANS Cumplimiento" icono="✅" alto={240} vacio={ansTendenciaFiltrada.length === 0}>
+              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla()} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejePorcentaje(11)} />
+                <Tooltip content={<TrendPctTooltip />} />
+                <Line type="monotone" dataKey="cumplimientoPct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="cumplimientoNoCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                <Legend {...leyenda()} />
+              </LineChart>
+            </ContenedorGrafica>
 
             {/* Gráfica: ANS Inicio Trabajo */}
-            <GlassPanel titulo="ANS Inicio Trabajo" icon="🚀">
-              {ansTendenciaFiltrada.length === 0 ? <Empty /> : (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#64748b' }} />
-                    <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip content={<TrendPctTooltip />} />
-                    <Line type="monotone" dataKey="inicioPct" stroke="#10b981" strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                    <Line type="monotone" dataKey="inicioNoCumplePct" stroke="#ef4444" strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </GlassPanel>
+            <ContenedorGrafica titulo="ANS Inicio Trabajo" icono="🚀" alto={240} vacio={ansTendenciaFiltrada.length === 0}>
+              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+                <CartesianGrid {...rejilla()} />
+                <XAxis dataKey="mes" {...ejeCategoria(10)} />
+                <YAxis {...ejePorcentaje(11)} />
+                <Tooltip content={<TrendPctTooltip />} />
+                <Line type="monotone" dataKey="inicioPct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="inicioNoCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
+                <Legend {...leyenda()} />
+              </LineChart>
+            </ContenedorGrafica>
           </section>
 
         </div>
@@ -808,23 +772,3 @@ function MetricCard({ accent, icon, label, value, sub }: {
   )
 }
 
-function GlassPanel({ titulo, icon, children }: { titulo: string; icon?: string; children: React.ReactNode }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white/70 backdrop-blur-sm p-5 shadow-sm transition-all duration-300 hover:shadow-md">
-      <div className="mb-4 flex items-center gap-2">
-        {icon && <span className="text-base">{icon}</span>}
-        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">{titulo}</h3>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function Empty() {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-      <span className="text-4xl opacity-30">📭</span>
-      <p className="mt-2 text-sm font-medium">Sin datos disponibles</p>
-    </div>
-  )
-}

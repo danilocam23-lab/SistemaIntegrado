@@ -7,7 +7,6 @@ import {
   LabelList,
   Line,
   LineChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -16,30 +15,23 @@ import { CONSOLIDADO } from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import type { Aplicacion, Requerimiento } from '../types'
-import { EncabezadoPagina, TablaScroll } from '../components/ui'
-
-// Paleta de colores premium
-const PALETA = {
-  azul_profundo: '#0F172A',
-  azul_primario: '#2563EB',
-  azul_brillante: '#3B82F6',
-  morado: '#7C3AED',
-  verde: '#16A34A',
-  naranja: '#F59E0B',
-  rojo: '#DC2626',
-  gris_fondo: '#F8FAFC',
-  gris_borde: '#E2E8F0',
-  texto: '#0F172A',
-  texto_sec: '#64748B',
-}
+import { EncabezadoPagina, Tarjeta, TablaScroll } from '../components/ui'
+import {
+  COLOR_GRAFICA,
+  ContenedorGrafica,
+  TooltipGrafica,
+  ejeCategoria,
+  ejeValor,
+  etiquetaBarra,
+  rejilla,
+} from '../components/ui/graficas'
 
 function colorEstado(estado: string): string {
-  const normalized = estado.toUpperCase()
-  if (normalized.includes('CANCELADO')) return PALETA.rojo
-  if (normalized.includes('PENDIENTE') || normalized.includes('ESPERA')) return PALETA.naranja
-  if (normalized.includes('APROBADA') || normalized.includes('APROBADO')) return PALETA.verde
-  if (normalized.includes('CARGADA')) return PALETA.azul_primario
-  return PALETA.morado
+  const normalizado = estado.toUpperCase()
+  if (normalizado.includes('CANCELADO')) return COLOR_GRAFICA.malo
+  if (normalizado.includes('PENDIENTE') || normalizado.includes('ESPERA')) return COLOR_GRAFICA.alerta
+  if (normalizado.includes('APROBADA') || normalizado.includes('APROBADO')) return COLOR_GRAFICA.ok
+  return COLOR_GRAFICA.serie
 }
 
 function esActivo(estado: string): boolean {
@@ -248,12 +240,20 @@ export default function DashboardEstados() {
         {/* Charts Section */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Tabla de estados de requerimientos */}
-          <ChartCardPremium
-            titulo="Análisis por Estado de Requerimientos"
-            descripcion="Distribución de requerimientos y métricas por estado"
-          >
+          <Tarjeta padding={false} className="min-w-0">
+            <div className="tarjeta-encabezado">
+              <div className="min-w-0">
+                <h3 className="titulo-seccion truncate">Análisis por Estado de Requerimientos</h3>
+                <p className="subtitulo-pagina">
+                  Distribución de requerimientos y métricas por estado
+                </p>
+              </div>
+            </div>
+            <div className="tarjeta-pad">
             {porEstado.length === 0 ? (
-              <EmptyState />
+              <p className="py-10 text-center text-sm text-slate-400">
+                Sin datos para el filtro actual
+              </p>
             ) : (
               <div className="overflow-hidden">
                 <table className="w-full table-fixed text-sm">
@@ -317,16 +317,24 @@ export default function DashboardEstados() {
                 </table>
               </div>
             )}
-          </ChartCardPremium>
+            </div>
+          </Tarjeta>
 
-          <div className="space-y-6">
-            {/* Tabla de estados de entregas */}
-            <ChartCardPremium
-              titulo="Análisis por Estado de Entregas"
-              descripcion="Distribución y métricas de las entregas por estado"
-            >
+          {/* Tabla de estados de entregas */}
+          <Tarjeta padding={false} className="min-w-0">
+            <div className="tarjeta-encabezado">
+              <div className="min-w-0">
+                <h3 className="titulo-seccion truncate">Análisis por Estado de Entregas</h3>
+                <p className="subtitulo-pagina">
+                  Distribución y métricas de las entregas por estado
+                </p>
+              </div>
+            </div>
+            <div className="tarjeta-pad">
             {porEstadoEntregas.length === 0 ? (
-              <EmptyState />
+              <p className="py-10 text-center text-sm text-slate-400">
+                Sin datos para el filtro actual
+              </p>
             ) : (
               <div className="overflow-hidden">
                 <table className="w-full table-fixed text-sm">
@@ -409,88 +417,60 @@ export default function DashboardEstados() {
                 </table>
               </div>
             )}
-            </ChartCardPremium>
-          </div>
+            </div>
+          </Tarjeta>
         </div>
 
         {/* Dos gráficos lado a lado */}
         <div className="grid gap-6 lg:grid-cols-2 mt-6">
           {/* Requerimientos por estado */}
-          <ChartCardPremium
+          <ContenedorGrafica
             titulo="Requerimientos por Estado"
             descripcion="Cantidad de requerimientos agrupados por estado"
+            alto={320}
+            vacio={porEstado.length === 0}
           >
-            {porEstado.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={porEstado} layout="vertical" margin={{ left: 140, right: 60, top: 20, bottom: 20 }}>
-                  <defs>
-                    <linearGradient id="gradientEstados" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor={PALETA.azul_brillante} stopOpacity={0.8} />
-                      <stop offset="100%" stopColor={PALETA.azul_primario} stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} horizontal={false} />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                  <YAxis
-                    type="category"
-                    dataKey="estado"
-                    width={130}
-                    tick={{ fontSize: 12, fill: PALETA.texto_sec }}
-                  />
-                  <Tooltip content={<TooltipPersonalizado />} />
-                  <Bar dataKey="cantidad" radius={[0, 12, 12, 0]} barSize={28}>
-                    <LabelList
-                      dataKey="cantidad"
-                      position="right"
-                      formatter={(valor: unknown) => String(Number(valor ?? 0))}
-                      fill={PALETA.texto}
-                      fontSize={12}
-                      fontWeight={600}
-                    />
-                    {porEstado.map((fila) => (
-                      <Cell key={`estado-${fila.estado}`} fill={fila.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCardPremium>
+            <BarChart data={porEstado} layout="vertical" margin={{ left: 140, right: 60, top: 20, bottom: 20 }}>
+              <CartesianGrid {...rejilla('vertical')} />
+              <XAxis type="number" {...ejeValor(12)} />
+              <YAxis type="category" dataKey="estado" width={130} {...ejeCategoria(12)} />
+              <Tooltip content={<TooltipGrafica />} />
+              <Bar dataKey="cantidad" radius={[0, 12, 12, 0]} barSize={28}>
+                <LabelList
+                  dataKey="cantidad"
+                  formatter={(valor: unknown) => String(Number(valor ?? 0))}
+                  {...etiquetaBarra('right', 12)}
+                />
+                {porEstado.map((fila) => (
+                  <Cell key={`estado-${fila.estado}`} fill={fila.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ContenedorGrafica>
 
           {/* Evolución mensual */}
-          <ChartCardPremium
+          <ContenedorGrafica
             titulo="Evolución Mensual"
             descripcion="Tendencia de requerimientos en el tiempo"
+            alto={320}
+            vacio={porMes.length === 0}
           >
-            {porMes.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={porMes} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
-                  <defs>
-                    <linearGradient id="colorCantidad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={PALETA.azul_primario} stopOpacity={0.8} />
-                      <stop offset="100%" stopColor={PALETA.azul_primario} stopOpacity={0.1} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={PALETA.gris_borde} vertical={false} />
-                  <XAxis dataKey="mes" tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: PALETA.texto_sec }} />
-                  <Tooltip content={<TooltipPersonalizado />} />
-                  <Line
-                    type="monotone"
-                    dataKey="cantidad"
-                    stroke={PALETA.azul_primario}
-                    strokeWidth={3}
-                    dot={{ r: 5, fill: PALETA.azul_primario }}
-                    activeDot={{ r: 7 }}
-                    name="Requerimientos"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </ChartCardPremium>
+            <LineChart data={porMes} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
+              <CartesianGrid {...rejilla('horizontal')} />
+              <XAxis dataKey="mes" {...ejeCategoria(12)} />
+              <YAxis {...ejeValor(12)} />
+              <Tooltip content={<TooltipGrafica />} />
+              <Line
+                type="monotone"
+                dataKey="cantidad"
+                stroke={COLOR_GRAFICA.serie}
+                strokeWidth={3}
+                dot={{ r: 5, fill: COLOR_GRAFICA.serie }}
+                activeDot={{ r: 7 }}
+                name="Requerimientos"
+              />
+            </LineChart>
+          </ContenedorGrafica>
         </div>
       </div>
 
@@ -516,7 +496,9 @@ export default function DashboardEstados() {
 
             <div className="p-6">
               {detalleGarantias.filas.length === 0 ? (
-                <EmptyState />
+                <p className="py-10 text-center text-sm text-slate-400">
+                  Sin garantías para mostrar.
+                </p>
               ) : (
                 <TablaScroll className="max-h-[70vh] overflow-y-auto">
                 <table className="w-full text-sm">
@@ -618,26 +600,6 @@ function KpiCardPremium({
   )
 }
 
-function ChartCardPremium({
-  titulo,
-  descripcion,
-  children,
-}: {
-  titulo: string
-  descripcion?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md">
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-slate-900">{titulo}</h3>
-        {descripcion && <p className="text-sm text-slate-500 mt-1">{descripcion}</p>}
-      </div>
-      <div className="relative">{children}</div>
-    </div>
-  )
-}
-
 function Badge({ variant, value }: { variant: 'blue' | 'amber' | 'green' | 'red'; value: string | number }) {
   const variants = {
     blue: 'bg-blue-100 text-blue-700',
@@ -668,31 +630,3 @@ function GarantiasButton({ value, onClick }: { value: number; onClick: () => voi
   )
 }
 
-function TooltipPersonalizado({ active, payload }: any) {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload
-    const value = payload[0].value
-
-    return (
-      <div className="rounded-lg bg-slate-900 p-3 shadow-xl border border-slate-700">
-        <p className="text-sm font-semibold text-slate-100">
-          {data.estado || data.mes || 'Valor'}
-        </p>
-        <p className="text-base font-bold text-blue-300 mt-1">
-          {typeof value === 'number' ? fmtNumero(value) : value}
-        </p>
-      </div>
-    )
-  }
-  return null
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16">
-      <div className="text-6xl mb-4 opacity-20">📭</div>
-      <p className="text-slate-600 font-semibold">Sin datos disponibles</p>
-      <p className="text-slate-400 text-sm mt-1">No hay información para mostrar en este período</p>
-    </div>
-  )
-}
