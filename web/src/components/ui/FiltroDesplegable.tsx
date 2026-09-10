@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { cx } from './primitivos'
 
 /* Filtro desplegable de selección múltiple.
@@ -10,7 +10,7 @@ interface Props {
   /** Texto del botón, p. ej. "Año" */
   label: string
   /** Icono opcional a la izquierda del texto */
-  icono?: string
+  icono?: ReactNode
   /** Opciones visibles */
   opciones: string[]
   /** Claves seleccionadas */

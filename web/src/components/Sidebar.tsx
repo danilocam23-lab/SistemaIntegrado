@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { Icono } from './ui'
+import type { NombreIcono } from './ui'
 
 const CLAVE_COLAPSADO = 'sidebar_colapsado'
 const CLAVE_GRUPOS = 'sidebar_grupos_cerrados'
@@ -12,14 +14,14 @@ interface Item {
 }
 interface Grupo {
   titulo: string
-  icono: string
+  icono: NombreIcono
   items: Item[]
 }
 
 const GRUPOS: Grupo[] = [
   {
     titulo: 'Dashboard',
-    icono: '📊',
+    icono: 'panel',
     items: [
       { to: '/dashboard', label: 'Dashboard', permiso: 'dashboard.ver' },
       { to: '/dashboard-estados', label: 'Estados', permiso: 'dashboard.estados.ver' },
@@ -28,7 +30,7 @@ const GRUPOS: Grupo[] = [
   },
   {
     titulo: 'Desarrollos de fábrica',
-    icono: '📋',
+    icono: 'fabrica',
     items: [
       { to: '/requerimientos', label: 'Requerimientos', permiso: 'requerimientos.ver' },
       { to: '/requerimientos/detalle-ans', label: 'Detalle ANS', permiso: 'requerimientos.ver' },
@@ -39,7 +41,7 @@ const GRUPOS: Grupo[] = [
   },
   {
     titulo: 'Carga de trabajo',
-    icono: '👥',
+    icono: 'personas',
     items: [
       { to: '/personas', label: 'Personas', permiso: 'personas.ver' },
       { to: '/asignaciones', label: 'Asignaciones', permiso: 'asignaciones.ver' },
@@ -52,7 +54,7 @@ const GRUPOS: Grupo[] = [
   },
   {
     titulo: 'Facturación',
-    icono: '💰',
+    icono: 'facturacion',
     items: [
       { to: '/facturacion/general', label: 'General', permiso: 'facturacion.ver' },
       { to: '/facturacion/ans-descontados', label: 'Ans descontados', permiso: 'facturacion.ans_descontados.ver' },
@@ -61,7 +63,7 @@ const GRUPOS: Grupo[] = [
   },
   {
     titulo: 'Soporte',
-    icono: '🛠️',
+    icono: 'soporte',
     items: [
       { to: '/soporte/solicitudes-fabrica', label: 'Solicitudes Fábrica', permiso: 'soporte.solicitudes_fabrica.ver' },
       { to: '/soporte/detalle-ans', label: 'Detalle ANS', permiso: 'soporte.solicitudes_fabrica.ver' },
@@ -70,7 +72,7 @@ const GRUPOS: Grupo[] = [
   },
   {
     titulo: 'Administración',
-    icono: '⚙️',
+    icono: 'administracion',
     items: [
       { to: '/admin/aplicaciones', label: 'Squads', permiso: 'aplicaciones.ver' },
       { to: '/admin/usuarios', label: 'Usuarios', permiso: 'admin.usuarios.ver' },
@@ -225,7 +227,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                       : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <span aria-hidden="true">{grupo.icono}</span>
+                  <Icono nombre={grupo.icono} className="h-5 w-5" />
                 </button>
               )
             }
@@ -238,7 +240,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                   className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-2xs font-bold uppercase tracking-wider text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <span aria-hidden="true">{grupo.icono}</span>
+                    <Icono nombre={grupo.icono} className="h-4 w-4" />
                     <span className="truncate">{grupo.titulo}</span>
                   </span>
                   <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3 w-3 shrink-0 transition-transform duration-200 ${abiertoGrupo ? 'rotate-180' : ''}`}>

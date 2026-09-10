@@ -14,7 +14,7 @@ import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import client from '../api/client'
 import type { Aplicacion, Capacidad, Configuracion, Festivo, Persona, Requerimiento, Squad } from '../types'
-import { Boton, EncabezadoPagina, FiltroDesplegable, Tarjeta, TablaScroll } from '../components/ui'
+import { Boton, Chip, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Tarjeta, TablaScroll } from '../components/ui'
 import {
   COLOR_GRAFICA,
   ContenedorGrafica,
@@ -583,7 +583,7 @@ export default function DashboardSquad() {
     <div className="min-h-screen bg-slate-50">
       {/* Header Premium */}
       <EncabezadoPagina
-        icono="📊"
+        icono={<Icono nombre="grafico-barras" />}
         titulo="Backlog"
         descripcion={`Métricas de capacidad y requerimientos en tiempo real${
           appActiva && appActiva !== CONSOLIDADO ? ` · ${appActiva}` : ' · Todos los squads'
@@ -592,7 +592,7 @@ export default function DashboardSquad() {
           <>
             <FiltroDesplegable
               label="Año"
-              icono="📅"
+              icono={<Icono nombre="calendario" />}
               opciones={anosCapacidadDisponibles}
               activos={anosCapacidadActivos}
               setActivos={setAnosCapacidadActivos}
@@ -600,7 +600,7 @@ export default function DashboardSquad() {
             />
             <FiltroDesplegable
               label="Mes"
-              icono="🗓️"
+              icono={<Icono nombre="calendario" />}
               opciones={MESES_LABELS}
               activos={mesesCapacidadActivos}
               setActivos={setMesesCapacidadActivos}
@@ -625,48 +625,41 @@ export default function DashboardSquad() {
       <div className="pagina">
         {/* KPI Grid - Premium Design */}
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 mb-8">
-          <KpiCardPremium
-            icon="📊"
-            label="Squads Activos"
-            value={kpis.totalSquads}
-            subtext="con requerimientos"
-            color="blue"
-            trend={kpis.totalSquads > 0 ? '+5%' : '0%'}
+          <Kpi
+            rotulo="Squads Activos"
+            valor={kpis.totalSquads}
+            nota="con requerimientos"
+            acento={COLOR_GRAFICA.serie}
           />
-          <KpiCardPremium
-            icon="🏆"
-            label="Backlog Principal"
-            value={kpis.topNombre}
-            subtext={`${kpis.topCantidad} requerimientos`}
-            color="purple"
+          <Kpi
+            rotulo="Backlog Principal"
+            valor={kpis.topNombre}
+            nota={`${kpis.topCantidad} requerimientos`}
+            acento={COLOR_GRAFICA.serie}
           />
-          <KpiCardPremium
-            icon="⏱️"
-            label="Horas de entregas"
-            value={`${fmtNumero(horasEntregasFiltradas.totalHoras)}h`}
-            subtext={`Promedio: ${fmtNumero(horasEntregasFiltradas.promedioHoras)}h • ${fmtNumero(horasEntregasFiltradas.totalEntregas)} entregas`}
-            color="amber"
+          <Kpi
+            rotulo="Horas de entregas"
+            valor={`${fmtNumero(horasEntregasFiltradas.totalHoras)}h`}
+            nota={`Promedio: ${fmtNumero(horasEntregasFiltradas.promedioHoras)}h • ${fmtNumero(horasEntregasFiltradas.totalEntregas)} entregas`}
+            acento={COLOR_GRAFICA.serie}
           />
-          <KpiCardPremium
-            icon="🧾"
-            label="Horas aprobadas WO"
-            value={`${fmtNumero(horasWoFiltradas.totalHoras)}h`}
-            subtext={`Promedio: ${fmtNumero(horasWoFiltradas.promedioHoras)}h • ${fmtNumero(horasWoFiltradas.totalWo)} WO`}
-            color="blue"
+          <Kpi
+            rotulo="Horas aprobadas WO"
+            valor={`${fmtNumero(horasWoFiltradas.totalHoras)}h`}
+            nota={`Promedio: ${fmtNumero(horasWoFiltradas.promedioHoras)}h • ${fmtNumero(horasWoFiltradas.totalWo)} WO`}
+            acento={COLOR_GRAFICA.serie}
           />
-          <KpiCardPremium
-            icon="Σ"
-            label="Total horas"
-            value={`${fmtNumero(totalHorasEntregasWo)}h`}
-            subtext="Horas de entregas + horas aprobadas WO"
-            color="purple"
+          <Kpi
+            rotulo="Total horas"
+            valor={`${fmtNumero(totalHorasEntregasWo)}h`}
+            nota="Horas de entregas + horas aprobadas WO"
+            acento={COLOR_GRAFICA.serie}
           />
-          <KpiCardPremium
-            icon="👥"
-            label="Equipo Disponible"
-            value={resumenCapacidad.personasDisponibles}
-            subtext={`${resumenCapacidad.personasUnicas} personas únicas • sin LT_EPM • ${fmtNumero(resumenCapacidad.totalHoras)}h capacidad`}
-            color="green"
+          <Kpi
+            rotulo="Equipo Disponible"
+            valor={resumenCapacidad.personasDisponibles}
+            nota={`${resumenCapacidad.personasUnicas} personas únicas • sin LT_EPM • ${fmtNumero(resumenCapacidad.totalHoras)}h capacidad`}
+            acento={COLOR_GRAFICA.serie}
           />
         </div>
 
@@ -829,10 +822,10 @@ export default function DashboardSquad() {
                       >
                         <td className="px-6 py-4 font-semibold text-slate-900 group-hover:text-blue-700">{fila.squad}</td>
                         <td className="px-6 py-4 text-center">
-                          <Badge variant="blue" value={fila.reqs} />
+                          <Chip tono="marca">{fila.reqs}</Chip>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <Badge variant="amber" value={`${fmtNumero(fila.horas)}h`} />
+                          <Chip tono="alerta">{`${fmtNumero(fila.horas)}h`}</Chip>
                         </td>
                         <td className="px-6 py-4 text-center text-slate-700 font-medium">{fmtNumero(fila.entregas)}</td>
                         <td className="px-6 py-4 text-center">
@@ -976,9 +969,9 @@ export default function DashboardSquad() {
                       <td className="px-4 py-3 text-right font-semibold text-amber-700">{fmtNumero(fila.horas)}h</td>
                       <td className="px-4 py-3 text-center">
                         {fila.personalizada ? (
-                          <Badge variant="blue" value={fila.predeterminada ? 'Mixto' : 'Configurada'} />
+                          <Chip tono="marca">{fila.predeterminada ? 'Mixto' : 'Configurada'}</Chip>
                         ) : (
-                          <Badge variant="green" value="Por defecto" />
+                          <Chip tono="exito">Por defecto</Chip>
                         )}
                       </td>
                     </tr>
@@ -1006,89 +999,6 @@ export default function DashboardSquad() {
         </div>
       )}
     </div>
-  )
-}
-
-function KpiCardPremium({
-  icon,
-  label,
-  value,
-  subtext,
-  color,
-  trend,
-}: {
-  icon: string
-  label: string
-  value: string | number
-  subtext?: string
-  color: 'blue' | 'purple' | 'amber' | 'green'
-  trend?: string
-}) {
-  const colors = {
-    blue: {
-      bg: 'from-blue-600 to-blue-700',
-      light: 'bg-blue-50',
-      text: 'text-blue-900',
-      border: 'border-blue-200',
-    },
-    purple: {
-      bg: 'from-purple-600 to-purple-700',
-      light: 'bg-purple-50',
-      text: 'text-purple-900',
-      border: 'border-purple-200',
-    },
-    amber: {
-      bg: 'from-amber-500 to-amber-600',
-      light: 'bg-amber-50',
-      text: 'text-amber-900',
-      border: 'border-amber-200',
-    },
-    green: {
-      bg: 'from-green-600 to-green-700',
-      light: 'bg-green-50',
-      text: 'text-green-900',
-      border: 'border-green-200',
-    },
-  }
-
-  const theme = colors[color]
-
-  return (
-    <div className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-300">
-      <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
-
-      <div className="relative p-5 2xl:p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className={`shrink-0 text-3xl 2xl:text-4xl p-3 rounded-xl ${theme.light}`}>{icon}</div>
-          {trend && (
-            <div className="shrink-0 text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full">
-              {trend}
-            </div>
-          )}
-        </div>
-
-        <div className="min-w-0 space-y-1">
-          <div className="text-sm font-medium text-slate-600 uppercase tracking-wider">{label}</div>
-          <div className={`break-words text-2xl font-bold ${theme.text} 2xl:text-3xl`}>{value}</div>
-          {subtext && <div className="mt-2 break-words text-xs text-slate-500">{subtext}</div>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Badge({ variant, value }: { variant: 'blue' | 'amber' | 'green' | 'red'; value: string | number }) {
-  const variants = {
-    blue: 'bg-blue-100 text-blue-700',
-    amber: 'bg-amber-100 text-amber-700',
-    green: 'bg-green-100 text-green-700',
-    red: 'bg-red-100 text-red-700',
-  }
-
-  return (
-    <span className={`inline-flex items-center px-3 py-2 rounded-lg font-semibold text-sm ${variants[variant]}`}>
-      {value}
-    </span>
   )
 }
 

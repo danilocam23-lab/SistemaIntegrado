@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { useAplicacion } from '../context/AplicacionContext'
-import { EncabezadoPagina } from '../components/ui'
+import { EncabezadoPagina, Icono } from '../components/ui'
 
 const COLORES_SQUAD = ['#2563eb', '#7c3aed', '#16a34a', '#f59e0b', '#dc2626', '#0891b2', '#06b6d4', '#8b5cf6']
 
@@ -37,7 +37,7 @@ export default function DashboardUnificado() {
   return (
     <div className="min-h-screen bg-slate-50">
       <EncabezadoPagina
-        icono="🌐"
+        icono={<Icono nombre="globo" />}
         titulo="Dashboard Unificado"
         descripcion={
           modoConsolidado

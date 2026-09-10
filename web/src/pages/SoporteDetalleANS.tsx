@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { FiltroDesplegable, TablaScroll } from '../components/ui'
+import { FiltroDesplegable, Icono, Kpi, TablaScroll } from '../components/ui'
+import { COLOR_GRAFICA } from '../components/ui/graficas'
 
 interface RegistroSoporte {
   id: string
@@ -256,7 +257,7 @@ export default function SoporteDetalleANS() {
           <div className="flex flex-wrap items-start gap-3">
             <FiltroDesplegable
               label="Año"
-              icono="📅"
+              icono={<Icono nombre="calendario" />}
               opciones={anosDisponibles}
               activos={anosActivos}
               setActivos={setAnosActivos}
@@ -264,7 +265,7 @@ export default function SoporteDetalleANS() {
             />
             <FiltroDesplegable
               label="Mes"
-              icono="🗓️"
+              icono={<Icono nombre="calendario" />}
               opciones={MESES_LABELS}
               activos={mesesActivos}
               setActivos={setMesesActivos}
@@ -283,9 +284,42 @@ export default function SoporteDetalleANS() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <CardANS titulo="ANS Oportunidad" data={resumen.oportunidad} color="green" />
-        <CardANS titulo="ANS Cumplimiento" data={resumen.cumplimiento} color="amber" />
-        <CardANS titulo="ANS Inicio Trabajo" data={resumen.inicio} color="purple" />
+        <Kpi
+          rotulo="ANS Oportunidad"
+          valor={`${(resumen.oportunidad.total > 0 ? (resumen.oportunidad.cumple / resumen.oportunidad.total) * 100 : 0).toFixed(2)}%`}
+          nota={
+            <>
+              Cumple: {resumen.oportunidad.cumple} / {resumen.oportunidad.total}
+              <br />
+              No cumple: {resumen.oportunidad.noCumple}
+            </>
+          }
+          acento={COLOR_GRAFICA.ok}
+        />
+        <Kpi
+          rotulo="ANS Cumplimiento"
+          valor={`${(resumen.cumplimiento.total > 0 ? (resumen.cumplimiento.cumple / resumen.cumplimiento.total) * 100 : 0).toFixed(2)}%`}
+          nota={
+            <>
+              Cumple: {resumen.cumplimiento.cumple} / {resumen.cumplimiento.total}
+              <br />
+              No cumple: {resumen.cumplimiento.noCumple}
+            </>
+          }
+          acento={COLOR_GRAFICA.alerta}
+        />
+        <Kpi
+          rotulo="ANS Inicio Trabajo"
+          valor={`${(resumen.inicio.total > 0 ? (resumen.inicio.cumple / resumen.inicio.total) * 100 : 0).toFixed(2)}%`}
+          nota={
+            <>
+              Cumple: {resumen.inicio.cumple} / {resumen.inicio.total}
+              <br />
+              No cumple: {resumen.inicio.noCumple}
+            </>
+          }
+          acento={COLOR_GRAFICA.serie}
+        />
       </div>
 
       <DetalleTablaANS
@@ -324,23 +358,6 @@ export default function SoporteDetalleANS() {
         onAviso={setAviso}
         puedeActualizar={puedeActualizar}
       />
-    </div>
-  )
-}
-
-function CardANS({ titulo, data, color }: { titulo: string; data: EstadoResumen; color: 'green' | 'amber' | 'purple' }) {
-  const colores = {
-    green: { borde: 'border-green-200', fondo: 'bg-green-50', texto: 'text-green-800', sub: 'text-green-600' },
-    amber: { borde: 'border-amber-200', fondo: 'bg-amber-50', texto: 'text-amber-800', sub: 'text-amber-600' },
-    purple: { borde: 'border-purple-200', fondo: 'bg-purple-50', texto: 'text-purple-800', sub: 'text-purple-600' },
-  }[color]
-  const pct = data.total > 0 ? Number(((data.cumple / data.total) * 100).toFixed(2)) : 0
-  return (
-    <div className={`rounded-xl border p-4 ${colores.borde} ${colores.fondo}`}>
-      <p className={`text-sm font-semibold ${colores.sub}`}>{titulo}</p>
-      <p className={`text-2xl font-bold ${colores.texto}`}>{pct.toFixed(2)}%</p>
-      <p className={`text-sm ${colores.sub}`}>Cumple: {data.cumple} / {data.total}</p>
-      <p className="text-sm text-red-600">No cumple: {data.noCumple}</p>
     </div>
   )
 }

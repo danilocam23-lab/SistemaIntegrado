@@ -7,7 +7,7 @@ import {
 import { useLista } from '../api/hooks'
 import client from '../api/client'
 import type { Persona, Requerimiento } from '../types'
-import { EncabezadoPagina, FiltroDesplegable, Tarjeta } from '../components/ui'
+import { EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Tarjeta } from '../components/ui'
 import {
   COLOR_GRAFICA,
   ContenedorGrafica,
@@ -426,7 +426,7 @@ export default function DashboardRequerimientos() {
     <div className="min-h-screen bg-slate-50">
       {/* ═══ Header ejecutivo ═══ */}
       <EncabezadoPagina
-        icono="📈"
+        icono={<Icono nombre="grafico-linea" />}
         titulo="Dashboard General"
         descripcion="Vista consolidada de métricas operativas · Requerimientos y Soporte"
       />
@@ -457,13 +457,13 @@ export default function DashboardRequerimientos() {
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <FiltroDesplegable
-                  label="Año" icono="📅"
+                  label="Año" icono={<Icono nombre="calendario" />}
                   opciones={anosDisponiblesReq}
                   activos={anosReq}
                   setActivos={setAnosReq}
                 />
                 <FiltroDesplegable
-                  label="Mes" icono="🗓️"
+                  label="Mes" icono={<Icono nombre="calendario" />}
                   opciones={MESES_LABELS}
                   activos={mesesReq}
                   setActivos={setMesesReq}
@@ -480,17 +480,17 @@ export default function DashboardRequerimientos() {
 
             {/* KPIs Requerimientos */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <MetricCard accent="blue" icon="📋" label="Requerimientos" value={kpis.total} sub={`${kpis.activos} activos`} />
-              <MetricCard accent="emerald" icon="⏱️" label="Horas estimadas" value={kpis.totalHoras.toLocaleString()} sub="total acumulado" />
-              <MetricCard accent="violet" icon="📦" label="Entregas" value={kpis.totalEntregas} sub={`de ${kpis.total} requerimientos`} />
-              <MetricCard accent="indigo" icon="📝" label="ANS Estimación" value={`${kpis.ansReqPct}%`} sub={`${kpis.ansReqCumple} / ${kpis.ansReqTotal}`} />
-              <MetricCard accent="indigo" icon="📝" label="ANS Estimación (Hitss)" value={`${kpis.ansReqEpmPct}%`} sub={`${kpis.ansReqEpmCumple} / ${kpis.ansReqTotal}`} />
-              <MetricCard accent="teal" icon="✅" label="ANS Entregas" value={`${kpis.ansEntPct}%`} sub={`${kpis.ansEntCumple} / ${kpis.ansEntTotal}`} />
-              <MetricCard accent="teal" icon="✅" label="ANS Entregas (Hitss)" value={`${kpis.ansEntEpmPct}%`} sub={`${kpis.ansEntEpmCumple} / ${kpis.ansEntTotal}`} />
+              <Kpi rotulo="Requerimientos" valor={kpis.total} nota={`${kpis.activos} activos`} acento={COLOR_GRAFICA.serie} />
+              <Kpi rotulo="Horas estimadas" valor={kpis.totalHoras.toLocaleString()} nota="total acumulado" acento={COLOR_GRAFICA.serie} />
+              <Kpi rotulo="Entregas" valor={kpis.totalEntregas} nota={`de ${kpis.total} requerimientos`} acento={COLOR_GRAFICA.serie} />
+              <Kpi rotulo="ANS Estimación" valor={`${kpis.ansReqPct}%`} nota={`${kpis.ansReqCumple} / ${kpis.ansReqTotal}`} acento={COLOR_GRAFICA.ok} />
+              <Kpi rotulo="ANS Estimación (Hitss)" valor={`${kpis.ansReqEpmPct}%`} nota={`${kpis.ansReqEpmCumple} / ${kpis.ansReqTotal}`} acento={COLOR_GRAFICA.ok} />
+              <Kpi rotulo="ANS Entregas" valor={`${kpis.ansEntPct}%`} nota={`${kpis.ansEntCumple} / ${kpis.ansEntTotal}`} acento={COLOR_GRAFICA.ok} />
+              <Kpi rotulo="ANS Entregas (Hitss)" valor={`${kpis.ansEntEpmPct}%`} nota={`${kpis.ansEntEpmCumple} / ${kpis.ansEntTotal}`} acento={COLOR_GRAFICA.ok} />
             </div>
 
             {/* Gráfica: Requerimientos por mes */}
-            <ContenedorGrafica titulo="Requerimientos por mes" icono="📊" alto={240} vacio={porMesFiltrado.length === 0}>
+            <ContenedorGrafica titulo="Requerimientos por mes" icono={<Icono nombre="grafico-barras" />} alto={240} vacio={porMesFiltrado.length === 0}>
               <BarChart data={porMesFiltrado} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla('horizontal')} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -535,7 +535,7 @@ export default function DashboardRequerimientos() {
             </Tarjeta>
 
             {/* Gráfica: Tendencia de entregas */}
-            <ContenedorGrafica titulo="ANS de entregas" icono="📈" alto={240} vacio={tendenciaFiltrada.length === 0}>
+            <ContenedorGrafica titulo="ANS de entregas" icono={<Icono nombre="grafico-linea" />} alto={240} vacio={tendenciaFiltrada.length === 0}>
               <LineChart data={tendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla()} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -548,7 +548,7 @@ export default function DashboardRequerimientos() {
             </ContenedorGrafica>
 
             {/* Gráfica: Tendencia de entregas (Tipificación EPM cuenta como cumple) */}
-            <ContenedorGrafica titulo="ANS de entregas (Hitss)" icono="📈" alto={240} vacio={tendenciaEpmFiltrada.length === 0}>
+            <ContenedorGrafica titulo="ANS de entregas (Hitss)" icono={<Icono nombre="grafico-linea" />} alto={240} vacio={tendenciaEpmFiltrada.length === 0}>
               <LineChart data={tendenciaEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla()} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -561,7 +561,7 @@ export default function DashboardRequerimientos() {
             </ContenedorGrafica>
 
             {/* Gráfica: Tendencia de estimación */}
-            <ContenedorGrafica titulo="ANS de estimación" icono="📋" alto={240} vacio={tendenciaReqsFiltrada.length === 0}>
+            <ContenedorGrafica titulo="ANS de estimación" icono={<Icono nombre="portafolio" />} alto={240} vacio={tendenciaReqsFiltrada.length === 0}>
               <LineChart data={tendenciaReqsFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla()} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -574,7 +574,7 @@ export default function DashboardRequerimientos() {
             </ContenedorGrafica>
 
             {/* Gráfica: Tendencia de estimación (Hitss) */}
-            <ContenedorGrafica titulo="ANS de estimación (Hitss)" icono="📋" alto={240} vacio={tendenciaReqsEpmFiltrada.length === 0}>
+            <ContenedorGrafica titulo="ANS de estimación (Hitss)" icono={<Icono nombre="portafolio" />} alto={240} vacio={tendenciaReqsEpmFiltrada.length === 0}>
               <LineChart data={tendenciaReqsEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla()} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -609,13 +609,13 @@ export default function DashboardRequerimientos() {
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <FiltroDesplegable
-                  label="Año" icono="📅"
+                  label="Año" icono={<Icono nombre="calendario" />}
                   opciones={anosDisponiblesSop}
                   activos={anosSop}
                   setActivos={setAnosSop}
                 />
                 <FiltroDesplegable
-                  label="Mes" icono="🗓️"
+                  label="Mes" icono={<Icono nombre="calendario" />}
                   opciones={MESES_LABELS}
                   activos={mesesSop}
                   setActivos={setMesesSop}
@@ -632,20 +632,20 @@ export default function DashboardRequerimientos() {
 
             {/* KPIs Soporte */}
             <div className="grid gap-3 sm:grid-cols-2">
-              <MetricCard accent="emerald" icon="📋" label="Work Orders" value={workOrderIDFiltrado.toLocaleString('es-CO')} sub="Órdenes distintas" />
-              <MetricCard accent="green" icon="🎯" label="ANS Oportunidad"
-                value={`${ansOportShow.total > 0 ? ((ansOportShow.cumple / ansOportShow.total) * 100).toFixed(1) : '0.0'}%`}
-                sub={`${ansOportShow.cumple} / ${ansOportShow.total}`} />
-              <MetricCard accent="amber" icon="✅" label="ANS Cumplimiento"
-                value={`${ansCumplShow.total > 0 ? ((ansCumplShow.cumple / ansCumplShow.total) * 100).toFixed(1) : '0.0'}%`}
-                sub={`${ansCumplShow.cumple} / ${ansCumplShow.total}`} />
-              <MetricCard accent="purple" icon="🚀" label="ANS Inicio Trabajo"
-                value={`${ansInicioShow.total > 0 ? ((ansInicioShow.cumple / ansInicioShow.total) * 100).toFixed(1) : '0.0'}%`}
-                sub={`${ansInicioShow.cumple} / ${ansInicioShow.total}`} />
+              <Kpi rotulo="Work Orders" valor={workOrderIDFiltrado.toLocaleString('es-CO')} nota="Órdenes distintas" acento={COLOR_GRAFICA.serie} />
+              <Kpi rotulo="ANS Oportunidad"
+                valor={`${ansOportShow.total > 0 ? ((ansOportShow.cumple / ansOportShow.total) * 100).toFixed(1) : '0.0'}%`}
+                nota={`${ansOportShow.cumple} / ${ansOportShow.total}`} acento={COLOR_GRAFICA.ok} />
+              <Kpi rotulo="ANS Cumplimiento"
+                valor={`${ansCumplShow.total > 0 ? ((ansCumplShow.cumple / ansCumplShow.total) * 100).toFixed(1) : '0.0'}%`}
+                nota={`${ansCumplShow.cumple} / ${ansCumplShow.total}`} acento={COLOR_GRAFICA.ok} />
+              <Kpi rotulo="ANS Inicio Trabajo"
+                valor={`${ansInicioShow.total > 0 ? ((ansInicioShow.cumple / ansInicioShow.total) * 100).toFixed(1) : '0.0'}%`}
+                nota={`${ansInicioShow.cumple} / ${ansInicioShow.total}`} acento={COLOR_GRAFICA.ok} />
             </div>
 
             {/* Gráfica: WO por mes */}
-            <ContenedorGrafica titulo="Work Orders por mes" icono="📊" alto={240} vacio={woPorMesFiltrado.length === 0}>
+            <ContenedorGrafica titulo="Work Orders por mes" icono={<Icono nombre="grafico-barras" />} alto={240} vacio={woPorMesFiltrado.length === 0}>
               <BarChart data={woPorMesFiltrado} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla('horizontal')} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -658,7 +658,7 @@ export default function DashboardRequerimientos() {
             </ContenedorGrafica>
 
             {/* Gráfica: ANS Oportunidad */}
-            <ContenedorGrafica titulo="ANS Oportunidad" icono="🎯" alto={240} vacio={ansTendenciaFiltrada.length === 0}>
+            <ContenedorGrafica titulo="ANS Oportunidad" icono={<Icono nombre="objetivo" />} alto={240} vacio={ansTendenciaFiltrada.length === 0}>
               <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla()} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -671,7 +671,7 @@ export default function DashboardRequerimientos() {
             </ContenedorGrafica>
 
             {/* Gráfica: ANS Cumplimiento */}
-            <ContenedorGrafica titulo="ANS Cumplimiento" icono="✅" alto={240} vacio={ansTendenciaFiltrada.length === 0}>
+            <ContenedorGrafica titulo="ANS Cumplimiento" icono={<Icono nombre="check-circulo" />} alto={240} vacio={ansTendenciaFiltrada.length === 0}>
               <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla()} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -684,7 +684,7 @@ export default function DashboardRequerimientos() {
             </ContenedorGrafica>
 
             {/* Gráfica: ANS Inicio Trabajo */}
-            <ContenedorGrafica titulo="ANS Inicio Trabajo" icono="🚀" alto={240} vacio={ansTendenciaFiltrada.length === 0}>
+            <ContenedorGrafica titulo="ANS Inicio Trabajo" icono={<Icono nombre="cohete" />} alto={240} vacio={ansTendenciaFiltrada.length === 0}>
               <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
                 <CartesianGrid {...rejilla()} />
                 <XAxis dataKey="mes" {...ejeCategoria(10)} />
@@ -738,37 +738,4 @@ function TrendPctTooltip({ active, payload, label }: any) {
   )
 }
 
-
-const METRIC_ACCENTS = {
-  blue:    { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', sub: 'text-blue-500' },
-  emerald: { bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', sub: 'text-emerald-500' },
-  violet:  { bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-700', sub: 'text-violet-500' },
-  indigo:  { bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-700', sub: 'text-indigo-500' },
-  teal:    { bg: 'bg-teal-50', border: 'border-teal-100', text: 'text-teal-700', sub: 'text-teal-500' },
-  green:   { bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-700', sub: 'text-green-500' },
-  amber:   { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700', sub: 'text-amber-500' },
-  purple:  { bg: 'bg-purple-50', border: 'border-purple-100', text: 'text-purple-700', sub: 'text-purple-500' },
-}
-
-function MetricCard({ accent, icon, label, value, sub }: {
-  accent: keyof typeof METRIC_ACCENTS
-  icon: string
-  label: string
-  value: string | number
-  sub: string
-}) {
-  const theme = METRIC_ACCENTS[accent]
-  return (
-    <div className={`group relative overflow-hidden rounded-2xl border ${theme.border} ${theme.bg} p-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02]`}>
-      <div className="flex items-start gap-3">
-        <span className="shrink-0 text-2xl">{icon}</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-          <p className={`mt-1 break-words text-xl font-extrabold ${theme.text}`}>{value}</p>
-          <p className={`mt-0.5 text-xs font-medium ${theme.sub}`}>{sub}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
 

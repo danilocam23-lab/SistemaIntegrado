@@ -15,7 +15,7 @@ import { CONSOLIDADO } from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import type { Aplicacion, Requerimiento } from '../types'
-import { EncabezadoPagina, Tarjeta, TablaScroll } from '../components/ui'
+import { Chip, EncabezadoPagina, Icono, Kpi, Tarjeta, TablaScroll } from '../components/ui'
 import {
   COLOR_GRAFICA,
   ContenedorGrafica,
@@ -196,7 +196,7 @@ export default function DashboardEstados() {
   return (
     <div className="min-h-screen bg-slate-50">
       <EncabezadoPagina
-        icono="📊"
+        icono={<Icono nombre="grafico-barras" />}
         titulo="Estados de Requerimientos"
         descripcion={`Análisis detallado de estados${
           appActiva && appActiva !== CONSOLIDADO ? ` · ${appActiva}` : ' · Consolidado'
@@ -207,33 +207,29 @@ export default function DashboardEstados() {
       <div className="pagina">
         {/* KPI Grid - Premium Design */}
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4 mb-8">
-          <KpiCardPremium
-            icon="📋"
-            label="Total de Requerimientos"
-            value={kpis.total}
-            subtext="en el sistema"
-            color="blue"
+          <Kpi
+            rotulo="Total de Requerimientos"
+            valor={kpis.total}
+            nota="en el sistema"
+            acento={COLOR_GRAFICA.serie}
           />
-          <KpiCardPremium
-            icon="🟢"
-            label="Requerimientos Activos"
-            value={kpis.activos}
-            subtext={`${kpis.total > 0 ? Math.round((kpis.activos / kpis.total) * 100) : 0}% del total`}
-            color="green"
+          <Kpi
+            rotulo="Requerimientos Activos"
+            valor={kpis.activos}
+            nota={`${kpis.total > 0 ? Math.round((kpis.activos / kpis.total) * 100) : 0}% del total`}
+            acento={COLOR_GRAFICA.serie}
           />
-          <KpiCardPremium
-            icon="⏱️"
-            label="Horas Estimadas"
-            value={`${fmtNumero(kpis.totalHoras)}h`}
-            subtext={`Promedio: ${fmtNumero(kpis.total > 0 ? kpis.totalHoras / kpis.total : 0)}h`}
-            color="amber"
+          <Kpi
+            rotulo="Horas Estimadas"
+            valor={`${fmtNumero(kpis.totalHoras)}h`}
+            nota={`Promedio: ${fmtNumero(kpis.total > 0 ? kpis.totalHoras / kpis.total : 0)}h`}
+            acento={COLOR_GRAFICA.serie}
           />
-          <KpiCardPremium
-            icon="📦"
-            label="Total de Entregas"
-            value={fmtNumero(kpis.totalEntregas)}
-            subtext="proyectadas"
-            color="purple"
+          <Kpi
+            rotulo="Total de Entregas"
+            valor={fmtNumero(kpis.totalEntregas)}
+            nota="proyectadas"
+            acento={COLOR_GRAFICA.serie}
           />
         </div>
 
@@ -281,7 +277,7 @@ export default function DashboardEstados() {
                           </div>
                         </td>
                         <td className="px-3 py-3 text-center">
-                          <Badge variant="blue" value={fila.cantidad} />
+                          <Chip tono="marca">{fila.cantidad}</Chip>
                         </td>
                         <td className="px-3 py-3 text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -299,18 +295,18 @@ export default function DashboardEstados() {
                           </div>
                         </td>
                         <td className="px-3 py-3 text-center">
-                          <Badge variant="amber" value={`${fmtNumero(fila.horas)}h`} />
+                          <Chip tono="alerta">{`${fmtNumero(fila.horas)}h`}</Chip>
                         </td>
                       </tr>
                     ))}
                     <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
                       <td className="px-3 py-3 text-slate-900">Total</td>
                       <td className="px-3 py-3 text-center">
-                        <Badge variant="blue" value={totalesEstados.cantidad} />
+                        <Chip tono="marca">{totalesEstados.cantidad}</Chip>
                       </td>
                       <td className="px-3 py-3 text-center text-slate-700">100.0%</td>
                       <td className="px-3 py-3 text-center">
-                        <Badge variant="amber" value={`${fmtNumero(totalesEstados.horas)}h`} />
+                        <Chip tono="alerta">{`${fmtNumero(totalesEstados.horas)}h`}</Chip>
                       </td>
                     </tr>
                   </tbody>
@@ -363,7 +359,7 @@ export default function DashboardEstados() {
                           </div>
                         </td>
                         <td className="px-3 py-3 text-center">
-                          <Badge variant="blue" value={fila.cantidad} />
+                          <Chip tono="marca">{fila.cantidad}</Chip>
                         </td>
                         <td className="px-3 py-3 text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -381,7 +377,7 @@ export default function DashboardEstados() {
                           </div>
                         </td>
                         <td className="px-3 py-3 text-center">
-                          <Badge variant="amber" value={`${fmtNumero(fila.horas)}h`} />
+                          <Chip tono="alerta">{`${fmtNumero(fila.horas)}h`}</Chip>
                         </td>
                         <td className="px-3 py-3 text-center">
                           <GarantiasButton
@@ -397,11 +393,11 @@ export default function DashboardEstados() {
                     <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
                       <td className="px-3 py-3 text-slate-900">Total</td>
                       <td className="px-3 py-3 text-center">
-                        <Badge variant="blue" value={totalesEntregas.cantidad} />
+                        <Chip tono="marca">{totalesEntregas.cantidad}</Chip>
                       </td>
                       <td className="px-3 py-3 text-center text-slate-700">100.0%</td>
                       <td className="px-3 py-3 text-center">
-                        <Badge variant="amber" value={`${fmtNumero(totalesEntregas.horas)}h`} />
+                        <Chip tono="alerta">{`${fmtNumero(totalesEntregas.horas)}h`}</Chip>
                       </td>
                       <td className="px-3 py-3 text-center">
                         <GarantiasButton
@@ -539,84 +535,8 @@ export default function DashboardEstados() {
   )
 }
 
-function KpiCardPremium({
-  icon,
-  label,
-  value,
-  subtext,
-  color,
-}: {
-  icon: string
-  label: string
-  value: string | number
-  subtext?: string
-  color: 'blue' | 'purple' | 'amber' | 'green'
-}) {
-  const colors = {
-    blue: {
-      bg: 'from-blue-600 to-blue-700',
-      light: 'bg-blue-50',
-      text: 'text-blue-900',
-      border: 'border-blue-200',
-    },
-    purple: {
-      bg: 'from-purple-600 to-purple-700',
-      light: 'bg-purple-50',
-      text: 'text-purple-900',
-      border: 'border-purple-200',
-    },
-    amber: {
-      bg: 'from-amber-500 to-amber-600',
-      light: 'bg-amber-50',
-      text: 'text-amber-900',
-      border: 'border-amber-200',
-    },
-    green: {
-      bg: 'from-green-600 to-green-700',
-      light: 'bg-green-50',
-      text: 'text-green-900',
-      border: 'border-green-200',
-    },
-  }
-
-  const theme = colors[color]
-
-  return (
-    <div className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-300">
-      <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" />
-
-      <div className="relative p-5 xl:p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className={`shrink-0 text-3xl xl:text-4xl p-3 rounded-xl ${theme.light}`}>{icon}</div>
-        </div>
-
-        <div className="min-w-0 space-y-1">
-          <div className="text-sm font-medium text-slate-600 uppercase tracking-wider">{label}</div>
-          <div className={`break-words text-2xl font-bold ${theme.text} xl:text-3xl`}>{value}</div>
-          {subtext && <div className="mt-2 break-words text-xs text-slate-500">{subtext}</div>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Badge({ variant, value }: { variant: 'blue' | 'amber' | 'green' | 'red'; value: string | number }) {
-  const variants = {
-    blue: 'bg-blue-100 text-blue-700',
-    amber: 'bg-amber-100 text-amber-700',
-    green: 'bg-green-100 text-green-700',
-    red: 'bg-red-100 text-red-700',
-  }
-
-  return (
-    <span className={`inline-flex items-center px-3 py-2 rounded-lg font-semibold text-sm ${variants[variant]}`}>
-      {value}
-    </span>
-  )
-}
-
 function GarantiasButton({ value, onClick }: { value: number; onClick: () => void }) {
-  if (value <= 0) return <Badge variant="green" value={value} />
+  if (value <= 0) return <Chip tono="exito">{value}</Chip>
 
   return (
     <button
