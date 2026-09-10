@@ -2,72 +2,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
-import { mensajeError, useLista } from '../api/hooks'
+import { mensajeError } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import { TablaScroll } from '../components/ui/primitivos'
-import type {
-  Asignacion,
-  Capacidad,
-  Categoria,
-  Configuracion,
-  Persona,
-  Requerimiento,
-} from '../types'
-
-const ESTADO_ACTIVO = 'ESTIMACION APROBADA ENTREGA PENDIENTE'
-
-// Roles válidos para asignaciones (excluye LT_EPM)
-// Si se crean nuevos roles, se incluirán automáticamente
-const ROLES_EXCLUIDOS = ['LT_EPM']
-
-type AsignacionItem = Asignacion & {
-  aplicacion_id?: string
-  activo?: boolean
-}
-
-interface OpcionReq {
-  id: string
-  label: string
-  aplicacionId: string
-  estado?: string
-}
-
-interface GrupoReq {
-  reqId: string | null
-  reqLabel: string
-  reqEstado: string | null
-  items: { asig: AsignacionItem; horasCarga: number }[]
-}
-
-function writeHeaders(aplicacionId: string) {
-  return { headers: { 'X-Aplicacion': aplicacionId } }
-}
-
-function badgeEstadoClass(estado: string | null): string {
-  if (!estado) return 'bg-slate-100 text-slate-600'
-  if (estado === ESTADO_ACTIVO) return 'bg-green-100 text-green-700'
-  if (estado.toLowerCase().includes('cancel')) return 'bg-slate-100 text-slate-700'
-  return 'bg-amber-100 text-amber-700'
-}
+import { cabecerasAplicacion } from '../utilidades/aplicacion'
+import { claseBadgeEstado } from './asignaciones/estados'
+import type { AsignacionItem, OpcionReq } from './asignaciones/tipos'
+import { useDatosAsignaciones } from './asignaciones/useDatosAsignaciones'
+import { useDerivadosAsignaciones } from './asignaciones/useDerivadosAsignaciones'
+import { useWorkOrdersPorPersona } from './asignaciones/useWorkOrdersPorPersona'
 
 export default function Asignaciones() {
-  const { datos: asignacionesBase, error, recargar } = useLista<AsignacionItem>('/asignaciones')
-  const { datos: personas } = useLista<Persona>('/personas')
-  const { datos: categorias } = useLista<Categoria>('/categorias')
-  const { datos: requerimientos } = useLista<Requerimiento>('/requerimientos')
-  const { datos: configuraciones } = useLista<Configuracion>('/configuracion')
+  const { asignaciones, personas, categorias, requerimientos, configuraciones, capacidades, error, recargar } =
+    useDatosAsignaciones()
   const { modoConsolidado, activa } = useAplicacion()
   const { tienePermiso } = useAuth()
+  const { wosPorPersonaMap } = useWorkOrdersPorPersona(personas)
 
-  const asignaciones = useMemo(() => asignacionesBase as AsignacionItem[], [asignacionesBase])
   const puedeEditarAsignaciones = tienePermiso('asignaciones.editar')
-  const mesSel = useMemo(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  }, [])
 
-  const [capacidades, setCapacidades] = useState<Capacidad[]>([])
   const [editandoAsig, setEditandoAsig] = useState<AsignacionItem | null>(null)
   const [personaId, setPersonaId] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
@@ -87,23 +41,6 @@ export default function Asignaciones() {
   const autoFixedRef = useRef(false)
   const modoEdicion = editandoAsig !== null
 
-  // WOs de soporte para vista por personas
-  const [woPorPersona, setWoPorPersona] = useState<{ id: string; wo_id: string; assigned_to: string; status: string; priority: string; created_date: string; descripcion: string }[]>([])
-
-  useEffect(() => {
-    client
-      .get<Capacidad[]>(`/capacidades?mes=${mesSel}`)
-      .then((r) => setCapacidades(r.data))
-      .catch(() => {})
-  }, [mesSel])
-
-  useEffect(() => {
-    client
-      .get<typeof woPorPersona>('/soporte/solicitudes-fabrica/wo-por-persona')
-      .then((r) => setWoPorPersona(Array.isArray(r.data) ? r.data : []))
-      .catch(() => {})
-  }, [])
-
   useEffect(() => {
     function cerrarDropdown(event: MouseEvent) {
       if (reqBoxRef.current && !reqBoxRef.current.contains(event.target as Node)) {
@@ -115,55 +52,31 @@ export default function Asignaciones() {
     return () => document.removeEventListener('mousedown', cerrarDropdown)
   }, [])
 
-  const personasDisponibles = useMemo(
-    () => personas
-      .filter((p) => p.rol_operativo && !ROLES_EXCLUIDOS.includes(p.rol_operativo))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
-    [personas],
-  )
-
-  const personaPorId = useMemo(() => {
-    const map = new Map<string, Persona>()
-    for (const persona of personas) map.set(persona.id, persona)
-    return map
-  }, [personas])
-
-  const categoriaPorId = useMemo(() => {
-    const map = new Map<string, Categoria>()
-    for (const categoria of categorias) map.set(categoria.id, categoria)
-    return map
-  }, [categorias])
-
-  const reqPorId = useMemo(() => {
-    const map = new Map<string, { sc: string; codigoReq: string; nombre: string }>()
-    for (const req of requerimientos) {
-      map.set(req.id, {
-        sc: req.solicitud?.codigo_sc ?? '',
-        codigoReq: req.codigo_req,
-        nombre: req.nombre ?? '',
-      })
-    }
-    return map
-  }, [requerimientos])
-
-  const reqIdsActivos = useMemo(() => {
-    const ids = new Set<string>()
-    for (const req of requerimientos) {
-      if (req.estado === ESTADO_ACTIVO) ids.add(req.id)
-    }
-    return ids
-  }, [requerimientos])
-
-  const opcionesReq = useMemo<OpcionReq[]>(() => {
-    return requerimientos
-      .map((r) => ({
-        id: r.id,
-        label: [r.solicitud?.codigo_sc, r.codigo_req, r.nombre].filter(Boolean).join(' - '),
-        aplicacionId: r.aplicacion_id,
-        estado: r.estado,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'es'))
-  }, [requerimientos])
+  const {
+    personasDisponibles,
+    personaPorId,
+    categoriaPorId,
+    reqIdsActivos,
+    opcionesReq,
+    etiquetaReq,
+    capacidadUsada,
+    calcularPctSugerido,
+    gruposReq,
+    estadosUnicos,
+    gruposFiltrados,
+    gruposPorPersona,
+  } = useDerivadosAsignaciones({
+    asignaciones,
+    personas,
+    categorias,
+    requerimientos,
+    configuraciones,
+    capacidades,
+    wosPorPersonaMap,
+    filtroEstado,
+    filtroPersona,
+    busquedaPersona,
+  })
 
   const opcionReqSeleccionada = useMemo(
     () => opcionesReq.find((opcion) => opcion.id === requerimientoId) ?? null,
@@ -178,177 +91,10 @@ export default function Asignaciones() {
     return lista.slice(0, 15)
   }, [busquedaReq, opcionesReq])
 
-  const horasMesDefault = useMemo(() => {
-    const config = configuraciones.find((item) => item.clave === 'horas_mes_default')
-    return config ? Number(config.valor) : 180
-  }, [configuraciones])
-
-  const capPorPersonaId = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const capacidad of capacidades) {
-      if (capacidad.persona_id && capacidad.scope === 'persona') {
-        map.set(capacidad.persona_id, capacidad.horas_disponibles)
-      }
-    }
-    return map
-  }, [capacidades])
-
-  const etiquetaReq = useCallback((reqId: string | null) => {
-    if (!reqId) return 'Sin requerimiento'
-    const req = reqPorId.get(reqId)
-    if (!req) return reqId
-    return [req.sc, req.codigoReq, req.nombre].filter(Boolean).join(' - ')
-  }, [reqPorId])
-
-  const capacidadUsada = useCallback((paraPersonaId: string, excluyendoId?: string) => {
-    return asignaciones
-      .filter((a) => a.persona_id === paraPersonaId && a.id !== excluyendoId)
-      .filter((a) => a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id)))
-      .reduce((sum, a) => sum + a.total_porcentaje, 0)
-  }, [asignaciones, reqIdsActivos])
-
-  const calcularPctSugerido = useCallback((pid: string) => {
-    const activas = asignaciones.filter((a) =>
-      a.persona_id === pid &&
-      a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id)),
-    ).length
-    return String(Math.round(100 / (activas + 1)))
-  }, [asignaciones, reqIdsActivos])
-
   const porcentajeSugerido = useMemo(
     () => (!modoEdicion && personaId ? calcularPctSugerido(personaId) : ''),
     [calcularPctSugerido, modoEdicion, personaId],
   )
-
-  const gruposReq = useMemo<GrupoReq[]>(() => {
-    const map = new Map<string | null, GrupoReq>()
-
-    for (const asig of asignaciones) {
-      const reqId = asig.proyectos[0]?.requerimiento_id ?? null
-      if (!map.has(reqId)) {
-        const req = reqId ? requerimientos.find((item) => item.id === reqId) : null
-        const info = reqId ? reqPorId.get(reqId) : null
-        map.set(reqId, {
-          reqId,
-          reqLabel: info
-            ? [info.sc, info.codigoReq, info.nombre].filter(Boolean).join(' - ')
-            : (reqId ?? 'Sin requerimiento'),
-          reqEstado: req?.estado ?? null,
-          items: [],
-        })
-      }
-
-      const horasBase = capPorPersonaId.get(asig.persona_id) ?? horasMesDefault
-      map.get(reqId)?.items.push({
-        asig,
-        horasCarga: horasBase * (asig.total_porcentaje / 100),
-      })
-    }
-
-    return Array.from(map.values())
-      .map((grupo) => ({
-        ...grupo,
-        items: [...grupo.items].sort((a, b) => {
-          const nombreA = personaPorId.get(a.asig.persona_id)?.nombre ?? a.asig.persona_id
-          const nombreB = personaPorId.get(b.asig.persona_id)?.nombre ?? b.asig.persona_id
-          return nombreA.localeCompare(nombreB, 'es')
-        }),
-      }))
-      .sort((a, b) => {
-        if (!a.reqId && b.reqId) return 1
-        if (a.reqId && !b.reqId) return -1
-        return a.reqLabel.localeCompare(b.reqLabel, 'es')
-      })
-  }, [asignaciones, requerimientos, reqPorId, capPorPersonaId, horasMesDefault, personaPorId])
-
-  const estadosUnicos = useMemo(() => {
-    const set = new Set<string>()
-    for (const grupo of gruposReq) {
-      if (grupo.reqEstado) set.add(grupo.reqEstado)
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
-  }, [gruposReq])
-
-  const gruposFiltrados = useMemo(() => {
-    let resultado = gruposReq
-    
-    // Filtrar por estado
-    if (filtroEstado === '__todos__') {
-      // Mantener todos
-    } else if (filtroEstado === '__sin_estado__') {
-      resultado = resultado.filter((g) => !g.reqEstado)
-    } else {
-      resultado = resultado.filter((g) => g.reqEstado === filtroEstado)
-    }
-    
-    // Filtrar por persona (dropdown)
-    if (filtroPersona !== '__todos__') {
-      resultado = resultado.map((g) => ({
-        ...g,
-        items: g.items.filter((item) => item.asig.persona_id === filtroPersona),
-      }))
-      resultado = resultado.filter((g) => g.items.length > 0)
-    }
-
-    // Filtrar por búsqueda de persona (texto)
-    if (busquedaPersona.trim()) {
-      const q = busquedaPersona.toLowerCase().trim()
-      resultado = resultado.map((g) => ({
-        ...g,
-        items: g.items.filter((item) => {
-          const persona = personaPorId.get(item.asig.persona_id)
-          return persona?.nombre.toLowerCase().includes(q)
-        }),
-      }))
-      resultado = resultado.filter((g) => g.items.length > 0)
-    }
-    
-    return resultado
-  }, [gruposReq, filtroEstado, filtroPersona, busquedaPersona, personaPorId])
-
-  // ─── Vista por personas: agrupa asignaciones por persona_id ───
-  // Mapa de WOs por persona (matching por nombre)
-  const wosPorPersonaMap = useMemo(() => {
-    const map = new Map<string, typeof woPorPersona>()
-    if (!personas.length || !woPorPersona.length) return map
-    for (const wo of woPorPersona) {
-      const nombreWo = wo.assigned_to.toLowerCase().trim()
-      const persona = personas.find((p) => p.nombre.toLowerCase().trim() === nombreWo)
-      if (persona) {
-        if (!map.has(persona.id)) map.set(persona.id, [])
-        map.get(persona.id)!.push(wo)
-      }
-    }
-    return map
-  }, [personas, woPorPersona])
-
-  const gruposPorPersona = useMemo(() => {
-    const map = new Map<string, { persona: Persona; reqs: { reqId: string | null; reqLabel: string; reqEstado: string | null; asig: AsignacionItem; horasCarga: number }[] }>()
-    for (const grupo of gruposFiltrados) {
-      for (const item of grupo.items) {
-        const pid = item.asig.persona_id
-        if (!map.has(pid)) {
-          const persona = personaPorId.get(pid)
-          if (!persona) continue
-          map.set(pid, { persona, reqs: [] })
-        }
-        map.get(pid)!.reqs.push({ reqId: grupo.reqId, reqLabel: grupo.reqLabel, reqEstado: grupo.reqEstado, ...item })
-      }
-    }
-    // Incluir personas que tienen WOs pero no asignaciones
-    for (const [pid] of wosPorPersonaMap) {
-      if (!map.has(pid)) {
-        const persona = personaPorId.get(pid)
-        if (persona) map.set(pid, { persona, reqs: [] })
-      }
-    }
-    let resultado = Array.from(map.values()).sort((a, b) => a.persona.nombre.localeCompare(b.persona.nombre, 'es'))
-    if (busquedaPersona.trim()) {
-      const q = busquedaPersona.toLowerCase().trim()
-      resultado = resultado.filter((g) => g.persona.nombre.toLowerCase().includes(q))
-    }
-    return resultado
-  }, [gruposFiltrados, personaPorId, busquedaPersona, wosPorPersonaMap])
 
   const [personasExpandidas, setPersonasExpandidas] = useState<Set<string>>(new Set())
 
@@ -443,7 +189,7 @@ export default function Asignaciones() {
           `/asignaciones/${a.id}`,
           { persona_id: a.persona_id, categoria_id: a.categoria_id, total_porcentaje: pct,
             estado: a.estado ?? 'active', activo: a.activo ?? true, proyectos: a.proyectos },
-          writeHeaders(resolverAppAsignacion(a)),
+          cabecerasAplicacion(resolverAppAsignacion(a)),
         )
       ),
     )
@@ -506,7 +252,7 @@ export default function Asignaciones() {
             ? [{ nombre: opcionReqSeleccionada?.label ?? '', estado: 'active', requerimiento_id: requerimientoId }]
             : [],
         },
-        writeHeaders(aplicacionId),
+        cabecerasAplicacion(aplicacionId),
       )
       limpiarFormulario()
       await recargar()
@@ -543,7 +289,7 @@ export default function Asignaciones() {
             ? [{ nombre: opcionReqSeleccionada?.label ?? etiquetaReq(requerimientoId), estado: 'active', requerimiento_id: requerimientoId }]
             : [],
         },
-        writeHeaders(aplicacionId),
+        cabecerasAplicacion(aplicacionId),
       )
       limpiarFormulario()
       await recargar()
@@ -564,7 +310,7 @@ export default function Asignaciones() {
     }
 
     try {
-      await client.delete(`/asignaciones/${asig.id}`, writeHeaders(aplicacionId))
+      await client.delete(`/asignaciones/${asig.id}`, cabecerasAplicacion(aplicacionId))
       if (editandoAsig?.id === asig.id) limpiarFormulario()
       // Redistribuir % entre las asignaciones restantes
       await redistribuirPct(asig.persona_id, asig.id)
@@ -611,7 +357,7 @@ export default function Asignaciones() {
           activo: asig.activo ?? true,
           proyectos: asig.proyectos,
         },
-        writeHeaders(aplicacionId),
+        cabecerasAplicacion(aplicacionId),
       )
       cancelarEdicionInline()
       await recargar()
@@ -625,7 +371,7 @@ export default function Asignaciones() {
     const aplicacionId = resolverAppAsignacion(asig)
     if (!aplicacionId) return
     try {
-      await client.patch(`/asignaciones/${asig.id}/prioridad`, {}, writeHeaders(aplicacionId))
+      await client.patch(`/asignaciones/${asig.id}/prioridad`, {}, cabecerasAplicacion(aplicacionId))
       await recargar()
     } catch (err) {
       setAviso(mensajeError(err))
@@ -771,7 +517,7 @@ export default function Asignaciones() {
                     >
                       <span className="truncate">{opcion.label}</span>
                       {opcion.estado && (
-                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badgeEstadoClass(opcion.estado)}`}>
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${claseBadgeEstado(opcion.estado)}`}>
                           {opcion.estado.length > 20 ? opcion.estado.slice(0, 20) + '…' : opcion.estado}
                         </span>
                       )}
@@ -856,13 +602,9 @@ export default function Asignaciones() {
             className="campo campo-sm"
           >
             <option value="__todos__">Todas</option>
-            {personas
-              .filter((p) => p.rol_operativo && !ROLES_EXCLUIDOS.includes(p.rol_operativo))
-              .slice()
-              .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-              .map((persona) => (
-                <option key={persona.id} value={persona.id}>{persona.nombre}</option>
-              ))}
+            {personasDisponibles.map((persona) => (
+              <option key={persona.id} value={persona.id}>{persona.nombre}</option>
+            ))}
           </select>
           {(filtroPersona !== '__todos__' || busquedaPersona) && (
             <button
@@ -891,14 +633,13 @@ export default function Asignaciones() {
                   <span className="text-sm">{expandido ? '▼' : '▶'}</span>
                   <span className="truncate text-sm font-semibold">{grupo.reqLabel}</span>
                   {grupo.reqId && (() => {
-                    const req = requerimientos.find(r => r.id === grupo.reqId)
-                    if (!req?.total_horas_estimadas) return null
-                    const horasReales = req.total_horas_estimadas * 0.9
+                    if (!grupo.horasEstimadas) return null
+                    const horasReales = grupo.horasEstimadas * 0.9
                     return (
                       <div className="ml-4 flex shrink-0 items-center gap-4 border-l border-white/30 pl-4 text-xs font-medium">
                         <div>
                           <div className="text-white/70">Horas est.</div>
-                          <div>{req.total_horas_estimadas.toFixed(1)} h</div>
+                          <div>{grupo.horasEstimadas.toFixed(1)} h</div>
                         </div>
                         <div>
                           <div className="text-white/70">Horas reales (90%)</div>
@@ -917,7 +658,7 @@ export default function Asignaciones() {
                       Ver req
                     </Link>
                   )}
-                  <span className={`chip ${badgeEstadoClass(grupo.reqEstado)}`}>
+                  <span className={`chip ${claseBadgeEstado(grupo.reqEstado)}`}>
                     {grupo.reqEstado ?? 'Sin estado'}
                   </span>
                   <span className="rounded-full bg-white/10 px-2 py-1 text-xs font-medium text-white">
@@ -1071,7 +812,7 @@ export default function Asignaciones() {
                           <tr key={idx} className="border-t">
                             <td className="px-3 py-2 font-medium">{r.reqLabel}</td>
                             <td className="px-3 py-2">
-                              {r.reqEstado && <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeEstadoClass(r.reqEstado)}`}>{r.reqEstado}</span>}
+                              {r.reqEstado && <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${claseBadgeEstado(r.reqEstado)}`}>{r.reqEstado}</span>}
                             </td>
                             <td className="px-3 py-2">{categoriaPorId.get(r.asig.categoria_id)?.nombre ?? '—'}</td>
                             <td className="px-3 py-2 text-right">{r.asig.total_porcentaje}%</td>
