@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react'
+import { Boton, Icono } from '../../components/ui'
 import { MESES_ES } from '../../constantes'
 import type { FormularioEntregaControl } from './useFormularioEntrega'
 
@@ -23,15 +24,16 @@ export default function FormularioEntrega({
   return (
     <form onSubmit={onSubmit} className={`flex flex-wrap items-end gap-3 border-t pt-3 ${editando ? 'rounded-lg bg-amber-50 p-3' : ''}`}>
       {editando && (
-        <div className="w-full text-xs font-semibold text-amber-700">
-          ✏️ Editando entrega N° {valores.numero} — los cambios reemplazarán la entrega existente
+        <div className="flex w-full items-center gap-1.5 text-xs font-semibold text-amber-700">
+          <Icono nombre="lapiz" />
+          Editando entrega N° {valores.numero} — los cambios reemplazarán la entrega existente
         </div>
       )}
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">N° entrega</span>
         <input value={valores.numero} onChange={(e) => form.actualizar('numero', e.target.value)} type="number" required
           readOnly={editando}
-          className={`w-24 rounded border px-3 py-2 ${editando ? 'bg-slate-100 text-slate-500' : ''}`} />
+          className={`campo w-24 ${editando ? 'bg-slate-100 text-slate-500' : ''}`} />
       </label>
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">Horas</span>
@@ -119,23 +121,18 @@ export default function FormularioEntrega({
             className="campo campo-sm w-20" />
         </label>
       )}
-      <button className="btn btn-primario">
+      <Boton variante="primario" type="submit">
         {editando ? 'Guardar cambios' : 'Guardar entrega'}
-      </button>
+      </Boton>
       {editando && (
-        <button
-          type="button"
-          onClick={onVerHistorial}
-          className="btn btn-secundario"
-        >
+        <Boton variante="secundario" onClick={onVerHistorial}>
           Historial de estados
-        </button>
+        </Boton>
       )}
       {editando && (
-        <button type="button" onClick={form.cancelar}
-          className="btn btn-secundario">
+        <Boton variante="secundario" onClick={form.cancelar}>
           Cancelar
-        </button>
+        </Boton>
       )}
     </form>
   )

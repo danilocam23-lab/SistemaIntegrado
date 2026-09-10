@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Entrega } from '../../types'
-import { TablaScroll } from '../../components/ui/primitivos'
+import { Chip, TablaScroll } from '../../components/ui/primitivos'
 
 interface Props {
   entregas: Entrega[]
@@ -54,16 +54,16 @@ export default function SeccionEntregas({
         )}
       </p>
       <TablaScroll>
-      <table className="mb-3 w-full text-sm">
-        <thead className="text-left text-slate-500">
+      <table className="tabla mb-3">
+        <thead>
           <tr>
-            <th className="py-1">N°</th><th className="py-1">Horas</th>
-            <th className="py-1">% Avance</th><th className="py-1">F. Comprometida</th>
-            <th className="py-1">F. Real</th><th className="py-1">Estado</th><th className="py-1">Mes aprobación</th>
-            <th className="py-1">Observaciones EPM</th><th className="py-1">Observaciones Hitss</th>
-            <th className="py-1">Tipificación</th>
-            <th className="py-1">ANS</th><th className="py-1">Garantía</th><th className="py-1">N° Garantía</th>
-            <th className="py-1"></th>
+            <th>N°</th><th>Horas</th>
+            <th>% Avance</th><th>F. Comprometida</th>
+            <th>F. Real</th><th>Estado</th><th>Mes aprobación</th>
+            <th>Observaciones EPM</th><th>Observaciones Hitss</th>
+            <th>Tipificación</th>
+            <th>ANS</th><th>Garantía</th><th>N° Garantía</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -71,21 +71,17 @@ export default function SeccionEntregas({
             const porcentaje = en.horas != null && totalHorasEstimadas
               ? ((Number(en.horas) * 100) / Number(totalHorasEstimadas)).toFixed(1)
               : '—'
-            const ansLabel = en.ans_entrega === 'CUMPLE' ? 'Cumple'
-              : en.ans_entrega === 'NO_CUMPLE' ? 'No cumple' : '—'
-            const ansColor = en.ans_entrega === 'CUMPLE' ? 'text-emerald-600'
-              : en.ans_entrega === 'NO_CUMPLE' ? 'text-red-600' : ''
             return (
-              <tr key={en.numero} className="border-t">
-                <td className="py-1">{en.numero}</td>
-                <td className="py-1">{en.horas ?? '—'}</td>
-                <td className="py-1">{porcentaje}{porcentaje !== '—' ? '%' : ''}</td>
-                <td className="py-1">{en.fecha_comprometida?.slice(0, 10) ?? '—'}</td>
-                <td className="py-1">{en.fecha_recepcion?.slice(0, 10) ?? '—'}</td>
-                <td className="py-1">{en.estado ?? '—'}</td>
-                <td className="py-1">{en.mes_aprobacion ?? '—'}</td>
-                <td className="py-1">{en.observaciones ?? '—'}</td>
-                <td className="py-1">
+              <tr key={en.numero}>
+                <td>{en.numero}</td>
+                <td>{en.horas ?? '—'}</td>
+                <td>{porcentaje}{porcentaje !== '—' ? '%' : ''}</td>
+                <td>{en.fecha_comprometida?.slice(0, 10) ?? '—'}</td>
+                <td>{en.fecha_recepcion?.slice(0, 10) ?? '—'}</td>
+                <td>{en.estado ?? '—'}</td>
+                <td>{en.mes_aprobacion ?? '—'}</td>
+                <td>{en.observaciones ?? '—'}</td>
+                <td>
                   {tipifEdicion[en.numero] ? (
                     <input
                       value={tipifEdicion[en.numero].obs}
@@ -94,7 +90,7 @@ export default function SeccionEntregas({
                     />
                   ) : (en.observaciones_hitss ?? '—')}
                 </td>
-                <td className="py-1">
+                <td>
                   {tipifEdicion[en.numero] ? (
                     <select
                       value={tipifEdicion[en.numero].tip}
@@ -107,10 +103,16 @@ export default function SeccionEntregas({
                     </select>
                   ) : (en.tipificacion ?? '—')}
                 </td>
-                <td className={`py-1 font-medium ${ansColor}`}>{ansLabel}</td>
-                <td className="py-1">{en.garantia ? 'Sí' : 'No'}</td>
-                <td className="py-1">{en.numero_garantia ?? '—'}</td>
-                <td className="py-1">
+                <td>
+                  {en.ans_entrega === 'CUMPLE' ? (
+                    <Chip tono="exito">Cumple</Chip>
+                  ) : en.ans_entrega === 'NO_CUMPLE' ? (
+                    <Chip tono="error">No cumple</Chip>
+                  ) : '—'}
+                </td>
+                <td>{en.garantia ? <Chip tono="marca">Sí</Chip> : <Chip tono="neutro">No</Chip>}</td>
+                <td>{en.numero_garantia ?? '—'}</td>
+                <td>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -146,14 +148,14 @@ export default function SeccionEntregas({
                             type="button"
                             disabled={guardandoTipif.has(en.numero)}
                             onClick={() => onGuardarTipif(en.numero)}
-                            className="text-marca hover:underline disabled:opacity-50"
+                            className="enlace-accion disabled:opacity-50"
                           >
                             Guardar
                           </button>
                           <button
                             type="button"
                             onClick={() => onCancelarTipif(en.numero)}
-                            className="text-slate-500 hover:underline"
+                            className="enlace-accion enlace-accion-sutil"
                           >
                             Cancelar
                           </button>
@@ -174,7 +176,7 @@ export default function SeccionEntregas({
             )
           })}
           {entregas.length === 0 && (
-            <tr><td colSpan={13} className="py-2 text-slate-400">Sin entregas.</td></tr>
+            <tr><td colSpan={13} className="text-slate-400">Sin entregas.</td></tr>
           )}
         </tbody>
       </table>

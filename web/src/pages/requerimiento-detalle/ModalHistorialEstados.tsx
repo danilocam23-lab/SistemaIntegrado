@@ -1,5 +1,5 @@
 import Modal from '../../components/Modal'
-import { TablaScroll } from '../../components/ui/primitivos'
+import { Chip, TablaScroll } from '../../components/ui/primitivos'
 import { fmtFechaCo, fmtDuracion } from '../../utilidades/fechas'
 import type { SegmentoHistorial } from './useHistorialEstados'
 
@@ -26,28 +26,26 @@ export default function ModalHistorialEstados({
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!cargando && !error && (
         <TablaScroll>
-        <table className="w-full text-sm">
-          <thead className="text-left text-slate-500">
+        <table className="tabla">
+          <thead>
             <tr>
-              <th className="py-1 pr-2">Estado</th>
-              <th className="py-1 pr-2">Desde</th>
-              <th className="py-1 pr-2">Hasta</th>
-              <th className="py-1 pr-2">Duración</th>
-              <th className="py-1">Situación</th>
+              <th>Estado</th>
+              <th>Desde</th>
+              <th>Hasta</th>
+              <th>Duración</th>
+              <th>Situación</th>
             </tr>
           </thead>
           <tbody>
             {segmentos.map((seg, i) => (
-              <tr key={i} className="border-t align-top">
-                <td className="py-1 pr-2 font-semibold">{seg.estado ?? '—'}</td>
-                <td className="py-1 pr-2 whitespace-nowrap">{fmtFechaCo(seg.desde)}</td>
-                <td className="py-1 pr-2 whitespace-nowrap">{seg.en_curso ? '—' : fmtFechaCo(seg.hasta)}</td>
-                <td className="py-1 pr-2 whitespace-nowrap">{fmtDuracion(seg.duracion_segundos)}</td>
-                <td className="py-1">
+              <tr key={i} className="align-top">
+                <td className="font-semibold">{seg.estado ?? '—'}</td>
+                <td className="whitespace-nowrap">{fmtFechaCo(seg.desde)}</td>
+                <td className="whitespace-nowrap">{seg.en_curso ? '—' : fmtFechaCo(seg.hasta)}</td>
+                <td className="whitespace-nowrap">{fmtDuracion(seg.duracion_segundos)}</td>
+                <td>
                   {seg.en_curso ? (
-                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                      En curso
-                    </span>
+                    <Chip tono="exito">En curso</Chip>
                   ) : (
                     <span className="text-xs text-slate-400">Finalizado</span>
                   )}
@@ -55,7 +53,7 @@ export default function ModalHistorialEstados({
               </tr>
             ))}
             {segmentos.length === 0 && (
-              <tr><td colSpan={5} className="py-2 text-slate-400">Sin historial disponible.</td></tr>
+              <tr><td colSpan={5} className="text-slate-400">Sin historial disponible.</td></tr>
             )}
           </tbody>
         </table>

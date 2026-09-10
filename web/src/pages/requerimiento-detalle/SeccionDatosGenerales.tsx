@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react'
+import { Boton, Chip } from '../../components/ui'
 import { TIPOS_COSTO } from '../../constantes'
 import type { Aplicacion, Persona, Requerimiento } from '../../types'
 import type { CamposRequerimiento } from './useRequerimientoDetalle'
@@ -163,13 +164,9 @@ export default function SeccionDatosGenerales({
                 ? new Date(valores.fechaRealEntregaEst) <= new Date(req.fecha_limite)
                 : null
             return (
-              <span className={`block rounded border px-3 py-2 font-medium ${
-                cumple === true  ? 'border-emerald-200 bg-emerald-50 text-emerald-700' :
-                cumple === false ? 'border-red-200 bg-red-50 text-red-700' :
-                'bg-slate-100 text-slate-500'
-              }`}>
+              <Chip tono={cumple === true ? 'exito' : cumple === false ? 'error' : 'neutro'}>
                 {cumple === true ? 'Cumple' : cumple === false ? 'No cumple' : '—'}
-              </span>
+              </Chip>
             )
           })()}
         </label>
@@ -199,9 +196,9 @@ export default function SeccionDatosGenerales({
       </div>
       </fieldset>
       {puedeEditarReq && (
-        <button className="btn btn-primario mt-3">
+        <Boton variante="primario" type="submit" className="mt-3">
           Guardar cambios
-        </button>
+        </Boton>
       )}
     </form>
   )

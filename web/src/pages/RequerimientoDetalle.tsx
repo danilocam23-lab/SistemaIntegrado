@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { Aviso, Chip, Selector } from '../components/ui'
 import { useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
@@ -77,21 +78,21 @@ export default function RequerimientoDetalle() {
           <h1 className="titulo-pagina">{req.codigo_req}</h1>
           {req.nombre && <span className="text-base text-slate-600">— {req.nombre}</span>}
           {puedeEditarReq ? (
-            <select
+            <Selector
+              compacto
               value={req.estado}
               onChange={(e) => detalle.transicion(e.target.value)}
-              className="campo campo-sm"
             >
               {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </Selector>
           ) : (
-            <span className="rounded border bg-slate-50 px-2 py-1 text-xs text-slate-600">{req.estado}</span>
+            <Chip tono="neutro">{req.estado}</Chip>
           )}
         </div>
       </div>
 
-      {aviso && <div className="aviso aviso-error">{aviso}</div>}
-      {ok && <div className="aviso aviso-exito">{ok}</div>}
+      {aviso && <Aviso tono="error">{aviso}</Aviso>}
+      {ok && <Aviso tono="exito">{ok}</Aviso>}
 
       {/* Datos generales */}
       <SeccionDatosGenerales

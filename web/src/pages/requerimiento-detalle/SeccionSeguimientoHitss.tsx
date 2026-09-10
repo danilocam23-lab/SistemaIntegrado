@@ -1,3 +1,4 @@
+import { AreaTexto, Boton, Selector } from '../../components/ui'
 import type { ValoresRequerimiento } from './useRequerimientoDetalle'
 
 interface Props {
@@ -30,32 +31,30 @@ export default function SeccionSeguimientoHitss({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className="text-sm sm:col-span-2 lg:col-span-3">
           <span className="mb-1 block text-slate-600">Seguimiento Hitss</span>
-          <textarea value={seguimiento} onChange={(e) => onCambiar('seguimiento', e.target.value)} rows={2}
+          <AreaTexto value={seguimiento} onChange={(e) => onCambiar('seguimiento', e.target.value)} rows={2}
             disabled={!puedeEditarTipificacion}
-            className="campo w-full" />
+            className="w-full" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Tipificación</span>
-          <select value={tipificacion} onChange={(e) => onCambiar('tipificacion', e.target.value)}
+          <Selector value={tipificacion} onChange={(e) => onCambiar('tipificacion', e.target.value)}
             disabled={!puedeEditarTipificacion}
-            className="campo w-full">
+            className="w-full">
             <option value="">— Seleccionar —</option>
             <option value="HITSS">Hitss</option>
             <option value="EPM">EPM</option>
-          </select>
+          </Selector>
         </label>
       </div>
       {puedeEditarTipificacion && (
-        <button type="button" onClick={onGuardar}
-          className="btn btn-primario mt-3">
+        <Boton variante="primario" onClick={onGuardar} className="mt-3">
           Guardar Seguimiento Hitss / Tipificación
-        </button>
+        </Boton>
       )}
       <div>
-        <button type="button" onClick={onVerHistorial}
-          className="btn btn-secundario mt-3">
+        <Boton variante="secundario" onClick={onVerHistorial} className="mt-3">
           Historial de estados
-        </button>
+        </Boton>
       </div>
     </div>
   )
