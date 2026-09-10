@@ -78,6 +78,23 @@ el diagnóstico ya viene hecho, aplica el arreglo; si no, diagnostícalo tú ant
 - Si la tarea implica **cambiar el patrón** (nueva capa, repositorio genérico, rediseño de modelo,
   tocar el mecanismo multi-tenant): **detente y deriva a `arquitectura`**; no improvises la decisión.
 
+## Resiliencia ante corte de sesión (obligatorio en tareas multi-archivo)
+
+La sesión puede cortarse en cualquier momento (límite de cuota, error de API). **El
+árbol de trabajo tiene que quedar SIEMPRE consistente entre archivo y archivo**, para no
+dejar `api/` a medias (un `import` sin uso, un router referenciado que no existe, un
+modelo a medio migrar rompen `ruff`/`mypy`/el arranque de `uvicorn`).
+
+1. **Un archivo/unidad a la vez, hasta dejarlo consistente.** No empieces el siguiente
+   hasta que el actual compile y sus imports/altas en `router.py` cuadren.
+2. **No añadas un `import`, un `include_router`, un campo o un permiso "por adelantado"**
+   antes del código que lo usa: déjalo en la misma edición, o después.
+3. **Verifica por tramos**, no solo al final: `ruff check .` (y `mypy app` si aplica)
+   tras cada unidad.
+4. **Párate en frontera de archivo**, no a mitad, si la sesión se agota.
+5. Al reanudar tras un corte: `git status` + `git diff`, localiza lo que quedó a medias
+   y **complétalo o reviértelo** (`git checkout --`) antes de seguir.
+
 ## Al terminar, reporta
 
 - Archivos creados/modificados (ruta + qué cambió).
