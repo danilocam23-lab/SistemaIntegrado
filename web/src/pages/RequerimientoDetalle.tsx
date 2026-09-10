@@ -5,57 +5,13 @@ import client from '../api/client'
 import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
-import { TIPOS_COSTO, ESTADOS_ENTREGA } from '../constantes'
+import { TIPOS_COSTO, ESTADOS_ENTREGA, MESES_ES } from '../constantes'
 import type { Aplicacion, EventoBitacora, Liquidacion, Persona, Requerimiento, Squad } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
-import Modal from '../components/Modal'
-
-interface SegmentoHistorial {
-  estado: string | null
-  desde: string | null
-  hasta: string | null
-  duracion_segundos: number | null
-  en_curso: boolean
-}
-
-/** Da formato legible (ej. "2 días 3 horas 10 min") a una duración en segundos. */
-function fmtDuracion(segundos: number | null): string {
-  if (segundos == null) return '—'
-  if (segundos < 60) return `${segundos} seg`
-  const dias = Math.floor(segundos / 86400)
-  const horas = Math.floor((segundos % 86400) / 3600)
-  const minutos = Math.floor((segundos % 3600) / 60)
-  const partes: string[] = []
-  if (dias > 0) partes.push(`${dias} día${dias === 1 ? '' : 's'}`)
-  if (horas > 0) partes.push(`${horas} hora${horas === 1 ? '' : 's'}`)
-  if (minutos > 0 || partes.length === 0) partes.push(`${minutos} min`)
-  return partes.join(' ')
-}
-
-/** Interpreta fechas de Mongo sin sufijo de zona horaria como UTC y las
- * muestra en hora de Colombia (mismo patrón usado en SoporteSolicitudesFabrica). */
-function fmtFechaCo(fecha: string | null): string {
-  if (!fecha) return '—'
-  const conZona = /[zZ]|[+-]\d{2}:?\d{2}$/.test(fecha) ? fecha : `${fecha}Z`
-  const d = new Date(conZona)
-  if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
-}
-
-const MESES_ES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-]
+import { useHistorialEstados } from './requerimiento-detalle/useHistorialEstados'
+import ModalHistorialEstados from './requerimiento-detalle/ModalHistorialEstados'
+import SeccionLiquidacion from './requerimiento-detalle/SeccionLiquidacion'
+import SeccionBitacora from './requerimiento-detalle/SeccionBitacora'
 
 export default function RequerimientoDetalle() {
   const { reqId } = useParams<{ reqId: string }>()
@@ -124,47 +80,7 @@ export default function RequerimientoDetalle() {
 
   // Historial de estados (popup con cuánto tiempo estuvo en cada estado y a
   // cuál pasó) tanto del requerimiento como de una entrega puntual.
-  const [historialAbierto, setHistorialAbierto] = useState<'req' | 'entrega' | null>(null)
-  const [historialCargando, setHistorialCargando] = useState(false)
-  const [historialError, setHistorialError] = useState('')
-  const [historialSegmentos, setHistorialSegmentos] = useState<SegmentoHistorial[]>([])
-  const [historialTitulo, setHistorialTitulo] = useState('')
-
-  async function verHistorialEstadosReq(): Promise<void> {
-    setHistorialAbierto('req')
-    setHistorialTitulo('Historial de estados del requerimiento')
-    setHistorialCargando(true)
-    setHistorialError('')
-    try {
-      const { data } = await client.get<{ segmentos: SegmentoHistorial[] }>(
-        `/requerimientos/${reqId}/historial-estados`,
-      )
-      setHistorialSegmentos(data.segmentos)
-    } catch (err) {
-      setHistorialError(mensajeError(err))
-    } finally {
-      setHistorialCargando(false)
-    }
-  }
-
-  async function verHistorialEstadosEntrega(numero?: number | string): Promise<void> {
-    const num = numero ?? eNumero
-    if (!num) return
-    setHistorialAbierto('entrega')
-    setHistorialTitulo(`Historial de estados de la entrega N° ${num}`)
-    setHistorialCargando(true)
-    setHistorialError('')
-    try {
-      const { data } = await client.get<{ segmentos: SegmentoHistorial[] }>(
-        `/requerimientos/${reqId}/entregas/${num}/historial-estados`,
-      )
-      setHistorialSegmentos(data.segmentos)
-    } catch (err) {
-      setHistorialError(mensajeError(err))
-    } finally {
-      setHistorialCargando(false)
-    }
-  }
+  const historial = useHistorialEstados(reqId)
 
   function iniciarEdicionTipifEntrega(en: Requerimiento['entregas'][number]): void {
     setTipifEdicion((p) => ({
@@ -722,7 +638,7 @@ export default function RequerimientoDetalle() {
           </button>
         )}
         <div>
-          <button type="button" onClick={verHistorialEstadosReq}
+          <button type="button" onClick={historial.verHistorialRequerimiento}
             className="btn btn-secundario mt-3">
             Historial de estados
           </button>
@@ -808,7 +724,7 @@ export default function RequerimientoDetalle() {
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => verHistorialEstadosEntrega(en.numero)}
+                        onClick={() => historial.verHistorialEntrega(en.numero)}
                         className="enlace-accion enlace-accion-sutil"
                       >
                         Historial
@@ -982,7 +898,7 @@ export default function RequerimientoDetalle() {
           {eEditando && (
             <button
               type="button"
-              onClick={() => verHistorialEstadosEntrega()}
+              onClick={() => historial.verHistorialEntrega(eNumero)}
               className="btn btn-secundario"
             >
               Historial de estados
@@ -999,104 +915,23 @@ export default function RequerimientoDetalle() {
       </div>
 
       {/* Liquidación */}
-      <div className="tarjeta tarjeta-pad">
-        <h2 className="etiqueta-sup mb-3">
-          Liquidación
-        </h2>
-        {liquidacion ? (
-          <>
-            <p className="mb-2 text-sm">
-              Total: <b className="text-marca-osc">{liquidacion.total.toLocaleString()}</b>
-            </p>
-            <ul className="text-sm text-slate-600">
-              {liquidacion.entregas.map((le) => (
-                <li key={le.numero}>
-                  Entrega {le.numero}:{' '}
-                  {le.error ? <span className="text-amber-600">{le.error}</span> : le.valor?.toLocaleString()}
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="text-sm text-slate-400">Sin datos de liquidación.</p>
-        )}
-      </div>
+      <SeccionLiquidacion liquidacion={liquidacion} />
 
       {/* Bitácora */}
-      <div className="tarjeta tarjeta-pad">
-        <h2 className="etiqueta-sup mb-3">
-          Bitácora
-        </h2>
-        <ul className="space-y-1 text-sm">
-          {eventos.map((ev) => (
-            <li key={ev.id} className="flex items-start justify-between gap-2 border-b py-1 last:border-0">
-              <span>
-                <span className="text-slate-400">{ev.creado_en?.slice(0, 19).replace('T', ' ')}</span>
-                {' · '}<b>{ev.accion}</b> · {ev.descripcion}
-                {ev.autor ? <span className="text-slate-400"> ({ev.autor})</span> : null}
-              </span>
-              {puedeEliminarBitacora && (
-                <button
-                  onClick={() => { void eliminarEvento(ev.id) }}
-                  className="btn btn-peligro shrink-0"
-                  title="Eliminar evento"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </li>
-          ))}
-          {eventos.length === 0 && <li className="text-slate-400">Sin eventos.</li>}
-        </ul>
-      </div>
+      <SeccionBitacora
+        eventos={eventos}
+        puedeEliminar={puedeEliminarBitacora}
+        onEliminar={eliminarEvento}
+      />
 
-      <Modal
-        titulo={historialTitulo}
-        abierto={historialAbierto !== null}
-        onCerrar={() => setHistorialAbierto(null)}
-      >
-        {historialCargando && <p className="text-sm text-slate-400">Cargando…</p>}
-        {historialError && <p className="text-sm text-red-600">{historialError}</p>}
-        {!historialCargando && !historialError && (
-          <TablaScroll>
-          <table className="w-full text-sm">
-            <thead className="text-left text-slate-500">
-              <tr>
-                <th className="py-1 pr-2">Estado</th>
-                <th className="py-1 pr-2">Desde</th>
-                <th className="py-1 pr-2">Hasta</th>
-                <th className="py-1 pr-2">Duración</th>
-                <th className="py-1">Situación</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historialSegmentos.map((seg, i) => (
-                <tr key={i} className="border-t align-top">
-                  <td className="py-1 pr-2 font-semibold">{seg.estado ?? '—'}</td>
-                  <td className="py-1 pr-2 whitespace-nowrap">{fmtFechaCo(seg.desde)}</td>
-                  <td className="py-1 pr-2 whitespace-nowrap">{seg.en_curso ? '—' : fmtFechaCo(seg.hasta)}</td>
-                  <td className="py-1 pr-2 whitespace-nowrap">{fmtDuracion(seg.duracion_segundos)}</td>
-                  <td className="py-1">
-                    {seg.en_curso ? (
-                      <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                        En curso
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-400">Finalizado</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {historialSegmentos.length === 0 && (
-                <tr><td colSpan={5} className="py-2 text-slate-400">Sin historial disponible.</td></tr>
-              )}
-            </tbody>
-          </table>
-          </TablaScroll>
-        )}
-      </Modal>
+      <ModalHistorialEstados
+        titulo={historial.titulo}
+        abierto={historial.abierto}
+        cargando={historial.cargando}
+        error={historial.error}
+        segmentos={historial.segmentos}
+        onCerrar={historial.cerrar}
+      />
     </div>
   )
 }

@@ -25,6 +25,21 @@ export const ESTADOS_ENTREGA = [
 
 export const TIPOS_COSTO = ['TYM', 'FIJO']
 
+export const MESES_ES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+]
+
 /** Claves de configuración (colección `configuracion`, grupo `entregas_actas`)
  *  usadas para activar/desactivar columnas, filtros y campos de exportación
  *  de la vista /entregas-actas sin necesidad de desarrollo. */
