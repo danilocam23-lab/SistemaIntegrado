@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, TablaScroll } from '../components/ui/primitivos'
 
 export default function AdminAplicaciones() {
   const { usuario, tienePermiso } = useAuth()
@@ -79,30 +79,30 @@ export default function AdminAplicaciones() {
               className="campo"
             />
           </label>
-          <button className="btn btn-primario">
+          <Boton variante="primario" type="submit">
             Crear squad
-          </button>
+          </Boton>
           {error && <span className="text-sm text-red-600">{error}</span>}
         </form>
       )}
 
       <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="p-2 text-left">Código</th>
-            <th className="p-2 text-left">Nombre</th>
-            <th className="p-2 text-left">Estado</th>
-            <th className="p-2">Acción</th>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Estado</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody>
           {apps.map((app) => (
-            <tr key={app.codigo} className="border-t">
-              <td className="p-2 font-mono">{app.codigo}</td>
-              <td className="p-2">{app.nombre}</td>
-              <td className="p-2">{app.activa ? 'Activa' : 'Inactiva'}</td>
-              <td className="p-2 text-center">
+            <tr key={app.codigo}>
+              <td className="font-mono">{app.codigo}</td>
+              <td>{app.nombre}</td>
+              <td>{app.activa ? 'Activa' : 'Inactiva'}</td>
+              <td className="text-center">
                 <button
                   onClick={() => alternarEstado(app)}
                   disabled={!puedeEditar}

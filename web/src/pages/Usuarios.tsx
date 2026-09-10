@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, TablaScroll } from '../components/ui/primitivos'
 import type { Aplicacion, Rol, Usuario } from '../types'
 
 type Tab = 'usuarios' | 'roles'
@@ -385,7 +385,7 @@ export default function Usuarios() {
                   ))}
                 </div>
               </div>
-              <button className="btn btn-primario">Crear</button>
+              <Boton variante="primario" type="submit">Crear</Boton>
             </form>
           )}
 
@@ -394,23 +394,23 @@ export default function Usuarios() {
           )}
 
           <TablaScroll>
-          <table className="text-sm">
-            <thead className="bg-marca-osc text-white">
+          <table className="tabla">
+            <thead>
               <tr>
-                <th className="p-2 text-left">Nombre</th>
-                <th className="p-2 text-left">Correo</th>
-                <th className="p-2 text-left">Rol</th>
-                <th className="p-2 text-left">Squads</th>
-                <th className="p-2 text-center">Activo</th>
-                <th className="p-2 text-center">Acciones</th>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Rol</th>
+                <th>Squads</th>
+                <th className="text-center">Activo</th>
+                <th className="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {usuariosFiltrados.map((u) => (
-                <tr key={u.id} className="border-t">
-                  <td className="p-2">{u.nombre}</td>
-                  <td className="p-2">{u.email}</td>
-                  <td className="p-2">
+                <tr key={u.id}>
+                  <td>{u.nombre}</td>
+                  <td>{u.email}</td>
+                  <td>
                     <select
                       value={u.rol_id ?? ''}
                       onChange={(e) => cambiarRol(u, e.target.value)}
@@ -420,22 +420,22 @@ export default function Usuarios() {
                       {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                     </select>
                   </td>
-                  <td className="p-2">{nombresSquadsUsuario(u)}</td>
-                  <td className="p-2 text-center">{u.activo ? 'Sí' : 'No'}</td>
-                  <td className="p-2 text-center whitespace-nowrap">
-                    <button onClick={() => abrirEditar(u)} disabled={!puedeEditarUsuarios} className="mr-2 text-marca hover:underline text-xs disabled:text-slate-300">
+                  <td>{nombresSquadsUsuario(u)}</td>
+                  <td className="text-center">{u.activo ? 'Sí' : 'No'}</td>
+                  <td className="text-center whitespace-nowrap">
+                    <button onClick={() => abrirEditar(u)} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs mr-2">
                       Editar
                     </button>
-                    <button onClick={() => alternarActivo(u)} disabled={!puedeEditarUsuarios} className={`mr-2 text-xs ${u.activo ? 'text-amber-600 hover:underline' : 'text-emerald-600 hover:underline'} disabled:text-slate-300`}>
+                    <button onClick={() => alternarActivo(u)} disabled={!puedeEditarUsuarios} className={`enlace-accion text-xs mr-2 ${u.activo ? 'enlace-accion-alerta' : 'enlace-accion-exito'}`}>
                       {u.activo ? 'Desactivar' : 'Activar'}
                     </button>
-                    <button onClick={() => resetPassword(u)} disabled={!puedeEditarUsuarios} className="mr-2 text-xs text-marca hover:underline disabled:text-slate-300">
+                    <button onClick={() => resetPassword(u)} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs mr-2">
                       Resetear clave
                     </button>
                     <button
                       onClick={() => eliminarAcceso(u)}
                       disabled={!puedeEditarUsuarios || u.id === yo?.id}
-                      className="text-xs text-red-600 hover:underline disabled:text-slate-300"
+                      className="enlace-accion enlace-accion-peligro text-xs"
                       title={u.id === yo?.id ? 'No puedes eliminar tu propio acceso' : 'Elimina definitivamente el registro del usuario'}
                     >
                       Eliminar acceso
@@ -481,40 +481,40 @@ export default function Usuarios() {
                   )
                 })}
               </div>
-              <button className="btn btn-primario">Crear rol</button>
+              <Boton variante="primario" type="submit">Crear rol</Boton>
             </form>
           )}
 
           <TablaScroll>
-          <table className="text-sm">
-            <thead className="bg-marca-osc text-white">
+          <table className="tabla">
+            <thead>
               <tr>
-                <th className="p-2 text-left">Rol</th>
-                <th className="p-2 text-left">Clave</th>
-                <th className="p-2 text-left">Permisos</th>
-                <th className="p-2 text-center">Activo</th>
-                <th className="p-2 text-center">Acciones</th>
+                <th>Rol</th>
+                <th>Clave</th>
+                <th>Permisos</th>
+                <th className="text-center">Activo</th>
+                <th className="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {roles.map((rol) => (
-                <tr key={rol.id} className="border-t">
-                  <td className="p-2">{rol.nombre}</td>
-                  <td className="p-2 font-mono">{rol.clave}</td>
-                  <td className="p-2">{rol.permisos.length}</td>
-                  <td className="p-2 text-center">{rol.activo ? 'Sí' : 'No'}</td>
-                  <td className="p-2 text-center whitespace-nowrap">
+                <tr key={rol.id}>
+                  <td>{rol.nombre}</td>
+                  <td className="font-mono">{rol.clave}</td>
+                  <td>{rol.permisos.length}</td>
+                  <td className="text-center">{rol.activo ? 'Sí' : 'No'}</td>
+                  <td className="text-center whitespace-nowrap">
                     <button
                       onClick={() => setRolEditando({ ...rol })}
                       disabled={!puedeEditarRoles}
-                      className="mr-2 text-xs text-marca hover:underline disabled:text-slate-300"
+                      className="enlace-accion text-xs mr-2"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => eliminarRol(rol)}
                       disabled={!puedeEliminarRoles || rol.es_sistema}
-                      className="text-xs text-red-600 hover:underline disabled:text-slate-300"
+                      className="enlace-accion enlace-accion-peligro text-xs"
                     >
                       Eliminar
                     </button>
@@ -590,13 +590,12 @@ export default function Usuarios() {
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={cerrarModal}
-              className="btn btn-secundario">
+            <Boton type="button" variante="secundario" onClick={cerrarModal}>
               Cancelar
-            </button>
-            <button className="btn btn-primario">
+            </Boton>
+            <Boton variante="primario" type="submit">
               Guardar cambios
-            </button>
+            </Boton>
           </div>
         </form>
       </Modal>
@@ -659,20 +658,20 @@ export default function Usuarios() {
               })}
             </div>
             <div className="flex justify-end gap-2">
-              <button
+              <Boton
                 type="button"
-                className="btn btn-secundario"
+                variante="secundario"
                 onClick={() => setRolEditando(null)}
               >
                 Cancelar
-              </button>
-              <button
+              </Boton>
+              <Boton
                 type="button"
-                className="btn btn-primario"
+                variante="primario"
                 onClick={guardarRol}
               >
                 Guardar
-              </button>
+              </Boton>
             </div>
           </div>
         )}

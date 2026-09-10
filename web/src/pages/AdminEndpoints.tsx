@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Aplicacion, EndpointAdmin } from '../types'
-import { TablaScroll } from '../components/ui/primitivos'
+import { Boton, TablaScroll } from '../components/ui/primitivos'
 
 const HEADER_CONSOLIDADO = { headers: { 'X-Aplicacion': '__todas__' } }
 
@@ -434,12 +434,13 @@ export default function AdminEndpoints() {
                 className="campo min-w-64"
               />
             </label>
-            <button
+            <Boton
+              variante="primario"
+              type="submit"
               disabled={cargandoDiag}
-              className="btn btn-primario"
             >
               {cargandoDiag ? 'Consultando...' : 'Consultar diagnóstico'}
-            </button>
+            </Boton>
           </div>
           <p className="mt-2 text-xs text-slate-500">GET /api/requerimientos/{'{codigo_req}'}/diagnostico</p>
         </form>
@@ -463,12 +464,13 @@ export default function AdminEndpoints() {
                 ))}
               </select>
             </label>
-            <button
+            <Boton
+              variante="alerta"
+              type="submit"
               disabled={cargandoReasig || !identificador.trim()}
-              className="btn btn-alerta"
             >
               {cargandoReasig ? 'Reasignando...' : 'Reasignar'}
-            </button>
+            </Boton>
           </div>
           <p className="mt-2 text-xs text-slate-500">
             POST /api/requerimientos/{'{codigo_req}'}/reasignar-aplicacion?nueva_aplicacion=...
@@ -511,12 +513,13 @@ export default function AdminEndpoints() {
               ))}
             </select>
           </label>
-          <button
+          <Boton
+            variante="primario"
+            type="submit"
             disabled={cargandoEntregas}
-            className="btn btn-primario"
           >
             {cargandoEntregas ? 'Probando...' : 'Probar endpoint'}
-          </button>
+          </Boton>
         </div>
         <p className="mt-2 font-mono text-xs text-slate-500">
           /api/integracion/entregas{aplicacionIntegracion ? `?aplicacion=${aplicacionIntegracion}` : ''}
@@ -567,12 +570,13 @@ export default function AdminEndpoints() {
               className="campo min-w-80"
             />
           </label>
-          <button
+          <Boton
+            variante="primario"
+            type="submit"
             disabled={cargandoRequerimientosIntegracion}
-            className="btn btn-primario"
           >
             {cargandoRequerimientosIntegracion ? 'Probando...' : 'Probar endpoint'}
-          </button>
+          </Boton>
         </div>
         <p className="mt-2 font-mono text-xs text-slate-500">
           /api/integracion/requerimientos
@@ -619,12 +623,13 @@ export default function AdminEndpoints() {
               ))}
             </select>
           </label>
-          <button
+          <Boton
+            variante="primario"
+            type="submit"
             disabled={cargandoSolicitudesIntegracion}
-            className="btn btn-primario"
           >
             {cargandoSolicitudesIntegracion ? 'Probando...' : 'Probar endpoint'}
-          </button>
+          </Boton>
         </div>
         <p className="mt-2 font-mono text-xs text-slate-500">
           /api/integracion/solicitudes{aplicacionSolicitudesIntegracion ? `?aplicacion=${aplicacionSolicitudesIntegracion}` : ''}
@@ -667,12 +672,13 @@ export default function AdminEndpoints() {
               ))}
             </select>
           </label>
-          <button
+          <Boton
+            variante="primario"
+            type="submit"
             disabled={cargandoSolicitudesEntregasIntegracion}
-            className="btn btn-primario"
           >
             {cargandoSolicitudesEntregasIntegracion ? 'Probando...' : 'Probar endpoint'}
-          </button>
+          </Boton>
         </div>
         <p className="mt-2 font-mono text-xs text-slate-500">
           /api/integracion/solicitudes-entregas{aplicacionSolicitudesIntegracion ? `?aplicacion=${aplicacionSolicitudesIntegracion}` : ''}
@@ -740,12 +746,13 @@ export default function AdminEndpoints() {
               className="campo min-w-64"
             />
           </label>
-          <button
+          <Boton
+            variante="primario"
+            type="submit"
             disabled={creandoEndpointAdmin}
-            className="btn btn-primario"
           >
             {creandoEndpointAdmin ? 'Creando...' : 'Crear endpoint'}
-          </button>
+          </Boton>
         </form>
 
         {(avisoEndpointsAdmin || errorEndpointsAdmin) && (
@@ -755,28 +762,28 @@ export default function AdminEndpoints() {
         )}
 
         <TablaScroll>
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600">
+          <table className="tabla">
+            <thead>
               <tr>
-                <th className="px-3 py-2">Módulo</th>
-                <th className="px-3 py-2">Método</th>
-                <th className="px-3 py-2">Ruta</th>
-                <th className="px-3 py-2">Descripción</th>
-                <th className="px-3 py-2"></th>
+                <th>Módulo</th>
+                <th>Método</th>
+                <th>Ruta</th>
+                <th>Descripción</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {endpointsAdmin.map((endpoint) => (
-                <tr key={endpoint.id} className="border-t align-top">
-                  <td className="px-3 py-2 font-medium text-slate-700">{endpoint.modulo}</td>
-                  <td className="px-3 py-2">
+                <tr key={endpoint.id}>
+                  <td>{endpoint.modulo}</td>
+                  <td>
                     <span className={`rounded px-2 py-0.5 font-semibold ${metodoClase[endpoint.metodo as Metodo] ?? ''}`}>
                       {endpoint.metodo}
                     </span>
                   </td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">{endpoint.ruta}</td>
-                  <td className="px-3 py-2 text-slate-600">{endpoint.descripcion || '—'}</td>
-                  <td className="px-3 py-2 text-center">
+                  <td className="font-mono">{endpoint.ruta}</td>
+                  <td>{endpoint.descripcion || '—'}</td>
+                  <td className="text-center">
                     <button onClick={() => eliminarEndpointAdmin(endpoint)} className="enlace-accion enlace-accion-peligro">
                       Eliminar
                     </button>
@@ -813,34 +820,34 @@ export default function AdminEndpoints() {
         </div>
 
         <TablaScroll>
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600">
+          <table className="tabla">
+            <thead>
               <tr>
-                <th className="px-3 py-2">Módulo</th>
-                <th className="px-3 py-2">Método</th>
-                <th className="px-3 py-2">Ruta</th>
-                <th className="px-3 py-2">Descripción</th>
-                <th className="px-3 py-2">Parámetros / cuerpo</th>
-                <th className="px-3 py-2">Permiso</th>
+                <th>Módulo</th>
+                <th>Método</th>
+                <th>Ruta</th>
+                <th>Descripción</th>
+                <th>Parámetros / cuerpo</th>
+                <th>Permiso</th>
               </tr>
             </thead>
             <tbody>
               {endpointsFiltrados.map((endpoint) => (
-                <tr key={`${endpoint.metodo}-${endpoint.ruta}`} className="border-t align-top">
-                  <td className="px-3 py-2 font-medium text-slate-700">{endpoint.modulo}</td>
-                  <td className="px-3 py-2">
+                <tr key={`${endpoint.metodo}-${endpoint.ruta}`}>
+                  <td>{endpoint.modulo}</td>
+                  <td>
                     <span className={`rounded px-2 py-0.5 font-semibold ${metodoClase[endpoint.metodo]}`}>
                       {endpoint.metodo}
                     </span>
                   </td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-700">{endpoint.ruta}</td>
-                  <td className="px-3 py-2 text-slate-600">{endpoint.descripcion}</td>
-                  <td className="px-3 py-2 text-slate-600">
+                  <td className="font-mono">{endpoint.ruta}</td>
+                  <td>{endpoint.descripcion}</td>
+                  <td>
                     {endpoint.parametros && <div><span className="font-semibold">Query:</span> {endpoint.parametros}</div>}
                     {endpoint.cuerpo && <div><span className="font-semibold">Body:</span> {endpoint.cuerpo}</div>}
                     {!endpoint.parametros && !endpoint.cuerpo && <span className="text-slate-400">—</span>}
                   </td>
-                  <td className="px-3 py-2 font-mono text-[11px] text-slate-600">{endpoint.permisos ?? 'JWT / rol según ruta'}</td>
+                  <td className="font-mono">{endpoint.permisos ?? 'JWT / rol según ruta'}</td>
                 </tr>
               ))}
             </tbody>

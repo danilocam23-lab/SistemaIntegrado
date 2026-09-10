@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
+import { Boton, EncabezadoPagina, Icono } from '../components/ui'
 
 interface Resultado {
   filas_procesadas: number
@@ -141,33 +142,38 @@ export default function Importacion() {
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-1">Importar / Exportar datos</h1>
-      <p className="mb-4 text-sm text-slate-500">
-        Exporta la plantilla con dos hojas: <b>REQUERIMIENTOS</b> y <b>ENTREGAS</b>.
-        La plantilla no pide APLICACIÓN, TECNOLOGIA ni DIRECCIÓN.
-        Luego importa el archivo y confirma el resumen de registros nuevos/actualizados.
-      </p>
+      <EncabezadoPagina
+        icono={<Icono nombre="administracion" />}
+        titulo="Importar / Exportar datos"
+        descripcion={
+          <>
+            Exporta la plantilla con dos hojas: <b>REQUERIMIENTOS</b> y <b>ENTREGAS</b>.
+            La plantilla no pide APLICACIÓN, TECNOLOGIA ni DIRECCIÓN.
+            Luego importa el archivo y confirma el resumen de registros nuevos/actualizados.
+          </>
+        }
+      />
 
       <div className="barra-filtros mb-4">
-        <button
+        <Boton
+          variante="primario"
           onClick={exportarPlantilla}
           disabled={descargando}
-          className="btn btn-primario"
         >
           {descargando ? 'Exportando…' : 'Exportar plantilla'}
-        </button>
+        </Boton>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Archivo .xlsx</span>
           <input type="file" accept=".xlsx,.xlsm" onChange={elegir}
             className="text-sm" />
         </label>
-        <button
+        <Boton
+          variante="primario"
           onClick={previsualizarImportacion}
           disabled={!archivo || cargando || previsualizando}
-          className="btn btn-primario"
         >
           {previsualizando ? 'Verificando…' : 'Importar'}
-        </button>
+        </Boton>
       </div>
 
       {aviso && <div className="aviso aviso-error mb-3">{aviso}</div>}
@@ -318,22 +324,22 @@ export default function Importacion() {
               )}
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button
+              <Boton
                 type="button"
+                variante="secundario"
                 onClick={() => setConfirmacionAbierta(false)}
                 disabled={cargando}
-                className="btn btn-secundario"
               >
                 Cancelar
-              </button>
-              <button
+              </Boton>
+              <Boton
                 type="button"
+                variante="primario"
                 onClick={confirmarImportacion}
                 disabled={cargando}
-                className="btn btn-primario"
               >
                 {cargando ? 'Importando…' : 'Confirmar'}
-              </button>
+              </Boton>
             </div>
           </div>
         )}
