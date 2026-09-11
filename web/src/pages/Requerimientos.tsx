@@ -1,9 +1,9 @@
-﻿import React, { useEffect, useRef, useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import type { Estimacion, EstimacionConResumen } from '../types'
+import type { EstimacionConResumen } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
 import type { ClaveSeccionResumen } from './requerimientos/tipos'
 import {
@@ -25,6 +25,8 @@ import { useAccesoresRequerimiento } from './requerimientos/useAccesoresRequerim
 import { useExportarExcel } from './requerimientos/useExportarExcel'
 import { useEscriturasRequerimientos } from './requerimientos/useEscriturasRequerimientos'
 import { crearRenderCelda } from './requerimientos/CeldaEditable'
+import { useEstimaciones } from './requerimientos/useEstimaciones'
+import { useCargaEstimacion } from './requerimientos/useCargaEstimacion'
 
 export default function Requerimientos() {
   const { tienePermiso } = useAuth()
@@ -61,11 +63,9 @@ export default function Requerimientos() {
     editValue, setEditValue, guardarCelda, handleKeyDown, isEditing, iniciarEdicionCelda, puedeEditar, estadosReq, personas,
   })
 
-  const [estimacionIds, setEstimacionIds] = useState<Set<string>>(new Set())
-  const [estimacionesMap, setEstimacionesMap] = useState<Record<string, Estimacion>>({})
-  const [expandedReqs, setExpandedReqs] = useState<Set<string>>(new Set())
-  const [loadingReqEst, setLoadingReqEst] = useState<Set<string>>(new Set())
-  const [uploadingId, setUploadingId] = useState<string | null>(null)
+  const { estimacionIds, estimacionesMap, expandedReqs, loadingReqEst, refreshEstimacionIds, toggleExpandReq } =
+    useEstimaciones(datos)
+
   const [estModalReqId, setEstModalReqId] = useState<string | null>(null)
   const [estData, setEstData] = useState<EstimacionConResumen | null>(null)
   const [estLoading, setEstLoading] = useState(false)
@@ -73,35 +73,6 @@ export default function Requerimientos() {
   const [expandedSections, setExpandedSections] = useState<Record<ClaveSeccionResumen, boolean>>({ type: true, sprint: false, complexity: false })
   const [expandedHUs, setExpandedHUs] = useState<Set<string>>(new Set())
   const [expandedEntregas, setExpandedEntregas] = useState<Set<string>>(new Set())
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const uploadTargetRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    refreshEstimacionIds().catch(() => {})
-  }, [datos])
-
-  async function refreshEstimacionIds(): Promise<void> {
-    const r = await client.get<Estimacion[]>('/estimaciones')
-    const ids = new Set(r.data.filter((e) => e.requerimiento_id).map((e) => e.requerimiento_id!))
-    setEstimacionIds(ids)
-  }
-
-  async function toggleExpandReq(reqId: string): Promise<void> {
-    if (expandedReqs.has(reqId)) {
-      setExpandedReqs((prev) => { const n = new Set(prev); n.delete(reqId); return n })
-      return
-    }
-    setExpandedReqs((prev) => new Set(prev).add(reqId))
-    if (estimacionesMap[reqId]) return
-    setLoadingReqEst((prev) => new Set(prev).add(reqId))
-    try {
-      const r = await client.get<EstimacionConResumen>(`/estimaciones/por-requerimiento/${reqId}`)
-      if (r.data.exists && r.data.estimacion) {
-        setEstimacionesMap((prev) => ({ ...prev, [reqId]: r.data.estimacion! }))
-      }
-    } catch { /* sin estimación */ }
-    finally { setLoadingReqEst((prev) => { const n = new Set(prev); n.delete(reqId); return n }) }
-  }
 
   async function openEstimationModal(reqId: string): Promise<void> {
     setEstModalReqId(reqId)
@@ -118,42 +89,8 @@ export default function Requerimientos() {
     }
   }
 
-  function handleUploadClick(reqId: string): void {
-    if (!puedeGestionarEstimaciones) return
-    uploadTargetRef.current = reqId
-    fileInputRef.current?.click()
-  }
-
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
-    if (!puedeGestionarEstimaciones) return
-    const file = e.target.files?.[0]
-    if (!file || !uploadTargetRef.current) return
-    const reqId = uploadTargetRef.current
-    e.target.value = ''
-
-    setAviso('')
-    setUploadingId(reqId)
-    try {
-      const arrayBuffer = await file.arrayBuffer()
-      const bytes = new Uint8Array(arrayBuffer)
-      let binary = ''
-      for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i])
-      const base64 = btoa(binary)
-
-      await client.post(`/estimaciones/upload/${reqId}`, {
-        file_base64: base64,
-        file_name: file.name,
-      })
-
-      await refreshEstimacionIds()
-      await openEstimationModal(reqId)
-    } catch (err) {
-      setAviso(mensajeError(err))
-    } finally {
-      setUploadingId(null)
-      uploadTargetRef.current = null
-    }
-  }
+  const { fileInputRef, uploadingId, handleUploadClick, handleFileSelected } =
+    useCargaEstimacion(puedeGestionarEstimaciones, setAviso, refreshEstimacionIds, openEstimationModal)
 
   async function handleCreateTasks(org: 'hitss' | 'epm'): Promise<void> {
     if (!puedeGestionarEstimaciones) return
