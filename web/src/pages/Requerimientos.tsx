@@ -14,6 +14,7 @@ import { useModalEstimacion } from './requerimientos/useModalEstimacion'
 import { useCargaEstimacion } from './requerimientos/useCargaEstimacion'
 import { TablaRequerimientos } from './requerimientos/TablaRequerimientos'
 import { ModalEstimacion } from './requerimientos/ModalEstimacion'
+import { Aviso } from '../components/ui'
 
 export default function Requerimientos() {
   const { tienePermiso } = useAuth()
@@ -78,7 +79,7 @@ export default function Requerimientos() {
       />
 
       {(aviso || error) && (
-        <div className="aviso aviso-error mb-3">{aviso || error}</div>
+        <Aviso tono="error" className="mb-3">{aviso || error}</Aviso>
       )}
 
       {/* Panel de filtros */}

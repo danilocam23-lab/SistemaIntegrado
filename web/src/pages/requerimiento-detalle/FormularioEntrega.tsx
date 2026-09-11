@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import { Boton, Icono } from '../../components/ui'
+import { Boton, Campo, Icono, Selector } from '../../components/ui'
 import { MESES_ES } from '../../constantes'
 import type { FormularioEntregaControl } from './useFormularioEntrega'
 
@@ -31,14 +31,14 @@ export default function FormularioEntrega({
       )}
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">N° entrega</span>
-        <input value={valores.numero} onChange={(e) => form.actualizar('numero', e.target.value)} type="number" required
+        <Campo value={valores.numero} onChange={(e) => form.actualizar('numero', e.target.value)} type="number" required
           readOnly={editando}
-          className={`campo w-24 ${editando ? 'bg-slate-100 text-slate-500' : ''}`} />
+          className={`w-24 ${editando ? 'bg-slate-100 text-slate-500' : ''}`} />
       </label>
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">Horas</span>
-        <input value={valores.horas} onChange={(e) => form.actualizar('horas', e.target.value)} type="number" step="any"
-          className="campo w-28" />
+        <Campo value={valores.horas} onChange={(e) => form.actualizar('horas', e.target.value)} type="number" step="any"
+          className="w-28" />
       </label>
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">
@@ -47,68 +47,63 @@ export default function FormularioEntrega({
             <span className="ml-1 text-red-500">*</span>
           )}
         </span>
-        <input
+        <Campo
           value={valores.fecha}
           onChange={(e) => form.actualizar('fecha', e.target.value)}
           type="date"
           required={fechaComprometidaRequerida}
-          className="campo"
         />
       </label>
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">Fecha real entrega</span>
-        <input value={valores.fechaReal} onChange={(e) => form.actualizar('fechaReal', e.target.value)} type="date"
-          className="campo" />
+        <Campo value={valores.fechaReal} onChange={(e) => form.actualizar('fechaReal', e.target.value)} type="date" />
       </label>
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">Estado</span>
-        <select value={valores.estado} onChange={(e) => form.cambiarEstado(e.target.value)}
-          className="campo">
+        <Selector value={valores.estado} onChange={(e) => form.cambiarEstado(e.target.value)}>
           {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </Selector>
       </label>
       {valores.estado.toUpperCase() === 'APROBADA' && (
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Mes de aprobación</span>
-          <select
+          <Selector
             value={valores.mesAprobacion}
             onChange={(e) => form.actualizar('mesAprobacion', e.target.value)}
-            className="campo"
           >
             <option value="">— Seleccionar —</option>
             {MESES_ES.map((mes) => <option key={mes} value={mes}>{mes}</option>)}
-          </select>
+          </Selector>
         </label>
       )}
       <label className="min-w-[280px] flex-1 text-sm">
         <span className="mb-1 block text-slate-600">Observaciones EPM</span>
-        <input
+        <Campo
           value={valores.observaciones}
           onChange={(e) => form.actualizar('observaciones', e.target.value)}
           placeholder="Notas de la entrega (EPM)"
-          className="campo w-full"
+          className="w-full"
         />
       </label>
       <label className="min-w-[280px] flex-1 text-sm">
         <span className="mb-1 block text-slate-600">Observaciones Hitss</span>
-        <input
+        <Campo
           value={valores.observacionesHitss}
           onChange={(e) => form.actualizar('observacionesHitss', e.target.value)}
           placeholder="Notas de la entrega (Hitss)"
-          className="campo w-full"
+          className="w-full"
         />
       </label>
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">Tipificación</span>
-        <select
+        <Selector
           value={valores.tipificacion}
           onChange={(e) => form.actualizar('tipificacion', e.target.value)}
-          className="campo"
         >
           <option value="">— Seleccionar —</option>
           <option value="HITSS">Hitss</option>
           <option value="EPM">EPM</option>
-        </select>
+        </Selector>
       </label>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={valores.garantia} onChange={(e) => form.cambiarGarantia(e.target.checked)} />
@@ -117,8 +112,8 @@ export default function FormularioEntrega({
       {valores.garantia && (
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">N° Garantía</span>
-          <input type="number" min={1} value={valores.numeroGarantia ?? ''} onChange={(e) => form.actualizar('numeroGarantia', e.target.value ? Number(e.target.value) : null)}
-            className="campo campo-sm w-20" />
+          <Campo type="number" min={1} value={valores.numeroGarantia ?? ''} onChange={(e) => form.actualizar('numeroGarantia', e.target.value ? Number(e.target.value) : null)}
+            compacto className="w-20" />
         </label>
       )}
       <Boton variante="primario" type="submit">
