@@ -1,4 +1,4 @@
-import { Boton, Campo, Selector, TablaScroll } from '../../components/ui'
+import { Aviso, Boton, Campo, Selector, TablaScroll } from '../../components/ui'
 import { metodoClase } from './catalogoEndpoints'
 import type { Metodo } from './tipos'
 import type { EstadoAdminEndpoints } from './useAdminEndpoints'
@@ -83,9 +83,9 @@ export function SeccionCatalogoEndpoints({
       </form>
 
       {(avisoEndpointsAdmin || errorEndpointsAdmin) && (
-        <div className="aviso aviso-error mb-3">
+        <Aviso tono="error" className="mb-3">
           {avisoEndpointsAdmin || errorEndpointsAdmin}
-        </div>
+        </Aviso>
       )}
 
       <TablaScroll>

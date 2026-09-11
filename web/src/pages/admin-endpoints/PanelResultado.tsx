@@ -1,3 +1,4 @@
+import { Aviso } from '../../components/ui'
 import type { EstadoAdminEndpoints } from './useAdminEndpoints'
 
 type Props = Pick<EstadoAdminEndpoints, 'ok' | 'error' | 'resultado'>
@@ -6,8 +7,8 @@ type Props = Pick<EstadoAdminEndpoints, 'ok' | 'error' | 'resultado'>
 export function PanelResultado({ ok, error, resultado }: Props) {
   return (
     <>
-      {ok && <div className="aviso aviso-exito">{ok}</div>}
-      {error && <div className="aviso aviso-error">{error}</div>}
+      {ok && <Aviso tono="exito">{ok}</Aviso>}
+      {error && <Aviso tono="error">{error}</Aviso>}
 
       <div className="rounded-xl border bg-slate-900 p-4 text-sm text-slate-100">
         <div className="mb-2 font-semibold">Respuesta</div>
