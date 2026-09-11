@@ -1,3 +1,4 @@
+import { Icono } from '../../components/ui'
 import type { Categoria, Persona } from '../../types'
 import type { AsignacionItem, ItemGrupo } from './tipos'
 import type { useEscriturasAsignaciones } from './useEscriturasAsignaciones'
@@ -34,10 +35,10 @@ export function FilaAsignacion({
   const enEdicionInline = escrituras.edicionInlineId === asig.id
 
   return (
-    <tr className={`border-t ${resaltada ? 'bg-amber-50' : ''}`}>
-      <td className="p-3">{personaPorId.get(asig.persona_id)?.nombre ?? asig.persona_id}</td>
-      <td className="p-3">{categoriaPorId.get(asig.categoria_id)?.nombre ?? asig.categoria_id}</td>
-      <td className="p-3 text-center">
+    <tr className={resaltada ? 'bg-amber-50' : ''}>
+      <td>{personaPorId.get(asig.persona_id)?.nombre ?? asig.persona_id}</td>
+      <td>{categoriaPorId.get(asig.categoria_id)?.nombre ?? asig.categoria_id}</td>
+      <td className="text-center">
         <input
           type="checkbox"
           checked={asig.prioridad === true}
@@ -47,7 +48,7 @@ export function FilaAsignacion({
           disabled={!puedeEditarAsignaciones}
         />
       </td>
-      <td className="p-3 text-right font-medium">
+      <td className="text-right font-medium">
         {enEdicionInline ? (
           <input
             autoFocus
@@ -72,31 +73,27 @@ export function FilaAsignacion({
                 title="Editar %"
                 className="text-slate-400 hover:text-marca"
               >
-                ✎
+                <Icono nombre="lapiz" tamano={14} />
               </button>
             )}
           </span>
         )}
       </td>
-      <td className="p-3 text-right text-slate-700">{horasCarga.toFixed(1)} h</td>
-      <td className="p-3 text-center whitespace-nowrap">
+      <td className="text-right text-slate-700">{horasCarga.toFixed(1)} h</td>
+      <td className="text-center whitespace-nowrap">
         {puedeEditarAsignaciones && (
-          <>
-            <button
-              type="button"
-              onClick={() => onEditar(asig)}
-              className="mr-3 text-xs text-marca hover:underline"
-            >
+          <div className="flex items-center justify-center gap-3">
+            <button type="button" onClick={() => onEditar(asig)} className="enlace-accion">
               Editar
             </button>
             <button
               type="button"
               onClick={() => void escrituras.eliminar(asig)}
-              className="text-xs text-red-600 hover:underline"
+              className="enlace-accion enlace-accion-peligro"
             >
               Eliminar
             </button>
-          </>
+          </div>
         )}
       </td>
     </tr>

@@ -1,4 +1,4 @@
-import { TablaScroll } from '../../components/ui/primitivos'
+import { TablaScroll } from '../../components/ui'
 import type { WoPersona } from './tipos'
 
 interface Props {
@@ -17,24 +17,24 @@ export function TablaWoPersona({ wos }: Props) {
     <div className="border-t bg-emerald-50/50 px-3 py-2">
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Solicitudes Soporte WO ({wos.length})</p>
       <TablaScroll plano>
-        <table className="w-full text-left text-xs">
-          <thead className="text-emerald-700">
+        <table className="tabla">
+          <thead>
             <tr>
-              <th className="px-2 py-1">WO ID</th>
-              <th className="px-2 py-1">Estado</th>
-              <th className="px-2 py-1">Prioridad</th>
-              <th className="px-2 py-1">Fecha</th>
-              <th className="px-2 py-1">Descripción</th>
+              <th className="text-left">WO ID</th>
+              <th className="text-left">Estado</th>
+              <th className="text-left">Prioridad</th>
+              <th className="text-left">Fecha</th>
+              <th className="text-left">Descripción</th>
             </tr>
           </thead>
           <tbody>
             {wos.map((wo) => (
-              <tr key={wo.id} className="border-t border-emerald-100">
-                <td className="px-2 py-1 font-mono font-medium">{wo.wo_id}</td>
-                <td className="px-2 py-1">{wo.status}</td>
-                <td className="px-2 py-1">{wo.priority}</td>
-                <td className="px-2 py-1">{wo.created_date}</td>
-                <td className="px-2 py-1 max-w-[200px] truncate">{wo.descripcion}</td>
+              <tr key={wo.id}>
+                <td className="font-mono font-medium">{wo.wo_id}</td>
+                <td>{wo.status}</td>
+                <td>{wo.priority}</td>
+                <td>{wo.created_date}</td>
+                <td className="max-w-[200px] truncate">{wo.descripcion}</td>
               </tr>
             ))}
           </tbody>

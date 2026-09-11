@@ -1,4 +1,5 @@
-import { claseBadgeEstado } from './estados'
+import { Chip, Icono } from '../../components/ui'
+import { tonoEstadoChip } from './estados'
 import type { useFormularioAsignacion } from './useFormularioAsignacion'
 
 interface Props {
@@ -29,11 +30,11 @@ export function SelectorRequerimiento({ form }: Props) {
           className="absolute right-3 top-[34px] text-slate-400 hover:text-slate-700"
           aria-label="Limpiar requerimiento"
         >
-          ✕
+          <Icono nombre="x" />
         </button>
       )}
       {form.dropdownReqAbierto && (
-        <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border bg-white shadow-lg">
+        <div className="panel-desplegable w-full p-0">
           {form.opcionesReqFiltradas.length > 0 ? (
             form.opcionesReqFiltradas.map((opcion) => (
               <button
@@ -44,9 +45,9 @@ export function SelectorRequerimiento({ form }: Props) {
               >
                 <span className="truncate">{opcion.label}</span>
                 {opcion.estado && (
-                  <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${claseBadgeEstado(opcion.estado)}`}>
+                  <Chip tono={tonoEstadoChip(opcion.estado)} className="shrink-0 px-1.5 py-0.5 text-[10px]">
                     {opcion.estado.length > 20 ? opcion.estado.slice(0, 20) + '…' : opcion.estado}
-                  </span>
+                  </Chip>
                 )}
               </button>
             ))

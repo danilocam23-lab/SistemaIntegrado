@@ -1,8 +1,8 @@
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { TablaScroll } from '../../components/ui/primitivos'
+import { Chip, Icono, TablaScroll } from '../../components/ui'
 import type { Categoria, Persona } from '../../types'
-import { claseBadgeEstado } from './estados'
+import { tonoEstadoChip } from './estados'
 import type { AsignacionItem, GrupoReq } from './tipos'
 import type { useEscriturasAsignaciones } from './useEscriturasAsignaciones'
 import { FilaAsignacion } from './FilaAsignacion'
@@ -43,7 +43,7 @@ export function GrupoRequerimiento({
           onClick={(event) => onToggle(event, grupo.reqId)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
-          <span className="text-sm">{expandido ? '▼' : '▶'}</span>
+          <Icono nombre="chevron-abajo" className={`transition-transform ${expandido ? '' : '-rotate-90'}`} />
           <span className="truncate text-sm font-semibold">{grupo.reqLabel}</span>
           {grupo.reqId && (() => {
             if (!grupo.horasEstimadas) return null
@@ -71,9 +71,7 @@ export function GrupoRequerimiento({
               Ver req
             </Link>
           )}
-          <span className={`chip ${claseBadgeEstado(grupo.reqEstado)}`}>
-            {grupo.reqEstado ?? 'Sin estado'}
-          </span>
+          <Chip tono={tonoEstadoChip(grupo.reqEstado)}>{grupo.reqEstado ?? 'Sin estado'}</Chip>
           <span className="rounded-full bg-white/10 px-2 py-1 text-xs font-medium text-white">
             {grupo.items.length} asignación{grupo.items.length === 1 ? '' : 'es'}
           </span>
@@ -82,15 +80,15 @@ export function GrupoRequerimiento({
 
       {expandido && (
         <TablaScroll plano>
-          <table className="w-full text-sm">
+          <table className="tabla">
             <thead>
-              <tr className="bg-slate-50 text-slate-700">
-                <th className="p-3 text-left">Persona</th>
-                <th className="p-3 text-left">Categoría</th>
-                <th className="p-3 text-center">Prioridad</th>
-                <th className="p-3 text-right">% carga</th>
-                <th className="p-3 text-right">Horas según carga</th>
-                <th className="p-3 text-center">Acciones</th>
+              <tr>
+                <th className="text-left">Persona</th>
+                <th className="text-left">Categoría</th>
+                <th className="text-center">Prioridad</th>
+                <th className="text-right">% carga</th>
+                <th className="text-right">Horas según carga</th>
+                <th className="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>

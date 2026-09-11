@@ -1,3 +1,4 @@
+import { BarraFiltros, Campo, Icono, Selector } from '../../components/ui'
 import type { Persona } from '../../types'
 
 interface Props {
@@ -27,60 +28,62 @@ export function BarraFiltrosAsignaciones({
   personasDisponibles,
 }: Props) {
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-6">
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-slate-600">Filtrar por estado del requerimiento:</label>
-        <select
+    <BarraFiltros className="mb-4">
+      <div className="flex items-end gap-2">
+        <Selector
+          etiqueta="Estado del requerimiento"
+          compacto
           value={filtroEstado}
           onChange={(e) => setFiltroEstado(e.target.value)}
-          className="campo campo-sm"
         >
           <option value="__todos__">Todos</option>
           {estadosUnicos.map((estado) => (
             <option key={estado} value={estado}>{estado}</option>
           ))}
           <option value="__sin_estado__">Sin estado</option>
-        </select>
+        </Selector>
         {filtroEstado !== '__todos__' && (
           <button
             type="button"
             onClick={() => setFiltroEstado('__todos__')}
-            className="enlace-accion-sutil"
+            className="enlace-accion-sutil mb-2 inline-flex items-center gap-1"
           >
-            Limpiar ✕
+            Limpiar <Icono nombre="x" />
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-slate-600">Buscar persona:</label>
-        <input
+      <div className="flex items-end gap-2">
+        <Campo
+          etiqueta="Buscar persona"
+          compacto
           type="text"
           value={busquedaPersona}
           onChange={(e) => setBusquedaPersona(e.target.value)}
           placeholder="Nombre de la persona…"
-          className="campo campo-sm w-56"
+          className="w-56"
         />
-        <select
+        <Selector
+          etiqueta="Persona"
+          compacto
           value={filtroPersona}
           onChange={(e) => setFiltroPersona(e.target.value)}
-          className="campo campo-sm"
         >
           <option value="__todos__">Todas</option>
           {personasDisponibles.map((persona) => (
             <option key={persona.id} value={persona.id}>{persona.nombre}</option>
           ))}
-        </select>
+        </Selector>
         {(filtroPersona !== '__todos__' || busquedaPersona) && (
           <button
             type="button"
             onClick={() => { setFiltroPersona('__todos__'); setBusquedaPersona('') }}
-            className="enlace-accion-sutil"
+            className="enlace-accion-sutil mb-2 inline-flex items-center gap-1"
           >
-            Limpiar ✕
+            Limpiar <Icono nombre="x" />
           </button>
         )}
       </div>
-    </div>
+    </BarraFiltros>
   )
 }

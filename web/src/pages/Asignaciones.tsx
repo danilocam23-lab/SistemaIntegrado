@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import { Aviso } from '../components/ui'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import type { AsignacionItem } from './asignaciones/tipos'
@@ -138,23 +139,28 @@ export default function Asignaciones() {
       )}
 
       {modoConsolidado && !formulario.requerimientoId && !formulario.modoEdicion && (
-        <div className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-          {'Modo consolidado: selecciona un requerimiento para crear la asignación en la aplicación correcta.'}
-        </div>
+        <Aviso tono="alerta" className="mb-3">
+          Modo consolidado: selecciona un requerimiento para crear la asignación en la aplicación correcta.
+        </Aviso>
       )}
 
       {(aviso || error) && (
-        <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{aviso || error}</div>
+        <Aviso tono="error" className="mb-3">{aviso || error}</Aviso>
       )}
 
-      {/* Tabs */}
-      <div className="mb-4 flex items-center gap-1 rounded-lg border bg-slate-100 p-1 w-fit">
-        <button type="button" onClick={() => setVistaActiva('actas')}
-          className={`rounded-md px-4 py-1.5 text-sm font-semibold transition-colors ${vistaActiva === 'actas' ? 'bg-white text-marca shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+      <div className="pestanas mb-4">
+        <button
+          type="button"
+          onClick={() => setVistaActiva('actas')}
+          className={`pestana ${vistaActiva === 'actas' ? 'pestana-activa' : ''}`}
+        >
           Por Actas / Requerimientos
         </button>
-        <button type="button" onClick={() => setVistaActiva('personas')}
-          className={`rounded-md px-4 py-1.5 text-sm font-semibold transition-colors ${vistaActiva === 'personas' ? 'bg-white text-marca shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
+        <button
+          type="button"
+          onClick={() => setVistaActiva('personas')}
+          className={`pestana ${vistaActiva === 'personas' ? 'pestana-activa' : ''}`}
+        >
           Por Personas
         </button>
       </div>
