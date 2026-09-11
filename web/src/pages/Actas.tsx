@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Acta } from '../types'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Actas() {
   const { datos, error, recargar } = useLista<Acta>('/actas')
@@ -67,18 +67,15 @@ export default function Actas() {
       <form onSubmit={crear} className="barra-filtros">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Código</span>
-          <input value={codigo} onChange={(e) => setCodigo(e.target.value)} required
-            className="campo" />
+          <Campo value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Fecha</span>
-          <input value={fecha} onChange={(e) => setFecha(e.target.value)} type="date"
-            className="campo" />
+          <Campo value={fecha} onChange={(e) => setFecha(e.target.value)} type="date" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Dirección</span>
-          <input value={direccion} onChange={(e) => setDireccion(e.target.value)}
-            className="campo" />
+          <Campo value={direccion} onChange={(e) => setDireccion(e.target.value)} />
         </label>
         <Boton type="submit" variante="primario">Crear</Boton>
       </form>
@@ -108,7 +105,7 @@ export default function Actas() {
                 onDoubleClick={() => iniciarEdicion(a.id, 'codigo', a.codigo)}
               >
                 {editCell?.id === a.id && editCell.campo === 'codigo' ? (
-                  <input
+                  <Campo
                     autoFocus
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -124,7 +121,8 @@ export default function Actas() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full font-mono"
+                    compacto
+                    className="w-full font-mono"
                   />
                 ) : (
                   a.codigo
@@ -136,7 +134,7 @@ export default function Actas() {
                 onDoubleClick={() => iniciarEdicion(a.id, 'fecha', a.fecha?.slice(0, 10) ?? '')}
               >
                 {editCell?.id === a.id && editCell.campo === 'fecha' ? (
-                  <input
+                  <Campo
                     autoFocus
                     type="date"
                     value={editValue}
@@ -153,7 +151,8 @@ export default function Actas() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full"
+                    compacto
+                    className="w-full"
                   />
                 ) : (
                   a.fecha?.slice(0, 10) ?? '—'
@@ -165,7 +164,7 @@ export default function Actas() {
                 onDoubleClick={() => iniciarEdicion(a.id, 'direccion', a.direccion ?? '')}
               >
                 {editCell?.id === a.id && editCell.campo === 'direccion' ? (
-                  <input
+                  <Campo
                     autoFocus
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -181,7 +180,8 @@ export default function Actas() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full"
+                    compacto
+                    className="w-full"
                   />
                 ) : (
                   a.direccion ?? '—'

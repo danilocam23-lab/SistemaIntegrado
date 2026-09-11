@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Estimacion } from '../types'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Estimaciones() {
   const { tienePermiso } = useAuth()
@@ -92,18 +92,15 @@ export default function Estimaciones() {
         <form onSubmit={crear} className="barra-filtros">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Título</span>
-            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} required
-              className="campo" />
+            <Campo value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Cliente</span>
-            <input value={cliente} onChange={(e) => setCliente(e.target.value)}
-              className="campo" />
+            <Campo value={cliente} onChange={(e) => setCliente(e.target.value)} />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Iniciativa</span>
-            <input value={iniciativa} onChange={(e) => setIniciativa(e.target.value)}
-              className="campo" />
+            <Campo value={iniciativa} onChange={(e) => setIniciativa(e.target.value)} />
           </label>
           <Boton variante="primario" type="submit">Crear</Boton>
         </form>
@@ -134,7 +131,7 @@ export default function Estimaciones() {
                 onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'titulo', es.titulo ?? '') : undefined}
               >
                 {editCell?.id === es.id && editCell.campo === 'titulo' ? (
-                  <input
+                  <Campo
                     autoFocus
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -150,7 +147,8 @@ export default function Estimaciones() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full"
+                    compacto
+                    className="w-full"
                   />
                 ) : (
                   es.titulo ?? '—'
@@ -162,7 +160,7 @@ export default function Estimaciones() {
                 onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'cliente', es.cliente ?? '') : undefined}
               >
                 {editCell?.id === es.id && editCell.campo === 'cliente' ? (
-                  <input
+                  <Campo
                     autoFocus
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -178,7 +176,8 @@ export default function Estimaciones() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full"
+                    compacto
+                    className="w-full"
                   />
                 ) : (
                   es.cliente ?? '—'
@@ -190,7 +189,7 @@ export default function Estimaciones() {
                 onDoubleClick={puedeGestionarEstimaciones ? () => iniciarEdicion(es.id, 'iniciativa', es.iniciativa ?? '') : undefined}
               >
                 {editCell?.id === es.id && editCell.campo === 'iniciativa' ? (
-                  <input
+                  <Campo
                     autoFocus
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -206,7 +205,8 @@ export default function Estimaciones() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full"
+                    compacto
+                    className="w-full"
                   />
                 ) : (
                   es.iniciativa ?? '—'

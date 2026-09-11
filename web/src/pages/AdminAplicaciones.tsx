@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion } from '../types'
-import { Boton, TablaScroll } from '../components/ui/primitivos'
+import { Boton, Campo, TablaScroll } from '../components/ui/primitivos'
 
 export default function AdminAplicaciones() {
   const { usuario, tienePermiso } = useAuth()
@@ -61,22 +61,20 @@ export default function AdminAplicaciones() {
         >
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Código</span>
-            <input
+            <Campo
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}
               required
               placeholder="bi"
-              className="campo"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Nombre</span>
-            <input
+            <Campo
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required
               placeholder="Business Intelligence"
-              className="campo"
             />
           </label>
           <Boton variante="primario" type="submit">

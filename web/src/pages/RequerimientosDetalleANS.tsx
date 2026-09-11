@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
-import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 
 type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 
@@ -308,11 +308,11 @@ export default function RequerimientosDetalleANS() {
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
         <label className="w-full text-sm sm:w-auto">
           <span className="mb-1 block text-slate-600">Buscar</span>
-          <input
+          <Campo
             value={filtroTexto}
             onChange={(e) => setFiltroTexto(e.target.value)}
             placeholder="REQ, SC, squad, ANS…"
-            className="campo w-full sm:w-72"
+            className="w-full sm:w-72"
           />
         </label>
         {(filtroTexto || anoLimite || mesLimite.length > 0 || anoComprometida || mesComprometida.length > 0) && (
@@ -469,11 +469,12 @@ export default function RequerimientosDetalleANS() {
                     </td>
                     <td>
                       <div className="flex min-w-[220px] gap-1.5">
-                        <input
+                        <Campo
                           value={obsEdicion[r.id] ?? r.observacionesAns}
                           onChange={(ev) => setObsEdicion((p) => ({ ...p, [r.id]: ev.target.value }))}
                           readOnly={!puedeEditar}
-                          className="campo campo-sm min-w-0 flex-1"
+                          compacto
+                          className="min-w-0 flex-1"
                           placeholder={puedeEditar ? 'Observaciones…' : ''}
                         />
                         {puedeEditar && (
@@ -613,11 +614,12 @@ export default function RequerimientosDetalleANS() {
                     </td>
                     <td>
                       <div className="flex min-w-[220px] gap-1.5">
-                        <input
+                        <Campo
                           value={obsEdicion[e.id] ?? e.observacionesAns}
                           onChange={(ev) => setObsEdicion((p) => ({ ...p, [e.id]: ev.target.value }))}
                           readOnly={!puedeEditar}
-                          className="campo campo-sm min-w-0 flex-1"
+                          compacto
+                          className="min-w-0 flex-1"
                           placeholder={puedeEditar ? 'Observaciones…' : ''}
                         />
                         {puedeEditar && (
@@ -694,10 +696,10 @@ function DateFilter({
     <div className="flex flex-wrap items-end gap-2">
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">{label} - año</span>
-        <select value={year} onChange={(e) => onYearChange(e.target.value)} className="campo">
+        <Selector value={year} onChange={(e) => onYearChange(e.target.value)}>
           <option value="">Todos los años</option>
           {years.map((value) => <option key={value} value={value}>{value}</option>)}
-        </select>
+        </Selector>
       </label>
       <div className="relative text-sm" ref={ref}>
         <span className="mb-1 block text-slate-600">{label} - mes</span>

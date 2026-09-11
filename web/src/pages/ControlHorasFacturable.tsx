@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
-import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { AreaTexto, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 import type { Festivo, Persona } from '../types'
 
 interface Fila {
@@ -329,30 +329,28 @@ export default function ControlHorasFacturable() {
       <div className="barra-filtros">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Año</span>
-          <select value={anio} onChange={(e) => setAnio(Number(e.target.value))}
-            className="campo">
+          <Selector value={anio} onChange={(e) => setAnio(Number(e.target.value))}>
             {Array.from({ length: 5 }, (_, i) => hoy.getFullYear() - 2 + i).map((a) => (
               <option key={a} value={a}>{a}</option>
             ))}
-          </select>
+          </Selector>
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Mes</span>
-          <select value={mes} onChange={(e) => setMes(Number(e.target.value))}
-            className="campo">
+          <Selector value={mes} onChange={(e) => setMes(Number(e.target.value))}>
             {_MESES.map((n, i) => (
               <option key={i + 1} value={i + 1}>{n}</option>
             ))}
-          </select>
+          </Selector>
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Buscar persona o squad</span>
-          <input
+          <Campo
             type="text"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar…"
-            className="campo w-64"
+            className="w-64"
           />
         </label>
         {busqueda && (
@@ -364,16 +362,15 @@ export default function ControlHorasFacturable() {
         {/* Aplicar LT_HITSS a todos */}
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Aplicar LT HITSS a todos</span>
-          <select
+          <Selector
             onChange={(e) => { if (e.target.value) aplicarATodos(e.target.value); e.target.value = '' }}
             defaultValue=""
-            className="campo"
           >
             <option value="" disabled>Seleccionar…</option>
             {todosLtNombres.map((n) => (
               <option key={n} value={n}>{n}</option>
             ))}
-          </select>
+          </Selector>
         </label>
 
         <span className="ml-auto text-xs text-slate-400 self-end pb-2">
@@ -456,15 +453,15 @@ export default function ControlHorasFacturable() {
                   <td>
                     <div className="flex items-center gap-1">
                       {tieneOpciones ? (
-                        <select
+                        <Selector
                           value={valor}
                           onChange={(e) => cambiarLt(f.key, e.target.value)}
-                          className="campo campo-sm"
+                          compacto
                         >
                           {f.opcionesLt.map((n) => (
                             <option key={n} value={n}>{n}</option>
                           ))}
-                        </select>
+                        </Selector>
                       ) : (
                         <span className="text-slate-600">{valor}</span>
                       )}
@@ -487,20 +484,22 @@ export default function ControlHorasFacturable() {
                   <td className="text-slate-600">{f.tipoContratacion}</td>
                   <td className="text-right font-mono text-slate-700">{horasMeta}</td>
                   <td>
-                    <input
+                    <Campo
                       type="number"
                       value={horasSoporte[f.key] ?? 0}
                       onChange={(e) => setHorasSoporte((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right"
+                      compacto
+                      className="w-20 text-right"
                       min={0}
                     />
                   </td>
                   <td>
-                    <input
+                    <Campo
                       type="number"
                       value={horasDesarrollo[f.key] ?? 0}
                       onChange={(e) => setHorasDesarrollo((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right"
+                      compacto
+                      className="w-20 text-right"
                       min={0}
                     />
                   </td>
@@ -519,20 +518,22 @@ export default function ControlHorasFacturable() {
                     );
                   })()}
                   <td>
-                    <input
+                    <Campo
                       type="number"
                       value={horasSopCerrado[f.key] ?? 0}
                       onChange={(e) => setHorasSopCerrado((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right"
+                      compacto
+                      className="w-20 text-right"
                       min={0}
                     />
                   </td>
                   <td>
-                    <input
+                    <Campo
                       type="number"
                       value={horasDesCerrado[f.key] ?? 0}
                       onChange={(e) => setHorasDesCerrado((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right"
+                      compacto
+                      className="w-20 text-right"
                       min={0}
                     />
                   </td>
@@ -551,52 +552,52 @@ export default function ControlHorasFacturable() {
                     );
                   })()}
                   <td>
-                    <input type="number" value={horasVac[f.key] ?? 0}
+                    <Campo type="number" value={horasVac[f.key] ?? 0}
                       onChange={(e) => setHorasVac((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td>
-                    <input type="number" value={horasInc[f.key] ?? 0}
+                    <Campo type="number" value={horasInc[f.key] ?? 0}
                       onChange={(e) => setHorasInc((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td>
-                    <input type="number" value={horasLic[f.key] ?? 0}
+                    <Campo type="number" value={horasLic[f.key] ?? 0}
                       onChange={(e) => setHorasLic((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td>
-                    <input type="number" value={horasPerm[f.key] ?? 0}
+                    <Campo type="number" value={horasPerm[f.key] ?? 0}
                       onChange={(e) => setHorasPerm((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td>
-                    <input type="number" value={otrasNov[f.key] ?? 0}
+                    <Campo type="number" value={otrasNov[f.key] ?? 0}
                       onChange={(e) => setOtrasNov((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td className="text-right font-mono font-semibold text-marca-osc">
                     {(horasVac[f.key] ?? 0) + (horasInc[f.key] ?? 0) + (horasLic[f.key] ?? 0) + (horasPerm[f.key] ?? 0) + (otrasNov[f.key] ?? 0)}
                   </td>
                   <td>
-                    <input type="number" value={horasErr[f.key] ?? 0}
+                    <Campo type="number" value={horasErr[f.key] ?? 0}
                       onChange={(e) => setHorasErr((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td>
-                    <input type="number" value={horasGar[f.key] ?? 0}
+                    <Campo type="number" value={horasGar[f.key] ?? 0}
                       onChange={(e) => setHorasGar((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td>
-                    <input type="number" value={horasRep[f.key] ?? 0}
+                    <Campo type="number" value={horasRep[f.key] ?? 0}
                       onChange={(e) => setHorasRep((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td>
-                    <input type="number" value={otrasNovCal[f.key] ?? 0}
+                    <Campo type="number" value={otrasNovCal[f.key] ?? 0}
                       onChange={(e) => setOtrasNovCal((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))}
-                      className="campo campo-sm w-20 text-right" min={0} />
+                      compacto className="w-20 text-right" min={0} />
                   </td>
                   <td className="text-right font-mono font-semibold text-marca-osc">
                     {(horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
@@ -611,10 +612,10 @@ export default function ControlHorasFacturable() {
                       + (horasErr[f.key] ?? 0) + (horasGar[f.key] ?? 0) + (horasRep[f.key] ?? 0) + (otrasNovCal[f.key] ?? 0)}
                   </td>
                   <td>
-                    <textarea
+                    <AreaTexto
                       value={observaciones[f.key] ?? ''}
                       onChange={(e) => setObservaciones((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                      className="campo campo-sm w-full min-w-[180px]"
+                      className="w-full min-w-[180px]"
                       rows={2}
                     />
                   </td>

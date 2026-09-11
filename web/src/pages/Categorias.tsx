@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Categoria } from '../types'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Categorias() {
   const { datos, error, recargar } = useLista<Categoria>('/categorias')
@@ -68,8 +68,7 @@ export default function Categorias() {
       <form onSubmit={crear} className="barra-filtros mb-4">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Nombre</span>
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} required
-            className="campo" />
+          <Campo value={nombre} onChange={(e) => setNombre(e.target.value)} required />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Color</span>
@@ -102,7 +101,7 @@ export default function Categorias() {
                 onDoubleClick={() => iniciarEdicion(c.id, 'orden', String(c.orden))}
               >
                 {editCell?.id === c.id && editCell.campo === 'orden' ? (
-                  <input
+                  <Campo
                     autoFocus
                     type="number"
                     value={editValue}
@@ -124,7 +123,8 @@ export default function Categorias() {
                         cancelarEdicion()
                       }
                     }}
-                    className="campo campo-sm w-20"
+                    compacto
+                    className="w-20"
                   />
                 ) : c.orden}
               </td>
@@ -134,7 +134,7 @@ export default function Categorias() {
                 onDoubleClick={() => iniciarEdicion(c.id, 'nombre', c.nombre)}
               >
                 {editCell?.id === c.id && editCell.campo === 'nombre' ? (
-                  <input
+                  <Campo
                     autoFocus
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -155,7 +155,8 @@ export default function Categorias() {
                         cancelarEdicion()
                       }
                     }}
-                    className="campo campo-sm w-full"
+                    compacto
+                    className="w-full"
                   />
                 ) : c.nombre}
               </td>

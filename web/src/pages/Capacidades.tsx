@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 import type { Capacidad, Persona } from '../types'
 
 const ROLES_EXCLUIDOS_CAPACIDAD_PERSONA = ['LT_EPM']
@@ -111,21 +111,19 @@ export default function Capacidades() {
       <form onSubmit={crear} className="barra-filtros mb-4">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Persona</span>
-          <select value={personaId} onChange={(e) => setPersonaId(e.target.value)} required
-            className="campo">
+          <Selector value={personaId} onChange={(e) => setPersonaId(e.target.value)} required>
             <option value="">— Seleccionar —</option>
             {personasDisponibles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
+          </Selector>
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Mes</span>
-          <input value={mes} onChange={(e) => setMes(e.target.value)} type="month" required
-            className="campo" />
+          <Campo value={mes} onChange={(e) => setMes(e.target.value)} type="month" required />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Horas disponibles</span>
-          <input value={horas} onChange={(e) => setHoras(e.target.value)} type="number" required
-            className="campo w-32" />
+          <Campo value={horas} onChange={(e) => setHoras(e.target.value)} type="number" required
+            className="w-32" />
         </label>
         <Boton variante="primario" type="submit">Crear</Boton>
       </form>
@@ -156,7 +154,7 @@ export default function Capacidades() {
                 onDoubleClick={() => iniciarEdicion(c.id, 'horas_disponibles', String(c.horas_disponibles))}
               >
                 {editCell?.id === c.id && editCell.campo === 'horas_disponibles' ? (
-                  <input
+                  <Campo
                     autoFocus
                     type="number"
                     value={editValue}
@@ -178,7 +176,8 @@ export default function Capacidades() {
                         cancelarEdicion()
                       }
                     }}
-                    className="campo campo-sm w-24 text-right"
+                    compacto
+                    className="w-24 text-right"
                   />
                 ) : c.horas_disponibles}
               </td>

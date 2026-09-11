@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Aplicacion, EndpointAdmin } from '../types'
-import { Boton, TablaScroll } from '../components/ui/primitivos'
+import { Boton, Campo, Selector, TablaScroll } from '../components/ui/primitivos'
 
 const HEADER_CONSOLIDADO = { headers: { 'X-Aplicacion': '__todas__' } }
 
@@ -426,12 +426,12 @@ export default function AdminEndpoints() {
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Código REQ o SC</span>
-              <input
+              <Campo
                 value={identificador}
                 onChange={(e) => setIdentificador(e.target.value)}
                 placeholder="Ej: 10813 o REQ-123"
                 required
-                className="campo min-w-64"
+                className="min-w-64"
               />
             </label>
             <Boton
@@ -450,11 +450,11 @@ export default function AdminEndpoints() {
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-sm">
               <span className="mb-1 block text-slate-600">Nueva aplicación</span>
-              <select
+              <Selector
                 value={nuevaAplicacion}
                 onChange={(e) => setNuevaAplicacion(e.target.value)}
                 required
-                className="campo min-w-64"
+                className="min-w-64"
               >
                 <option value="">Seleccione una aplicación</option>
                 {apps.map((a) => (
@@ -462,7 +462,7 @@ export default function AdminEndpoints() {
                     {a.nombre} ({a.codigo})
                   </option>
                 ))}
-              </select>
+              </Selector>
             </label>
             <Boton
               variante="alerta"
@@ -489,21 +489,21 @@ export default function AdminEndpoints() {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">X-API-Key</span>
-            <input
+            <Campo
               type="password"
               value={apiKeyIntegracion}
               onChange={(e) => setApiKeyIntegracion(e.target.value)}
               placeholder="Clave configurada en API_KEY"
               required
-              className="campo min-w-72"
+              className="min-w-72"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Aplicación / squad (opcional)</span>
-            <select
+            <Selector
               value={aplicacionIntegracion}
               onChange={(e) => setAplicacionIntegracion(e.target.value)}
-              className="campo min-w-64"
+              className="min-w-64"
             >
               <option value="">Todas</option>
               {apps.map((a) => (
@@ -511,7 +511,7 @@ export default function AdminEndpoints() {
                   {a.nombre} ({a.codigo})
                 </option>
               ))}
-            </select>
+            </Selector>
           </label>
           <Boton
             variante="primario"
@@ -537,21 +537,21 @@ export default function AdminEndpoints() {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">X-API-Key requerimientos</span>
-            <input
+            <Campo
               type="password"
               value={apiKeyRequerimientosIntegracion}
               onChange={(e) => setApiKeyRequerimientosIntegracion(e.target.value)}
               placeholder="Clave configurada en API_KEY_REQUERIMIENTOS"
               required
-              className="campo min-w-72"
+              className="min-w-72"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Aplicación / squad (opcional)</span>
-            <select
+            <Selector
               value={aplicacionRequerimientosIntegracion}
               onChange={(e) => setAplicacionRequerimientosIntegracion(e.target.value)}
-              className="campo min-w-64"
+              className="min-w-64"
             >
               <option value="">Todas</option>
               {apps.map((a) => (
@@ -559,15 +559,15 @@ export default function AdminEndpoints() {
                   {a.nombre} ({a.codigo})
                 </option>
               ))}
-            </select>
+            </Selector>
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Estado (opcional)</span>
-            <input
+            <Campo
               value={estadoRequerimientosIntegracion}
               onChange={(e) => setEstadoRequerimientosIntegracion(e.target.value)}
               placeholder="Ej: ESTIMACION APROBADA ENTREGA PENDIENTE"
-              className="campo min-w-80"
+              className="min-w-80"
             />
           </label>
           <Boton
@@ -599,21 +599,21 @@ export default function AdminEndpoints() {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">X-API-Key solicitudes</span>
-            <input
+            <Campo
               type="password"
               value={apiKeySolicitudesIntegracion}
               onChange={(e) => setApiKeySolicitudesIntegracion(e.target.value)}
               placeholder="Clave configurada en API_KEY_SOLICITUDES"
               required
-              className="campo min-w-72"
+              className="min-w-72"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Aplicación / squad (opcional)</span>
-            <select
+            <Selector
               value={aplicacionSolicitudesIntegracion}
               onChange={(e) => setAplicacionSolicitudesIntegracion(e.target.value)}
-              className="campo min-w-64"
+              className="min-w-64"
             >
               <option value="">Todas</option>
               {apps.map((a) => (
@@ -621,7 +621,7 @@ export default function AdminEndpoints() {
                   {a.nombre} ({a.codigo})
                 </option>
               ))}
-            </select>
+            </Selector>
           </label>
           <Boton
             variante="primario"
@@ -648,21 +648,21 @@ export default function AdminEndpoints() {
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">X-API-Key solicitudes</span>
-            <input
+            <Campo
               type="password"
               value={apiKeySolicitudesIntegracion}
               onChange={(e) => setApiKeySolicitudesIntegracion(e.target.value)}
               placeholder="Clave configurada en API_KEY_SOLICITUDES"
               required
-              className="campo min-w-72"
+              className="min-w-72"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Aplicación / squad (opcional)</span>
-            <select
+            <Selector
               value={aplicacionSolicitudesIntegracion}
               onChange={(e) => setAplicacionSolicitudesIntegracion(e.target.value)}
-              className="campo min-w-64"
+              className="min-w-64"
             >
               <option value="">Todas</option>
               {apps.map((a) => (
@@ -670,7 +670,7 @@ export default function AdminEndpoints() {
                   {a.nombre} ({a.codigo})
                 </option>
               ))}
-            </select>
+            </Selector>
           </label>
           <Boton
             variante="primario"
@@ -707,43 +707,42 @@ export default function AdminEndpoints() {
         <form onSubmit={crearEndpointAdmin} className="mb-3 flex flex-wrap items-end gap-3">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Módulo</span>
-            <input
+            <Campo
               value={nuevoModulo}
               onChange={(e) => setNuevoModulo(e.target.value)}
               placeholder="Ej: Endpoints"
               required
-              className="campo min-w-40"
+              className="min-w-40"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Método</span>
-            <select
+            <Selector
               value={nuevoMetodo}
               onChange={(e) => setNuevoMetodo(e.target.value as Metodo)}
-              className="campo"
             >
               {(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as Metodo[]).map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
-            </select>
+            </Selector>
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Ruta</span>
-            <input
+            <Campo
               value={nuevaRuta}
               onChange={(e) => setNuevaRuta(e.target.value)}
               placeholder="/api/admin/endpoints"
               required
-              className="campo min-w-64"
+              className="min-w-64"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Descripción</span>
-            <input
+            <Campo
               value={nuevaDescripcion}
               onChange={(e) => setNuevaDescripcion(e.target.value)}
               placeholder="Descripción breve"
-              className="campo min-w-64"
+              className="min-w-64"
             />
           </label>
           <Boton
@@ -807,14 +806,14 @@ export default function AdminEndpoints() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <select value={modulo} onChange={(e) => setModulo(e.target.value)} className="campo">
+            <Selector value={modulo} onChange={(e) => setModulo(e.target.value)}>
               {modulos.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-            <input
+            </Selector>
+            <Campo
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
               placeholder="Buscar ruta, permiso o descripción"
-              className="campo min-w-72"
+              className="min-w-72"
             />
           </div>
         </div>

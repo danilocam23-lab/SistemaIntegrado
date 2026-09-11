@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Persona, PlanAccion } from '../types'
-import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 
 const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADO', 'CANCELADO']
 
@@ -125,54 +125,51 @@ export default function PlanesAccion() {
         <form onSubmit={guardar} className="barra-filtros mb-4">
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Título</span>
-            <input
+            <Campo
               value={form.titulo}
               onChange={(e) => setForm({ ...form, titulo: e.target.value })}
               required
-              className="campo w-56"
+              className="w-56"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Descripción</span>
-            <input
+            <Campo
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="campo w-64"
+              className="w-64"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Responsable</span>
-            <select
+            <Selector
               value={form.responsableId}
               onChange={(e) => setForm({ ...form, responsableId: e.target.value })}
-              className="campo"
             >
               <option value="">— Ninguno —</option>
               {personasOrdenadas.map((p) => (
                 <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
-            </select>
+            </Selector>
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Fecha límite</span>
-            <input
+            <Campo
               type="date"
               value={form.fechaLimite}
               onChange={(e) => setForm({ ...form, fechaLimite: e.target.value })}
-              className="campo"
             />
           </label>
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Estado</span>
-            <select
+            <Selector
               value={form.estado}
               onChange={(e) => setForm({ ...form, estado: e.target.value })}
-              className="campo"
             >
               {ESTADOS.map((s) => (
                 <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
               ))}
-            </select>
+            </Selector>
           </label>
           <Boton variante="primario" type="submit">
             {form.id ? 'Guardar' : 'Crear'}
@@ -187,16 +184,15 @@ export default function PlanesAccion() {
 
       <div className="mb-3 flex items-center gap-2">
         <span className="text-sm text-slate-600">Filtrar por estado:</span>
-        <select
+        <Selector
           value={filtroEstado}
           onChange={(e) => setFiltroEstado(e.target.value)}
-          className="campo"
         >
           <option value="">Todos</option>
           {ESTADOS.map((s) => (
             <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
           ))}
-        </select>
+        </Selector>
       </div>
 
       {(aviso || error) && (
