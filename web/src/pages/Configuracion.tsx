@@ -2,102 +2,55 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
-import { ESTADOS_ENTREGA, ESTADOS_REQUERIMIENTO, ENTREGAS_ACTAS_CONFIG_CLAVES, ENTREGAS_ACTAS_COLUMNAS, ENTREGAS_ACTAS_FILTROS, REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../constantes'
+import { ENTREGAS_ACTAS_CONFIG_CLAVES, ENTREGAS_ACTAS_COLUMNAS, ENTREGAS_ACTAS_FILTROS, REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS } from '../constantes'
 import type { Configuracion as Config, Festivo } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
+import { SeccionCargaExcel } from './configuracion/SeccionCargaExcel'
+import { SeccionCamposConfigurables } from './configuracion/SeccionCamposConfigurables'
 import { SeccionCategorias } from './configuracion/SeccionCategorias'
+import { SeccionEstados } from './configuracion/SeccionEstados'
 import { SeccionTarifas } from './configuracion/SeccionTarifas'
 import { PESTANAS } from './configuracion/tipos'
-import type { Tab, UltimaSincronizacionResumen } from './configuracion/tipos'
-import { agruparCampos, fmtFechaCo } from './configuracion/utilidades'
+import type { Tab } from './configuracion/tipos'
+import { useCargaExcel } from './configuracion/useCargaExcel'
+import { useCamposConfigurables } from './configuracion/useCamposConfigurables'
 import { useCategorias } from './configuracion/useCategorias'
+import { useDatosConfiguracion } from './configuracion/useDatosConfiguracion'
+import { useEstadosConfigurables } from './configuracion/useEstadosConfigurables'
 import { useTarifas } from './configuracion/useTarifas'
-
-const CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA = 'soporte.solicitudes_fabrica.ruta_carga_local'
 
 export default function Configuracion() {
   const [tab, setTab] = useState<Tab>('tarifas')
 
-  const { datos, error, recargar } = useLista<Config>('/configuracion')
+  const { datos, error, recargar } = useDatosConfiguracion()
   const { datos: festivos, recargar: recargarFestivos } = useLista<Festivo>('/festivos')
   // INVARIANTE 1: todos los hooks de seccion se invocan sin condicion; solo el JSX depende de tab.
   const tarifasState = useTarifas()
   const categoriasState = useCategorias()
+  const estadosState = useEstadosConfigurables({ datos, recargar })
+  const entregasActasState = useCamposConfigurables({
+    datos,
+    recargar,
+    configClaves: ENTREGAS_ACTAS_CONFIG_CLAVES,
+    columnasCatalogo: ENTREGAS_ACTAS_COLUMNAS,
+    filtrosCatalogo: ENTREGAS_ACTAS_FILTROS,
+    grupo: 'entregas_actas',
+  })
+  const requerimientosState = useCamposConfigurables({
+    datos,
+    recargar,
+    configClaves: REQUERIMIENTOS_CONFIG_CLAVES,
+    columnasCatalogo: REQUERIMIENTOS_COLUMNAS,
+    filtrosCatalogo: REQUERIMIENTOS_FILTROS,
+    grupo: 'requerimientos',
+  })
+  const cargaExcelState = useCargaExcel({ datos, recargar })
   const [valores, setValores] = useState<Record<string, string>>({})
   const [nuevaClave, setNuevaClave] = useState('')
   const [nuevoValor, setNuevoValor] = useState('')
   const [grupo, setGrupo] = useState('general')
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
-
-  // ── Carga de Excel (Solicitudes Fábrica automática) ──
-  const [rutaCargaExcel, setRutaCargaExcel] = useState('')
-  const [rutaCargaExcelAviso, setRutaCargaExcelAviso] = useState('')
-  const [rutaCargaExcelOk, setRutaCargaExcelOk] = useState('')
-  const [probandoCargaExcel, setProbandoCargaExcel] = useState(false)
-  const [resultadoPruebaCargaExcel, setResultadoPruebaCargaExcel] = useState('')
-  const [ultimaEjecucionAuto, setUltimaEjecucionAuto] = useState<UltimaSincronizacionResumen | null>(null)
-  const [cargandoUltimaEjecucion, setCargandoUltimaEjecucion] = useState(false)
-
-  useEffect(() => {
-    const cfg = datos.find((d) => d.clave === CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA)
-    setRutaCargaExcel(cfg?.valor ?? '')
-  }, [datos])
-
-  async function consultarUltimaEjecucionAuto(): Promise<void> {
-    setCargandoUltimaEjecucion(true)
-    try {
-      const { data } = await client.get<UltimaSincronizacionResumen | null>(
-        '/soporte/solicitudes-fabrica/ultima-sincronizacion',
-      )
-      setUltimaEjecucionAuto(data)
-    } catch {
-      // No es crítico si falla; simplemente no se muestra el estado.
-    } finally {
-      setCargandoUltimaEjecucion(false)
-    }
-  }
-
-  useEffect(() => {
-    void consultarUltimaEjecucionAuto()
-  }, [])
-
-  async function guardarRutaCargaExcel(e: FormEvent): Promise<void> {
-    e.preventDefault()
-    setRutaCargaExcelAviso('')
-    setRutaCargaExcelOk('')
-    try {
-      await client.put(`/configuracion/${encodeURIComponent(CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA)}`, {
-        valor: rutaCargaExcel.trim(),
-        grupo: 'soporte_solicitudes_fabrica',
-      })
-      setRutaCargaExcelOk('Ruta guardada.')
-      recargar()
-    } catch (err) {
-      setRutaCargaExcelAviso(mensajeError(err))
-    }
-  }
-
-  async function probarCargaAutomatica(): Promise<void> {
-    setProbandoCargaExcel(true)
-    setResultadoPruebaCargaExcel('')
-    try {
-      const { data } = await client.post('/soporte/solicitudes-fabrica/ejecutar-carga-automatica')
-      if (!data.ejecutado) {
-        setResultadoPruebaCargaExcel(`⚠️ ${data.mensaje}`)
-      } else {
-        setResultadoPruebaCargaExcel(
-          `✅ Archivo "${data.archivo}" procesado: ${data.total_encontrados} filas encontradas, ` +
-            `${data.cargados} cargadas, ${data.con_error} con error.`
-        )
-      }
-    } catch (err) {
-      setResultadoPruebaCargaExcel(`❌ ${mensajeError(err)}`)
-    } finally {
-      setProbandoCargaExcel(false)
-      void consultarUltimaEjecucionAuto()
-    }
-  }
 
   // ── Popup edición ──
   const [editItem, setEditItem] = useState<Config | null>(null)
@@ -318,172 +271,6 @@ export default function Configuracion() {
     }
   }
 
-  // ── Estado: Estados de Requerimiento / Entrega ──
-  const [estReq, setEstReq] = useState<string[]>(ESTADOS_REQUERIMIENTO)
-  const [estEnt, setEstEnt] = useState<string[]>(ESTADOS_ENTREGA)
-  const [nuevoEstReq, setNuevoEstReq] = useState('')
-  const [nuevoEstEnt, setNuevoEstEnt] = useState('')
-  const [estAviso, setEstAviso] = useState('')
-  const [estOk, setEstOk] = useState('')
-
-  useEffect(() => {
-    datos.forEach((c) => {
-      if (c.clave === 'estados_requerimiento' && c.valor)
-        setEstReq(c.valor.split(',').map((s) => s.trim()).filter(Boolean))
-      if (c.clave === 'estados_entrega' && c.valor)
-        setEstEnt(c.valor.split(',').map((s) => s.trim()).filter(Boolean))
-    })
-  }, [datos])
-
-  async function guardarEstados(clave: string, lista: string[]): Promise<void> {
-    setEstAviso('')
-    setEstOk('')
-    try {
-      await client.put(`/configuracion/${encodeURIComponent(clave)}`, {
-        valor: lista.join(','),
-        grupo: 'estados',
-      })
-      setEstOk('Estados guardados.')
-      recargar()
-    } catch (err) {
-      setEstAviso(mensajeError(err))
-    }
-  }
-
-  function agregarEstadoReq(): void {
-    const e = nuevoEstReq.trim().toUpperCase()
-    if (!e || estReq.includes(e)) return
-    const nueva = [...estReq, e]
-    setNuevoEstReq('')
-    setEstReq(nueva)
-    void guardarEstados('estados_requerimiento', nueva)
-  }
-
-  function quitarEstadoReq(estado: string): void {
-    const nueva = estReq.filter((e) => e !== estado)
-    setEstReq(nueva)
-    void guardarEstados('estados_requerimiento', nueva)
-  }
-
-  function agregarEstadoEnt(): void {
-    const e = nuevoEstEnt.trim().toUpperCase()
-    if (!e || estEnt.includes(e)) return
-    const nueva = [...estEnt, e]
-    setNuevoEstEnt('')
-    setEstEnt(nueva)
-    void guardarEstados('estados_entrega', nueva)
-  }
-
-  function quitarEstadoEnt(estado: string): void {
-    const nueva = estEnt.filter((e) => e !== estado)
-    setEstEnt(nueva)
-    void guardarEstados('estados_entrega', nueva)
-  }
-
-  // ── Estado: Entregas de Actas (columnas, filtros y campos de exportación) ──
-  const [eaColumnas, setEaColumnas] = useState<Set<string>>(new Set(ENTREGAS_ACTAS_COLUMNAS.map((c) => c.key)))
-  const [eaFiltros, setEaFiltros] = useState<Set<string>>(new Set(ENTREGAS_ACTAS_FILTROS.map((f) => f.key)))
-  const [eaExport, setEaExport] = useState<Set<string>>(new Set(ENTREGAS_ACTAS_COLUMNAS.map((c) => c.key)))
-  const [eaAviso, setEaAviso] = useState('')
-  const [eaOk, setEaOk] = useState('')
-
-  useEffect(() => {
-    setEaColumnas(leerCamposActivos(datos, ENTREGAS_ACTAS_CONFIG_CLAVES.columnas, ENTREGAS_ACTAS_COLUMNAS))
-    setEaFiltros(leerCamposActivos(datos, ENTREGAS_ACTAS_CONFIG_CLAVES.filtros, ENTREGAS_ACTAS_FILTROS))
-    setEaExport(leerCamposActivos(datos, ENTREGAS_ACTAS_CONFIG_CLAVES.exportCampos, ENTREGAS_ACTAS_COLUMNAS))
-  }, [datos])
-
-  async function guardarCamposEntregasActas(clave: string, keys: string[]): Promise<void> {
-    setEaAviso('')
-    setEaOk('')
-    try {
-      await client.put(`/configuracion/${encodeURIComponent(clave)}`, {
-        valor: JSON.stringify(keys),
-        grupo: 'entregas_actas',
-      })
-      setEaOk('Configuración guardada.')
-      recargar()
-    } catch (err) {
-      setEaAviso(mensajeError(err))
-    }
-  }
-
-  function alternarEaColumna(key: string): void {
-    const nueva = new Set(eaColumnas)
-    if (nueva.has(key)) nueva.delete(key)
-    else nueva.add(key)
-    setEaColumnas(nueva)
-    void guardarCamposEntregasActas(ENTREGAS_ACTAS_CONFIG_CLAVES.columnas, Array.from(nueva))
-  }
-
-  function alternarEaFiltro(key: string): void {
-    const nueva = new Set(eaFiltros)
-    if (nueva.has(key)) nueva.delete(key)
-    else nueva.add(key)
-    setEaFiltros(nueva)
-    void guardarCamposEntregasActas(ENTREGAS_ACTAS_CONFIG_CLAVES.filtros, Array.from(nueva))
-  }
-
-  function alternarEaExport(key: string): void {
-    const nueva = new Set(eaExport)
-    if (nueva.has(key)) nueva.delete(key)
-    else nueva.add(key)
-    setEaExport(nueva)
-    void guardarCamposEntregasActas(ENTREGAS_ACTAS_CONFIG_CLAVES.exportCampos, Array.from(nueva))
-  }
-
-  // ── Estado: Requerimientos (columnas, filtros y campos de exportación) ──
-  const [reqColumnas, setReqColumnas] = useState<Set<string>>(new Set(REQUERIMIENTOS_COLUMNAS.map((c) => c.key)))
-  const [reqFiltros, setReqFiltros] = useState<Set<string>>(new Set(REQUERIMIENTOS_FILTROS.map((f) => f.key)))
-  const [reqExport, setReqExport] = useState<Set<string>>(new Set(REQUERIMIENTOS_COLUMNAS.map((c) => c.key)))
-  const [reqAviso, setReqAviso] = useState('')
-  const [reqOk, setReqOk] = useState('')
-
-  useEffect(() => {
-    setReqColumnas(leerCamposActivos(datos, REQUERIMIENTOS_CONFIG_CLAVES.columnas, REQUERIMIENTOS_COLUMNAS))
-    setReqFiltros(leerCamposActivos(datos, REQUERIMIENTOS_CONFIG_CLAVES.filtros, REQUERIMIENTOS_FILTROS))
-    setReqExport(leerCamposActivos(datos, REQUERIMIENTOS_CONFIG_CLAVES.exportCampos, REQUERIMIENTOS_COLUMNAS))
-  }, [datos])
-
-  async function guardarCamposRequerimientos(clave: string, keys: string[]): Promise<void> {
-    setReqAviso('')
-    setReqOk('')
-    try {
-      await client.put(`/configuracion/${encodeURIComponent(clave)}`, {
-        valor: JSON.stringify(keys),
-        grupo: 'requerimientos',
-      })
-      setReqOk('Configuración guardada.')
-      recargar()
-    } catch (err) {
-      setReqAviso(mensajeError(err))
-    }
-  }
-
-  function alternarReqColumna(key: string): void {
-    const nueva = new Set(reqColumnas)
-    if (nueva.has(key)) nueva.delete(key)
-    else nueva.add(key)
-    setReqColumnas(nueva)
-    void guardarCamposRequerimientos(REQUERIMIENTOS_CONFIG_CLAVES.columnas, Array.from(nueva))
-  }
-
-  function alternarReqFiltro(key: string): void {
-    const nueva = new Set(reqFiltros)
-    if (nueva.has(key)) nueva.delete(key)
-    else nueva.add(key)
-    setReqFiltros(nueva)
-    void guardarCamposRequerimientos(REQUERIMIENTOS_CONFIG_CLAVES.filtros, Array.from(nueva))
-  }
-
-  function alternarReqExport(key: string): void {
-    const nueva = new Set(reqExport)
-    if (nueva.has(key)) nueva.delete(key)
-    else nueva.add(key)
-    setReqExport(nueva)
-    void guardarCamposRequerimientos(REQUERIMIENTOS_CONFIG_CLAVES.exportCampos, Array.from(nueva))
-  }
-
   return (
     <div>
       <h1 className="titulo-pagina mb-4">Configuración</h1>
@@ -690,345 +477,47 @@ export default function Configuracion() {
       )}
 
       {/* ═══ TAB: Estados ═══ */}
-      {tab === 'estados' && (
-        <div className="space-y-6">
-          <p className="text-sm text-slate-500">
-            Configura los estados disponibles para requerimientos y entregas. Los cambios se reflejan
-            automáticamente al crear o editar requerimientos.
-          </p>
+      {tab === 'estados' && <SeccionEstados {...estadosState} />}
 
-          {estAviso && <div className="aviso aviso-error">{estAviso}</div>}
-          {estOk && <div className="aviso aviso-exito">{estOk}</div>}
-
-          {/* Estados de Requerimiento */}
-          <div className="tarjeta tarjeta-pad">
-            <h2 className="etiqueta-sup mb-3">
-              Estados de Requerimiento
-            </h2>
-            <div className="mb-3 flex flex-wrap gap-2">
-              {estReq.map((e) => (
-                <span key={e} className="chip chip-marca">
-                  {e}
-                  <button onClick={() => quitarEstadoReq(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
-                </span>
-              ))}
-              {estReq.length === 0 && <span className="text-sm text-slate-400">Sin estados configurados</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                value={nuevoEstReq}
-                onChange={(e) => setNuevoEstReq(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarEstadoReq())}
-                placeholder="Nuevo estado (ej: EN REVISION)"
-                className="campo w-72"
-              />
-              <button onClick={agregarEstadoReq} className="btn btn-primario btn-sm">
-                Agregar
-              </button>
-            </div>
-          </div>
-
-          {/* Estados de Entrega */}
-          <div className="tarjeta tarjeta-pad">
-            <h2 className="etiqueta-sup mb-3">
-              Estados de Entrega
-            </h2>
-            <div className="mb-3 flex flex-wrap gap-2">
-              {estEnt.map((e) => (
-                <span key={e} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-800">
-                  {e}
-                  <button onClick={() => quitarEstadoEnt(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
-                </span>
-              ))}
-              {estEnt.length === 0 && <span className="text-sm text-slate-400">Sin estados configurados</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                value={nuevoEstEnt}
-                onChange={(e) => setNuevoEstEnt(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarEstadoEnt())}
-                placeholder="Nuevo estado (ej: EN GARANTIA)"
-                className="campo w-72"
-              />
-              <button onClick={agregarEstadoEnt} className="btn btn-primario btn-sm">
-                Agregar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ═══ TAB: Entregas de Actas ═══ */}
       {tab === 'entregas_actas' && (
-        <div className="space-y-6">
-          <p className="text-sm text-slate-500">
-            Activa o desactiva, sin necesidad de desarrollo, las columnas visibles en la tabla, los
-            filtros de búsqueda disponibles y los campos incluidos al exportar a Excel en la vista
-            "Entregas de Actas".
-          </p>
-
-          {eaAviso && <div className="aviso aviso-error">{eaAviso}</div>}
-          {eaOk && <div className="aviso aviso-exito">{eaOk}</div>}
-
-          {/* Columnas de la tabla */}
-          <div className="tarjeta tarjeta-pad">
-            <h2 className="etiqueta-sup mb-3">
-              Columnas de la tabla
-            </h2>
-            <div className="space-y-4">
-              {agruparCampos(ENTREGAS_ACTAS_COLUMNAS).map(({ grupo, items }) => (
-                <div key={grupo}>
-                  <h3 className="mb-2 text-xs font-semibold text-slate-400">{grupo}</h3>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {items.map((c) => (
-                      <label key={c.key} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={eaColumnas.has(c.key)}
-                          onChange={() => alternarEaColumna(c.key)}
-                        />
-                        {c.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Filtros de búsqueda */}
-          <div className="tarjeta tarjeta-pad">
-            <h2 className="etiqueta-sup mb-3">
-              Filtros de búsqueda
-            </h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {ENTREGAS_ACTAS_FILTROS.map((f) => (
-                <label key={f.key} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={eaFiltros.has(f.key)}
-                    onChange={() => alternarEaFiltro(f.key)}
-                  />
-                  {f.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Campos de exportación a Excel */}
-          <div className="tarjeta tarjeta-pad">
-            <h2 className="etiqueta-sup mb-3">
-              Campos incluidos al exportar a Excel
-            </h2>
-            <div className="space-y-4">
-              {agruparCampos(ENTREGAS_ACTAS_COLUMNAS).map(({ grupo, items }) => (
-                <div key={grupo}>
-                  <h3 className="mb-2 text-xs font-semibold text-slate-400">{grupo}</h3>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {items.map((c) => (
-                      <label key={c.key} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={eaExport.has(c.key)}
-                          onChange={() => alternarEaExport(c.key)}
-                        />
-                        {c.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <SeccionCamposConfigurables
+          {...entregasActasState}
+          descripcion={(
+            <p className="text-sm text-slate-500">
+              Activa o desactiva, sin necesidad de desarrollo, las columnas visibles en la tabla, los
+              filtros de búsqueda disponibles y los campos incluidos al exportar a Excel en la vista
+              "Entregas de Actas".
+            </p>
+          )}
+          columnasCatalogo={ENTREGAS_ACTAS_COLUMNAS}
+          filtrosCatalogo={ENTREGAS_ACTAS_FILTROS}
+        />
       )}
+
 
       {/* ═══ TAB: Requerimientos ═══ */}
       {tab === 'requerimientos' && (
-        <div className="space-y-6">
-          <p className="text-sm text-slate-500">
-            Activa o desactiva, sin necesidad de desarrollo, las columnas visibles en la tabla principal,
-            los filtros de búsqueda disponibles y los campos incluidos al exportar a Excel en la vista
-            "Requerimientos". Las columnas de acciones (expandir, estimación, editar/eliminar) no son
-            configurables porque son funcionales.
-          </p>
-
-          {reqAviso && <div className="aviso aviso-error">{reqAviso}</div>}
-          {reqOk && <div className="aviso aviso-exito">{reqOk}</div>}
-
-          {/* Columnas de la tabla */}
-          <div className="tarjeta tarjeta-pad">
-            <h2 className="etiqueta-sup mb-3">
-              Columnas de la tabla
-            </h2>
-            <div className="space-y-4">
-              {agruparCampos(REQUERIMIENTOS_COLUMNAS).map(({ grupo, items }) => (
-                <div key={grupo}>
-                  <h3 className="mb-2 text-xs font-semibold text-slate-400">{grupo}</h3>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {items.map((c) => (
-                      <label key={c.key} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={reqColumnas.has(c.key)}
-                          onChange={() => alternarReqColumna(c.key)}
-                        />
-                        {c.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Filtros de búsqueda */}
-          <div className="tarjeta tarjeta-pad">
-            <h2 className="etiqueta-sup mb-3">
-              Filtros de búsqueda
-            </h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {REQUERIMIENTOS_FILTROS.map((f) => (
-                <label key={f.key} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={reqFiltros.has(f.key)}
-                    onChange={() => alternarReqFiltro(f.key)}
-                  />
-                  {f.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Campos de exportación a Excel */}
-          <div className="tarjeta tarjeta-pad">
-            <h2 className="etiqueta-sup mb-3">
-              Campos incluidos al exportar a Excel
-            </h2>
-            <div className="space-y-4">
-              {agruparCampos(REQUERIMIENTOS_COLUMNAS).map(({ grupo, items }) => (
-                <div key={grupo}>
-                  <h3 className="mb-2 text-xs font-semibold text-slate-400">{grupo}</h3>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {items.map((c) => (
-                      <label key={c.key} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={reqExport.has(c.key)}
-                          onChange={() => alternarReqExport(c.key)}
-                        />
-                        {c.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <SeccionCamposConfigurables
+          {...requerimientosState}
+          descripcion={(
+            <p className="text-sm text-slate-500">
+              Activa o desactiva, sin necesidad de desarrollo, las columnas visibles en la tabla principal,
+              los filtros de búsqueda disponibles y los campos incluidos al exportar a Excel en la vista
+              "Requerimientos". Las columnas de acciones (expandir, estimación, editar/eliminar) no son
+              configurables porque son funcionales.
+            </p>
+          )}
+          columnasCatalogo={REQUERIMIENTOS_COLUMNAS}
+          filtrosCatalogo={REQUERIMIENTOS_FILTROS}
+        />
       )}
+
 
       {/* ═══ TAB: Carga de Excel ═══ */}
-      {tab === 'carga_excel' && (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-500">
-            Ruta local (en el servidor) donde el proceso automático busca el archivo
-            <code className="mx-1 rounded bg-slate-100 px-1">Solicitudes Fabrica soporte.xlsx</code>
-            y lo sincroniza 3 veces al día (6:00, 12:00 y 18:00), sin pedir confirmación. Solo se cargan
-            los registros sin error; si hay registros con error, quedan disponibles para revisión y carga
-            manual desde la vista "Soporte — Solicitudes Fábrica".
-          </p>
+      {tab === 'carga_excel' && <SeccionCargaExcel {...cargaExcelState} />}
 
-          <form onSubmit={guardarRutaCargaExcel} className="tarjeta tarjeta-pad flex flex-wrap items-end gap-3">
-            <label className="min-w-[320px] flex-1 text-sm">
-              <span className="mb-1 block text-slate-600">Ruta de la carpeta</span>
-              <input
-                value={rutaCargaExcel}
-                onChange={(e) => setRutaCargaExcel(e.target.value)}
-                placeholder="C:\Users\usuario\HITSS\Storage 01 Colombia - Sabana de seguimiento"
-                className="campo w-full"
-              />
-            </label>
-            <button className="btn btn-primario">Guardar</button>
-          </form>
-
-          {rutaCargaExcelAviso && <div className="aviso aviso-error">{rutaCargaExcelAviso}</div>}
-          {rutaCargaExcelOk && <div className="aviso aviso-exito">{rutaCargaExcelOk}</div>}
-
-          <div className="tarjeta tarjeta-pad space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="etiqueta-sup">Estado de la última ejecución (automática o manual)</h2>
-              <button
-                type="button"
-                className="btn btn-secundario"
-                onClick={() => void consultarUltimaEjecucionAuto()}
-                disabled={cargandoUltimaEjecucion}
-              >
-                🔄 {cargandoUltimaEjecucion ? 'Consultando…' : 'Consultar estado'}
-              </button>
-            </div>
-            {!ultimaEjecucionAuto && (
-              <p className="text-sm text-slate-500">
-                {cargandoUltimaEjecucion ? 'Consultando…' : 'Todavía no se ha ejecutado ninguna carga.'}
-              </p>
-            )}
-            {ultimaEjecucionAuto && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded border p-3 text-sm">
-                  <div className="text-slate-500">Archivo</div>
-                  <div className="font-semibold text-slate-700">{ultimaEjecucionAuto.archivo ?? '—'}</div>
-                </div>
-                <div className="rounded border p-3 text-sm">
-                  <div className="text-slate-500">Estado</div>
-                  <div className={`font-semibold ${ultimaEjecucionAuto.estado === 'exitoso' ? 'text-emerald-700' : 'text-red-700'}`}>
-                    {ultimaEjecucionAuto.estado === 'exitoso' ? '✅ Exitoso' : `❌ ${ultimaEjecucionAuto.estado}`}
-                  </div>
-                </div>
-                <div className="rounded border p-3 text-sm">
-                  <div className="text-slate-500">Ejecutado</div>
-                  <div className="font-semibold text-slate-700">{fmtFechaCo(ultimaEjecucionAuto.finalizado_en)}</div>
-                </div>
-                <div className="rounded border p-3 text-sm">
-                  <div className="text-slate-500">Filas</div>
-                  <div className="font-semibold text-slate-700">
-                    {ultimaEjecucionAuto.total_encontrados} encontradas, {ultimaEjecucionAuto.cargados} cargadas,{' '}
-                    {ultimaEjecucionAuto.con_error} con error
-                  </div>
-                </div>
-                {ultimaEjecucionAuto.error_general && (
-                  <div className="sm:col-span-2 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                    {ultimaEjecucionAuto.error_general}
-                  </div>
-                )}
-              </div>
-            )}
-            <p className="text-xs text-slate-400">
-              Este estado se actualiza automáticamente 3 veces al día (6:00, 12:00 y 18:00, hora Colombia) y
-              también cada vez que uses "Probar ahora" más abajo.
-            </p>
-          </div>
-
-          <div className="tarjeta tarjeta-pad space-y-2">
-            <p className="text-sm text-slate-600">
-              Probar ahora: ejecuta manualmente el mismo proceso automático (buscar el archivo en la ruta
-              guardada y sincronizarlo) sin esperar al próximo horario. Útil para confirmar que la ruta y
-              el archivo están correctamente configurados.
-            </p>
-            <button
-              type="button"
-              className="btn btn-secundario"
-              onClick={probarCargaAutomatica}
-              disabled={probandoCargaExcel}
-            >
-              {probandoCargaExcel ? 'Ejecutando…' : '▶️ Probar ahora'}
-            </button>
-            {resultadoPruebaCargaExcel && (
-              <div className="aviso aviso-info">{resultadoPruebaCargaExcel}</div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
