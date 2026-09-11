@@ -1,19 +1,15 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import * as XLSX from 'xlsx'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { REQUERIMIENTOS_COLUMNAS } from '../constantes'
 import type { Estimacion, EstimacionConResumen, Requerimiento } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
-import type { ClaveSeccionResumen, Filtros } from './requerimientos/tipos'
-import { FILTROS_INIT } from './requerimientos/tipos'
+import type { ClaveSeccionResumen } from './requerimientos/tipos'
 import {
   agruparPorHU,
   calcularDiasTranscurridos,
   complexityColor,
-  fechaComprometidaReq,
   formatDateTime,
   formatNumber,
   normalizarAns,
@@ -22,6 +18,11 @@ import {
 } from './requerimientos/utilidades'
 import { useCamposRequerimientos } from './requerimientos/useCamposRequerimientos'
 import { useDatosRequerimientos } from './requerimientos/useDatosRequerimientos'
+import { useFiltrosRequerimientos } from './requerimientos/useFiltrosRequerimientos'
+import { PanelFiltrosRequerimientos } from './requerimientos/PanelFiltrosRequerimientos'
+import { BarraAccionesRequerimientos } from './requerimientos/BarraAccionesRequerimientos'
+import { useAccesoresRequerimiento } from './requerimientos/useAccesoresRequerimiento'
+import { useExportarExcel } from './requerimientos/useExportarExcel'
 
 export default function Requerimientos() {
   const { tienePermiso } = useAuth()
@@ -41,6 +42,14 @@ export default function Requerimientos() {
 
   const { columnasActivas, filtrosActivos, exportCamposActivos, columnasExtra, coreVisibleCount, metricasVisibles, totalColumnasTabla } =
     useCamposRequerimientos(configuracion)
+
+  const {
+    filtros, setFiltros, mostrarFiltros, setMostrarFiltros, hayFiltrosActivos, datosFiltrados,
+    squadsDisponibles, lideresDisponibles, categoriasDisponibles, tipificacionesDisponibles, tiposCostoDisponibles,
+  } = useFiltrosRequerimientos(datos, personas, squadPorId, categoriaPorId)
+
+  const { CAMPO_ACCESOR_REQ } = useAccesoresRequerimiento(squadPorId, categoriaPorId, personaPorId, nombrePersona)
+  const { exportarExcel } = useExportarExcel(puedeExportar, exportCamposActivos, datosFiltrados, CAMPO_ACCESOR_REQ)
 
   const [aviso, setAviso] = useState('')
   const [estimacionIds, setEstimacionIds] = useState<Set<string>>(new Set())
@@ -184,9 +193,6 @@ export default function Requerimientos() {
     })
   }
 
-  const [filtros, setFiltros] = useState<Filtros>(FILTROS_INIT)
-  const [mostrarFiltros, setMostrarFiltros] = useState(false)
-
   // Edición inline por celda
   const [editCell, setEditCell] = useState<{ id: string; campo: string } | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -307,206 +313,17 @@ export default function Requerimientos() {
   const estimacion = estData?.estimacion ?? null
   const summary = estData?.summary
 
-  const squadsDisponibles = useMemo(() => {
-    const nombres = new Set<string>()
-    datos.forEach((req) => {
-      if (req.solicitud?.squad_id) {
-        const nombre = squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id)
-        nombres.add(nombre)
-      }
-    })
-    return Array.from(nombres).sort((a, b) => a.localeCompare(b, 'es'))
-  }, [datos, squadPorId])
-
-  const lideresDisponibles = useMemo(() =>
-    personas.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS'),
-    [personas])
-
-  const categoriasDisponibles = useMemo(() =>
-    Array.from(new Set(datos.filter((r) => r.categoria_id).map((r) => categoriaPorId.get(String(r.categoria_id)) ?? String(r.categoria_id))))
-      .sort((a, b) => a.localeCompare(b, 'es')),
-    [datos, categoriaPorId])
-
-  const tipificacionesDisponibles = useMemo(() =>
-    Array.from(new Set(datos.filter((r) => r.tipificacion).map((r) => r.tipificacion as string))),
-    [datos])
-
-  const tiposCostoDisponibles = useMemo(() =>
-    Array.from(new Set(datos.filter((r) => r.solicitud?.tipo_costo).map((r) => r.solicitud!.tipo_costo as string))),
-    [datos])
-
-  const hayFiltrosActivos = Object.values(filtros).some((v) => v !== '')
-
-  const datosFiltrados = useMemo(() => {
-    return datos.filter((req) => {
-      // Texto libre
-      if (filtros.codigoReq && !req.codigo_req.toLowerCase().includes(filtros.codigoReq.toLowerCase())) return false
-      if (filtros.sc && !(req.solicitud?.codigo_sc ?? '').toLowerCase().includes(filtros.sc.toLowerCase())) return false
-
-      // Squad: comparar contra nombre resuelto
-      if (filtros.squad) {
-        const nombreSquad = req.solicitud?.squad_id
-          ? (squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id))
-          : ''
-        if (nombreSquad !== filtros.squad) return false
-      }
-
-      // Estado exacto del requerimiento
-      if (filtros.estado && req.estado !== filtros.estado) return false
-
-      // Líder técnico por ID
-      if (filtros.liderTecnico && req.solicitud?.lt_hitss_id !== filtros.liderTecnico) return false
-
-      // Fecha solicitud acta (campo que se ve en el formulario)
-      if (filtros.fechaSolicitudDesde || filtros.fechaSolicitudHasta) {
-        const fecha = req.fecha_solicitud_acta ? req.fecha_solicitud_acta.slice(0, 10) : null
-        if (!fecha) return false
-        if (filtros.fechaSolicitudDesde && fecha < filtros.fechaSolicitudDesde) return false
-        if (filtros.fechaSolicitudHasta && fecha > filtros.fechaSolicitudHasta) return false
-      }
-
-      // Fecha comprometida (usa la misma lógica que la columna)
-      if (filtros.fechaComprometidaDesde || filtros.fechaComprometidaHasta) {
-        const fc = fechaComprometidaReq(req)
-        if (!fc) return false
-        if (filtros.fechaComprometidaDesde && fc < filtros.fechaComprometidaDesde) return false
-        if (filtros.fechaComprometidaHasta && fc > filtros.fechaComprometidaHasta) return false
-      }
-
-      // Fecha límite (filtra por fecha real de entrega de la estimación)
-      if (filtros.fechaLimiteDesde || filtros.fechaLimiteHasta) {
-        const fl = req.fecha_real_entrega_estimacion ? req.fecha_real_entrega_estimacion.slice(0, 10) : null
-        if (!fl) return false
-        if (filtros.fechaLimiteDesde && fl < filtros.fechaLimiteDesde) return false
-        if (filtros.fechaLimiteHasta && fl > filtros.fechaLimiteHasta) return false
-      }
-
-      // Estado de entrega: case-insensitive
-      if (filtros.estadoEntrega) {
-        const match = (req.entregas ?? []).some(
-          (en) => (en.estado ?? '').toLowerCase() === filtros.estadoEntrega.toLowerCase()
-        )
-        if (!match) return false
-      }
-
-      // ANS Estimación
-      if (filtros.ansEstimacion) {
-        const v = (req.ans_acta ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
-        if (v !== filtros.ansEstimacion) return false
-      }
-
-      // Categoría (resuelto por nombre)
-      if (filtros.categoria) {
-        const nombreCat = req.categoria_id ? (categoriaPorId.get(String(req.categoria_id)) ?? String(req.categoria_id)) : ''
-        if (nombreCat !== filtros.categoria) return false
-      }
-
-      // Tipificación del requerimiento
-      if (filtros.tipificacion && req.tipificacion !== filtros.tipificacion) return false
-
-      // Tipo de costo (solicitud)
-      if (filtros.tipoCosto && req.solicitud?.tipo_costo !== filtros.tipoCosto) return false
-
-      return true
-    })
-  }, [datos, filtros, squadPorId, categoriaPorId])
-
-  /** Accesores de valor (texto/número) por clave de columna, usados para exportar a
-   *  Excel y para renderizar las columnas "extra" (no editables, activadas desde
-   *  Configuración). Las 15 columnas históricas se siguen renderizando con su JSX
-   *  específico (edición inline, badges, etc.) para no romper esa funcionalidad. */
-  const CAMPO_ACCESOR_REQ: Record<string, (r: Requerimiento) => string | number> = {
-    codigoReq: (r) => r.codigo_req,
-    sc: (r) => r.solicitud?.codigo_sc ?? '',
-    squad: (r) => (r.solicitud?.squad_id ? (squadPorId.get(String(r.solicitud.squad_id)) ?? String(r.solicitud.squad_id)) : ''),
-    nombreActa: (r) => r.nombre ?? '',
-    aplicacionEpm: (r) => (r.nombre ? r.nombre.split('-')[0].trim() : ''),
-    estado: (r) => r.estado,
-    ansEstimacion: (r) => normalizarAns(r.ans_acta),
-    ltHitss: (r) => nombrePersona(r.solicitud?.lt_hitss_id ?? null),
-    scrum: (r) => nombrePersona(r.solicitud?.scrum_id ?? null),
-    horas: (r) => r.total_horas_estimadas ?? '',
-    fechaSolicitud: (r) => (r.fecha_solicitud_acta ? r.fecha_solicitud_acta.slice(0, 10) : ''),
-    fechaLimite: (r) => (r.fecha_limite ? r.fecha_limite.slice(0, 10) : ''),
-    fechaReal: (r) => (r.fecha_real_entrega_estimacion ? r.fecha_real_entrega_estimacion.slice(0, 10) : ''),
-    diasTranscurridos: (r) => {
-      const result = calcularDiasTranscurridos(r.fecha_limite, r.fecha_real_entrega_estimacion)
-      return result ? `${result.esNegativo ? '-' : '+'}${result.dias}` : ''
-    },
-    entregasCount: (r) => r.entregas?.length ?? 0,
-    // ── Extra ──
-    ansEstimacionReal: (r) => r.ans_estimacion ?? '',
-    seLevantoAnsReq: (r) => (r.se_levanto_ans == null ? '' : r.se_levanto_ans ? 'Sí' : 'No'),
-    observacionesAnsReq: (r) => r.observaciones_ans ?? '',
-    motivoCierre: (r) => r.motivo_cierre ?? '',
-    seguimiento: (r) => r.seguimiento ?? '',
-    seguimientoEpm: (r) => r.seguimiento_epm ?? '',
-    tipificacion: (r) => r.tipificacion ?? '',
-    montoPactado: (r) => r.monto_pactado ?? '',
-    actaTrabajo: (r) => r.acta_trabajo ?? '',
-    cantidadEntregas: (r) => r.cantidad_entregas ?? '',
-    categoria: (r) => (r.categoria_id ? (categoriaPorId.get(String(r.categoria_id)) ?? String(r.categoria_id)) : ''),
-    developers: (r) => (r.developers_asignados ?? []).map((id) => personaPorId.get(String(id)) ?? String(id)).join(', '),
-    fechaInicio: (r) => (r.fecha_inicio ? r.fecha_inicio.slice(0, 10) : ''),
-    fechaFin: (r) => (r.fecha_fin ? r.fecha_fin.slice(0, 10) : ''),
-    ltEpm: (r) => nombrePersona(r.solicitud?.lt_epm_id ?? null),
-    analista: (r) => nombrePersona(r.solicitud?.analista_requerimientos_id ?? null),
-    tipoCosto: (r) => r.solicitud?.tipo_costo ?? '',
-    tecnologia: (r) => r.solicitud?.tecnologia ?? '',
-    solicitudEstado: (r) => r.solicitud?.estado ?? '',
-    fechaSolicitudSc: (r) => (r.solicitud?.fecha_solicitud ? r.solicitud.fecha_solicitud.slice(0, 10) : ''),
-    anioTarifa: (r) => r.solicitud?.anio_tarifa ?? '',
-  }
-
-  /** Exporta a Excel el listado actualmente filtrado, según los campos configurados. */
-  function exportarExcel(): void {
-    if (!puedeExportar) return
-    const columnasExport = REQUERIMIENTOS_COLUMNAS.filter((c) => exportCamposActivos.has(c.key))
-    const filas = datosFiltrados.map((r) => {
-      const fila: Record<string, string | number> = {}
-      for (const c of columnasExport) {
-        fila[c.label] = CAMPO_ACCESOR_REQ[c.key]?.(r) ?? ''
-      }
-      return fila
-    })
-    const hoja = XLSX.utils.json_to_sheet(filas)
-    const libro = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(libro, hoja, 'Requerimientos')
-    const fecha = new Date().toISOString().slice(0, 10)
-    XLSX.writeFile(libro, `requerimientos_${fecha}.xlsx`)
-  }
-
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="titulo-pagina">Requerimientos</h1>
-        <div className="flex items-center gap-2">
-          {puedeCrear && (
-            <Link to="/requerimientos/nuevo" className="rounded bg-marca px-4 py-2 text-white hover:bg-marca-osc text-sm">
-              Crear
-            </Link>
-          )}
-          <button
-            onClick={() => setMostrarFiltros((v) => !v)}
-            className={`btn ${mostrarFiltros || hayFiltrosActivos ? 'btn-suave' : 'btn-secundario'}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-            </svg>
-            Filtros{hayFiltrosActivos && <span className="contador-filtro ml-1">ON</span>}
-          </button>
-          {puedeExportar && (
-            <button
-              onClick={exportarExcel}
-              disabled={datosFiltrados.length === 0}
-              title="Exporta a Excel el listado con los filtros actualmente aplicados"
-              className="btn btn-exito items-center gap-1"
-            >
-              Exportar a Excel
-            </button>
-          )}
-        </div>
-      </div>
+      <BarraAccionesRequerimientos
+        puedeCrear={puedeCrear}
+        puedeExportar={puedeExportar}
+        mostrarFiltros={mostrarFiltros}
+        setMostrarFiltros={setMostrarFiltros}
+        hayFiltrosActivos={hayFiltrosActivos}
+        exportarDeshabilitado={datosFiltrados.length === 0}
+        onExportar={exportarExcel}
+      />
 
       {(aviso || error) && (
         <div className="aviso aviso-error mb-3">{aviso || error}</div>
@@ -514,178 +331,19 @@ export default function Requerimientos() {
 
       {/* Panel de filtros */}
       {mostrarFiltros && (
-        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filtros</span>
-            {hayFiltrosActivos && (
-              <button onClick={() => setFiltros(FILTROS_INIT)} className="enlace-accion enlace-accion-peligro text-xs">
-                Limpiar filtros
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {/* Código REQ */}
-            {filtrosActivos.has('codigoReq') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Código REQ</label>
-              <input type="text" value={filtros.codigoReq} placeholder="Buscar..."
-                onChange={(e) => setFiltros((f) => ({ ...f, codigoReq: e.target.value }))}
-                className="campo campo-sm w-full" />
-            </div>
-            )}
-            {/* SC */}
-            {filtrosActivos.has('sc') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">SC</label>
-              <input type="text" value={filtros.sc} placeholder="Buscar..."
-                onChange={(e) => setFiltros((f) => ({ ...f, sc: e.target.value }))}
-                className="campo campo-sm w-full" />
-            </div>
-            )}
-            {/* Squad */}
-            {filtrosActivos.has('squad') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Squad</label>
-              <select value={filtros.squad}
-                onChange={(e) => setFiltros((f) => ({ ...f, squad: e.target.value }))}
-                className="campo campo-sm w-full">
-                <option value="">Todos</option>
-                {squadsDisponibles.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            )}
-            {/* Estado */}
-            {filtrosActivos.has('estado') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Estado</label>
-              <select value={filtros.estado}
-                onChange={(e) => setFiltros((f) => ({ ...f, estado: e.target.value }))}
-                className="campo campo-sm w-full">
-                <option value="">Todos</option>
-                {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            )}
-            {/* Líder técnico */}
-            {filtrosActivos.has('liderTecnico') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Líder técnico</label>
-              <select value={filtros.liderTecnico}
-                onChange={(e) => setFiltros((f) => ({ ...f, liderTecnico: e.target.value }))}
-                className="campo campo-sm w-full">
-                <option value="">Todos</option>
-                {lideresDisponibles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
-            </div>
-            )}
-            {/* Estado entregas */}
-            {filtrosActivos.has('estadoEntrega') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Estado (entregas)</label>
-              <select value={filtros.estadoEntrega}
-                onChange={(e) => setFiltros((f) => ({ ...f, estadoEntrega: e.target.value }))}
-                className="campo campo-sm w-full">
-                <option value="">Todos</option>
-                {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            )}
-            {/* ANS Estimación */}
-            {filtrosActivos.has('ansEstimacion') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">ANS Estimación</label>
-              <select value={filtros.ansEstimacion}
-                onChange={(e) => setFiltros((f) => ({ ...f, ansEstimacion: e.target.value }))}
-                className="campo campo-sm w-full">
-                <option value="">Todos</option>
-                <option value="CUMPLE">Cumple</option>
-                <option value="NO CUMPLE">No cumple</option>
-              </select>
-            </div>
-            )}
-            {/* Categoría */}
-            {filtrosActivos.has('categoria') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Categoría</label>
-              <select value={filtros.categoria}
-                onChange={(e) => setFiltros((f) => ({ ...f, categoria: e.target.value }))}
-                className="campo campo-sm w-full">
-                <option value="">Todas</option>
-                {categoriasDisponibles.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            )}
-            {/* Tipificación */}
-            {filtrosActivos.has('tipificacion') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Tipificación</label>
-              <select value={filtros.tipificacion}
-                onChange={(e) => setFiltros((f) => ({ ...f, tipificacion: e.target.value }))}
-                className="campo campo-sm w-full">
-                <option value="">Todas</option>
-                {tipificacionesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            )}
-            {/* Tipo de costo */}
-            {filtrosActivos.has('tipoCosto') && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Tipo de costo</label>
-              <select value={filtros.tipoCosto}
-                onChange={(e) => setFiltros((f) => ({ ...f, tipoCosto: e.target.value }))}
-                className="campo campo-sm w-full">
-                <option value="">Todos</option>
-                {tiposCostoDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            )}
-            {/* Fecha solicitud */}
-            {filtrosActivos.has('fechaSolicitud') && (
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-slate-600">Fecha y hora de solicitud</label>
-              <div className="flex items-center gap-1">
-                <input type="date" value={filtros.fechaSolicitudDesde}
-                  onChange={(e) => setFiltros((f) => ({ ...f, fechaSolicitudDesde: e.target.value }))}
-                  className="campo campo-sm w-full" />
-                <span className="text-xs text-slate-400">–</span>
-                <input type="date" value={filtros.fechaSolicitudHasta}
-                  onChange={(e) => setFiltros((f) => ({ ...f, fechaSolicitudHasta: e.target.value }))}
-                  className="campo campo-sm w-full" />
-              </div>
-            </div>
-            )}
-            {/* Fecha comprometida */}
-            {filtrosActivos.has('fechaComprometida') && (
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-slate-600">Fecha comprometida</label>
-              <div className="flex items-center gap-1">
-                <input type="date" value={filtros.fechaComprometidaDesde}
-                  onChange={(e) => setFiltros((f) => ({ ...f, fechaComprometidaDesde: e.target.value }))}
-                  className="campo campo-sm w-full" />
-                <span className="text-xs text-slate-400">–</span>
-                <input type="date" value={filtros.fechaComprometidaHasta}
-                  onChange={(e) => setFiltros((f) => ({ ...f, fechaComprometidaHasta: e.target.value }))}
-                  className="campo campo-sm w-full" />
-              </div>
-            </div>
-            )}
-            {/* Fecha real entrega de estimaciones */}
-            {filtrosActivos.has('fechaLimite') && (
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-slate-600">Fecha real entrega de estimaciones</label>
-              <div className="flex items-center gap-1">
-                <input type="date" value={filtros.fechaLimiteDesde}
-                  onChange={(e) => setFiltros((f) => ({ ...f, fechaLimiteDesde: e.target.value }))}
-                  className="campo campo-sm w-full" />
-                <span className="text-xs text-slate-400">–</span>
-                <input type="date" value={filtros.fechaLimiteHasta}
-                  onChange={(e) => setFiltros((f) => ({ ...f, fechaLimiteHasta: e.target.value }))}
-                  className="campo campo-sm w-full" />
-              </div>
-            </div>
-            )}
-          </div>
-        </div>
+        <PanelFiltrosRequerimientos
+          filtros={filtros}
+          setFiltros={setFiltros}
+          hayFiltrosActivos={hayFiltrosActivos}
+          filtrosActivos={filtrosActivos}
+          estadosReq={estadosReq}
+          estadosEnt={estadosEnt}
+          squadsDisponibles={squadsDisponibles}
+          lideresDisponibles={lideresDisponibles}
+          categoriasDisponibles={categoriasDisponibles}
+          tipificacionesDisponibles={tipificacionesDisponibles}
+          tiposCostoDisponibles={tiposCostoDisponibles}
+        />
       )}
 
       <TablaScroll>
