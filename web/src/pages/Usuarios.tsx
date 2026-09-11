@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
-import { Boton, TablaScroll } from '../components/ui/primitivos'
+import { Boton, Campo, Selector, TablaScroll } from '../components/ui/primitivos'
 import type { Aplicacion, Rol, Usuario } from '../types'
 
 type Tab = 'usuarios' | 'roles'
@@ -336,25 +336,22 @@ export default function Usuarios() {
             <form onSubmit={crear} className="barra-filtros mb-4">
               <label className="text-sm">
                 <span className="mb-1 block text-slate-600">Nombre</span>
-                <input value={nombre} onChange={(e) => setNombre(e.target.value)} required
-                  className="campo" />
+                <Campo value={nombre} onChange={(e) => setNombre(e.target.value)} required />
               </label>
               <label className="text-sm">
                 <span className="mb-1 block text-slate-600">Correo</span>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required
-                  className="campo" />
+                <Campo value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
               </label>
               <label className="text-sm">
                 <span className="mb-1 block text-slate-600">Contraseña</span>
-                <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required
-                  className="campo" />
+                <Campo value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
               </label>
               <label className="text-sm">
                 <span className="mb-1 block text-slate-600">Rol</span>
-                <select value={rolId} onChange={(e) => setRolId(e.target.value)} className="campo">
+                <Selector value={rolId} onChange={(e) => setRolId(e.target.value)}>
                   <option value="">Seleccione</option>
                   {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                </select>
+                </Selector>
               </label>
               <div className="min-w-64 text-sm">
                 <div className="mb-1 flex items-center justify-between gap-3">
@@ -411,14 +408,14 @@ export default function Usuarios() {
                   <td>{u.nombre}</td>
                   <td>{u.email}</td>
                   <td>
-                    <select
+                    <Selector
                       value={u.rol_id ?? ''}
                       onChange={(e) => cambiarRol(u, e.target.value)}
                       disabled={!puedeEditarUsuarios}
-                      className="campo campo-sm"
+                      compacto
                     >
                       {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                    </select>
+                    </Selector>
                   </td>
                   <td>{nombresSquadsUsuario(u)}</td>
                   <td className="text-center">{u.activo ? 'Sí' : 'No'}</td>
@@ -462,9 +459,9 @@ export default function Usuarios() {
             <form onSubmit={crearRol} className="rounded-xl border bg-white p-4 space-y-3">
               <h2 className="titulo-seccion text-sm">Crear rol</h2>
               <div className="flex flex-wrap gap-3">
-                <input className="campo" placeholder="Clave (ej: auditor)" value={nuevoRolClave} onChange={(e) => setNuevoRolClave(e.target.value)} required />
-                <input className="campo" placeholder="Nombre" value={nuevoRolNombre} onChange={(e) => setNuevoRolNombre(e.target.value)} required />
-                <input className="campo min-w-72" placeholder="Descripción" value={nuevoRolDescripcion} onChange={(e) => setNuevoRolDescripcion(e.target.value)} />
+                <Campo placeholder="Clave (ej: auditor)" value={nuevoRolClave} onChange={(e) => setNuevoRolClave(e.target.value)} required />
+                <Campo placeholder="Nombre" value={nuevoRolNombre} onChange={(e) => setNuevoRolNombre(e.target.value)} required />
+                <Campo className="min-w-72" placeholder="Descripción" value={nuevoRolDescripcion} onChange={(e) => setNuevoRolDescripcion(e.target.value)} />
               </div>
               <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto rounded border p-2 md:grid-cols-2">
                 {catalogoPermisosOrdenado.map((permiso) => {
@@ -539,20 +536,20 @@ export default function Usuarios() {
           {editAviso && <div className="aviso aviso-error">{editAviso}</div>}
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Nombre</span>
-            <input value={editNombre} onChange={(e) => setEditNombre(e.target.value)} required
-              className="campo w-full" />
+            <Campo value={editNombre} onChange={(e) => setEditNombre(e.target.value)} required
+              className="w-full" />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Correo</span>
-            <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" required
-              className="campo w-full" />
+            <Campo value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" required
+              className="w-full" />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-slate-600">Rol</span>
-            <select value={editRolId} onChange={(e) => setEditRolId(e.target.value)}
-              className="campo w-full">
+            <Selector value={editRolId} onChange={(e) => setEditRolId(e.target.value)}
+              className="w-full">
               {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-            </select>
+            </Selector>
           </label>
           <div className="block text-sm">
             <div className="mb-1 flex items-center justify-between gap-3">
@@ -609,18 +606,18 @@ export default function Usuarios() {
           <div className="space-y-3">
             <label className="block text-sm">
               <span className="mb-1 block text-slate-600">Nombre</span>
-              <input
+              <Campo
                 value={rolEditando.nombre}
                 onChange={(e) => setRolEditando({ ...rolEditando, nombre: e.target.value })}
-                className="campo w-full"
+                className="w-full"
               />
             </label>
             <label className="block text-sm">
               <span className="mb-1 block text-slate-600">Descripción</span>
-              <input
+              <Campo
                 value={rolEditando.descripcion}
                 onChange={(e) => setRolEditando({ ...rolEditando, descripcion: e.target.value })}
-                className="campo w-full"
+                className="w-full"
               />
             </label>
             <label className="flex items-center gap-2 text-sm">

@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Tarifa } from '../types'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 
 const RAMIFICACIONES = ['Fábrica', 'Soporte']
 
@@ -96,20 +96,19 @@ export default function Tarifas() {
       <form onSubmit={crear} className="barra-filtros mb-4">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Año</span>
-          <input value={anio} onChange={(e) => setAnio(e.target.value)} type="number" required
-            className="campo w-24" />
+          <Campo value={anio} onChange={(e) => setAnio(e.target.value)} type="number" required
+            className="w-24" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Valor hora</span>
-          <input value={valorHora} onChange={(e) => setValorHora(e.target.value)} type="number" required
-            className="campo w-32" />
+          <Campo value={valorHora} onChange={(e) => setValorHora(e.target.value)} type="number" required
+            className="w-32" />
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Ramificación</span>
-          <select value={ramificacion} onChange={(e) => setRamificacion(e.target.value)}
-            className="campo">
+          <Selector value={ramificacion} onChange={(e) => setRamificacion(e.target.value)}>
             {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
+          </Selector>
         </label>
         <Boton variante="primario" type="submit">Crear</Boton>
       </form>
@@ -137,7 +136,7 @@ export default function Tarifas() {
                 onDoubleClick={() => iniciarEdicion(t.id, 'anio', String(t.anio))}
               >
                 {editCell?.id === t.id && editCell.campo === 'anio' ? (
-                  <input
+                  <Campo
                     autoFocus
                     type="number"
                     value={editValue}
@@ -154,7 +153,8 @@ export default function Tarifas() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full"
+                    compacto
+                    className="w-full"
                   />
                 ) : (
                   t.anio
@@ -166,7 +166,7 @@ export default function Tarifas() {
                 onDoubleClick={() => iniciarEdicion(t.id, 'valor_hora', String(t.valor_hora))}
               >
                 {editCell?.id === t.id && editCell.campo === 'valor_hora' ? (
-                  <input
+                  <Campo
                     autoFocus
                     type="number"
                     value={editValue}
@@ -183,7 +183,8 @@ export default function Tarifas() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full text-right"
+                    compacto
+                    className="w-full text-right"
                   />
                 ) : (
                   t.valor_hora
@@ -195,7 +196,7 @@ export default function Tarifas() {
                 onDoubleClick={() => iniciarEdicion(t.id, 'ramificacion', t.ramificacion ?? RAMIFICACIONES[0])}
               >
                 {editCell?.id === t.id && editCell.campo === 'ramificacion' ? (
-                  <select
+                  <Selector
                     autoFocus
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
@@ -211,10 +212,11 @@ export default function Tarifas() {
                         setEditValue('')
                       }
                     }}
-                    className="campo campo-sm w-full"
+                    compacto
+                    className="w-full"
                   >
                     {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
+                  </Selector>
                 ) : (
                   t.ramificacion ?? '—'
                 )}
@@ -247,20 +249,20 @@ export default function Tarifas() {
             <h2 className="titulo-seccion mb-4">Editar tarifa</h2>
             <div className="mb-3">
               <label className="mb-1 block text-sm text-slate-600">Año</label>
-              <input value={editAnio} onChange={(e) => setEditAnio(e.target.value)}
-                type="number" className="campo w-full" />
+              <Campo value={editAnio} onChange={(e) => setEditAnio(e.target.value)}
+                type="number" className="w-full" />
             </div>
             <div className="mb-3">
               <label className="mb-1 block text-sm text-slate-600">Valor hora</label>
-              <input value={editValorHora} onChange={(e) => setEditValorHora(e.target.value)}
-                type="number" className="campo w-full" />
+              <Campo value={editValorHora} onChange={(e) => setEditValorHora(e.target.value)}
+                type="number" className="w-full" />
             </div>
             <div className="mb-4">
               <label className="mb-1 block text-sm text-slate-600">Ramificación</label>
-              <select value={editRamificacion} onChange={(e) => setEditRamificacion(e.target.value)}
-                className="campo w-full">
+              <Selector value={editRamificacion} onChange={(e) => setEditRamificacion(e.target.value)}
+                className="w-full">
                 {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
+              </Selector>
             </div>
             <div className="flex justify-end gap-2">
               <Boton variante="secundario" onClick={() => setEditItem(null)}>
