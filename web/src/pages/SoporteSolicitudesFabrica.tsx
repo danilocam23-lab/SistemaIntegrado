@@ -2,7 +2,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
+import { COLOR_GRAFICA } from '../components/ui/graficas'
 import { useAuth } from '../context/AuthContext'
 
 interface RegistroSoporte {
@@ -472,36 +473,22 @@ export default function SoporteSolicitudesFabrica() {
       {aviso && <div className="aviso aviso-error">{aviso}</div>}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded border bg-white p-3">
-          <div className="text-2xl font-bold text-marca-osc">{data?.total ?? 0}</div>
-          <div className="text-xs text-slate-500">Registros</div>
-        </div>
-        <div className="rounded border bg-white p-3 sm:col-span-2">
-          <div className="text-sm font-semibold text-slate-700">Última actualización</div>
-          <div className="text-sm text-slate-500">{fmtFecha(data?.ultima_actualizacion ?? null)}</div>
-        </div>
+        <Kpi rotulo="Registros" valor={data?.total ?? 0} />
+        <Kpi
+          rotulo="Última actualización"
+          valor={fmtFecha(data?.ultima_actualizacion ?? null)}
+          className="sm:col-span-2"
+        />
       </div>
 
       {resultadoSync && (
         <div className="tarjeta tarjeta-pad">
           <h2 className="etiqueta-sup mb-3">Resultado de sincronización</h2>
           <div className="grid gap-3 sm:grid-cols-4">
-            <div className="rounded border p-3">
-              <div className="text-2xl font-bold text-marca-osc">{resultadoSync.total_procesados}</div>
-              <div className="text-xs text-slate-500">Procesados</div>
-            </div>
-            <div className="rounded border p-3">
-              <div className="text-2xl font-bold text-emerald-700">{resultadoSync.registros_creados}</div>
-              <div className="text-xs text-slate-500">Creados</div>
-            </div>
-            <div className="rounded border p-3">
-              <div className="text-2xl font-bold text-amber-700">{resultadoSync.registros_omitidos}</div>
-              <div className="text-xs text-slate-500">Omitidos</div>
-            </div>
-            <div className="rounded border p-3">
-              <div className="text-2xl font-bold text-slate-700">{(resultadoSync.tiempo_ejecucion_ms / 1000).toFixed(2)}s</div>
-              <div className="text-xs text-slate-500">Tiempo</div>
-            </div>
+            <Kpi rotulo="Procesados" valor={resultadoSync.total_procesados} acento={COLOR_GRAFICA.serie} />
+            <Kpi rotulo="Creados" valor={resultadoSync.registros_creados} acento={COLOR_GRAFICA.ok} />
+            <Kpi rotulo="Omitidos" valor={resultadoSync.registros_omitidos} acento={COLOR_GRAFICA.alerta} />
+            <Kpi rotulo="Tiempo" valor={`${(resultadoSync.tiempo_ejecucion_ms / 1000).toFixed(2)}s`} />
           </div>
           {resultadoSync.registros_omitidos > 0 && (
             <div className="mt-3">

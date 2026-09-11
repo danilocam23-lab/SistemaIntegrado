@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Requerimiento, Tarifa } from '../types'
-import { EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
 
 interface RegistroSoporte {
   Work_Order_ID: string
@@ -192,27 +192,20 @@ export default function FacturacionValoresProyecto() {
       />
       {errorVisible && <div className="aviso aviso-error">{errorVisible}</div>}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="aviso aviso-exito">
-          <p className="text-sm font-medium text-emerald-800">Dinero de soporte</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-900">{formatoMoneda(totales.valorTotal)}</p>
-        </div>
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <p className="text-sm font-medium text-blue-800">Dinero de entregas por estado</p>
-          <p className="mt-1 text-2xl font-bold text-blue-900">{formatoMoneda(totalesEntregasEstado.valorTotal)}</p>
-        </div>
-        <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
-          <p className="text-sm font-medium text-violet-800">Dinero entregas aprobadas</p>
-          <p className="mt-1 text-2xl font-bold text-violet-900">{formatoMoneda(totalAprobadas)}</p>
-        </div>
-        <div className="aviso aviso-alerta">
-          <p className="text-sm font-medium text-amber-800">Total dinero</p>
-          <p className="mt-1 text-2xl font-bold text-amber-900">{formatoMoneda(totalDinero)}</p>
-        </div>
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-          <p className="text-sm font-medium text-indigo-800">Total dinero ingresado</p>
-          <p className="mt-1 text-2xl font-bold text-indigo-900">{formatoMoneda(totalDineroIngresado)}</p>
-          <p className="mt-2 text-xs text-indigo-700">Nota: falta validar horas de soporte.</p>
-        </div>
+        <Kpi rotulo="Dinero de soporte" valor={formatoMoneda(totales.valorTotal)} acento="#059669" />
+        <Kpi
+          rotulo="Dinero de entregas por estado"
+          valor={formatoMoneda(totalesEntregasEstado.valorTotal)}
+          acento="#2563eb"
+        />
+        <Kpi rotulo="Dinero entregas aprobadas" valor={formatoMoneda(totalAprobadas)} acento="#7c3aed" />
+        <Kpi rotulo="Total dinero" valor={formatoMoneda(totalDinero)} acento="#d97706" />
+        <Kpi
+          rotulo="Total dinero ingresado"
+          valor={formatoMoneda(totalDineroIngresado)}
+          nota="Nota: falta validar horas de soporte."
+          acento="#4f46e5"
+        />
       </div>
       <div className="tarjeta overflow-hidden">
         <TablaScroll plano>

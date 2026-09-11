@@ -3,7 +3,8 @@ import type { ChangeEvent } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
-import { Boton, EncabezadoPagina, Icono } from '../components/ui'
+import { Boton, EncabezadoPagina, Icono, Kpi } from '../components/ui'
+import { COLOR_GRAFICA } from '../components/ui/graficas'
 
 interface Resultado {
   filas_procesadas: number
@@ -192,10 +193,7 @@ export default function Importacion() {
               ['Entregas actualizadas', resultado.entregas_actualizadas],
               ['Festivos cargados', resultado.festivos_cargados],
             ].map(([etiqueta, valor]) => (
-              <div key={etiqueta} className="rounded border p-3">
-                <div className="text-2xl font-bold text-marca-osc">{valor}</div>
-                <div className="text-xs text-slate-500">{etiqueta}</div>
-              </div>
+              <Kpi key={etiqueta} rotulo={String(etiqueta)} valor={valor} />
             ))}
           </div>
           {resultado.errores.length > 0 && (
@@ -224,12 +222,12 @@ export default function Importacion() {
               Se verificó el archivo. Confirma para aplicar los cambios:
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded border p-2">Requerimientos en archivo: <b>{preview.filas_requerimientos}</b></div>
-              <div className="rounded border p-2">Entregas en archivo: <b>{preview.filas_entregas}</b></div>
-              <div className="rounded border p-2 text-green-700">Req nuevos: <b>{preview.requerimientos_nuevos}</b></div>
-              <div className="rounded border p-2 text-blue-700">Req actualizados: <b>{preview.requerimientos_actualizados}</b></div>
-              <div className="rounded border p-2 text-green-700">Entregas nuevas: <b>{preview.entregas_nuevas}</b></div>
-              <div className="rounded border p-2 text-blue-700">Entregas actualizadas: <b>{preview.entregas_actualizadas}</b></div>
+              <Kpi rotulo="Requerimientos en archivo" valor={preview.filas_requerimientos} />
+              <Kpi rotulo="Entregas en archivo" valor={preview.filas_entregas} />
+              <Kpi rotulo="Req nuevos" valor={preview.requerimientos_nuevos} acento={COLOR_GRAFICA.ok} />
+              <Kpi rotulo="Req actualizados" valor={preview.requerimientos_actualizados} acento={COLOR_GRAFICA.serie} />
+              <Kpi rotulo="Entregas nuevas" valor={preview.entregas_nuevas} acento={COLOR_GRAFICA.ok} />
+              <Kpi rotulo="Entregas actualizadas" valor={preview.entregas_actualizadas} acento={COLOR_GRAFICA.serie} />
             </div>
             <div className="max-h-64 space-y-3 overflow-auto rounded border bg-slate-50 p-2 text-xs">
               {/* Reqs nuevos */}
