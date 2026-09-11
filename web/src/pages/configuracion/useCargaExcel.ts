@@ -70,15 +70,15 @@ export function useCargaExcel({ datos, recargar }: Params) {
     try {
       const { data } = await client.post('/soporte/solicitudes-fabrica/ejecutar-carga-automatica')
       if (!data.ejecutado) {
-        setResultadoPruebaCargaExcel(`⚠️ ${data.mensaje}`)
+        setResultadoPruebaCargaExcel(data.mensaje)
       } else {
         setResultadoPruebaCargaExcel(
-          `✅ Archivo "${data.archivo}" procesado: ${data.total_encontrados} filas encontradas, ` +
+          `Archivo "${data.archivo}" procesado: ${data.total_encontrados} filas encontradas, ` +
             `${data.cargados} cargadas, ${data.con_error} con error.`
         )
       }
     } catch (err) {
-      setResultadoPruebaCargaExcel(`❌ ${mensajeError(err)}`)
+      setResultadoPruebaCargaExcel(mensajeError(err))
     } finally {
       setProbandoCargaExcel(false)
       // INVARIANTE 9: la tarjeta se refresca en el finally de Probar ahora.

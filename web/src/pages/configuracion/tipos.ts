@@ -4,15 +4,15 @@ export type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'f
 
 export const PESTANAS: { id: Tab; label: string; icono?: NombreIcono }[] = [
   { id: 'tarifas', label: 'Tarifas', icono: 'facturacion' },
-  { id: 'categorias', label: '🏷️ Categorías' },
-  { id: 'roles', label: '👤 Roles' },
-  { id: 'tipos_contratacion', label: '📄 Tipo de contratación' },
-  { id: 'festivos', label: '📅 Festivos' },
-  { id: 'parametros', label: '⚙️ Parámetros' },
-  { id: 'estados', label: '🔖 Estados' },
+  { id: 'categorias', label: 'Categorías' },
+  { id: 'roles', label: 'Roles', icono: 'personas' },
+  { id: 'tipos_contratacion', label: 'Tipo de contratación', icono: 'documento' },
+  { id: 'festivos', label: 'Festivos', icono: 'calendario' },
+  { id: 'parametros', label: 'Parámetros', icono: 'administracion' },
+  { id: 'estados', label: 'Estados' },
   { id: 'entregas_actas', label: 'Entregas de Actas', icono: 'documento' },
-  { id: 'requerimientos', label: '🧾 Requerimientos' },
-  { id: 'carga_excel', label: '📂 Carga de Excel' },
+  { id: 'requerimientos', label: 'Requerimientos', icono: 'documento' },
+  { id: 'carga_excel', label: 'Carga de Excel', icono: 'caja' },
 ]
 
 export interface UltimaSincronizacionResumen {

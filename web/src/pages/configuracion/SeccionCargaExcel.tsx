@@ -1,4 +1,4 @@
-import { Aviso, Boton, Campo } from '../../components/ui'
+import { Aviso, Boton, Campo, Icono } from '../../components/ui'
 import { fmtFechaCo } from './utilidades'
 import type { CargaExcelState } from './useCargaExcel'
 
@@ -51,8 +51,9 @@ export function SeccionCargaExcel({
             variante="secundario"
             onClick={() => void consultarUltimaEjecucionAuto()}
             disabled={cargandoUltimaEjecucion}
+            icono={<Icono nombre="recargar" />}
           >
-            🔄 {cargandoUltimaEjecucion ? 'Consultando…' : 'Consultar estado'}
+            {cargandoUltimaEjecucion ? 'Consultando…' : 'Consultar estado'}
           </Boton>
         </div>
         {!ultimaEjecucionAuto && (
@@ -68,8 +69,9 @@ export function SeccionCargaExcel({
             </div>
             <div className="rounded border p-3 text-sm">
               <div className="text-slate-500">Estado</div>
-              <div className={`font-semibold ${ultimaEjecucionAuto.estado === 'exitoso' ? 'text-emerald-700' : 'text-red-700'}`}>
-                {ultimaEjecucionAuto.estado === 'exitoso' ? '✅ Exitoso' : `❌ ${ultimaEjecucionAuto.estado}`}
+              <div className={`flex items-center gap-1 font-semibold ${ultimaEjecucionAuto.estado === 'exitoso' ? 'text-emerald-700' : 'text-red-700'}`}>
+                <Icono nombre={ultimaEjecucionAuto.estado === 'exitoso' ? 'check-circulo' : 'alerta'} />
+                {ultimaEjecucionAuto.estado === 'exitoso' ? 'Exitoso' : ultimaEjecucionAuto.estado}
               </div>
             </div>
             <div className="rounded border p-3 text-sm">
@@ -108,7 +110,7 @@ export function SeccionCargaExcel({
           onClick={probarCargaAutomatica}
           disabled={probandoCargaExcel}
         >
-          {probandoCargaExcel ? 'Ejecutando…' : '▶️ Probar ahora'}
+          {probandoCargaExcel ? 'Ejecutando…' : 'Probar ahora'}
         </Boton>
         {resultadoPruebaCargaExcel && (
           <Aviso tono="info">{resultadoPruebaCargaExcel}</Aviso>

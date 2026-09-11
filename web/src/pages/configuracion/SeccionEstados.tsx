@@ -1,4 +1,4 @@
-import { Aviso, Boton, Campo } from '../../components/ui'
+import { Aviso, Boton, Campo, Icono } from '../../components/ui'
 import type { EstadosConfigurablesState } from './useEstadosConfigurables'
 
 type Props = EstadosConfigurablesState
@@ -36,7 +36,7 @@ export function SeccionEstados({
           {estReq.map((e) => (
             <span key={e} className="chip chip-marca">
               {e}
-              <button onClick={() => quitarEstadoReq(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
+              <button onClick={() => quitarEstadoReq(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar"><Icono nombre="x" /></button>
             </span>
           ))}
           {estReq.length === 0 && <span className="text-sm text-slate-400">Sin estados configurados</span>}
@@ -64,7 +64,7 @@ export function SeccionEstados({
           {estEnt.map((e) => (
             <span key={e} className="chip chip-marca">
               {e}
-              <button onClick={() => quitarEstadoEnt(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
+              <button onClick={() => quitarEstadoEnt(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar"><Icono nombre="x" /></button>
             </span>
           ))}
           {estEnt.length === 0 && <span className="text-sm text-slate-400">Sin estados configurados</span>}

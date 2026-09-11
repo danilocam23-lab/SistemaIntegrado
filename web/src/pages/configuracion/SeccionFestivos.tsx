@@ -1,4 +1,4 @@
-import { Aviso, Boton, Campo, Chip } from '../../components/ui'
+import { Aviso, Boton, Campo, Chip, Icono } from '../../components/ui'
 import type { FestivosState } from './useFestivos'
 
 type Props = FestivosState & {
@@ -39,7 +39,7 @@ export function SeccionFestivos({
                 <li key={f.id}>
                   <Chip tono="neutro">
                     {f.fecha?.slice(0, 10)}
-                    <button onClick={() => eliminarFestivo(f)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
+                    <button onClick={() => eliminarFestivo(f)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar"><Icono nombre="x" /></button>
                   </Chip>
                 </li>
               ))}

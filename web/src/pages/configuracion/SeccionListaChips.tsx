@@ -1,4 +1,4 @@
-import { Aviso, Boton, Campo } from '../../components/ui'
+import { Aviso, Boton, Campo, Icono } from '../../components/ui'
 import type { ListaEncoladaState } from './useListaEncolada'
 
 type Props = ListaEncoladaState & {
@@ -26,7 +26,7 @@ export function SeccionListaChips({
         {items.map((item) => (
           <span key={item} className="chip chip-marca">
             {item}
-            <button onClick={() => quitar(item)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
+            <button onClick={() => quitar(item)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar"><Icono nombre="x" /></button>
           </span>
         ))}
         {items.length === 0 && <span className="text-sm text-slate-400">{textoVacio}</span>}

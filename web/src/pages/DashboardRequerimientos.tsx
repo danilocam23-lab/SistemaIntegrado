@@ -441,8 +441,8 @@ export default function DashboardRequerimientos() {
           <section className="flex flex-col gap-6">
             {/* Section header */}
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-marca-50 text-marca-700">
-                <span className="text-lg">📋</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-marca-50 text-lg text-marca-700">
+                <Icono nombre="portafolio" />
               </div>
               <div>
                 <h2 className="titulo-seccion">Requerimientos &amp; Actas</h2>
@@ -471,8 +471,8 @@ export default function DashboardRequerimientos() {
                 />
                 {hayFiltroReq && (
                   <Boton onClick={() => { setAnosReq(new Set()); setMesesReq(new Set()) }}
-                    variante="secundario" tamano="sm">
-                    ✕ Limpiar
+                    variante="secundario" tamano="sm" icono={<Icono nombre="x" />}>
+                    Limpiar
                   </Boton>
                 )}
               </div>
@@ -593,8 +593,8 @@ export default function DashboardRequerimientos() {
           <section className="flex flex-col gap-6">
             {/* Section header */}
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-marca-50 text-marca-700">
-                <span className="text-lg">🛠️</span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-marca-50 text-lg text-marca-700">
+                <Icono nombre="soporte" />
               </div>
               <div>
                 <h2 className="titulo-seccion">Soporte &amp; Work Orders</h2>
@@ -623,8 +623,8 @@ export default function DashboardRequerimientos() {
                 />
                 {hayFiltroSop && (
                   <Boton onClick={() => { setAnosSop(new Set()); setMesesSop(new Set()) }}
-                    variante="exito" tamano="sm">
-                    ✕ Limpiar
+                    variante="exito" tamano="sm" icono={<Icono nombre="x" />}>
+                    Limpiar
                   </Boton>
                 )}
               </div>
