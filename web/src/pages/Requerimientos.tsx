@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import type { Estimacion, EstimacionConResumen, Requerimiento } from '../types'
+import type { Estimacion, EstimacionConResumen } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
 import type { ClaveSeccionResumen } from './requerimientos/tipos'
 import {
@@ -23,6 +23,8 @@ import { PanelFiltrosRequerimientos } from './requerimientos/PanelFiltrosRequeri
 import { BarraAccionesRequerimientos } from './requerimientos/BarraAccionesRequerimientos'
 import { useAccesoresRequerimiento } from './requerimientos/useAccesoresRequerimiento'
 import { useExportarExcel } from './requerimientos/useExportarExcel'
+import { useEscriturasRequerimientos } from './requerimientos/useEscriturasRequerimientos'
+import { crearRenderCelda } from './requerimientos/CeldaEditable'
 
 export default function Requerimientos() {
   const { tienePermiso } = useAuth()
@@ -52,6 +54,13 @@ export default function Requerimientos() {
   const { exportarExcel } = useExportarExcel(puedeExportar, exportCamposActivos, datosFiltrados, CAMPO_ACCESOR_REQ)
 
   const [aviso, setAviso] = useState('')
+
+  const { editValue, setEditValue, iniciarEdicionCelda, guardarCelda, handleKeyDown, isEditing, eliminar } =
+    useEscriturasRequerimientos(puedeEditar, puedeEliminar, recargar, setAviso)
+  const renderCelda = crearRenderCelda({
+    editValue, setEditValue, guardarCelda, handleKeyDown, isEditing, iniciarEdicionCelda, puedeEditar, estadosReq, personas,
+  })
+
   const [estimacionIds, setEstimacionIds] = useState<Set<string>>(new Set())
   const [estimacionesMap, setEstimacionesMap] = useState<Record<string, Estimacion>>({})
   const [expandedReqs, setExpandedReqs] = useState<Set<string>>(new Set())
@@ -191,122 +200,6 @@ export default function Requerimientos() {
       else next.add(key)
       return next
     })
-  }
-
-  // Edición inline por celda
-  const [editCell, setEditCell] = useState<{ id: string; campo: string } | null>(null)
-  const [editValue, setEditValue] = useState('')
-
-  function iniciarEdicionCelda(req: Requerimiento, campo: string): void {
-    let valor = ''
-    switch (campo) {
-      case 'codigo_sc': valor = req.solicitud?.codigo_sc ?? ''; break
-      case 'nombre': valor = req.nombre ?? ''; break
-      case 'estado': valor = req.estado; break
-      case 'lt_hitss_id': valor = req.solicitud?.lt_hitss_id ?? ''; break
-      case 'scrum_id': valor = req.solicitud?.scrum_id ?? ''; break
-      case 'analista_requerimientos_id': valor = req.solicitud?.analista_requerimientos_id ?? ''; break
-      case 'total_horas_estimadas': valor = req.total_horas_estimadas != null ? String(req.total_horas_estimadas) : ''; break
-      case 'cantidad_entregas': valor = String(req.cantidad_entregas ?? 0); break
-    }
-    setEditCell({ id: req.id, campo })
-    setEditValue(valor)
-  }
-
-  async function guardarCelda(req: Requerimiento): Promise<void> {
-    setAviso('')
-    if (!puedeEditar) {
-      setAviso('No tienes permiso para editar requerimientos.')
-      setEditCell(null)
-      return
-    }
-    const campo = editCell?.campo
-    if (!campo) return
-
-    try {
-      const payload: any = {}
-      if (campo === 'codigo_sc' || campo === 'lt_hitss_id' || campo === 'scrum_id' || campo === 'analista_requerimientos_id') {
-        payload.solicitud = { ...req.solicitud, [campo]: editValue || null }
-      } else if (campo === 'total_horas_estimadas') {
-        payload.total_horas_estimadas = editValue ? Number(editValue) : null
-      } else if (campo === 'cantidad_entregas') {
-        payload.cantidad_entregas = editValue ? Number(editValue) : 0
-      } else if (campo === 'nombre') {
-        payload.nombre = editValue || null
-      } else if (campo === 'estado') {
-        payload.estado = editValue
-      }
-
-      await client.put(`/requerimientos/${req.id}`, payload)
-      setEditCell(null)
-      recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent, req: Requerimiento): void {
-    if (e.key === 'Enter') { guardarCelda(req) }
-    else if (e.key === 'Escape') { setEditCell(null) }
-  }
-
-  async function eliminar(req: Requerimiento): Promise<void> {
-    if (!puedeEliminar) {
-      setAviso('No tienes permiso para eliminar requerimientos.')
-      return
-    }
-    if (!window.confirm(`¿Eliminar el requerimiento ${req.codigo_req}? Esta acción no se puede deshacer.`)) return
-    setAviso('')
-    try {
-      await client.delete(`/requerimientos/${req.id}`, {
-        headers: { 'X-Aplicacion': req.aplicacion_id },
-      })
-      recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }
-
-  const isEditing = (reqId: string, campo: string): boolean =>
-    editCell?.id === reqId && editCell?.campo === campo
-
-  function renderCelda(req: Requerimiento, campo: string, displayValue: string, type?: 'select' | 'select-persona' | 'number', rolFiltro?: string | string[]): JSX.Element {
-    if (isEditing(req.id, campo)) {
-      if (type === 'select') {
-        return (
-          <select value={editValue} onChange={(e) => setEditValue(e.target.value)}
-            onBlur={() => guardarCelda(req)} autoFocus
-            className="campo campo-sm w-full">
-            {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )
-      }
-      if (type === 'select-persona') {
-        const roles = rolFiltro ? (Array.isArray(rolFiltro) ? rolFiltro : [rolFiltro]) : []
-        const lista = (roles.length > 0 ? personas.filter((p) => roles.includes(p.rol_operativo)) : personas).filter((p) => p.activo)
-        return (
-          <select value={editValue} onChange={(e) => { setEditValue(e.target.value) }}
-            onBlur={() => guardarCelda(req)} autoFocus
-            className="campo campo-sm w-full">
-            <option value="">—</option>
-            {lista.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
-        )
-      }
-      return (
-        <input value={editValue} onChange={(e) => setEditValue(e.target.value)}
-          onBlur={() => guardarCelda(req)} onKeyDown={(e) => handleKeyDown(e, req)}
-          type={type === 'number' ? 'number' : 'text'} autoFocus
-          className="campo campo-sm w-full" />
-      )
-    }
-    return (
-      <span onDoubleClick={puedeEditar ? () => iniciarEdicionCelda(req, campo) : undefined}
-        className={`block w-full rounded px-1 py-0.5 ${puedeEditar ? 'cursor-pointer hover:bg-slate-100' : ''}`}
-        title={puedeEditar ? 'Doble clic para editar' : undefined}>
-        {displayValue || '—'}
-      </span>
-    )
   }
 
   const reqSeleccionado = estModalReqId ? datos.find((req) => req.id === estModalReqId) ?? null : null
