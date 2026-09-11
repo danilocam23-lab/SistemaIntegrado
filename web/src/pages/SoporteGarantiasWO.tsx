@@ -332,7 +332,7 @@ export default function SoporteGarantiasWO() {
                 <p className="py-8 text-center text-sm text-red-500">{errorDetalle}</p>
               )}
               {!cargandoDetalle && !errorDetalle && detalleWo && (
-                <table className="w-full text-sm">
+                <table className="tabla">
                   <tbody className="divide-y divide-slate-100">
                     <tr>
                       <td className="w-56 px-3 py-2 font-semibold text-slate-600">Squad</td>
