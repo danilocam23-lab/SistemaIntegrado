@@ -50,30 +50,30 @@ export function TablaRequerimientos({
 }: TablaRequerimientosProps) {
   return (
     <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="w-8 p-2"></th>
-            {columnasActivas.has('codigoReq') && <th className="p-2 text-left">Código REQ</th>}
-            {columnasActivas.has('sc') && <th className="p-2 text-left">SC</th>}
-            {columnasActivas.has('squad') && <th className="p-2 text-left">Squad</th>}
-            {columnasActivas.has('nombreActa') && <th className="p-2 text-left">Nombre de acta</th>}
-            {columnasActivas.has('aplicacionEpm') && <th className="p-2 text-left">Aplicación EPM</th>}
-            {columnasActivas.has('estado') && <th className="p-2 text-left">Estado</th>}
-            {columnasActivas.has('ansEstimacion') && <th className="p-2 text-center">ANS Estimación</th>}
-            {columnasActivas.has('ltHitss') && <th className="p-2 text-left">Líder técnico</th>}
-            {columnasActivas.has('scrum') && <th className="p-2 text-left">Scrum</th>}
-            {columnasActivas.has('horas') && <th className="p-2 text-right">Horas</th>}
-            {columnasActivas.has('fechaSolicitud') && <th className="p-2 text-center">F. Solicitud</th>}
-            {columnasActivas.has('fechaLimite') && <th className="p-2 text-center">F. Límite</th>}
-            {columnasActivas.has('fechaReal') && <th className="p-2 text-center">F. Real</th>}
-            {columnasActivas.has('diasTranscurridos') && <th className="p-2 text-right">Días transcurridos</th>}
-            {columnasActivas.has('entregasCount') && <th className="p-2 text-center">Entregas</th>}
-            <th className="p-2 text-center">Est.</th>
+            <th className="w-8"></th>
+            {columnasActivas.has('codigoReq') && <th>Código REQ</th>}
+            {columnasActivas.has('sc') && <th>SC</th>}
+            {columnasActivas.has('squad') && <th>Squad</th>}
+            {columnasActivas.has('nombreActa') && <th>Nombre de acta</th>}
+            {columnasActivas.has('aplicacionEpm') && <th>Aplicación EPM</th>}
+            {columnasActivas.has('estado') && <th>Estado</th>}
+            {columnasActivas.has('ansEstimacion') && <th className="text-center">ANS Estimación</th>}
+            {columnasActivas.has('ltHitss') && <th>Líder técnico</th>}
+            {columnasActivas.has('scrum') && <th>Scrum</th>}
+            {columnasActivas.has('horas') && <th className="text-right">Horas</th>}
+            {columnasActivas.has('fechaSolicitud') && <th className="text-center">F. Solicitud</th>}
+            {columnasActivas.has('fechaLimite') && <th className="text-center">F. Límite</th>}
+            {columnasActivas.has('fechaReal') && <th className="text-center">F. Real</th>}
+            {columnasActivas.has('diasTranscurridos') && <th className="text-right">Días transcurridos</th>}
+            {columnasActivas.has('entregasCount') && <th className="text-center">Entregas</th>}
+            <th className="text-center">Est.</th>
             {columnasExtra.map((c) => (
-              <th key={c.key} className="p-2 text-left whitespace-nowrap">{c.label}</th>
+              <th key={c.key} className="whitespace-nowrap">{c.label}</th>
             ))}
-            <th className="p-2"></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -138,7 +138,7 @@ export function TablaRequerimientos({
           const leadCount = coreVisibleCount - metricasVisibles.length + columnasExtra.length + 1
           return (
             <tfoot>
-              <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700 text-sm">
+              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
                 <td className="p-2"></td>
                 <td className="p-2" colSpan={leadCount}>Total ({datosFiltrados.length} requerimientos)</td>
                 {columnasActivas.has('horas') && <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>}

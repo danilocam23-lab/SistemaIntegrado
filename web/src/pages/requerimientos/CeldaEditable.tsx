@@ -1,4 +1,5 @@
 import type React from 'react'
+import { Campo, Selector } from '../../components/ui'
 import type { Persona, Requerimiento } from '../../types'
 
 export interface ContextoCeldaEditable {
@@ -30,30 +31,30 @@ export function crearRenderCelda(ctx: ContextoCeldaEditable) {
     if (ctx.isEditing(req.id, campo)) {
       if (type === 'select') {
         return (
-          <select value={ctx.editValue} onChange={(e) => ctx.setEditValue(e.target.value)}
-            onBlur={() => ctx.guardarCelda(req)} autoFocus
-            className="campo campo-sm w-full">
+          <Selector value={ctx.editValue} onChange={(e) => ctx.setEditValue(e.target.value)}
+            onBlur={() => ctx.guardarCelda(req)} autoFocus compacto
+            className="w-full">
             {ctx.estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          </Selector>
         )
       }
       if (type === 'select-persona') {
         const roles = rolFiltro ? (Array.isArray(rolFiltro) ? rolFiltro : [rolFiltro]) : []
         const lista = (roles.length > 0 ? ctx.personas.filter((p) => roles.includes(p.rol_operativo)) : ctx.personas).filter((p) => p.activo)
         return (
-          <select value={ctx.editValue} onChange={(e) => { ctx.setEditValue(e.target.value) }}
-            onBlur={() => ctx.guardarCelda(req)} autoFocus
-            className="campo campo-sm w-full">
+          <Selector value={ctx.editValue} onChange={(e) => { ctx.setEditValue(e.target.value) }}
+            onBlur={() => ctx.guardarCelda(req)} autoFocus compacto
+            className="w-full">
             <option value="">—</option>
             {lista.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
+          </Selector>
         )
       }
       return (
-        <input value={ctx.editValue} onChange={(e) => ctx.setEditValue(e.target.value)}
+        <Campo value={ctx.editValue} onChange={(e) => ctx.setEditValue(e.target.value)}
           onBlur={() => ctx.guardarCelda(req)} onKeyDown={(e) => ctx.handleKeyDown(e, req)}
-          type={type === 'number' ? 'number' : 'text'} autoFocus
-          className="campo campo-sm w-full" />
+          type={type === 'number' ? 'number' : 'text'} autoFocus compacto
+          className="w-full" />
       )
     }
     return (

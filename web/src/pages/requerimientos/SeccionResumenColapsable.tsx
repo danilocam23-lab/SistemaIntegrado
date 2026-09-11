@@ -1,4 +1,4 @@
-import { TablaScroll } from '../../components/ui/primitivos'
+import { Icono, TablaScroll } from '../../components/ui'
 import { sortEntries } from './utilidades'
 
 export interface ColumnaResumen<T> {
@@ -30,27 +30,25 @@ export function SeccionResumenColapsable<T>({
           <h3 className="font-semibold text-slate-900">{titulo}</h3>
           <p className="text-sm text-slate-600">{subtitulo}</p>
         </div>
-        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-slate-400 transition-transform ${abierta ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        <Icono nombre="chevron-abajo" className={`h-5 w-5 text-slate-400 transition-transform ${abierta ? 'rotate-180' : ''}`} />
       </button>
       {abierta && (
         <TablaScroll plano className="border-t border-slate-200">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+          <table className="tabla">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left">{encabezadoClave}</th>
+                <th className="text-left">{encabezadoClave}</th>
                 {columnas.map((c) => (
-                  <th key={c.encabezado} className="px-4 py-3 text-right">{c.encabezado}</th>
+                  <th key={c.encabezado} className="text-right">{c.encabezado}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {sortEntries(entradas).map(([key, value]) => (
-                <tr key={key} className="border-t border-slate-100">
-                  <td className="px-4 py-3 font-medium text-slate-900">{key}</td>
+                <tr key={key}>
+                  <td className="font-medium text-slate-900">{key}</td>
                   {columnas.map((c) => (
-                    <td key={c.encabezado} className={`px-4 py-3 text-right ${c.className ?? 'text-slate-700'}`}>{c.render(value)}</td>
+                    <td key={c.encabezado} className={`text-right ${c.className ?? 'text-slate-700'}`}>{c.render(value)}</td>
                   ))}
                 </tr>
               ))}

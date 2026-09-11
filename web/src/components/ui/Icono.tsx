@@ -240,6 +240,23 @@ const ICONOS = {
   ),
   /** Check simple (sin círculo) */
   check: <path d="M20 6 9 17l-5-5" />,
+  /** Filtro / embudo */
+  filtro: (
+    <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+  ),
+  /** Cheurón hacia la derecha (fila/HU expandible) */
+  'chevron-derecha': <path d="m9 5 7 7-7 7" />,
+  /** Estimación / gráfico de barras ascendentes */
+  estimacion: (
+    <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  ),
+  /** Documento / archivo con texto */
+  documento: (
+    <>
+      <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      <path d="M9 17h6m-6-4h6m-6-4h3" />
+    </>
+  ),
 } as const
 
 export type NombreIcono = keyof typeof ICONOS

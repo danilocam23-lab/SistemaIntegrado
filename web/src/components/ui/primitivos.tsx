@@ -213,12 +213,14 @@ export function Chip({
   children,
   tono = 'neutro',
   className,
+  title,
 }: {
   children: ReactNode
   tono?: keyof typeof TONOS_CHIP
   className?: string
+  title?: string
 }) {
-  return <span className={cx('chip', TONOS_CHIP[tono], className)}>{children}</span>
+  return <span title={title} className={cx('chip', TONOS_CHIP[tono], className)}>{children}</span>
 }
 
 export function Kpi({

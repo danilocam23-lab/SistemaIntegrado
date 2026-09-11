@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react'
 import { Link } from 'react-router-dom'
+import { Boton, Chip, Icono } from '../../components/ui'
 import type { EntregasActasCampo } from '../../constantes'
 import type { Requerimiento } from '../../types'
 import type { crearRenderCelda } from './CeldaEditable'
@@ -48,11 +49,7 @@ export function FilaRequerimiento({
             {isLoadingEstimacion ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-cyan-500" />
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg"
-                className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
+              <Icono nombre="chevron-derecha" className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
             )}
           </button>
         ) : null}
@@ -88,15 +85,8 @@ export function FilaRequerimiento({
         {(() => {
           const v = (req.ans_acta ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
           if (!v) return <span className="text-slate-400">—</span>
-          const clase = v === 'CUMPLE' ? 'bg-emerald-100 text-emerald-700'
-            : v === 'NO CUMPLE' ? 'bg-red-100 text-red-700'
-            : 'bg-slate-100 text-slate-600'
-          const label = normalizarAns(req.ans_acta)
-          return (
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${clase}`}>
-              {label}
-            </span>
-          )
+          const tono = v === 'CUMPLE' ? 'exito' : v === 'NO CUMPLE' ? 'error' : 'neutro'
+          return <Chip tono={tono}>{normalizarAns(req.ans_acta)}</Chip>
         })()}
       </td>
       )}
@@ -147,22 +137,19 @@ export function FilaRequerimiento({
       {columnasActivas.has('entregasCount') && (
       <td className="p-2 text-center">
         {(req.entregas?.length ?? 0) > 0 ? (
-          <button
+          <Boton
+            variante="exito"
+            tamano="sm"
             onClick={() => setExpandedEntregas(prev => {
               const next = new Set(prev)
               next.has(req.id) ? next.delete(req.id) : next.add(req.id)
               return next
             })}
-            className="btn btn-exito btn-sm items-center gap-1"
             title="Ver entregas"
           >
             {req.entregas.length}
-            <svg xmlns="http://www.w3.org/2000/svg"
-              className={`h-3 w-3 transition-transform ${expandedEntregas.has(req.id) ? 'rotate-90' : ''}`}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+            <Icono nombre="chevron-derecha" className={`h-3 w-3 transition-transform ${expandedEntregas.has(req.id) ? 'rotate-90' : ''}`} />
+          </Boton>
         ) : (
           <span className="text-slate-400">0</span>
         )}
@@ -172,19 +159,14 @@ export function FilaRequerimiento({
         {hasEst ? (
           <button onClick={() => { void openEstimationModal(req.id) }} title="Ver estimación"
             className="rounded p-0.5 text-cyan-600 hover:text-cyan-800">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
+            <Icono nombre="estimacion" className="h-5 w-5" />
           </button>
         ) : uploadingId === req.id ? (
           <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-amber-500" />
         ) : puedeGestionarEstimaciones ? (
           <button onClick={() => handleUploadClick(req.id)} title="Cargar estimación (Excel)"
             className="rounded p-0.5 text-slate-400 hover:text-cyan-600">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 17h6m-6-4h6m-6-4h3" />
-            </svg>
+            <Icono nombre="documento" className="h-5 w-5" />
           </button>
         ) : (
           <span className="text-slate-300">—</span>

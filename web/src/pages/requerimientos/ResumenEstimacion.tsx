@@ -1,3 +1,4 @@
+import { Kpi, Tarjeta } from '../../components/ui'
 import type { Estimacion } from '../../types'
 import { formatNumber } from './utilidades'
 
@@ -9,7 +10,7 @@ interface ResumenEstimacionProps {
 export function ResumenEstimacion({ estimacion }: ResumenEstimacionProps) {
   return (
     <div className="grid gap-4 lg:grid-cols-[2fr,1fr,1fr]">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-1">
+      <Tarjeta className="lg:col-span-1">
         <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Información general</p>
         <div className="space-y-3">
           <div>
@@ -25,24 +26,12 @@ export function ResumenEstimacion({ estimacion }: ResumenEstimacionProps) {
             <p className="text-sm font-semibold text-slate-900">{estimacion.iniciativa || '—'}</p>
           </div>
         </div>
-      </div>
+      </Tarjeta>
       <div className="grid gap-4 md:grid-cols-2 lg:col-span-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-cyan-600">Total tareas</p>
-          <p className="mt-3 text-3xl font-bold text-slate-900">{formatNumber(estimacion.total_filas)}</p>
-        </div>
-        <div className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Horas estimadas</p>
-          <p className="mt-3 text-3xl font-bold text-slate-900">{formatNumber(estimacion.total_horas_estimadas)}</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Promedio (hrs)</p>
-          <p className="mt-3 text-3xl font-bold text-slate-900">{formatNumber(estimacion.total_promedio)}</p>
-        </div>
-        <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Total +10% (hrs)</p>
-          <p className="mt-3 text-3xl font-bold text-slate-900">{formatNumber(estimacion.total_horas_finales)}</p>
-        </div>
+        <Kpi rotulo="Total tareas" valor={formatNumber(estimacion.total_filas)} acento="#0891b2" />
+        <Kpi rotulo="Horas estimadas" valor={formatNumber(estimacion.total_horas_estimadas)} acento="#d97706" />
+        <Kpi rotulo="Promedio (hrs)" valor={formatNumber(estimacion.total_promedio)} acento="#475569" />
+        <Kpi rotulo="Total +10% (hrs)" valor={formatNumber(estimacion.total_horas_finales)} acento="#059669" />
       </div>
     </div>
   )
