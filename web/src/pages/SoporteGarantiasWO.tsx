@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import client from '../api/client'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { AreaTexto, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 function getId(item: any): string {
   if (!item._id) return ''
@@ -142,16 +142,16 @@ export default function SoporteGarantiasWO() {
       <div className="tarjeta tarjeta-pad">
         <h2 className="titulo-seccion text-sm mb-3">Agregar WO de garantía</h2>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex-1 text-sm">
-            <span className="mb-1 block text-slate-600">Buscar Work Order ID</span>
-            <input
+          <div className="flex-1">
+            <Campo
+              etiqueta="Buscar Work Order ID"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && buscarWO()}
               placeholder="Ej: WO-12345"
-              className="campo w-full"
+              className="w-full"
             />
-          </label>
+          </div>
           <Boton variante="primario" onClick={buscarWO} disabled={buscando}>
             {buscando ? 'Buscando…' : 'Buscar'}
           </Boton>
@@ -241,10 +241,10 @@ export default function SoporteGarantiasWO() {
                       <td>{g.estado_wo ?? '—'}</td>
                       <td className="min-w-[180px]">
                         {edicion ? (
-                          <textarea
+                          <AreaTexto
                             value={edicion.obs}
                             onChange={(e) => setEditandoObs((p) => ({ ...p, [getId(g)]: { ...p[getId(g)], obs: e.target.value } }))}
-                            className="campo campo-sm w-full"
+                            className="campo-sm w-full"
                             rows={2}
                           />
                         ) : (
@@ -253,10 +253,10 @@ export default function SoporteGarantiasWO() {
                       </td>
                       <td className="min-w-[180px]">
                         {edicion ? (
-                          <textarea
+                          <AreaTexto
                             value={edicion.res}
                             onChange={(e) => setEditandoObs((p) => ({ ...p, [getId(g)]: { ...p[getId(g)], res: e.target.value } }))}
-                            className="campo campo-sm w-full"
+                            className="campo-sm w-full"
                             rows={2}
                           />
                         ) : (

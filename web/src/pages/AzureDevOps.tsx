@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 
 interface Persona {
   id: string
@@ -188,29 +188,29 @@ function PanelAzdo({ titulo, target, personas }: {
 
         {/* Persona */}
         <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-slate-700">Persona</label>
-          <select
+          <Selector
+            etiqueta="Persona"
             value={scopeUsuarioId ?? ''}
             onChange={(e) => setScopeUsuarioId(e.target.value || null)}
             disabled={!puedeEditar}
-            className="campo w-full"
+            className="w-full"
           >
             <option value="">Ninguno (config global)</option>
             {personas.filter((p) => p.activo).map((p) => (
               <option key={p.id} value={p.id}>{p.nombre} {p.email ? `(${p.email})` : ''}</option>
             ))}
-          </select>
+          </Selector>
         </div>
 
         {/* URL */}
         <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-slate-700">URL de la organización</label>
-          <input
+          <Campo
+            etiqueta="URL de la organización"
             value={orgUrl}
             onChange={(e) => setOrgUrl(e.target.value)}
             readOnly={!puedeEditar}
             placeholder="https://dev.azure.com/TuOrganizacion"
-            className="campo w-full"
+            className="w-full"
           />
         </div>
 
@@ -218,13 +218,13 @@ function PanelAzdo({ titulo, target, personas }: {
         <div className="mb-4">
           <label className="mb-1 block text-xs font-medium text-slate-700">Personal Access Token (PAT)</label>
           <div className="flex gap-2">
-            <input
+            <Campo
               type={mostrarPat ? 'text' : 'password'}
               value={pat}
               onChange={(e) => setPat(e.target.value)}
               readOnly={!puedeEditar}
               placeholder={patGuardado ? '••••••••••••••••••••' : 'Ingresa tu PAT'}
-              className="campo flex-1"
+              className="flex-1"
             />
             <Boton
               variante="secundario"
@@ -259,29 +259,29 @@ function PanelAzdo({ titulo, target, personas }: {
 
         {/* Proyecto */}
         <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-slate-700">Proyecto por defecto</label>
-          <input
+          <Campo
+            etiqueta="Proyecto por defecto"
             value={proyecto}
             onChange={(e) => setProyecto(e.target.value)}
             readOnly={!puedeEditar}
             placeholder="Nombre del proyecto"
-            className="campo w-full"
+            className="w-full"
           />
         </div>
 
         {/* Frecuencia */}
         <div className="mb-5">
-          <label className="mb-1 block text-xs font-medium text-slate-700">Frecuencia de sincronización</label>
-          <select
+          <Selector
+            etiqueta="Frecuencia de sincronización"
             value={frecuencia}
             onChange={(e) => setFrecuencia(e.target.value)}
             disabled={!puedeEditar}
-            className="campo w-full"
+            className="w-full"
           >
             {Object.entries(frecuenciaLabel).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>
             ))}
-          </select>
+          </Selector>
         </div>
 
         {/* Guardar */}

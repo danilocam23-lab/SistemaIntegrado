@@ -12,7 +12,7 @@ import {
   leerCamposActivos,
 } from '../constantes'
 import type { Aplicacion, Categoria, Configuracion as ConfigItem, Persona, Requerimiento, Squad } from '../types'
-import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 
 type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 
@@ -597,128 +597,112 @@ export default function EntregasActas() {
       {/* Filtros */}
       <div className="barra-filtros">
         {filtrosActivos.has('texto') && (
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Buscar</span>
-          <input
+          <Campo
+            etiqueta="Buscar"
             value={filtroTexto}
             onChange={(e) => setFiltroTexto(e.target.value)}
             placeholder="REQ, SC, acta o acta de trabajo…"
-            className="campo w-48"
+            className="w-48"
           />
-        </label>
         )}
         {filtrosActivos.has('mes') && (
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Mes de aprobación</span>
-            <select
-              value={filtroMes}
-              onChange={(e) => setFiltroMes(e.target.value)}
-              className="campo w-52"
-            >
-              <option value="">Todos los meses</option>
-              {mesesEnBD.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </label>
+          <Selector
+            etiqueta="Mes de aprobación"
+            value={filtroMes}
+            onChange={(e) => setFiltroMes(e.target.value)}
+            className="w-52"
+          >
+            <option value="">Todos los meses</option>
+            {mesesEnBD.map((m) => <option key={m} value={m}>{m}</option>)}
+          </Selector>
         )}
         {filtrosActivos.has('estado') && (
-          <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Estado</span>
-          <select
+          <Selector
+            etiqueta="Estado"
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
-            className="campo w-52"
+            className="w-52"
           >
             <option value="">Todos los estados</option>
             {estadosEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
+          </Selector>
         )}
         {filtrosActivos.has('ans') && (
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">ANS</span>
-          <select
+          <Selector
+            etiqueta="ANS"
             value={filtroAns}
             onChange={(e) => setFiltroAns(e.target.value)}
-            className="campo w-44"
+            className="w-44"
           >
             <option value="">Todos</option>
             <option value="__SIN_ANS__">Sin ANS</option>
             {ansEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
+          </Selector>
         )}
         {filtrosActivos.has('fechas') && (
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">F. Comprometida</span>
-          <div className="flex items-center gap-1">
-            <input
-              type="date"
-              value={filtroFechaDesde}
-              onChange={(e) => setFiltroFechaDesde(e.target.value)}
-              className="campo campo-sm"
-            />
-            <span className="text-xs text-slate-400">–</span>
-            <input
-              type="date"
-              value={filtroFechaHasta}
-              onChange={(e) => setFiltroFechaHasta(e.target.value)}
-              className="campo campo-sm"
-            />
-          </div>
-        </label>
+          <label className="grupo-filtro">
+            <span className="etiqueta">F. Comprometida</span>
+            <div className="flex items-center gap-1">
+              <Campo
+                type="date"
+                value={filtroFechaDesde}
+                onChange={(e) => setFiltroFechaDesde(e.target.value)}
+                compacto
+              />
+              <span className="text-xs text-slate-400">–</span>
+              <Campo
+                type="date"
+                value={filtroFechaHasta}
+                onChange={(e) => setFiltroFechaHasta(e.target.value)}
+                compacto
+              />
+            </div>
+          </label>
         )}
         {filtrosActivos.has('reqEstado') && (
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Estado del requerimiento</span>
-          <select
+          <Selector
+            etiqueta="Estado del requerimiento"
             value={filtroReqEstado}
             onChange={(e) => setFiltroReqEstado(e.target.value)}
-            className="campo w-56"
+            className="w-56"
           >
             <option value="">Todos</option>
             {reqEstadosEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
+          </Selector>
         )}
         {filtrosActivos.has('squad') && (
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Squad</span>
-          <select
+          <Selector
+            etiqueta="Squad"
             value={filtroSquad}
             onChange={(e) => setFiltroSquad(e.target.value)}
-            className="campo w-44"
+            className="w-44"
           >
             <option value="">Todos</option>
             {squadsEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
+          </Selector>
         )}
         {filtrosActivos.has('tipificacion') && (
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Tipificación</span>
-          <select
+          <Selector
+            etiqueta="Tipificación"
             value={filtroTipificacion}
             onChange={(e) => setFiltroTipificacion(e.target.value)}
-            className="campo w-40"
+            className="w-40"
           >
             <option value="">Todas</option>
             {tipificacionesEnBD.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
+          </Selector>
         )}
         {filtrosActivos.has('garantia') && (
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">En garantía</span>
-          <select
+          <Selector
+            etiqueta="En garantía"
             value={filtroGarantia}
             onChange={(e) => setFiltroGarantia(e.target.value)}
-            className="campo w-32"
+            className="w-32"
           >
             <option value="">Todas</option>
             <option value="SI">Sí</option>
             <option value="NO">No</option>
-          </select>
-        </label>
+          </Selector>
         )}
         {(filtroTexto || filtroEstado || filtroAns || filtroMes || filtroFechaDesde || filtroFechaHasta || filtroReqEstado || filtroSquad || filtroTipificacion || filtroGarantia) && (
           <button

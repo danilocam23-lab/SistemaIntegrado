@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { Boton, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, TablaScroll } from '../components/ui'
+import { AreaTexto, Boton, Campo, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Selector, TablaScroll } from '../components/ui'
 import { COLOR_GRAFICA } from '../components/ui/graficas'
 
 interface RegistroSoporte {
@@ -213,43 +213,33 @@ export default function SoporteDetalleANS() {
       <div className="tarjeta tarjeta-pad space-y-3">
         {/* Work Order ID + Assigned To */}
         <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="text-sm font-medium text-slate-700" htmlFor="filtro-wo-ans">
-              Filtrar por Work Order ID
-            </label>
-            <input
-              id="filtro-wo-ans"
-              className="campo mt-2 w-full"
-              placeholder="Buscar Work Order ID…"
-              value={filtroWo}
-              onChange={(e) => {
-                const v = e.target.value
-                setFiltroWo(v)
-                if (debounceRef.current) clearTimeout(debounceRef.current)
-                debounceRef.current = setTimeout(() => void cargarANS(v), 500)
-              }}
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-700" htmlFor="filtro-assigned-ans">
-              Filtrar por Assigned To
-            </label>
-            <select
-              id="filtro-assigned-ans"
-              className="campo mt-2 w-full"
-              value={filtroAssignedTo}
-              onChange={(e) => {
-                const v = e.target.value
-                setFiltroAssignedTo(v)
-                void cargarANS(undefined, v)
-              }}
-            >
-              <option value="">Todos</option>
-              {assignedToOpciones.map((persona) => (
-                <option key={persona} value={persona}>{persona}</option>
-              ))}
-            </select>
-          </div>
+          <Campo
+            etiqueta="Filtrar por Work Order ID"
+            className="w-full"
+            placeholder="Buscar Work Order ID…"
+            value={filtroWo}
+            onChange={(e) => {
+              const v = e.target.value
+              setFiltroWo(v)
+              if (debounceRef.current) clearTimeout(debounceRef.current)
+              debounceRef.current = setTimeout(() => void cargarANS(v), 500)
+            }}
+          />
+          <Selector
+            etiqueta="Filtrar por Assigned To"
+            className="w-full"
+            value={filtroAssignedTo}
+            onChange={(e) => {
+              const v = e.target.value
+              setFiltroAssignedTo(v)
+              void cargarANS(undefined, v)
+            }}
+          >
+            <option value="">Todos</option>
+            {assignedToOpciones.map((persona) => (
+              <option key={persona} value={persona}>{persona}</option>
+            ))}
+          </Selector>
         </div>
 
         {/* Filtros Año / Mes por Fecha_Fin_Real */}
@@ -534,12 +524,12 @@ function DetalleTablaANS({
                       </td>
                       <td>
                         <div className="flex min-w-[300px] gap-2">
-                          <textarea
+                          <AreaTexto
                             value={observaciones[r.id] ?? observacionesAns(r, tipo)}
                             onChange={(event) => setObservaciones((actuales) => ({ ...actuales, [r.id]: event.target.value }))}
                             rows={2}
                             readOnly={!puedeActualizar}
-                            className="campo campo-sm min-w-0 flex-1"
+                            className="campo-sm min-w-0 flex-1"
                             placeholder={puedeActualizar ? 'Agregar observaciones…' : 'Sin observaciones'}
                           />
                           {puedeActualizar && (

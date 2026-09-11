@@ -6,7 +6,7 @@ import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import { TIPOS_COSTO } from '../constantes'
-import { Boton } from '../components/ui'
+import { AreaTexto, Boton, Campo, Selector } from '../components/ui'
 import type { Aplicacion, Persona } from '../types'
 
 export default function RequerimientoNuevo() {
@@ -143,17 +143,17 @@ export default function RequerimientoNuevo() {
               <p className="mb-2 text-xs text-blue-600">
                 Estás en modo "Todos los squads". Selecciona el squad al que pertenecerá este requerimiento.
               </p>
-              <select
+              <Selector
                 value={aplicacionDestino}
                 onChange={(e) => setAplicacionDestino(e.target.value)}
                 required
-                className="campo w-full"
+                className="w-full"
               >
                 <option value="">— Seleccionar squad destino —</option>
                 {squads.filter((s) => s.activa).map((s) => (
                   <option key={s.codigo} value={s.codigo}>{s.nombre}</option>
                 ))}
-              </select>
+              </Selector>
             </label>
           </div>
         )}
@@ -161,99 +161,61 @@ export default function RequerimientoNuevo() {
           Datos generales
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Código SC *</span>
-            <input value={codigoSc} onChange={(e) => setCodigoSc(e.target.value)} required
-              placeholder="11110" className="campo w-full" />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Código REQ *</span>
-            <input value={codigoReq} onChange={(e) => setCodigoReq(e.target.value)} required
-              placeholder="RP-SSC-0964" className="campo w-full" />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Nombre</span>
-            <input value={nombre} onChange={(e) => setNombre(e.target.value)}
-              placeholder="Nombre del requerimiento" className="campo w-full" />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Tipo de costo</span>
-            <select value={tipoCosto} onChange={(e) => setTipoCosto(e.target.value)}
-              className="campo w-full">
-              {TIPOS_COSTO.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Squad</span>
-            <select value={squadId} onChange={(e) => cambiarSquad(e.target.value)}
-              className="campo w-full">
-              <option value="">— Seleccionar —</option>
-              {squads.filter((s) => s.activa).map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Líder técnico</span>
-            <select value={ltHitssId} onChange={(e) => setLtHitssId(e.target.value)}
-              className="campo w-full">
-              <option value="">— Seleccionar —</option>
-              {ltHitss.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Líder técnico EPM</span>
-            <select value={ltEpmId} onChange={(e) => setLtEpmId(e.target.value)}
-              className="campo w-full">
-              <option value="">— Seleccionar —</option>
-              {ltEpm.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Scrum</span>
-            <select value={scrumId} onChange={(e) => setScrumId(e.target.value)}
-              disabled={!squadId}
-              className="campo w-full">
-              <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
-              {scrums.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
-            <select value={analistaId} onChange={(e) => setAnalistaId(e.target.value)}
-              disabled={!squadId}
-              className="campo w-full">
-              <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
-              {analistas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Horas estimadas</span>
-            <input value={horas} onChange={(e) => setHoras(e.target.value)} type="number" step="any"
-              className="campo w-full" />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Fecha y hora de solicitud</span>
-            <input value={fechaSolicitud} onChange={(e) => setFechaSolicitud(e.target.value)}
-              type="datetime-local" className="campo w-full" />
-          </label>
-          <label className="text-sm sm:col-span-2 lg:col-span-3">
-            <span className="mb-1 block text-slate-600">Seguimiento Hitss</span>
-            <textarea value={seguimiento} onChange={(e) => setSeguimiento(e.target.value)} rows={2}
-              className="campo w-full" />
-          </label>
-          <label className="text-sm sm:col-span-2 lg:col-span-3">
-            <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
-            <textarea value={seguimientoEpm} onChange={(e) => setSeguimientoEpm(e.target.value)} rows={2}
-              className="campo w-full" />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Tipificación</span>
-            <select value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
-              className="campo w-full">
-              <option value="">— Seleccionar —</option>
-              <option value="HITSS">Hitss</option>
-              <option value="EPM">EPM</option>
-            </select>
-          </label>
+          <Campo etiqueta="Código SC *" value={codigoSc} onChange={(e) => setCodigoSc(e.target.value)} required
+            placeholder="11110" className="w-full" />
+          <Campo etiqueta="Código REQ *" value={codigoReq} onChange={(e) => setCodigoReq(e.target.value)} required
+            placeholder="RP-SSC-0964" className="w-full" />
+          <Campo etiqueta="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
+            placeholder="Nombre del requerimiento" className="w-full" />
+          <Selector etiqueta="Tipo de costo" value={tipoCosto} onChange={(e) => setTipoCosto(e.target.value)}
+            className="w-full">
+            {TIPOS_COSTO.map((t) => <option key={t} value={t}>{t}</option>)}
+          </Selector>
+          <Selector etiqueta="Squad" value={squadId} onChange={(e) => cambiarSquad(e.target.value)}
+            className="w-full">
+            <option value="">— Seleccionar —</option>
+            {squads.filter((s) => s.activa).map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}
+          </Selector>
+          <Selector etiqueta="Líder técnico" value={ltHitssId} onChange={(e) => setLtHitssId(e.target.value)}
+            className="w-full">
+            <option value="">— Seleccionar —</option>
+            {ltHitss.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </Selector>
+          <Selector etiqueta="Líder técnico EPM" value={ltEpmId} onChange={(e) => setLtEpmId(e.target.value)}
+            className="w-full">
+            <option value="">— Seleccionar —</option>
+            {ltEpm.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </Selector>
+          <Selector etiqueta="Scrum" value={scrumId} onChange={(e) => setScrumId(e.target.value)}
+            disabled={!squadId}
+            className="w-full">
+            <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
+            {scrums.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </Selector>
+          <Selector etiqueta="Analista de requerimientos" value={analistaId} onChange={(e) => setAnalistaId(e.target.value)}
+            disabled={!squadId}
+            className="w-full">
+            <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
+            {analistas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </Selector>
+          <Campo etiqueta="Horas estimadas" value={horas} onChange={(e) => setHoras(e.target.value)} type="number" step="any"
+            className="w-full" />
+          <Campo etiqueta="Fecha y hora de solicitud" value={fechaSolicitud} onChange={(e) => setFechaSolicitud(e.target.value)}
+            type="datetime-local" className="w-full" />
+          <div className="sm:col-span-2 lg:col-span-3">
+            <AreaTexto etiqueta="Seguimiento Hitss" value={seguimiento} onChange={(e) => setSeguimiento(e.target.value)} rows={2}
+              className="w-full" />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <AreaTexto etiqueta="Seguimiento EPM" value={seguimientoEpm} onChange={(e) => setSeguimientoEpm(e.target.value)} rows={2}
+              className="w-full" />
+          </div>
+          <Selector etiqueta="Tipificación" value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
+            className="w-full">
+            <option value="">— Seleccionar —</option>
+            <option value="HITSS">Hitss</option>
+            <option value="EPM">EPM</option>
+          </Selector>
         </div>
         <p className="mt-2 text-xs text-slate-400">
           La cantidad de entregas inicia en 0 y se calcula automáticamente al registrar

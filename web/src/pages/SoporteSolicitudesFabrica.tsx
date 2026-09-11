@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
-import { Boton, EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
+import { Boton, Campo, EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
 import { COLOR_GRAFICA } from '../components/ui/graficas'
 import { useAuth } from '../context/AuthContext'
 
@@ -505,16 +505,14 @@ export default function SoporteSolicitudesFabrica() {
       )}
 
       <div className="barra-filtros">
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Filtrar por Work Order ID</span>
-          <input
-            type="text"
-            value={filtroWorkOrderID}
-            onChange={(e) => onFiltroChange(e.target.value)}
-            placeholder="Buscar Work Order ID…"
-            className="campo w-64"
-          />
-        </label>
+        <Campo
+          etiqueta="Filtrar por Work Order ID"
+          type="text"
+          value={filtroWorkOrderID}
+          onChange={(e) => onFiltroChange(e.target.value)}
+          placeholder="Buscar Work Order ID…"
+          className="w-64"
+        />
         {filtroWorkOrderID && (
           <button
             onClick={() => { setFiltroWorkOrderID(''); setPagina(1); void cargar(1, '') }}
