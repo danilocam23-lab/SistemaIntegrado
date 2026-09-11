@@ -2,11 +2,26 @@
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import client from '../api/client'
-import { mensajeError, useLista, useEstados } from '../api/hooks'
+import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../constantes'
-import type { Aplicacion, Categoria, Configuracion as ConfigItem, Estimacion, EstimacionConResumen, FilaEstimacion, Persona, Requerimiento, Squad } from '../types'
+import { REQUERIMIENTOS_COLUMNAS } from '../constantes'
+import type { Estimacion, EstimacionConResumen, Requerimiento } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
+import type { ClaveSeccionResumen, Filtros } from './requerimientos/tipos'
+import { FILTROS_INIT } from './requerimientos/tipos'
+import {
+  agruparPorHU,
+  calcularDiasTranscurridos,
+  complexityColor,
+  fechaComprometidaReq,
+  formatDateTime,
+  formatNumber,
+  normalizarAns,
+  sortEntries,
+  taskTypeColor,
+} from './requerimientos/utilidades'
+import { useCamposRequerimientos } from './requerimientos/useCamposRequerimientos'
+import { useDatosRequerimientos } from './requerimientos/useDatosRequerimientos'
 
 export default function Requerimientos() {
   const { tienePermiso } = useAuth()
@@ -15,44 +30,17 @@ export default function Requerimientos() {
   const puedeCrear = tienePermiso('requerimientos.crear')
   const puedeExportar = tienePermiso('requerimientos.exportar')
   const puedeGestionarEstimaciones = tienePermiso('requerimientos.editar')
-  const { datos, error, recargar } = useLista<Requerimiento>('/requerimientos')
-  const { estadosReq, estadosEnt } = useEstados()
-  const { datos: personas } = useLista<Persona>('/personas')
-  const { datos: categorias } = useLista<Categoria>('/categorias')
-  const { datos: configuracion } = useLista<ConfigItem>('/configuracion')
-  // Aplicaciones: fuente principal de nombre de squad (squad_id = codigo de app)
-  const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
+  const {
+    datos, error, recargar,
+    estadosReq, estadosEnt,
+    personas,
+    configuracion,
+    squadPorId, personaPorId, categoriaPorId,
+    nombrePersona,
+  } = useDatosRequerimientos()
 
-  /** Columnas, filtros y campos de exportación activados desde /configuracion
-   *  (tab "Requerimientos" en Configuración). Por defecto, todo lo histórico activo. */
-  const columnasActivas = useMemo(
-    () => leerCamposActivos(configuracion, REQUERIMIENTOS_CONFIG_CLAVES.columnas, REQUERIMIENTOS_COLUMNAS),
-    [configuracion],
-  )
-  const filtrosActivos = useMemo(
-    () => leerCamposActivos(configuracion, REQUERIMIENTOS_CONFIG_CLAVES.filtros, REQUERIMIENTOS_FILTROS),
-    [configuracion],
-  )
-  const exportCamposActivos = useMemo(
-    () => leerCamposActivos(configuracion, REQUERIMIENTOS_CONFIG_CLAVES.exportCampos, REQUERIMIENTOS_COLUMNAS),
-    [configuracion],
-  )
-  /** Columnas "extra" (no forman parte del set histórico de 15), en el orden del catálogo. */
-  const CORE_COLUMNAS = ['codigoReq', 'sc', 'squad', 'nombreActa', 'aplicacionEpm', 'estado', 'ansEstimacion', 'ltHitss', 'scrum', 'horas', 'fechaSolicitud', 'fechaLimite', 'fechaReal', 'diasTranscurridos', 'entregasCount']
-  const columnasExtra = useMemo(
-    () => REQUERIMIENTOS_COLUMNAS.filter((c) => !CORE_COLUMNAS.includes(c.key) && columnasActivas.has(c.key)),
-    [columnasActivas],
-  )
-
-  // Squads de la colección squads (para registros importados con _id numérico)
-  const [squadsCol, setSquadsCol] = useState<Squad[]>([])
-  useEffect(() => {
-    client.get<Squad[]>('/squads', { headers: { 'X-Aplicacion': '__todas__' } })
-      .then((r) => setSquadsCol(r.data))
-      .catch(() => {
-        client.get<Squad[]>('/squads').then((r) => setSquadsCol(r.data)).catch(() => {})
-      })
-  }, [])
+  const { columnasActivas, filtrosActivos, exportCamposActivos, columnasExtra, coreVisibleCount, metricasVisibles, totalColumnasTabla } =
+    useCamposRequerimientos(configuracion)
 
   const [aviso, setAviso] = useState('')
   const [estimacionIds, setEstimacionIds] = useState<Set<string>>(new Set())
@@ -64,7 +52,7 @@ export default function Requerimientos() {
   const [estData, setEstData] = useState<EstimacionConResumen | null>(null)
   const [estLoading, setEstLoading] = useState(false)
   const [creatingTasks, setCreatingTasks] = useState<'hitss' | 'epm' | null>(null)
-  const [expandedSections, setExpandedSections] = useState({ type: true, sprint: false, complexity: false })
+  const [expandedSections, setExpandedSections] = useState<Record<ClaveSeccionResumen, boolean>>({ type: true, sprint: false, complexity: false })
   const [expandedHUs, setExpandedHUs] = useState<Set<string>>(new Set())
   const [expandedEntregas, setExpandedEntregas] = useState<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -183,49 +171,8 @@ export default function Requerimientos() {
     }
   }
 
-  function toggleSection(key: 'type' | 'sprint' | 'complexity'): void {
+  function toggleSection(key: ClaveSeccionResumen): void {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
-
-  function taskTypeColor(tipo: string | null): string {
-    switch (tipo?.toUpperCase()) {
-      case 'DESARROLLO': return '#22c55e'
-      case 'PRUEBAS': return '#f97316'
-      case 'DESPLIEGUE': return '#3b82f6'
-      case 'ESTABILIZACION': return '#6b7280'
-      default: return '#94a3b8'
-    }
-  }
-
-  function complexityColor(cx: string | null): string {
-    switch (cx?.toLowerCase()) {
-      case 'bajo': return '#22c55e'
-      case 'medio': return '#f59e0b'
-      case 'alto': return '#ef4444'
-      default: return '#94a3b8'
-    }
-  }
-
-  function formatNumber(value: number | null | undefined): string {
-    const num = Number(value ?? 0)
-    if (!Number.isFinite(num)) return '0'
-    return num.toLocaleString('es-CO', { maximumFractionDigits: 2 })
-  }
-
-  function formatDateTime(value: string | null | undefined): string {
-    if (!value) return 'Sin fecha'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
-  }
-
-  function sortEntries<T>(entries: Array<[string, T]>): Array<[string, T]> {
-    return [...entries].sort(([a], [b]) => {
-      const numA = Number(a)
-      const numB = Number(b)
-      if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numA - numB
-      return a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })
-    })
   }
 
   function toggleHU(key: string): void {
@@ -237,86 +184,6 @@ export default function Requerimientos() {
     })
   }
 
-  interface GrupoHU {
-    key: string
-    historia_usuario: string
-    epica_feature: string
-    filas: FilaEstimacion[]
-    totalHorasEstimadas: number
-    totalHorasFinales: number
-    totalMejor: number
-    totalPeor: number
-    totalPromedio: number
-    createdHU: number | null
-    createdTasks: number[]
-    createdTasksEpm: number[]
-  }
-
-  function agruparPorHU(filas: FilaEstimacion[]): GrupoHU[] {
-    const mapa = new Map<string, GrupoHU>()
-    for (const fila of filas) {
-      const key = fila.historia_usuario || `__sin_hu_${fila.numero ?? Math.random()}`
-      let grupo = mapa.get(key)
-      if (!grupo) {
-        grupo = {
-          key,
-          historia_usuario: fila.historia_usuario || 'Sin Historia de Usuario',
-          epica_feature: fila.epica_feature || '—',
-          filas: [],
-          totalHorasEstimadas: 0,
-          totalHorasFinales: 0,
-          totalMejor: 0,
-          totalPeor: 0,
-          totalPromedio: 0,
-          createdHU: null,
-          createdTasks: [],
-          createdTasksEpm: [],
-        }
-        mapa.set(key, grupo)
-      }
-      grupo.filas.push(fila)
-      grupo.totalHorasEstimadas += fila.horas_estimadas ?? 0
-      grupo.totalHorasFinales += fila.horas_totales ?? fila.metodologia_10 ?? 0
-      grupo.totalMejor += fila.mejor_caso ?? 0
-      grupo.totalPeor += fila.peor_caso ?? 0
-      grupo.totalPromedio += fila.promedio ?? 0
-      if (fila.created_hu_hitss) grupo.createdHU = fila.created_hu_hitss
-      if (fila.created_task_hitss) grupo.createdTasks.push(fila.created_task_hitss)
-      if (fila.created_task_epm) grupo.createdTasksEpm.push(fila.created_task_epm)
-    }
-    return Array.from(mapa.values())
-  }
-
-  // Filtros
-  interface Filtros {
-    codigoReq: string
-    sc: string
-    squad: string
-    estado: string
-    liderTecnico: string
-    fechaSolicitudDesde: string
-    fechaSolicitudHasta: string
-    fechaComprometidaDesde: string
-    fechaComprometidaHasta: string
-    fechaLimiteDesde: string
-    fechaLimiteHasta: string
-    estadoEntrega: string
-    ansEstimacion: string
-    categoria: string
-    tipificacion: string
-    tipoCosto: string
-  }
-  const FILTROS_INIT: Filtros = {
-    codigoReq: '', sc: '', squad: '', estado: '', liderTecnico: '',
-    fechaSolicitudDesde: '', fechaSolicitudHasta: '',
-    fechaComprometidaDesde: '', fechaComprometidaHasta: '',
-    fechaLimiteDesde: '', fechaLimiteHasta: '',
-    estadoEntrega: '',
-    ansEstimacion: '',
-    categoria: '',
-    tipificacion: '',
-    tipoCosto: '',
-  }
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INIT)
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
 
@@ -394,9 +261,6 @@ export default function Requerimientos() {
     }
   }
 
-  const nombrePersona = (id: string | null): string =>
-    id ? (personas.find((p) => p.id === id)?.nombre ?? id) : '—'
-
   const isEditing = (reqId: string, campo: string): boolean =>
     editCell?.id === reqId && editCell?.campo === campo
 
@@ -439,59 +303,9 @@ export default function Requerimientos() {
     )
   }
 
-  function fechaComprometidaReq(req: Requerimiento): string | null {
-    const fechas = (req.entregas ?? [])
-      .map((e) => e.fecha_comprometida)
-      .filter(Boolean) as string[]
-    if (fechas.length === 0) return null
-    const hoy = new Date().toISOString().slice(0, 10)
-    const futuras = fechas.filter((f) => f.slice(0, 10) >= hoy).sort()
-    if (futuras.length > 0) return futuras[0].slice(0, 10)
-    return fechas.sort().reverse()[0].slice(0, 10)
-  }
-
-  function calcularDiasTranscurridos(fechaLimite: string | null, fechaReal: string | null): { dias: number; esNegativo: boolean } | null {
-    const hoy = new Date().toISOString().slice(0, 10)
-    
-    if (!fechaLimite) return null
-    
-    // Fecha a usar para el cálculo del rango
-    const fechaFin = fechaReal ? fechaReal.slice(0, 10) : hoy
-    const fechaInicio = fechaLimite.slice(0, 10)
-    
-    // Calcular diferencia en días
-    const fecha1 = new Date(fechaInicio)
-    const fecha2 = new Date(fechaFin)
-    const diferencia = Math.floor((fecha2.getTime() - fecha1.getTime()) / (1000 * 60 * 60 * 24))
-    
-    // Determinar si es negativo:
-    // - Si no hay fecha real y hoy > fechaLimite: negativo (atraso)
-    // - Si hay fecha real y fechaReal > fechaLimite: negativo (atraso)
-    // - En caso contrario: positivo (días restantes o dentro de plazo)
-    let esNegativo = false
-    if (!fechaReal && hoy > fechaInicio) {
-      esNegativo = true
-    } else if (fechaReal && fechaReal.slice(0, 10) > fechaInicio) {
-      esNegativo = true
-    }
-    
-    return { dias: Math.abs(diferencia), esNegativo }
-  }
-
   const reqSeleccionado = estModalReqId ? datos.find((req) => req.id === estModalReqId) ?? null : null
   const estimacion = estData?.estimacion ?? null
   const summary = estData?.summary
-
-  // Mapa id → nombre combinando aplicaciones (fuente principal: squad_id = codigo de app)
-  // y la colección squads (para registros importados con _id numérico).
-  const squadPorId = useMemo(() => {
-    const m = new Map<string, string>()
-    // Primero squads de colección (menor prioridad, colección puede estar vacía)
-    squadsCol.forEach((s) => m.set(String(s.id), s.nombre))
-    // Luego aplicaciones (mayor prioridad, fuente real de squad_id en la mayoría de los casos)
-    aplicaciones.forEach((a) => m.set(String(a.codigo), a.nombre))
-    return m
-  }, [squadsCol, aplicaciones])
 
   const squadsDisponibles = useMemo(() => {
     const nombres = new Set<string>()
@@ -507,18 +321,6 @@ export default function Requerimientos() {
   const lideresDisponibles = useMemo(() =>
     personas.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS'),
     [personas])
-
-  const personaPorId = useMemo(() => {
-    const m = new Map<string, string>()
-    personas.forEach((p) => m.set(String(p.id), p.nombre))
-    return m
-  }, [personas])
-
-  const categoriaPorId = useMemo(() => {
-    const m = new Map<string, string>()
-    categorias.forEach((c) => m.set(String(c.id), c.nombre))
-    return m
-  }, [categorias])
 
   const categoriasDisponibles = useMemo(() =>
     Array.from(new Set(datos.filter((r) => r.categoria_id).map((r) => categoriaPorId.get(String(r.categoria_id)) ?? String(r.categoria_id))))
@@ -620,10 +422,7 @@ export default function Requerimientos() {
     nombreActa: (r) => r.nombre ?? '',
     aplicacionEpm: (r) => (r.nombre ? r.nombre.split('-')[0].trim() : ''),
     estado: (r) => r.estado,
-    ansEstimacion: (r) => {
-      const v = (r.ans_acta ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
-      return v === 'CUMPLE' ? 'Cumple' : v === 'NO CUMPLE' ? 'No cumple' : v
-    },
+    ansEstimacion: (r) => normalizarAns(r.ans_acta),
     ltHitss: (r) => nombrePersona(r.solicitud?.lt_hitss_id ?? null),
     scrum: (r) => nombrePersona(r.solicitud?.scrum_id ?? null),
     horas: (r) => r.total_horas_estimadas ?? '',
@@ -676,11 +475,6 @@ export default function Requerimientos() {
     const fecha = new Date().toISOString().slice(0, 10)
     XLSX.writeFile(libro, `requerimientos_${fecha}.xlsx`)
   }
-
-  // Total de columnas activas de la tabla principal (usado para colSpan dinámico).
-  const coreVisibleCount = CORE_COLUMNAS.filter((k) => columnasActivas.has(k)).length
-  const metricasVisibles = ['horas', 'entregasCount'].filter((k) => columnasActivas.has(k))
-  const totalColumnasTabla = 2 + coreVisibleCount + columnasExtra.length
 
   return (
     <div>
@@ -979,7 +773,7 @@ export default function Requerimientos() {
                         const clase = v === 'CUMPLE' ? 'bg-emerald-100 text-emerald-700'
                           : v === 'NO CUMPLE' ? 'bg-red-100 text-red-700'
                           : 'bg-slate-100 text-slate-600'
-                        const label = v === 'CUMPLE' ? 'Cumple' : v === 'NO CUMPLE' ? 'No cumple' : v
+                        const label = normalizarAns(req.ans_acta)
                         return (
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${clase}`}>
                             {label}
