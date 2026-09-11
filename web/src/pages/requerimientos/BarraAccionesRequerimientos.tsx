@@ -25,6 +25,11 @@ export function BarraAccionesRequerimientos({
       acciones={
         <>
           {puedeCrear && (
+            /* Excepción ADR-0006: navegación, no acción. `Boton` solo renderiza
+               <button> y no admite polimorfismo a `Link`; además `.btn:disabled`
+               nunca aplicaría sobre un <a>. Las clases son las mismas que produce
+               `<Boton variante="primario">`. No "corregir" a `Boton` en un barrido
+               futuro: si aparece un segundo caso así, se crea `BotonLink`. */
             <Link to="/requerimientos/nuevo" className="btn btn-primario">
               Crear
             </Link>
