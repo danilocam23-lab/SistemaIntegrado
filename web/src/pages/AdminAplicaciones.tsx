@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion } from '../types'
-import { Boton, Campo, TablaScroll } from '../components/ui'
+import { Boton, Campo, Chip, TablaScroll } from '../components/ui'
 
 export default function AdminAplicaciones() {
   const { usuario, tienePermiso } = useAuth()
@@ -99,7 +99,9 @@ export default function AdminAplicaciones() {
             <tr key={app.codigo}>
               <td className="font-mono">{app.codigo}</td>
               <td>{app.nombre}</td>
-              <td>{app.activa ? 'Activa' : 'Inactiva'}</td>
+              <td>
+                <Chip tono={app.activa ? 'exito' : 'neutro'}>{app.activa ? 'Activa' : 'Inactiva'}</Chip>
+              </td>
               <td className="text-center">
                 <button
                   onClick={() => alternarEstado(app)}

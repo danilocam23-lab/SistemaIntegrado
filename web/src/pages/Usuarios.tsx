@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
-import { Boton, Campo, Selector, TablaScroll } from '../components/ui'
+import { Boton, Campo, Chip, Selector, TablaScroll } from '../components/ui'
 import type { Aplicacion, Rol, Usuario } from '../types'
 
 type Tab = 'usuarios' | 'roles'
@@ -418,7 +418,9 @@ export default function Usuarios() {
                     </Selector>
                   </td>
                   <td>{nombresSquadsUsuario(u)}</td>
-                  <td className="text-center">{u.activo ? 'Sí' : 'No'}</td>
+                  <td className="text-center">
+                    <Chip tono={u.activo ? 'exito' : 'neutro'}>{u.activo ? 'Sí' : 'No'}</Chip>
+                  </td>
                   <td className="text-center whitespace-nowrap">
                     <button onClick={() => abrirEditar(u)} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs mr-2">
                       Editar
@@ -499,7 +501,9 @@ export default function Usuarios() {
                   <td>{rol.nombre}</td>
                   <td className="font-mono">{rol.clave}</td>
                   <td>{rol.permisos.length}</td>
-                  <td className="text-center">{rol.activo ? 'Sí' : 'No'}</td>
+                  <td className="text-center">
+                    <Chip tono={rol.activo ? 'exito' : 'neutro'}>{rol.activo ? 'Sí' : 'No'}</Chip>
+                  </td>
                   <td className="text-center whitespace-nowrap">
                     <button
                       onClick={() => setRolEditando({ ...rol })}
