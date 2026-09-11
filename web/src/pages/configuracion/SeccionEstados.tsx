@@ -1,3 +1,4 @@
+import { Aviso, Boton, Campo } from '../../components/ui'
 import type { EstadosConfigurablesState } from './useEstadosConfigurables'
 
 type Props = EstadosConfigurablesState
@@ -23,8 +24,8 @@ export function SeccionEstados({
         automáticamente al crear o editar requerimientos.
       </p>
 
-      {estAviso && <div className="aviso aviso-error">{estAviso}</div>}
-      {estOk && <div className="aviso aviso-exito">{estOk}</div>}
+      {estAviso && <Aviso tono="error">{estAviso}</Aviso>}
+      {estOk && <Aviso tono="exito">{estOk}</Aviso>}
 
       {/* Estados de Requerimiento */}
       <div className="tarjeta tarjeta-pad">
@@ -41,16 +42,16 @@ export function SeccionEstados({
           {estReq.length === 0 && <span className="text-sm text-slate-400">Sin estados configurados</span>}
         </div>
         <div className="flex items-center gap-2">
-          <input
+          <Campo
             value={nuevoEstReq}
             onChange={(e) => setNuevoEstReq(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarEstadoReq())}
             placeholder="Nuevo estado (ej: EN REVISION)"
-            className="campo w-72"
+            className="w-72"
           />
-          <button onClick={agregarEstadoReq} className="btn btn-primario btn-sm">
+          <Boton onClick={agregarEstadoReq} variante="primario" tamano="sm">
             Agregar
-          </button>
+          </Boton>
         </div>
       </div>
 
@@ -61,7 +62,7 @@ export function SeccionEstados({
         </h2>
         <div className="mb-3 flex flex-wrap gap-2">
           {estEnt.map((e) => (
-            <span key={e} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-800">
+            <span key={e} className="chip chip-marca">
               {e}
               <button onClick={() => quitarEstadoEnt(e)} className="enlace-accion enlace-accion-peligro ml-1" title="Quitar">✕</button>
             </span>
@@ -69,16 +70,16 @@ export function SeccionEstados({
           {estEnt.length === 0 && <span className="text-sm text-slate-400">Sin estados configurados</span>}
         </div>
         <div className="flex items-center gap-2">
-          <input
+          <Campo
             value={nuevoEstEnt}
             onChange={(e) => setNuevoEstEnt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarEstadoEnt())}
             placeholder="Nuevo estado (ej: EN GARANTIA)"
-            className="campo w-72"
+            className="w-72"
           />
-          <button onClick={agregarEstadoEnt} className="btn btn-primario btn-sm">
+          <Boton onClick={agregarEstadoEnt} variante="primario" tamano="sm">
             Agregar
-          </button>
+          </Boton>
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { EntregasActasCampo } from '../../constantes'
+import { Aviso } from '../../components/ui'
 import { agruparCampos } from './utilidades'
 import type { CamposConfigurablesState } from './useCamposConfigurables'
 
@@ -26,8 +27,8 @@ export function SeccionCamposConfigurables({
     <div className="space-y-6">
       {descripcion}
 
-      {aviso && <div className="aviso aviso-error">{aviso}</div>}
-      {ok && <div className="aviso aviso-exito">{ok}</div>}
+      {aviso && <Aviso tono="error">{aviso}</Aviso>}
+      {ok && <Aviso tono="exito">{ok}</Aviso>}
 
       {/* Columnas de la tabla */}
       <div className="tarjeta tarjeta-pad">

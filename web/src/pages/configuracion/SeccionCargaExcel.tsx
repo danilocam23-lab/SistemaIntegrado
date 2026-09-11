@@ -1,3 +1,4 @@
+import { Aviso, Boton, Campo } from '../../components/ui'
 import { fmtFechaCo } from './utilidades'
 import type { CargaExcelState } from './useCargaExcel'
 
@@ -27,32 +28,32 @@ export function SeccionCargaExcel({
       </p>
 
       <form onSubmit={guardarRutaCargaExcel} className="tarjeta tarjeta-pad flex flex-wrap items-end gap-3">
-        <label className="min-w-[320px] flex-1 text-sm">
-          <span className="mb-1 block text-slate-600">Ruta de la carpeta</span>
-          <input
+        <div className="min-w-[320px] flex-1">
+          <Campo
+            etiqueta="Ruta de la carpeta"
             value={rutaCargaExcel}
             onChange={(e) => setRutaCargaExcel(e.target.value)}
             placeholder="C:\Users\usuario\HITSS\Storage 01 Colombia - Sabana de seguimiento"
-            className="campo w-full"
+            className="w-full"
           />
-        </label>
-        <button className="btn btn-primario">Guardar</button>
+        </div>
+        <Boton type="submit" variante="primario">Guardar</Boton>
       </form>
 
-      {rutaCargaExcelAviso && <div className="aviso aviso-error">{rutaCargaExcelAviso}</div>}
-      {rutaCargaExcelOk && <div className="aviso aviso-exito">{rutaCargaExcelOk}</div>}
+      {rutaCargaExcelAviso && <Aviso tono="error">{rutaCargaExcelAviso}</Aviso>}
+      {rutaCargaExcelOk && <Aviso tono="exito">{rutaCargaExcelOk}</Aviso>}
 
       <div className="tarjeta tarjeta-pad space-y-2">
         <div className="flex items-center justify-between gap-2">
           <h2 className="etiqueta-sup">Estado de la última ejecución (automática o manual)</h2>
-          <button
+          <Boton
             type="button"
-            className="btn btn-secundario"
+            variante="secundario"
             onClick={() => void consultarUltimaEjecucionAuto()}
             disabled={cargandoUltimaEjecucion}
           >
             🔄 {cargandoUltimaEjecucion ? 'Consultando…' : 'Consultar estado'}
-          </button>
+          </Boton>
         </div>
         {!ultimaEjecucionAuto && (
           <p className="text-sm text-slate-500">
@@ -101,16 +102,16 @@ export function SeccionCargaExcel({
           guardada y sincronizarlo) sin esperar al próximo horario. Útil para confirmar que la ruta y
           el archivo están correctamente configurados.
         </p>
-        <button
+        <Boton
           type="button"
-          className="btn btn-secundario"
+          variante="secundario"
           onClick={probarCargaAutomatica}
           disabled={probandoCargaExcel}
         >
           {probandoCargaExcel ? 'Ejecutando…' : '▶️ Probar ahora'}
-        </button>
+        </Boton>
         {resultadoPruebaCargaExcel && (
-          <div className="aviso aviso-info">{resultadoPruebaCargaExcel}</div>
+          <Aviso tono="info">{resultadoPruebaCargaExcel}</Aviso>
         )}
       </div>
     </div>

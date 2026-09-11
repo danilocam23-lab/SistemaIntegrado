@@ -1,4 +1,4 @@
-import { TablaScroll } from '../../components/ui/primitivos'
+import { Aviso, Boton, Campo, Selector, TablaScroll } from '../../components/ui'
 import { ModalEditarTarifa } from './ModalEditarTarifa'
 import { RAMIFICACIONES } from './useTarifas'
 import type { TarifasState } from './useTarifas'
@@ -33,45 +33,51 @@ export function SeccionTarifas({
         Valores hora globales del proyecto. No dependen de un squad específico.
       </p>
       <form onSubmit={crearTarifa} className="barra-filtros mb-4">
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Año</span>
-          <input value={tAnio} onChange={(e) => setTAnio(e.target.value)} type="number" required
-            className="campo w-24" />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Valor hora</span>
-          <input value={tValorHora} onChange={(e) => setTValorHora(e.target.value)} type="number" required
-            className="campo w-32" />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Ramificación</span>
-          <select value={tRamificacion} onChange={(e) => setTRamificacion(e.target.value)}
-            className="campo">
-            {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-        </label>
-        <button className="btn btn-primario">Crear</button>
+        <Campo
+          etiqueta="Año"
+          value={tAnio}
+          onChange={(e) => setTAnio(e.target.value)}
+          type="number"
+          required
+          className="w-24"
+        />
+        <Campo
+          etiqueta="Valor hora"
+          value={tValorHora}
+          onChange={(e) => setTValorHora(e.target.value)}
+          type="number"
+          required
+          className="w-32"
+        />
+        <Selector
+          etiqueta="Ramificación"
+          value={tRamificacion}
+          onChange={(e) => setTRamificacion(e.target.value)}
+        >
+          {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
+        </Selector>
+        <Boton type="submit" variante="primario">Crear</Boton>
       </form>
 
-      {tAviso && <div className="aviso aviso-error mb-3">{tAviso}</div>}
+      {tAviso && <Aviso tono="error" className="mb-3">{tAviso}</Aviso>}
 
       <TablaScroll>
-      <table className="text-sm">
-        <thead className="bg-marca-osc text-white">
+      <table className="tabla">
+        <thead>
           <tr>
-            <th className="p-2 text-left">Año</th>
-            <th className="p-2 text-right">Valor hora</th>
-            <th className="p-2 text-left">Ramificación</th>
-            <th className="p-2"></th>
+            <th>Año</th>
+            <th className="text-right">Valor hora</th>
+            <th>Ramificación</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {tarifas.map((t) => (
-            <tr key={t.id} className="border-t">
-              <td className="p-2">{t.anio}</td>
-              <td className="p-2 text-right">{t.valor_hora}</td>
-              <td className="p-2">{t.ramificacion ?? '—'}</td>
-              <td className="p-2 text-center">
+            <tr key={t.id}>
+              <td>{t.anio}</td>
+              <td className="text-right">{t.valor_hora}</td>
+              <td>{t.ramificacion ?? '—'}</td>
+              <td className="text-center">
                 <div className="flex justify-center gap-2">
                   <button onClick={() => abrirEdicionTarifa(t)} className="enlace-accion enlace-accion-alerta">Editar</button>
                   <button onClick={() => eliminarTarifa(t)} className="enlace-accion enlace-accion-peligro">Eliminar</button>
@@ -80,7 +86,7 @@ export function SeccionTarifas({
             </tr>
           ))}
           {tarifas.length === 0 && (
-            <tr><td colSpan={4} className="p-4 text-center text-slate-400">Sin tarifas.</td></tr>
+            <tr><td colSpan={4} className="text-center text-slate-400">Sin tarifas.</td></tr>
           )}
         </tbody>
       </table>

@@ -1,3 +1,4 @@
+import { Aviso, Boton, Campo } from '../../components/ui'
 import type { ListaEncoladaState } from './useListaEncolada'
 
 type Props = ListaEncoladaState & {
@@ -31,12 +32,12 @@ export function SeccionListaChips({
         {items.length === 0 && <span className="text-sm text-slate-400">{textoVacio}</span>}
       </div>
       <div className="flex items-center gap-2">
-        <input value={nuevo} onChange={(e) => setNuevo(e.target.value)}
+        <Campo value={nuevo} onChange={(e) => setNuevo(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregar())}
-          placeholder={placeholder} className="campo" />
-        <button onClick={agregar} className="btn btn-primario btn-sm">Agregar</button>
+          placeholder={placeholder} />
+        <Boton onClick={agregar} variante="primario" tamano="sm">Agregar</Boton>
       </div>
-      {ok && <div className="aviso aviso-exito mt-3">{ok}</div>}
+      {ok && <Aviso tono="exito" className="mt-3">{ok}</Aviso>}
     </div>
   )
 }
