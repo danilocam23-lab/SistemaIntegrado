@@ -3,53 +3,26 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { ESTADOS_ENTREGA, ESTADOS_REQUERIMIENTO, ENTREGAS_ACTAS_CONFIG_CLAVES, ENTREGAS_ACTAS_COLUMNAS, ENTREGAS_ACTAS_FILTROS, REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../constantes'
-import type { EntregasActasCampo } from '../constantes'
-import type { Configuracion as Config, Festivo, Tarifa, Categoria } from '../types'
+import type { Configuracion as Config, Festivo } from '../types'
 import { TablaScroll } from '../components/ui/primitivos'
-
-type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'estados' | 'entregas_actas' | 'requerimientos' | 'carga_excel'
+import { SeccionCategorias } from './configuracion/SeccionCategorias'
+import { SeccionTarifas } from './configuracion/SeccionTarifas'
+import { PESTANAS } from './configuracion/tipos'
+import type { Tab, UltimaSincronizacionResumen } from './configuracion/tipos'
+import { agruparCampos, fmtFechaCo } from './configuracion/utilidades'
+import { useCategorias } from './configuracion/useCategorias'
+import { useTarifas } from './configuracion/useTarifas'
 
 const CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA = 'soporte.solicitudes_fabrica.ruta_carga_local'
-
-interface UltimaSincronizacionResumen {
-  sync_id: string
-  estado: string
-  archivo: string | null
-  total_encontrados: number
-  cargados: number
-  con_error: number
-  iniciado_en: string | null
-  finalizado_en: string | null
-  error_general: string | null
-}
-
-/** Formatea una fecha ISO (guardada en UTC, sin sufijo de zona) en hora de Colombia. */
-function fmtFechaCo(fecha: string | null): string {
-  if (!fecha) return '—'
-  const iso = /[zZ]|[+-]\d{2}:\d{2}$/.test(fecha) ? fecha : `${fecha}Z`
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return fecha
-  return d.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
-}
-
-/** Agrupa una lista de campos configurables por su `grupo`, en un orden fijo legible. */
-function agruparCampos(campos: EntregasActasCampo[]): { grupo: string; items: EntregasActasCampo[] }[] {
-  const orden = ['Entrega', 'Requerimiento', 'Solicitud', 'Facturación']
-  const mapa = new Map<string, EntregasActasCampo[]>()
-  for (const c of campos) {
-    if (!mapa.has(c.grupo)) mapa.set(c.grupo, [])
-    mapa.get(c.grupo)?.push(c)
-  }
-  return orden.filter((g) => mapa.has(g)).map((g) => ({ grupo: g, items: mapa.get(g) ?? [] }))
-}
 
 export default function Configuracion() {
   const [tab, setTab] = useState<Tab>('tarifas')
 
   const { datos, error, recargar } = useLista<Config>('/configuracion')
   const { datos: festivos, recargar: recargarFestivos } = useLista<Festivo>('/festivos')
-  const { datos: tarifas, recargar: recargarTarifas } = useLista<Tarifa>('/tarifas')
-  const { datos: categorias, recargar: recargarCategorias } = useLista<Categoria>('/categorias')
+  // INVARIANTE 1: todos los hooks de seccion se invocan sin condicion; solo el JSX depende de tab.
+  const tarifasState = useTarifas()
+  const categoriasState = useCategorias()
   const [valores, setValores] = useState<Record<string, string>>({})
   const [nuevaClave, setNuevaClave] = useState('')
   const [nuevoValor, setNuevoValor] = useState('')
@@ -124,61 +97,6 @@ export default function Configuracion() {
       setProbandoCargaExcel(false)
       void consultarUltimaEjecucionAuto()
     }
-  }
-
-  // ── Estado Tarifas ──
-  const RAMIFICACIONES = ['Fábrica', 'Soporte']
-  const [tAnio, setTAnio] = useState(String(new Date().getFullYear()))
-  const [tValorHora, setTValorHora] = useState('')
-  const [tRamificacion, setTRamificacion] = useState(RAMIFICACIONES[0])
-  const [tAviso, setTAviso] = useState('')
-  const [tEditItem, setTEditItem] = useState<Tarifa | null>(null)
-  const [tEditAnio, setTEditAnio] = useState('')
-  const [tEditValorHora, setTEditValorHora] = useState('')
-  const [tEditRamificacion, setTEditRamificacion] = useState('')
-
-  function abrirEdicionTarifa(t: Tarifa) {
-    setTEditItem(t)
-    setTEditAnio(String(t.anio))
-    setTEditValorHora(String(t.valor_hora))
-    setTEditRamificacion(t.ramificacion ?? RAMIFICACIONES[0])
-  }
-
-  async function guardarPopupTarifa(): Promise<void> {
-    if (!tEditItem) return
-    setTAviso('')
-    try {
-      await client.put(`/tarifas/${tEditItem.id}`, {
-        anio: Number(tEditAnio),
-        valor_hora: Number(tEditValorHora),
-        ramificacion: tEditRamificacion,
-      })
-      setTEditItem(null)
-      recargarTarifas()
-    } catch (err) {
-      setTAviso(mensajeError(err))
-    }
-  }
-
-  async function crearTarifa(e: FormEvent): Promise<void> {
-    e.preventDefault()
-    setTAviso('')
-    try {
-      await client.post('/tarifas', {
-        anio: Number(tAnio),
-        valor_hora: Number(tValorHora),
-        ramificacion: tRamificacion,
-      })
-      setTValorHora('')
-      recargarTarifas()
-    } catch (err) {
-      setTAviso(mensajeError(err))
-    }
-  }
-
-  async function eliminarTarifa(t: Tarifa): Promise<void> {
-    await client.delete(`/tarifas/${t.id}`)
-    recargarTarifas()
   }
 
   // ── Popup edición ──
@@ -389,45 +307,6 @@ export default function Configuracion() {
     }
   }
 
-  // ── Estado Categorías ──
-  const [cNombre, setCNombre] = useState('')
-  const [cColor, setCColor] = useState('#6366f1')
-  const [cAviso, setCAviso] = useState('')
-  const [cEditCell, setCEditCell] = useState<{ id: string; campo: string } | null>(null)
-  const [cEditValue, setCEditValue] = useState('')
-  const cCancelarBlur = useRef(false)
-
-  function cIniciarEdicion(id: string, campo: string, valor: string) {
-    setCEditCell({ id, campo }); setCEditValue(valor); cCancelarBlur.current = false
-  }
-  function cCancelarEdicion() {
-    cCancelarBlur.current = true; setCEditCell(null); setCEditValue('')
-  }
-  async function cGuardarEdicion(cat: Categoria): Promise<void> {
-    if (!cEditCell) return
-    try {
-      await client.put(`/categorias/${cat.id}`, {
-        nombre: cat.nombre, color: cat.color, orden: cat.orden,
-        [cEditCell.campo]: cEditCell.campo === 'orden' ? Number(cEditValue) : cEditValue,
-      })
-      setCEditCell(null); setCEditValue(''); recargarCategorias()
-    } catch (err) { setCAviso(mensajeError(err)) }
-  }
-  async function cCrear(e: FormEvent): Promise<void> {
-    e.preventDefault(); setCAviso('')
-    try {
-      await client.post('/categorias', { nombre: cNombre, color: cColor, orden: categorias.length + 1 })
-      setCNombre(''); recargarCategorias()
-    } catch (err) { setCAviso(mensajeError(err)) }
-  }
-  async function cEliminar(cat: Categoria): Promise<void> {
-    setCAviso('')
-    try {
-      await client.delete(`/categorias/${cat.id}`)
-      recargarCategorias()
-    } catch (err) { setCAviso(mensajeError(err)) }
-  }
-
   async function eliminarParametro(c: Config): Promise<void> {
     setAviso('')
     setOk('')
@@ -611,18 +490,7 @@ export default function Configuracion() {
 
       {/* ═══ Tabs ═══ */}
       <div className="pestanas mb-6">
-        {([
-          { id: 'tarifas',    label: '💰 Tarifas' },
-          { id: 'categorias', label: '🏷️ Categorías' },
-          { id: 'roles',      label: '👤 Roles' },
-          { id: 'tipos_contratacion', label: '📄 Tipo de contratación' },
-          { id: 'festivos',   label: '📅 Festivos' },
-          { id: 'parametros', label: '⚙️ Parámetros' },
-          { id: 'estados',    label: '🔖 Estados' },
-          { id: 'entregas_actas', label: '📋 Entregas de Actas' },
-          { id: 'requerimientos', label: '🧾 Requerimientos' },
-          { id: 'carga_excel', label: '📂 Carga de Excel' },
-        ] as { id: Tab; label: string }[]).map(({ id, label }) => (
+        {PESTANAS.map(({ id, label }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -634,184 +502,10 @@ export default function Configuracion() {
       </div>
 
       {/* ═══ TAB: Tarifas ═══ */}
-      {tab === 'tarifas' && (
-        <div>
-          <p className="mb-4 text-sm text-slate-500">
-            Valores hora globales del proyecto. No dependen de un squad específico.
-          </p>
-          <form onSubmit={crearTarifa} className="barra-filtros mb-4">
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-600">Año</span>
-              <input value={tAnio} onChange={(e) => setTAnio(e.target.value)} type="number" required
-                className="campo w-24" />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-600">Valor hora</span>
-              <input value={tValorHora} onChange={(e) => setTValorHora(e.target.value)} type="number" required
-                className="campo w-32" />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-600">Ramificación</span>
-              <select value={tRamificacion} onChange={(e) => setTRamificacion(e.target.value)}
-                className="campo">
-                {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </label>
-            <button className="btn btn-primario">Crear</button>
-          </form>
-
-          {tAviso && <div className="aviso aviso-error mb-3">{tAviso}</div>}
-
-          <TablaScroll>
-          <table className="text-sm">
-            <thead className="bg-marca-osc text-white">
-              <tr>
-                <th className="p-2 text-left">Año</th>
-                <th className="p-2 text-right">Valor hora</th>
-                <th className="p-2 text-left">Ramificación</th>
-                <th className="p-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {tarifas.map((t) => (
-                <tr key={t.id} className="border-t">
-                  <td className="p-2">{t.anio}</td>
-                  <td className="p-2 text-right">{t.valor_hora}</td>
-                  <td className="p-2">{t.ramificacion ?? '—'}</td>
-                  <td className="p-2 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button onClick={() => abrirEdicionTarifa(t)} className="enlace-accion enlace-accion-alerta">Editar</button>
-                      <button onClick={() => eliminarTarifa(t)} className="enlace-accion enlace-accion-peligro">Eliminar</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {tarifas.length === 0 && (
-                <tr><td colSpan={4} className="p-4 text-center text-slate-400">Sin tarifas.</td></tr>
-              )}
-            </tbody>
-          </table>
-          </TablaScroll>
-
-          {/* Modal edición tarifa */}
-          {tEditItem && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-              onClick={() => setTEditItem(null)}>
-              <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
-                onClick={(e) => e.stopPropagation()}>
-                <h2 className="titulo-seccion mb-4">Editar tarifa</h2>
-                <div className="mb-3">
-                  <label className="mb-1 block text-sm text-slate-600">Año</label>
-                  <input value={tEditAnio} onChange={(e) => setTEditAnio(e.target.value)}
-                    type="number" className="campo w-full" />
-                </div>
-                <div className="mb-3">
-                  <label className="mb-1 block text-sm text-slate-600">Valor hora</label>
-                  <input value={tEditValorHora} onChange={(e) => setTEditValorHora(e.target.value)}
-                    type="number" className="campo w-full" />
-                </div>
-                <div className="mb-4">
-                  <label className="mb-1 block text-sm text-slate-600">Ramificación</label>
-                  <select value={tEditRamificacion} onChange={(e) => setTEditRamificacion(e.target.value)}
-                    className="campo w-full">
-                    {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => setTEditItem(null)}
-                    className="btn btn-secundario">Cancelar</button>
-                  <button onClick={guardarPopupTarifa}
-                    className="btn btn-primario">Guardar</button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {tab === 'tarifas' && <SeccionTarifas {...tarifasState} />}
 
       {/* ═══ TAB: Categorías ═══ */}
-      {tab === 'categorias' && (
-        <div>
-          <p className="mb-4 text-sm text-slate-500">
-            Categorías globales para clasificar los requerimientos del proyecto.
-          </p>
-          <form onSubmit={cCrear} className="barra-filtros mb-4">
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-600">Nombre</span>
-              <input value={cNombre} onChange={(e) => setCNombre(e.target.value)} required
-                className="campo" />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-slate-600">Color</span>
-              <input value={cColor} onChange={(e) => setCColor(e.target.value)} type="color"
-                className="h-10 w-16 rounded border" />
-            </label>
-            <button className="btn btn-primario">Crear</button>
-          </form>
-
-          {cAviso && <div className="aviso aviso-error mb-3">{cAviso}</div>}
-
-          <TablaScroll>
-          <table className="text-sm">
-            <thead className="bg-marca-osc text-white">
-              <tr>
-                <th className="p-2 text-left">Orden</th>
-                <th className="p-2 text-left">Categoría</th>
-                <th className="p-2 text-left">Color</th>
-                <th className="p-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {categorias.map((c) => (
-                <tr key={c.id} className="border-t">
-                  <td className="cursor-pointer p-2" title="Doble clic para editar"
-                    onDoubleClick={() => cIniciarEdicion(c.id, 'orden', String(c.orden))}>
-                    {cEditCell?.id === c.id && cEditCell.campo === 'orden' ? (
-                      <input autoFocus type="number" value={cEditValue}
-                        onChange={(e) => setCEditValue(e.target.value)}
-                        onBlur={() => { if (cCancelarBlur.current) { cCancelarBlur.current = false; return } void cGuardarEdicion(c) }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } if (e.key === 'Escape') { e.preventDefault(); cCancelarEdicion() } }}
-                        className="campo campo-sm w-20" />
-                    ) : c.orden}
-                  </td>
-                  <td className="cursor-pointer p-2" title="Doble clic para editar"
-                    onDoubleClick={() => cIniciarEdicion(c.id, 'nombre', c.nombre)}>
-                    {cEditCell?.id === c.id && cEditCell.campo === 'nombre' ? (
-                      <input autoFocus value={cEditValue}
-                        onChange={(e) => setCEditValue(e.target.value)}
-                        onBlur={() => { if (cCancelarBlur.current) { cCancelarBlur.current = false; return } void cGuardarEdicion(c) }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } if (e.key === 'Escape') { e.preventDefault(); cCancelarEdicion() } }}
-                        className="campo campo-sm w-full" />
-                    ) : c.nombre}
-                  </td>
-                  <td className="cursor-pointer p-2" title="Doble clic para editar"
-                    onDoubleClick={() => cIniciarEdicion(c.id, 'color', c.color)}>
-                    {cEditCell?.id === c.id && cEditCell.campo === 'color' ? (
-                      <input autoFocus type="color" value={cEditValue}
-                        onChange={(e) => setCEditValue(e.target.value)}
-                        onBlur={() => { if (cCancelarBlur.current) { cCancelarBlur.current = false; return } void cGuardarEdicion(c) }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } if (e.key === 'Escape') { e.preventDefault(); cCancelarEdicion() } }}
-                        className="h-10 w-16 rounded border" />
-                    ) : (
-                      <span className="inline-flex items-center gap-2">
-                        <span className="inline-block h-4 w-4 rounded" style={{ background: c.color }} />
-                        {c.color}
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-2 text-center">
-                    <button onClick={() => void cEliminar(c)} className="enlace-accion enlace-accion-peligro">Eliminar</button>
-                  </td>
-                </tr>
-              ))}
-              {categorias.length === 0 && (
-                <tr><td colSpan={4} className="p-4 text-center text-slate-400">Sin categorías.</td></tr>
-              )}
-            </tbody>
-          </table>
-          </TablaScroll>
-        </div>
-      )}
+      {tab === 'categorias' && <SeccionCategorias {...categoriasState} />}
 
       {/* ═══ TAB: Roles ═══ */}
       {tab === 'roles' && (
