@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion } from '../types'
-import { Boton, Campo, TablaScroll } from '../components/ui/primitivos'
+import { Boton, Campo, TablaScroll } from '../components/ui'
 
 export default function AdminAplicaciones() {
   const { usuario, tienePermiso } = useAuth()

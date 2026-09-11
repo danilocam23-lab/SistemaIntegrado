@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Aplicacion, EndpointAdmin } from '../types'
-import { Boton, Campo, Selector, TablaScroll } from '../components/ui/primitivos'
+import { Boton, Campo, Selector, TablaScroll } from '../components/ui'
 
 const HEADER_CONSOLIDADO = { headers: { 'X-Aplicacion': '__todas__' } }
 

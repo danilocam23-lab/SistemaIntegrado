@@ -4,7 +4,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
-import { Boton, Campo, Selector, TablaScroll } from '../components/ui/primitivos'
+import { Boton, Campo, Selector, TablaScroll } from '../components/ui'
 import type { Aplicacion, Rol, Usuario } from '../types'
 
 type Tab = 'usuarios' | 'roles'
