@@ -709,16 +709,16 @@ export default function DashboardSquad() {
             vacio={woSoportePorMes.length === 0}
             acciones={
               detalleWoSoporte.length > 0 ? (
-                <button
-                  type="button"
+                <Boton
                   onClick={() => {
                     setBusquedaDetalleWo('')
                     setMostrarDetalleWo(true)
                   }}
-                  className="btn btn-secundario btn-sm"
+                  variante="secundario"
+                  tamano="sm"
                 >
                   Ver detalle
-                </button>
+                </Boton>
               ) : null
             }
           >
@@ -760,16 +760,16 @@ export default function DashboardSquad() {
             vacio={filasCapacidadSquad.length === 0}
             acciones={
               detallePersonasCapacidad.length > 0 ? (
-                <button
-                  type="button"
+                <Boton
                   onClick={() => {
                     setBusquedaDetallePersonas('')
                     setMostrarDetallePersonas(true)
                   }}
-                  className="btn btn-secundario btn-sm"
+                  variante="secundario"
+                  tamano="sm"
                 >
                   Ver detalle
-                </button>
+                </Boton>
               ) : null
             }
           >

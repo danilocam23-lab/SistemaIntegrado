@@ -7,7 +7,7 @@ import {
 import { useLista } from '../api/hooks'
 import client from '../api/client'
 import type { Persona, Requerimiento } from '../types'
-import { EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Tarjeta } from '../components/ui'
+import { Boton, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Tarjeta } from '../components/ui'
 import {
   COLOR_GRAFICA,
   ContenedorGrafica,
@@ -470,10 +470,10 @@ export default function DashboardRequerimientos() {
                   esMes
                 />
                 {hayFiltroReq && (
-                  <button type="button" onClick={() => { setAnosReq(new Set()); setMesesReq(new Set()) }}
-                    className="btn btn-secundario btn-sm">
+                  <Boton onClick={() => { setAnosReq(new Set()); setMesesReq(new Set()) }}
+                    variante="secundario" tamano="sm">
                     ✕ Limpiar
-                  </button>
+                  </Boton>
                 )}
               </div>
             </div>
@@ -622,10 +622,10 @@ export default function DashboardRequerimientos() {
                   esMes
                 />
                 {hayFiltroSop && (
-                  <button type="button" onClick={() => { setAnosSop(new Set()); setMesesSop(new Set()) }}
-                    className="btn btn-exito btn-sm">
+                  <Boton onClick={() => { setAnosSop(new Set()); setMesesSop(new Set()) }}
+                    variante="exito" tamano="sm">
                     ✕ Limpiar
-                  </button>
+                  </Boton>
                 )}
               </div>
             </div>
