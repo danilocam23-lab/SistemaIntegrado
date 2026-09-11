@@ -803,15 +803,15 @@ export default function DashboardSquad() {
               </p>
             ) : (
               <TablaScroll>
-                <table className="w-full text-sm">
+                <table className="tabla">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/50">
-                      <th className="px-6 py-4 text-left font-semibold text-slate-900">Squad</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">Reqs</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">Horas</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">Entregas</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">ANS Acta</th>
-                      <th className="px-6 py-4 text-center font-semibold text-slate-900">ANS Entrega</th>
+                    <tr>
+                      <th>Squad</th>
+                      <th className="text-center">Reqs</th>
+                      <th className="text-center">Horas</th>
+                      <th className="text-center">Entregas</th>
+                      <th className="text-center">ANS Acta</th>
+                      <th className="text-center">ANS Entrega</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -878,12 +878,12 @@ export default function DashboardSquad() {
             </div>
 
             <div className="max-h-[62vh] overflow-auto p-6">
-              <table className="w-full text-sm">
+              <table className="tabla">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Mes</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Work Order ID</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-900">Horas aprobadas</th>
+                  <tr>
+                    <th>Mes</th>
+                    <th>Work Order ID</th>
+                    <th className="text-right">Horas aprobadas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -952,13 +952,13 @@ export default function DashboardSquad() {
             </div>
 
             <div className="max-h-[62vh] overflow-auto p-6">
-              <table className="w-full text-sm">
+              <table className="tabla">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Persona</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Squad</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-900">Horas</th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-900">Origen</th>
+                  <tr>
+                    <th>Persona</th>
+                    <th>Squad</th>
+                    <th className="text-right">Horas</th>
+                    <th className="text-center">Origen</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

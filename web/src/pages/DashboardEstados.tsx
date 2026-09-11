@@ -252,13 +252,13 @@ export default function DashboardEstados() {
               </p>
             ) : (
               <div className="overflow-hidden">
-                <table className="w-full table-fixed text-sm">
+                <table className="tabla table-fixed">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/50">
-                      <th className="px-3 py-3 text-left font-semibold text-slate-900">Estado</th>
-                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Cantidad</th>
-                      <th className="px-3 py-3 text-center font-semibold text-slate-900">% del total</th>
-                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Horas</th>
+                    <tr>
+                      <th>Estado</th>
+                      <th className="text-center">Cantidad</th>
+                      <th className="text-center">% del total</th>
+                      <th className="text-center">Horas</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -333,14 +333,14 @@ export default function DashboardEstados() {
               </p>
             ) : (
               <div className="overflow-hidden">
-                <table className="w-full table-fixed text-sm">
+                <table className="tabla table-fixed">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/50">
-                      <th className="px-3 py-3 text-left font-semibold text-slate-900">Estado</th>
-                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Entregas</th>
-                      <th className="px-3 py-3 text-center font-semibold text-slate-900">% del total</th>
-                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Horas</th>
-                      <th className="px-3 py-3 text-center font-semibold text-slate-900">Garantías</th>
+                    <tr>
+                      <th>Estado</th>
+                      <th className="text-center">Entregas</th>
+                      <th className="text-center">% del total</th>
+                      <th className="text-center">Horas</th>
+                      <th className="text-center">Garantías</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -497,17 +497,17 @@ export default function DashboardEstados() {
                 </p>
               ) : (
                 <TablaScroll className="max-h-[70vh] overflow-y-auto">
-                <table className="w-full text-sm">
+                <table className="tabla">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-4 py-3 text-left font-semibold text-slate-900">REQ</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-900">Nombre</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-900">Entrega</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-900">Estado</th>
-                      <th className="px-4 py-3 text-right font-semibold text-slate-900">Horas</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-900">Comprometida</th>
-                      <th className="px-4 py-3 text-center font-semibold text-slate-900">Recepción</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-900">Observaciones</th>
+                    <tr>
+                      <th>REQ</th>
+                      <th>Nombre</th>
+                      <th className="text-center">Entrega</th>
+                      <th>Estado</th>
+                      <th className="text-right">Horas</th>
+                      <th className="text-center">Comprometida</th>
+                      <th className="text-center">Recepción</th>
+                      <th>Observaciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
