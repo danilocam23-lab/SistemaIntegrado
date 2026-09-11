@@ -26,15 +26,23 @@ export function useEstimaciones(datos: Requerimiento[]) {
     refreshEstimacionIds().catch(() => {})
   }, [datos])
 
+  // Fix ex-INVARIANTE 6 (ADR 0005, ticket 6): la decisión de colapsar/expandir se toma
+  // dentro de la propia actualización funcional de `setExpandedReqs` (bandera capturada
+  // por referencia), en vez de leer `expandedReqs` del closure. Dos clics rápidos en
+  // filas distintas ya no pueden perder una actualización.
   async function toggleExpandReq(reqId: string): Promise<void> {
-    if (expandedReqs.has(reqId)) {
-      setExpandedReqs((prev) => { const n = new Set(prev); n.delete(reqId); return n })
-      return
-    }
-    setExpandedReqs((prev) => new Set(prev).add(reqId))
-    // INVARIANTE 5: estimacionesMap es una caché que nunca se invalida. Tras reemplazar
-    // una estimación, la sub-fila expandida sigue mostrando la versión anterior hasta
-    // recargar la página. Bug latente vigente: se congela, no se arregla en el troceo.
+    let estabaExpandido = false
+    setExpandedReqs((prev) => {
+      const next = new Set(prev)
+      if (next.has(reqId)) { next.delete(reqId); estabaExpandido = true }
+      else next.add(reqId)
+      return next
+    })
+    if (estabaExpandido) return
+    // Fix ex-INVARIANTE 5 (ADR 0005, ticket 1): estimacionesMap ya se invalida vía
+    // `invalidarEstimacion`, llamada desde useCargaEstimacion.handleFileSelected (tras
+    // reemplazar) y useModalEstimacion.deleteEstimation (tras borrar). Este guard de
+    // caché ahora es seguro: si hay una entrada es porque sigue vigente.
     if (estimacionesMap[reqId]) return
     setLoadingReqEst((prev) => new Set(prev).add(reqId))
     try {
@@ -43,11 +51,24 @@ export function useEstimaciones(datos: Requerimiento[]) {
         setEstimacionesMap((prev) => ({ ...prev, [reqId]: r.data.estimacion! }))
       }
     } catch { /* sin estimación */ }
-    // INVARIANTE 6: esta rama lee `expandedReqs` del closure (arriba, en el `if`) en vez de
-    // la forma funcional que sí usan las dos líneas de `setExpandedReqs`/`setLoadingReqEst`
-    // de este mismo bloque. Dos clics muy rápidos en filas distintas pueden perder uno.
-    // Copiado tal cual, sin "corregirlo" a forma funcional consistente.
     finally { setLoadingReqEst((prev) => { const n = new Set(prev); n.delete(reqId); return n }) }
+  }
+
+  /** Invalida la caché de una estimación puntual: la saca de `estimacionesMap` y colapsa
+   *  su sub-fila si estaba expandida, para que el próximo `toggleExpandReq` dispare un
+   *  fetch fresco. Conectar en todo flujo que reemplace o borre una estimación. */
+  function invalidarEstimacion(reqId: string): void {
+    setEstimacionesMap((prev) => {
+      if (!(reqId in prev)) return prev
+      const { [reqId]: _omitido, ...resto } = prev
+      return resto
+    })
+    setExpandedReqs((prev) => {
+      if (!prev.has(reqId)) return prev
+      const next = new Set(prev)
+      next.delete(reqId)
+      return next
+    })
   }
 
   return {
@@ -57,5 +78,6 @@ export function useEstimaciones(datos: Requerimiento[]) {
     loadingReqEst,
     refreshEstimacionIds,
     toggleExpandReq,
+    invalidarEstimacion,
   }
 }

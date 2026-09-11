@@ -9,9 +9,10 @@ import type { ClaveSeccionResumen } from './tipos'
  *  condición en el shell (regla de oro del ADR 0005); solo el JSX del modal depende de
  *  `estModalReqId`. */
 export function useModalEstimacion(
-  setAviso: (v: string) => void,
+  setAviso: (v: string, tono?: 'error' | 'exito') => void,
   refreshEstimacionIds: () => Promise<void>,
   puedeGestionarEstimaciones: boolean,
+  invalidarEstimacion: (reqId: string) => void,
 ) {
   const [estModalReqId, setEstModalReqId] = useState<string | null>(null)
   const [estData, setEstData] = useState<EstimacionConResumen | null>(null)
@@ -64,7 +65,7 @@ export function useModalEstimacion(
       setEstData({ exists: true, estimacion: r.data.estimacion, summary: r.data.summary })
       const partes = [`${r.data.creadas} tareas creadas en ${org.toUpperCase()}`]
       if (r.data.errores?.length) partes.push(`${r.data.errores.length} con error`)
-      setAviso(partes.join(' · '))
+      setAviso(partes.join(' · '), 'exito')
     } catch (err) {
       setAviso(mensajeError(err))
     } finally {
@@ -76,11 +77,13 @@ export function useModalEstimacion(
     if (!puedeGestionarEstimaciones) return
     if (!estData?.estimacion) return
     setAviso('')
+    const reqId = estModalReqId
     try {
       await client.delete(`/estimaciones/${estData.estimacion.id}`)
       setEstModalReqId(null)
       setEstData(null)
       await refreshEstimacionIds()
+      if (reqId) invalidarEstimacion(reqId)
     } catch (err) {
       setAviso(mensajeError(err))
     }

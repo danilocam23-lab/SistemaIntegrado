@@ -12,6 +12,7 @@ export function useCargaEstimacion(
   setAviso: (v: string) => void,
   refreshEstimacionIds: () => Promise<void>,
   openEstimationModal: (reqId: string) => Promise<void>,
+  invalidarEstimacion: (reqId: string) => void,
 ) {
   const [uploadingId, setUploadingId] = useState<string | null>(null)
   // INVARIANTE 2 (riesgo nº1 del troceo completo): hay DOS disparadores del mismo
@@ -53,6 +54,7 @@ export function useCargaEstimacion(
       })
 
       await refreshEstimacionIds()
+      invalidarEstimacion(reqId)
       await openEstimationModal(reqId)
     } catch (err) {
       setAviso(mensajeError(err))

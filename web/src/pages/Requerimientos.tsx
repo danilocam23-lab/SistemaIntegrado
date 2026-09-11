@@ -43,7 +43,12 @@ export default function Requerimientos() {
   const { CAMPO_ACCESOR_REQ } = useAccesoresRequerimiento(squadPorId, categoriaPorId, personaPorId, nombrePersona)
   const { exportarExcel } = useExportarExcel(puedeExportar, exportCamposActivos, datosFiltrados, CAMPO_ACCESOR_REQ)
 
-  const [aviso, setAviso] = useState('')
+  const [aviso, setAvisoMensaje] = useState('')
+  const [avisoTono, setAvisoTono] = useState<'error' | 'exito'>('error')
+  function setAviso(mensaje: string, tono: 'error' | 'exito' = 'error') {
+    setAvisoMensaje(mensaje)
+    setAvisoTono(tono)
+  }
 
   const { editValue, setEditValue, iniciarEdicionCelda, guardarCelda, handleKeyDown, isEditing, eliminar } =
     useEscriturasRequerimientos(puedeEditar, puedeEliminar, recargar, setAviso)
@@ -51,16 +56,16 @@ export default function Requerimientos() {
     editValue, setEditValue, guardarCelda, handleKeyDown, isEditing, iniciarEdicionCelda, puedeEditar, estadosReq, personas,
   })
 
-  const { estimacionIds, estimacionesMap, expandedReqs, loadingReqEst, refreshEstimacionIds, toggleExpandReq } =
+  const { estimacionIds, estimacionesMap, expandedReqs, loadingReqEst, refreshEstimacionIds, toggleExpandReq, invalidarEstimacion } =
     useEstimaciones(datos)
 
   const {
     estModalReqId, setEstModalReqId, estData, estLoading, creatingTasks, expandedSections, expandedHUs,
     openEstimationModal, toggleSection, toggleHU, handleCreateTasks, deleteEstimation,
-  } = useModalEstimacion(setAviso, refreshEstimacionIds, puedeGestionarEstimaciones)
+  } = useModalEstimacion(setAviso, refreshEstimacionIds, puedeGestionarEstimaciones, invalidarEstimacion)
 
   const { fileInputRef, handleUploadClick: handleUploadClickCarga, uploadingId, handleFileSelected } =
-    useCargaEstimacion(puedeGestionarEstimaciones, setAviso, refreshEstimacionIds, openEstimationModal)
+    useCargaEstimacion(puedeGestionarEstimaciones, setAviso, refreshEstimacionIds, openEstimationModal, invalidarEstimacion)
 
   const [expandedEntregas, setExpandedEntregas] = useState<Set<string>>(new Set())
 
@@ -79,7 +84,7 @@ export default function Requerimientos() {
       />
 
       {(aviso || error) && (
-        <Aviso tono="error" className="mb-3">{aviso || error}</Aviso>
+        <Aviso tono={error ? 'error' : avisoTono} className="mb-3">{aviso || error}</Aviso>
       )}
 
       {/* Panel de filtros */}
