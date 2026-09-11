@@ -10,6 +10,7 @@ import { SeccionParametros } from './configuracion/SeccionParametros'
 import { SeccionTarifas } from './configuracion/SeccionTarifas'
 import { PESTANAS } from './configuracion/tipos'
 import type { Tab } from './configuracion/tipos'
+import { Icono } from '../components/ui'
 import { useCargaExcel } from './configuracion/useCargaExcel'
 import { useCamposConfigurables } from './configuracion/useCamposConfigurables'
 import { useCategorias } from './configuracion/useCategorias'
@@ -76,12 +77,13 @@ export default function Configuracion() {
 
       {/* ═══ Tabs ═══ */}
       <div className="pestanas mb-6">
-        {PESTANAS.map(({ id, label }) => (
+        {PESTANAS.map(({ id, label, icono }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
             className={`pestana ${tab === id ? 'pestana-activa' : ''}`}
           >
+            {icono && <Icono nombre={icono} className="h-4 w-4" />}
             {label}
           </button>
         ))}

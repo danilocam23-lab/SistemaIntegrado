@@ -1,14 +1,16 @@
+import type { NombreIcono } from '../../components/ui'
+
 export type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'estados' | 'entregas_actas' | 'requerimientos' | 'carga_excel'
 
-export const PESTANAS: { id: Tab; label: string }[] = [
-  { id: 'tarifas', label: '💰 Tarifas' },
+export const PESTANAS: { id: Tab; label: string; icono?: NombreIcono }[] = [
+  { id: 'tarifas', label: 'Tarifas', icono: 'facturacion' },
   { id: 'categorias', label: '🏷️ Categorías' },
   { id: 'roles', label: '👤 Roles' },
   { id: 'tipos_contratacion', label: '📄 Tipo de contratación' },
   { id: 'festivos', label: '📅 Festivos' },
   { id: 'parametros', label: '⚙️ Parámetros' },
   { id: 'estados', label: '🔖 Estados' },
-  { id: 'entregas_actas', label: '📋 Entregas de Actas' },
+  { id: 'entregas_actas', label: 'Entregas de Actas', icono: 'documento' },
   { id: 'requerimientos', label: '🧾 Requerimientos' },
   { id: 'carga_excel', label: '📂 Carga de Excel' },
 ]
