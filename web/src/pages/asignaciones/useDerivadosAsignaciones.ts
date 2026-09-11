@@ -209,6 +209,12 @@ export function useDerivadosAsignaciones({
   }, [gruposReq, filtroEstado, filtroPersona, busquedaPersona, personaPorId])
 
   // ─── Vista por personas: agrupa asignaciones por persona_id ───
+  // INVARIANTE: `gruposPorPersona` reagrupa `gruposFiltrados` (no `gruposReq`),
+  // así que ya hereda los filtros de estado y de persona (dropdown) aplicados
+  // ahí. `busquedaPersona` se filtra en 2 niveles: aquí dentro de
+  // `gruposFiltrados` (a nivel de `item`, arriba) y otra vez aquí a nivel de
+  // `persona.nombre` (abajo) para excluir personas sin ninguna asignación que
+  // matchee pero que sí tienen WO (agregadas por `wosPorPersonaMap`).
   const gruposPorPersona = useMemo(() => {
     const map = new Map<string, GrupoPersona>()
     for (const grupo of gruposFiltrados) {

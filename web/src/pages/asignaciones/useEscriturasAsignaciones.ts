@@ -48,8 +48,20 @@ export function useEscriturasAsignaciones({
     limpiarFormulario,
   } = formulario
 
+  // INVARIANTE (edición en línea vs. formulario): `edicionInlineId`/
+  // `edicionInlineValor` de aquí y el estado del `formulario` (`editandoAsig`,
+  // etc.) comparten el mismo `setAviso`. `abrirEdicion` (en la página) cancela
+  // la edición en línea antes de abrir el formulario, e iniciar una edición en
+  // línea limpia el aviso: se cancelan mutuamente, nunca coexisten.
   const [edicionInlineId, setEdicionInlineId] = useState<string | null>(null)
   const [edicionInlineValor, setEdicionInlineValor] = useState('')
+  // INVARIANTE: `autoFixedRef` se monta a nivel de página (este hook vive en
+  // `Asignaciones.tsx`, nunca dentro de una vista `VistaPor*`), y se pone a
+  // `true` antes de lanzar las promesas de `redistribuirPct`, no después. Un
+  // remonte del hook (p. ej. si viviera en una vista que se desmonta al
+  // cambiar de pestaña) relanzaría los `PUT` masivos de redistribución —cada
+  // uno con su propio header `X-Aplicacion` resuelto por asignación— en cada
+  // montaje.
   const autoFixedRef = useRef(false)
 
   const resolverAppAsignacion = useCallback((asig: AsignacionItem) => {
