@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import Modal from '../components/Modal'
-import { Boton, Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona } from '../types'
@@ -315,11 +315,11 @@ export default function Personas() {
       )}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <input
+        <Campo
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Buscar por nombre, correo, squad o rol…"
-          className="campo w-72"
+          className="w-72"
         />
         {puedeCrearPersonas && (
           <Boton variante="primario" onClick={abrirNuevo}>
@@ -453,71 +453,53 @@ export default function Personas() {
                 </span>
               )}
             </span>
-            <select
+            <Selector
               multiple
               value={squadsSelec}
               onChange={(e) => {
                 setSquadsSelec(Array.from(e.target.selectedOptions, (o) => o.value))
                 setAplicacionId('') // recalcular desde squad
               }}
-              className="campo w-full h-32"
+              className="w-full h-32"
             >
               {squads.filter((s) => s.activa).map((s) => (
                 <option key={s.codigo} value={s.nombre}>{s.nombre}</option>
               ))}
-            </select>
+            </Selector>
             <p className="mt-0.5 text-xs text-slate-400">Ctrl+clic para seleccionar varios</p>
           </div>
           {!editando && (
             <label className="block text-sm">
               <span className="mb-1 block text-slate-600">Aplicación <span className="text-slate-400">(se auto-detecta del squad; cambia solo si es necesario)</span></span>
-              <select value={aplicacionIdEfectivo} onChange={(e) => setAplicacionId(e.target.value)}
-                className="campo w-full">
+              <Selector value={aplicacionIdEfectivo} onChange={(e) => setAplicacionId(e.target.value)}
+                className="w-full">
                 {squads.filter((s) => s.activa).map((s) => (
                   <option key={s.codigo} value={s.codigo}>{s.nombre}</option>
                 ))}
-              </select>
+              </Selector>
             </label>
           )}
-          <label className="block text-sm">
-            <span className="mb-1 block text-slate-600">Nombre</span>
-            <input value={nombre} onChange={(e) => setNombre(e.target.value)} required
-              className="campo w-full" />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block text-slate-600">Correo</span>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email"
-              className="campo w-full" />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block text-slate-600">Rol</span>
-            <select value={rol} onChange={(e) => setRol(e.target.value)}
-              className="campo w-full">
-              {roles.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block text-slate-600">Tipo de contratación</span>
-            <select value={tipoContratacion} onChange={(e) => setTipoContratacion(e.target.value)}
-              className="campo w-full">
-              <option value="">— Sin especificar —</option>
-              {tiposContratacion.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </label>
+          <Campo etiqueta="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required
+            className="w-full" />
+          <Campo etiqueta="Correo" value={email} onChange={(e) => setEmail(e.target.value)} type="email"
+            className="w-full" />
+          <Selector etiqueta="Rol" value={rol} onChange={(e) => setRol(e.target.value)}
+            className="w-full">
+            {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+          </Selector>
+          <Selector etiqueta="Tipo de contratación" value={tipoContratacion} onChange={(e) => setTipoContratacion(e.target.value)}
+            className="w-full">
+            <option value="">— Sin especificar —</option>
+            {tiposContratacion.map((t) => <option key={t} value={t}>{t}</option>)}
+          </Selector>
           {esGerente && (
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm">
-                <span className="mb-1 block text-slate-600">Valor de la persona ($)</span>
-                <input type="number" min={0} step={0.01} value={valorPersona}
-                  onChange={(e) => setValorPersona(Number(e.target.value))}
-                  className="campo w-full" placeholder="0.00" />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1 block text-slate-600">Valor de periféricos ($)</span>
-                <input type="number" min={0} step={0.01} value={valorPerifericos}
-                  onChange={(e) => setValorPerifericos(Number(e.target.value))}
-                  className="campo w-full" placeholder="0.00" />
-              </label>
+              <Campo etiqueta="Valor de la persona ($)" type="number" min={0} step={0.01} value={valorPersona}
+                onChange={(e) => setValorPersona(Number(e.target.value))}
+                className="w-full" placeholder="0.00" />
+              <Campo etiqueta="Valor de periféricos ($)" type="number" min={0} step={0.01} value={valorPerifericos}
+                onChange={(e) => setValorPerifericos(Number(e.target.value))}
+                className="w-full" placeholder="0.00" />
             </div>
           )}
           <label className="flex items-center gap-2 text-sm">
