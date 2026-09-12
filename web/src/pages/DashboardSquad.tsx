@@ -14,7 +14,7 @@ import { useLista } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import client from '../api/client'
 import type { Aplicacion, Capacidad, Configuracion, Festivo, Persona, Requerimiento, Squad } from '../types'
-import { Boton, Chip, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Tarjeta, TablaScroll } from '../components/ui'
+import { Boton, Campo, Chip, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Tarjeta, TablaScroll } from '../components/ui'
 import {
   COLOR_GRAFICA,
   ContenedorGrafica,
@@ -864,16 +864,13 @@ export default function DashboardSquad() {
             </div>
 
             <div className="border-b border-slate-100 px-6 py-4">
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor="buscar-wo-detalle">
-                Buscar por WO
-              </label>
-              <input
-                id="buscar-wo-detalle"
+              <Campo
+                etiqueta="Buscar por WO"
                 type="search"
                 value={busquedaDetalleWo}
                 onChange={(event) => setBusquedaDetalleWo(event.target.value)}
                 placeholder="Ej: WO12345"
-                className="campo mt-2 w-full"
+                className="w-full"
               />
             </div>
 
@@ -938,16 +935,13 @@ export default function DashboardSquad() {
             </div>
 
             <div className="border-b border-slate-100 px-6 py-4">
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor="buscar-persona-detalle">
-                Buscar por persona o squad
-              </label>
-              <input
-                id="buscar-persona-detalle"
+              <Campo
+                etiqueta="Buscar por persona o squad"
                 type="search"
                 value={busquedaDetallePersonas}
                 onChange={(event) => setBusquedaDetallePersonas(event.target.value)}
                 placeholder="Ej: José Danilo"
-                className="campo mt-2 w-full"
+                className="w-full"
               />
             </div>
 
