@@ -3,7 +3,7 @@ import client from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Configuracion, Tarifa } from '../types'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { AreaTexto, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 interface FilaGeneral {
   id: string
@@ -267,49 +267,55 @@ export default function FacturacionGeneral() {
                   return (
                     <>
                 <td>
-                  <input
+                  <Campo
                     value={f.periodo}
                     onChange={(e) => actualizar(f.id, 'periodo', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
                     placeholder="Enero - Febrero"
-                    className="campo campo-sm w-44"
+                    compacto
+                    className="w-44"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={valorHoraAutomaticoTexto ? formatoCOP(aNumero(valorHoraAutomaticoTexto)) : ''}
                     readOnly
-                    className="campo campo-sm w-32 text-right"
+                    compacto
+                    className="w-32 text-right"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={f.horasComprometidas}
                     onChange={(e) => actualizar(f.id, 'horasComprometidas', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
-                    className="campo campo-sm w-32 text-right"
+                    compacto
+                    className="w-32 text-right"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={formatoCOP(totalComprometidoNum)}
                     readOnly
-                    className="campo campo-sm w-36 text-right"
+                    compacto
+                    className="w-36 text-right"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={f.horasFacturadas}
                     onChange={(e) => actualizar(f.id, 'horasFacturadas', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
-                    className="campo campo-sm w-32 text-right"
+                    compacto
+                    className="w-32 text-right"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={formatoCOP(totalFacturadoNum)}
                     readOnly
-                    className="campo campo-sm w-36 text-right"
+                    compacto
+                    className="w-36 text-right"
                   />
                 </td>
                 <td>
@@ -328,12 +334,12 @@ export default function FacturacionGeneral() {
                   />
                 </td>
                 <td className="min-w-[260px]">
-                  <textarea
+                  <AreaTexto
                     rows={2}
                     value={f.observacion}
                     onChange={(e) => actualizar(f.id, 'observacion', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
-                    className="campo campo-sm w-full resize-none"
+                    className="campo-sm w-full resize-none"
                   />
                 </td>
                 <td className="text-center">

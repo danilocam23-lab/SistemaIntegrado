@@ -3,7 +3,7 @@ import client from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Configuracion } from '../types'
-import { Boton, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { AreaTexto, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 interface FilaGeneral {
   id: string
@@ -212,16 +212,17 @@ export default function FacturacionAnsDescontados() {
             {!cargando && inicializado && filas.map((f) => (
               <tr key={f.id} className="align-top">
                 <td>
-                  <input
+                  <Campo
                     value={f.periodo}
                     onChange={(e) => actualizar(f.id, 'periodo', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
                     placeholder="Enero - Febrero"
-                    className="campo campo-sm w-44"
+                    compacto
+                    className="w-44"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={f.valorDescuento}
                     onChange={(e) => actualizar(f.id, 'valorDescuento', e.target.value)}
                     onBlur={(e) => {
@@ -230,11 +231,12 @@ export default function FacturacionAnsDescontados() {
                     }}
                     readOnly={!puedeEditarFacturacion}
                     placeholder="$ 0"
-                    className="campo campo-sm w-32 text-right"
+                    compacto
+                    className="w-32 text-right"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={f.fabrica}
                     onChange={(e) => actualizar(f.id, 'fabrica', e.target.value)}
                     onBlur={(e) => {
@@ -243,11 +245,12 @@ export default function FacturacionAnsDescontados() {
                     }}
                     readOnly={!puedeEditarFacturacion}
                     placeholder="$ 0"
-                    className="campo campo-sm w-32 text-right"
+                    compacto
+                    className="w-32 text-right"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={f.soporte}
                     onChange={(e) => actualizar(f.id, 'soporte', e.target.value)}
                     onBlur={(e) => {
@@ -256,25 +259,27 @@ export default function FacturacionAnsDescontados() {
                     }}
                     readOnly={!puedeEditarFacturacion}
                     placeholder="$ 0"
-                    className="campo campo-sm w-32 text-right"
+                    compacto
+                    className="w-32 text-right"
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     type="date"
                     value={f.fechaDescuento}
                     onChange={(e) => actualizar(f.id, 'fechaDescuento', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
-                    className="campo campo-sm w-40"
+                    compacto
+                    className="w-40"
                   />
                 </td>
                 <td className="min-w-[260px]">
-                  <textarea
+                  <AreaTexto
                     rows={2}
                     value={f.observacion}
                     onChange={(e) => actualizar(f.id, 'observacion', e.target.value)}
                     readOnly={!puedeEditarFacturacion}
-                    className="campo campo-sm w-full resize-none"
+                    className="campo-sm w-full resize-none"
                   />
                 </td>
                 <td className="text-center">
