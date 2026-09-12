@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Entrega } from '../../types'
-import { Chip, TablaScroll } from '../../components/ui/primitivos'
+import { Campo, Chip, Selector, TablaScroll } from '../../components/ui/primitivos'
 
 interface Props {
   entregas: Entrega[]
@@ -83,24 +83,25 @@ export default function SeccionEntregas({
                 <td>{en.observaciones ?? '—'}</td>
                 <td>
                   {tipifEdicion[en.numero] ? (
-                    <input
+                    <Campo
                       value={tipifEdicion[en.numero].obs}
                       onChange={(ev) => onCambiarTipif(en.numero, 'obs', ev.target.value)}
-                      className="campo campo-sm w-full"
+                      compacto
+                      className="w-full"
                     />
                   ) : (en.observaciones_hitss ?? '—')}
                 </td>
                 <td>
                   {tipifEdicion[en.numero] ? (
-                    <select
+                    <Selector
                       value={tipifEdicion[en.numero].tip}
                       onChange={(ev) => onCambiarTipif(en.numero, 'tip', ev.target.value)}
-                      className="campo campo-sm"
+                      compacto
                     >
                       <option value="">— Seleccionar —</option>
                       <option value="HITSS">Hitss</option>
                       <option value="EPM">EPM</option>
-                    </select>
+                    </Selector>
                   ) : (en.tipificacion ?? '—')}
                 </td>
                 <td>

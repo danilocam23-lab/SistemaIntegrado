@@ -1,4 +1,4 @@
-import { Icono } from '../../components/ui'
+import { Campo, Icono } from '../../components/ui'
 import type { Categoria, Persona } from '../../types'
 import type { AsignacionItem, ItemGrupo } from './tipos'
 import type { useEscriturasAsignaciones } from './useEscriturasAsignaciones'
@@ -50,7 +50,7 @@ export function FilaAsignacion({
       </td>
       <td className="text-right font-medium">
         {enEdicionInline ? (
-          <input
+          <Campo
             autoFocus
             type="number"
             min="0"
@@ -59,7 +59,8 @@ export function FilaAsignacion({
             onChange={(e) => escrituras.setEdicionInlineValor(e.target.value)}
             onBlur={() => void escrituras.guardarEdicionInline(asig)}
             onKeyDown={escrituras.onInlineKeyDown}
-            className="campo campo-sm w-20 text-right"
+            compacto
+            className="w-20 text-right"
           />
         ) : (
           <span className="inline-flex items-center gap-1">

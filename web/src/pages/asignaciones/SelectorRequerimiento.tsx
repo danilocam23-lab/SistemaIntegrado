@@ -1,4 +1,4 @@
-import { Chip, Icono } from '../../components/ui'
+import { Campo, Chip, Icono } from '../../components/ui'
 import { tonoEstadoChip } from './estados'
 import type { useFormularioAsignacion } from './useFormularioAsignacion'
 
@@ -16,12 +16,12 @@ export function SelectorRequerimiento({ form }: Props) {
       <span className="mb-1 block text-slate-600">
         Requerimiento <span className="text-slate-400">(opcional)</span>
       </span>
-      <input
+      <Campo
         value={form.busquedaReq}
         onChange={(e) => form.cambiarBusquedaReq(e.target.value)}
         onFocus={() => form.setDropdownReqAbierto(true)}
         placeholder="Buscar SC - REQ - Nombre"
-        className="campo w-full"
+        className="w-full"
       />
       {form.busquedaReq && (
         <button

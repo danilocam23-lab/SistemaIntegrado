@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLista } from '../api/hooks'
-import { Boton, Icono, TablaScroll } from '../components/ui'
+import { Boton, Icono, Selector, TablaScroll } from '../components/ui'
 import type { Asignacion, Categoria, Persona, Requerimiento } from '../types'
 
 /* ─── helpers de fecha ─── */
@@ -365,27 +365,27 @@ export default function Roadmap() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <select
+          <Selector
             value={modoAgrupacion}
             onChange={(e) => setModoAgrupacion(e.target.value as 'usuario' | 'plano')}
-            className="campo campo-sm"
+            compacto
           >
             <option value="usuario">Por usuario asignado</option>
             <option value="plano">Sin agrupar por usuario</option>
-          </select>
+          </Selector>
 
           {modoAgrupacion === 'usuario' && (
-            <select
+            <Selector
               value={filtroPersona}
               onChange={(e) => setFiltroPersona(e.target.value)}
-              className="campo campo-sm"
+              compacto
             >
               <option value="__todos__">Todos los desarrolladores</option>
               <option value={SIN_ASIGNAR_ID}>Sin asignar</option>
               {personas.filter((p) => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre)).map((p) => (
                 <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
-            </select>
+            </Selector>
           )}
         </div>
       </div>
