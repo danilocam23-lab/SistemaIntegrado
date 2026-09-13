@@ -113,7 +113,7 @@ export function SeccionCargaExcel({
           {probandoCargaExcel ? 'Ejecutando…' : 'Probar ahora'}
         </Boton>
         {resultadoPruebaCargaExcel && (
-          <Aviso tono="info">{resultadoPruebaCargaExcel}</Aviso>
+          <Aviso tono={resultadoPruebaCargaExcel.tono}>{resultadoPruebaCargaExcel.mensaje}</Aviso>
         )}
       </div>
     </div>

@@ -7,6 +7,13 @@ import type { UltimaSincronizacionResumen } from './tipos'
 
 const CLAVE_RUTA_CARGA_SOLICITUDES_FABRICA = 'soporte.solicitudes_fabrica.ruta_carga_local'
 
+/**
+ * Resultado de "Probar ahora" (ADR-0007, D8): las tres severidades ya
+ * existian como ramas del codigo; esto solo transporta el tono real hasta
+ * el <Aviso> en vez de fijarlo siempre en "info".
+ */
+type ResultadoPrueba = { tono: 'alerta' | 'exito' | 'error'; mensaje: string }
+
 interface Params {
   datos: Config[]
   recargar: () => void
@@ -17,7 +24,7 @@ export function useCargaExcel({ datos, recargar }: Params) {
   const [rutaCargaExcelAviso, setRutaCargaExcelAviso] = useState('')
   const [rutaCargaExcelOk, setRutaCargaExcelOk] = useState('')
   const [probandoCargaExcel, setProbandoCargaExcel] = useState(false)
-  const [resultadoPruebaCargaExcel, setResultadoPruebaCargaExcel] = useState('')
+  const [resultadoPruebaCargaExcel, setResultadoPruebaCargaExcel] = useState<ResultadoPrueba | null>(null)
   const [ultimaEjecucionAuto, setUltimaEjecucionAuto] = useState<UltimaSincronizacionResumen | null>(null)
   const [cargandoUltimaEjecucion, setCargandoUltimaEjecucion] = useState(false)
   // INVARIANTE 5: CargaExcel usa aviso propio y no toca el aviso compartido del shell.
@@ -66,19 +73,21 @@ export function useCargaExcel({ datos, recargar }: Params) {
 
   async function probarCargaAutomatica(): Promise<void> {
     setProbandoCargaExcel(true)
-    setResultadoPruebaCargaExcel('')
+    setResultadoPruebaCargaExcel(null)
     try {
       const { data } = await client.post('/soporte/solicitudes-fabrica/ejecutar-carga-automatica')
       if (!data.ejecutado) {
-        setResultadoPruebaCargaExcel(data.mensaje)
+        setResultadoPruebaCargaExcel({ tono: 'alerta', mensaje: data.mensaje })
       } else {
-        setResultadoPruebaCargaExcel(
-          `Archivo "${data.archivo}" procesado: ${data.total_encontrados} filas encontradas, ` +
-            `${data.cargados} cargadas, ${data.con_error} con error.`
-        )
+        setResultadoPruebaCargaExcel({
+          tono: 'exito',
+          mensaje:
+            `Archivo "${data.archivo}" procesado: ${data.total_encontrados} filas encontradas, ` +
+            `${data.cargados} cargadas, ${data.con_error} con error.`,
+        })
       }
     } catch (err) {
-      setResultadoPruebaCargaExcel(mensajeError(err))
+      setResultadoPruebaCargaExcel({ tono: 'error', mensaje: mensajeError(err) })
     } finally {
       setProbandoCargaExcel(false)
       // INVARIANTE 9: la tarjeta se refresca en el finally de Probar ahora.
