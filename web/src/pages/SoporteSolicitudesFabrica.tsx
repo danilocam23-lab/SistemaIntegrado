@@ -146,6 +146,9 @@ const FilaRegistro = memo(function FilaRegistro({ registro: r, headers, onVerDes
         )}
       </td>
       <td>
+        {/* Excepcion ADR-0007 (compuerta 1): el matiz indigo/violeta/teal anterior
+            era decoracion — la cabecera ya identifica cada Task y esto es una accion,
+            no una insignia. No se le devuelve color. */}
         {tieneTask10 ? (
           <Boton
             variante="suave"

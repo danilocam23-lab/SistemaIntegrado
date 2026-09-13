@@ -45,7 +45,10 @@ interface GrupoPersona {
 
 const SIN_ASIGNAR_ID = '__sin_asignar__'
 
-/* ─── colores para barras ─── */
+/* ─── colores para barras ───
+   Excepcion categorica ADR-0007: identifica cada requerimiento en la barra
+   de Gantt, no un estado ni un umbral. Se queda tal cual, sin migrar a Chip
+   (pinta barras, no chips). */
 const COLORS_REQ = [
   'bg-[#1d4ed8]', // blue
   'bg-[#0f766e]', // teal
