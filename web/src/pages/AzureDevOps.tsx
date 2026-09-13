@@ -48,13 +48,18 @@ const frecuenciaLabel: Record<string, string> = {
   daily: 'Diario',
 }
 
-const typeColors: Record<string, string> = {
-  string: 'bg-blue-100 text-blue-700',
-  html: 'bg-purple-100 text-purple-700',
-  dateTime: 'bg-amber-100 text-amber-700',
-  double: 'bg-emerald-100 text-emerald-700',
-  integer: 'bg-emerald-100 text-emerald-700',
-  picklist: 'bg-pink-100 text-pink-700',
+/**
+ * Excepcion categorica ADR-0007: el color identifica el tipo de campo, no un
+ * estado. La forma la da `.chip` via <Chip tono="categoria">; aqui solo el
+ * par bg/text.
+ */
+const paletaTipoCampo: Record<string, string> = {
+  string: 'bg-blue-50 text-blue-700',
+  html: 'bg-purple-50 text-purple-700',
+  dateTime: 'bg-amber-50 text-amber-700',
+  double: 'bg-emerald-50 text-emerald-700',
+  integer: 'bg-emerald-50 text-emerald-700',
+  picklist: 'bg-pink-50 text-pink-700',
 }
 
 /* ── Panel reutilizable para cada instancia Azure DevOps ── */
@@ -348,9 +353,9 @@ function PanelAzdo({ titulo, target, personas }: {
                       <td>{campo.name}</td>
                       <td className="font-mono">{campo.ref}</td>
                       <td>
-                        <span className={`inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium ${typeColors[campo.type] ?? 'bg-slate-100 text-slate-600'}`}>
+                        <Chip tono="categoria" className={paletaTipoCampo[campo.type] ?? 'chip-neutro'}>
                           {campo.type}
-                        </span>
+                        </Chip>
                       </td>
                       <td>{String(campo.default_value ?? '—')}</td>
                       <td>

@@ -1,4 +1,4 @@
-import { Aviso, Boton, Campo, Selector, TablaScroll } from '../../components/ui'
+import { Aviso, Boton, Campo, Chip, Selector, TablaScroll } from '../../components/ui'
 import { metodoClase } from './catalogoEndpoints'
 import type { Metodo } from './tipos'
 import type { EstadoAdminEndpoints } from './useAdminEndpoints'
@@ -104,9 +104,9 @@ export function SeccionCatalogoEndpoints({
               <tr key={endpoint.id}>
                 <td>{endpoint.modulo}</td>
                 <td>
-                  <span className={`rounded px-2 py-0.5 font-semibold ${metodoClase[endpoint.metodo as Metodo] ?? ''}`}>
+                  <Chip tono="categoria" className={metodoClase[endpoint.metodo as Metodo] ?? 'chip-neutro'}>
                     {endpoint.metodo}
-                  </span>
+                  </Chip>
                 </td>
                 <td className="font-mono">{endpoint.ruta}</td>
                 <td>{endpoint.descripcion || '—'}</td>

@@ -128,10 +128,14 @@ export const ENDPOINTS: EndpointDoc[] = [
   { modulo: 'Integración externa', metodo: 'GET', ruta: '/api/integracion/solicitudes-entregas', descripcion: 'Entregas aplanadas: Código SC, Código REQ, N° Entrega, Horas, F. Comprometida, F. Real, Estado, Mes de aprobación, ANS (de la entrega), Garantía y N° Garantía (fechas sin hora). Auth: X-API-Key independiente (API_KEY_SOLICITUDES).', parametros: 'aplicacion opcional' },
 ]
 
+/**
+ * Excepcion categorica ADR-0007: el color identifica el verbo, no un estado.
+ * La forma la da `.chip` via <Chip tono="categoria">; aqui solo el par bg/text.
+ */
 export const metodoClase: Record<Metodo, string> = {
-  GET: 'bg-emerald-100 text-emerald-700',
-  POST: 'bg-blue-100 text-blue-700',
-  PUT: 'bg-amber-100 text-amber-700',
-  PATCH: 'bg-purple-100 text-purple-700',
-  DELETE: 'bg-red-100 text-red-700',
+  GET: 'bg-emerald-50 text-emerald-700',
+  POST: 'bg-blue-50 text-blue-700',
+  PUT: 'bg-amber-50 text-amber-700',
+  PATCH: 'bg-purple-50 text-purple-700',
+  DELETE: 'bg-red-50 text-red-700',
 }
