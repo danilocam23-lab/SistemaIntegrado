@@ -257,6 +257,15 @@ const ICONOS = {
       <path d="M9 17h6m-6-4h6m-6-4h3" />
     </>
   ),
+  /** Etiqueta / tag (categorias) */
+  etiqueta: (
+    <>
+      <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
+      <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
+    </>
+  ),
+  /** Marcador / bookmark (estados) */
+  marcador: <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
 } as const
 
 export type NombreIcono = keyof typeof ICONOS
