@@ -829,10 +829,10 @@ export default function DashboardSquad() {
                         </td>
                         <td className="px-6 py-4 text-center text-slate-700 font-medium">{fmtNumero(fila.entregas)}</td>
                         <td className="px-6 py-4 text-center">
-                          <ProgressBadge percentage={Math.round((fila.ansActaCumple / (fila.ansActaTotal || 1)) * 100)} />
+                          <InsigniaAvance porcentaje={Math.round((fila.ansActaCumple / (fila.ansActaTotal || 1)) * 100)} />
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <ProgressBadge percentage={Math.round((fila.ansEntregaCumple / (fila.ansEntregaTotal || 1)) * 100)} />
+                          <InsigniaAvance porcentaje={Math.round((fila.ansEntregaCumple / (fila.ansEntregaTotal || 1)) * 100)} />
                         </td>
                       </tr>
                     ))}
@@ -996,16 +996,12 @@ export default function DashboardSquad() {
   )
 }
 
-function ProgressBadge({ percentage }: { percentage: number }) {
-  let color = 'bg-red-100 text-red-700'
-  if (percentage >= 75) color = 'bg-green-100 text-green-700'
-  else if (percentage >= 50) color = 'bg-amber-100 text-amber-700'
+function InsigniaAvance({ porcentaje }: { porcentaje: number }) {
+  const tono = porcentaje >= 75 ? 'exito' : porcentaje >= 50 ? 'alerta' : 'error'
 
   return (
-    <div className="flex items-center gap-2 justify-center">
-      <span className={`inline-block px-3 py-1.5 rounded-lg font-semibold text-sm ${color}`}>
-        {percentage}%
-      </span>
+    <div className="flex items-center justify-center">
+      <Chip tono={tono}>{porcentaje}%</Chip>
     </div>
   )
 }

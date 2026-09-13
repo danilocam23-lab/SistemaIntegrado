@@ -3,7 +3,7 @@ import client from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Configuracion, Tarifa } from '../types'
-import { AreaTexto, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { AreaTexto, Boton, Campo, cx, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 interface FilaGeneral {
   id: string
@@ -74,6 +74,16 @@ function formatoCOP(valor: number): string {
     currency: 'COP',
     maximumFractionDigits: 0,
   })
+}
+
+/**
+ * Color por signo del saldo (ADR-0007, compuerta 2: es semantica, no identidad).
+ * Negativo = credito a favor -> exito; positivo = deuda -> error.
+ */
+function claseSaldo(valor: number, intenso = false): string {
+  if (valor < 0) return intenso ? 'text-emerald-700' : 'text-emerald-600'
+  if (valor > 0) return intenso ? 'text-red-700' : 'text-red-600'
+  return intenso ? '' : 'text-slate-600'
 }
 
 function formatoNumero(valor: number): string {
@@ -319,7 +329,7 @@ export default function FacturacionGeneral() {
                   />
                 </td>
                 <td>
-                  <input
+                  <Campo
                     value={f.deuda}
                     onChange={(e) => actualizar(f.id, 'deuda', e.target.value)}
                     onBlur={(e) => {
@@ -328,9 +338,8 @@ export default function FacturacionGeneral() {
                       actualizar(f.id, 'deuda', formatoCOP(n))
                     }}
                     readOnly={!puedeEditarFacturacion}
-                    className={`w-32 rounded border border-slate-200 px-2 py-1 text-right read-only:bg-slate-50 ${
-                      aNumero(f.deuda) < 0 ? 'text-emerald-600' : aNumero(f.deuda) > 0 ? 'text-red-600' : 'text-slate-600'
-                    }`}
+                    compacto
+                    className={cx('w-32 text-right', claseSaldo(aNumero(f.deuda)))}
                   />
                 </td>
                 <td className="min-w-[260px]">
@@ -364,7 +373,7 @@ export default function FacturacionGeneral() {
                 <td className="text-right">{formatoCOP(totales.totalComprometido)}</td>
                 <td className="text-right">{formatoNumero(totales.horasFacturadas)}</td>
                 <td className="text-right">{formatoCOP(totales.totalFacturado)}</td>
-                <td className={`text-right ${totales.deuda < 0 ? 'text-emerald-700' : totales.deuda > 0 ? 'text-red-700' : ''}`}>
+                <td className={cx('text-right', claseSaldo(totales.deuda, true))}>
                   {formatoCOP(Math.abs(totales.deuda))}
                 </td>
                 <td />
