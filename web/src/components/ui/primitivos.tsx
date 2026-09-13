@@ -105,9 +105,13 @@ interface PropsSelector extends SelectHTMLAttributes<HTMLSelectElement> {
   compacto?: boolean
 }
 
-export function Selector({ etiqueta, compacto, className, children, ...resto }: PropsSelector) {
+export function Selector({ etiqueta, compacto, className, children, multiple, ...resto }: PropsSelector) {
   const select = (
-    <select className={cx('campo pr-8', compacto && 'campo-sm', className)} {...resto}>
+    <select
+      className={cx('campo', !multiple && 'pr-8', compacto && 'campo-sm', className)}
+      multiple={multiple}
+      {...resto}
+    >
       {children}
     </select>
   )
@@ -207,6 +211,13 @@ const TONOS_CHIP = {
   exito: 'chip-exito',
   alerta: 'chip-alerta',
   error: 'chip-error',
+  /**
+   * Sin color: el chip toma la forma del sistema (.chip) y el par bg/text
+   * llega por `className` desde una paleta categorica del modulo consumidor.
+   * Solo para identidad nominal (metodo HTTP, tipo de campo...), nunca para
+   * estado ni umbral. Ver ADR-0007.
+   */
+  categoria: '',
 } as const
 
 export function Chip({
