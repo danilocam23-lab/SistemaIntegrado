@@ -77,10 +77,14 @@ TRANSICIONES_ENTREGA: dict[EstadoEntrega, set[EstadoEntrega]] = {
 def puede_transitar_requerimiento(
     actual: EstadoRequerimiento, nuevo: EstadoRequerimiento
 ) -> bool:
+    """``True`` si ``TRANSICIONES_REQUERIMIENTO`` permite pasar de ``actual`` a
+    ``nuevo``. No considera "quedarse en el mismo estado" (ver
+    ``validar_transicion_requerimiento``, que sí lo permite)."""
     return nuevo in TRANSICIONES_REQUERIMIENTO.get(actual, set())
 
 
 def puede_transitar_entrega(actual: EstadoEntrega, nuevo: EstadoEntrega) -> bool:
+    """Como ``puede_transitar_requerimiento``, para el estado de una entrega."""
     return nuevo in TRANSICIONES_ENTREGA.get(actual, set())
 
 

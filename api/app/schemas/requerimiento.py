@@ -13,6 +13,9 @@ from app.documents.enums import (
 
 
 class SolicitudIn(BaseModel):
+    """Datos de la solicitud (SC) que origina un requerimiento: quién la pidió,
+    a qué squad/tecnología pertenece y con qué tarifa se liquida."""
+
     codigo_sc: str
     fecha_solicitud: datetime | None = None
     aplicativo_id: str | None = None
@@ -29,6 +32,8 @@ class SolicitudIn(BaseModel):
 
 
 class RequerimientoIn(BaseModel):
+    """Datos para crear un requerimiento completo (con su solicitud embebida)."""
+
     codigo_req: str
     nombre: str | None = None
     solicitud: SolicitudIn
@@ -51,6 +56,8 @@ class RequerimientoIn(BaseModel):
 
 
 class RequerimientoUpdate(BaseModel):
+    """Campos editables de un requerimiento existente; todos opcionales."""
+
     nombre: str | None = None
     solicitud: SolicitudIn | None = None
     estado: str | None = None
@@ -72,6 +79,8 @@ class RequerimientoUpdate(BaseModel):
 
 
 class FacturacionIn(BaseModel):
+    """Datos de facturación de una entrega concreta."""
+
     mes_facturacion: datetime | None = None
     estado: EstadoFacturacion | None = None
     fecha_aprobacion_factura: datetime | None = None
@@ -79,6 +88,9 @@ class FacturacionIn(BaseModel):
 
 
 class EntregaIn(BaseModel):
+    """Una entrega (hito facturable) de un requerimiento: fechas, horas/porcentaje,
+    estado del ANS y, si aplica, sus datos de facturación."""
+
     numero: int
     horas: Decimal | None = None
     porcentaje: Decimal | None = None
@@ -101,11 +113,15 @@ class EntregaIn(BaseModel):
 
 
 class TransicionIn(BaseModel):
+    """Cambio de estado de un requerimiento, con la nota que queda en la bitácora."""
+
     nuevo_estado: str
     descripcion: str = ""
 
 
 class AnsCalcularIn(BaseModel):
+    """Parámetros para calcular el resultado ANS entre dos fechas (``services/ans.py``)."""
+
     fecha_inicio: date
     fecha_fin: date
     umbral_dias_habiles: int

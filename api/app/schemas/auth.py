@@ -3,11 +3,16 @@ from pydantic import BaseModel
 
 
 class LoginIn(BaseModel):
+    """Credenciales de inicio de sesión."""
+
     email: str
     password: str
 
 
 class UsuarioOut(BaseModel):
+    """Usuario autenticado, con su rol y permisos ya resueltos, tal como lo
+    consume el frontend (``AuthContext``)."""
+
     id: str
     nombre: str
     email: str
@@ -20,6 +25,8 @@ class UsuarioOut(BaseModel):
 
 
 class TokenOut(BaseModel):
+    """Respuesta de ``POST /api/auth/login``: el JWT y el usuario autenticado."""
+
     access_token: str
     token_type: str = "bearer"
     usuario: UsuarioOut

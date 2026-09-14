@@ -21,6 +21,14 @@ class ANSService:
         fecha_fin: date,
         umbral_dias_habiles: int,
     ) -> AnsResultado:
+        """Cuenta los días hábiles entre ``fecha_inicio`` y ``fecha_fin`` (ambas
+        incluidas, excluyendo fines de semana y festivos de ``aplicacion_id`` o
+        globales) y compara contra ``umbral_dias_habiles``.
+
+        Devuelve ``AnsResultado.CUMPLE`` si los días hábiles no superan el
+        umbral, ``NO_CUMPLE`` en caso contrario. Lanza ``ValueError`` si
+        ``fecha_fin`` es anterior a ``fecha_inicio``.
+        """
         if fecha_fin < fecha_inicio:
             raise ValueError("fecha_fin no puede ser menor que fecha_inicio")
 

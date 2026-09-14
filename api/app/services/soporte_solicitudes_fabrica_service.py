@@ -225,6 +225,10 @@ def _cache_invalidar() -> None:
 
 
 class SoporteSolicitudesFabricaService:
+    """Sincroniza y sirve las Solicitudes de Fábrica cargadas desde el Excel de
+    OneDrive/SharePoint (una fila por WO), con caché de lectura y bitácora de
+    cada sincronización (``SoporteSolicitudFabricaSyncLog``)."""
+
     @staticmethod
     async def _url_fuente() -> str:
         cfg = await Configuracion.find_one(Configuracion.clave == "soporte.solicitudes_fabrica.onedrive_url")
@@ -477,6 +481,8 @@ class SoporteSolicitudesFabricaService:
 
     @staticmethod
     async def listar(ctx: ContextoAplicacion) -> dict:
+        """Registros visibles para ``ctx`` con sus columnas dinámicas, cacheados
+        un tiempo corto (``_CACHE_TTL``) por combinación de aplicaciones."""
         key = _cache_key(ctx.codigos)
         ahora = time.monotonic()
         cached = _cache_listar.get(key)
@@ -716,6 +722,9 @@ class SoporteSolicitudesFabricaService:
         se_levanto_ans: bool | None = None,
         observaciones: str | None = None,
     ) -> dict:
+        """Actualiza el detalle de ANS (``tipo``: cumplimiento o inicio de
+        trabajo) de un registro visible para ``ctx``. Invalida la caché de
+        ``listar``/``listar_paginado`` tras guardar."""
         campos = ANS_DETALLE_CAMPOS.get(tipo)
         if campos is None:
             raise ValueError("Tipo de ANS no válido.")
@@ -750,6 +759,9 @@ class SoporteSolicitudesFabricaService:
         contenido_excel: bytes,
         nombre_archivo: str | None = None,
     ) -> dict:
+        """Valida un Excel cargado a mano sin escribir nada: cuántas filas son
+        válidas, cuántas tienen error y por qué motivo (para revisar antes de
+        confirmar ``sincronizar``)."""
         if not contenido_excel:
             raise ValueError("El archivo cargado está vacío.")
         resultado = await SoporteSolicitudesFabricaService._parsear_y_validar(contenido_excel, ctx.codigos)
@@ -774,6 +786,10 @@ class SoporteSolicitudesFabricaService:
         contenido_excel: bytes,
         nombre_archivo: str | None = None,
     ) -> dict:
+        """Valida un Excel cargado a mano y, si hay filas válidas, reemplaza los
+        registros de las aplicaciones de ``ctx`` (``reemplazar_por_aplicacion``).
+        Registra la corrida en ``SoporteSolicitudFabricaSyncLog`` y devuelve el
+        resumen (creados, con error, motivo de cada error)."""
         inicio = datetime.now(UTC)
         url = "archivo_local"
         if not contenido_excel:
@@ -911,6 +927,9 @@ class SoporteSolicitudesFabricaService:
 
     @staticmethod
     async def descargar_errores_csv(ctx: ContextoAplicacion, sync_id: str) -> bytes:
+        """CSV (UTF-8 con BOM) de las filas que fallaron en la sincronización
+        ``sync_id``, una por fila con su motivo. ``NoEncontrado`` si la
+        sincronización no existe o no es visible para ``ctx``."""
         log = await SoporteSolicitudFabricaSyncLog.get(sync_id)
         if log is None or (log.aplicacion_id not in ctx.codigos and log.aplicacion_id != "__todas__"):
             raise NoEncontrado("Sincronización no encontrada.")

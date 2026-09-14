@@ -143,6 +143,8 @@ def iniciar_scheduler() -> None:
 
 
 def detener_scheduler() -> None:
+    """Apaga el scheduler (sin esperar a que terminen los jobs en curso), si hay
+    uno corriendo. Se llama desde el ``lifespan`` de ``app/main.py`` al cerrar."""
     global _scheduler
     if _scheduler is not None:
         _scheduler.shutdown(wait=False)

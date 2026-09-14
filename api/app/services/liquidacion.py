@@ -20,6 +20,13 @@ class LiquidacionService:
 
     @staticmethod
     async def valor_entrega(requerimiento: Requerimiento, entrega: Entrega) -> Decimal:
+        """Valor a facturar de ``entrega``.
+
+        ``0`` si es una entrega de garantía; el ``monto_pactado`` del
+        requerimiento si el costo es ``FIJO`` y hay uno cargado; en cualquier
+        otro caso, horas × valor/hora de la tarifa vigente para la aplicación
+        del requerimiento en la fecha de la entrega (ver ``_tarifa_vigente``).
+        """
         if entrega.garantia:
             return Decimal("0")
 

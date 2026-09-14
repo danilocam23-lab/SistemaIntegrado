@@ -72,6 +72,13 @@ class AzureDevOpsService:
         return resp.json()
 
     async def test_conexion(self) -> dict:
+        """Prueba la conexión con el PAT configurado.
+
+        Es la única excepción deliberada al patrón de excepciones de dominio
+        del backend (ADR-0008 E3): siempre devuelve ``200`` con
+        ``{"ok": bool, ...}`` porque su propósito *es* reportar el estado de
+        la conexión, no fallar la petición HTTP en sí.
+        """
         async with httpx.AsyncClient(timeout=30) as cliente:
             try:
                 data = await self._fetch(cliente, self._url("/_apis/projects"))
@@ -80,6 +87,7 @@ class AzureDevOpsService:
                 return {"ok": False, "error": str(exc)}
 
     async def obtener_proyectos(self) -> list[dict]:
+        """Lista los proyectos de la organización, ordenados por nombre."""
         async with httpx.AsyncClient(timeout=30) as cliente:
             data = await self._fetch(cliente, self._url("/_apis/projects"))
         proyectos = [
@@ -89,6 +97,8 @@ class AzureDevOpsService:
         return sorted(proyectos, key=lambda p: p["nombre"])
 
     async def obtener_iteraciones(self, proyecto: str) -> list[dict]:
+        """Lista las iteraciones (sprints) del proyecto, aplanando el árbol de
+        clasificación hasta 10 niveles de profundidad."""
         url = self._url(
             f"/{quote(proyecto)}/_apis/wit/classificationnodes/iterations",
             {"$depth": "10"},
@@ -108,6 +118,8 @@ class AzureDevOpsService:
         return resultados
 
     def construir_wiql(self, iteration_path: str, asignado_a: str | None = None) -> str:
+        """Arma la consulta WIQL para traer Task/Bug/User Story de una iteración,
+        opcionalmente filtrada por asignado."""
         condiciones = [
             f"[System.IterationPath] = '{iteration_path}'",
             "[System.WorkItemType] IN ('Task', 'Bug', 'User Story')",
@@ -122,6 +134,8 @@ class AzureDevOpsService:
     async def obtener_work_items_sprint(
         self, proyecto: str, iteration_path: str, asignado_a: str | None = None
     ) -> list[dict]:
+        """Ejecuta la WIQL de la iteración y trae los work items en lotes de 200
+        (límite de la API de Azure DevOps), ya normalizados (``_normalizar``)."""
         wiql = self.construir_wiql(iteration_path, asignado_a)
         async with httpx.AsyncClient(timeout=60) as cliente:
             data = await self._fetch(
