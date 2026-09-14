@@ -4,10 +4,10 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
@@ -57,15 +57,24 @@ app.include_router(api_router)
 if _DIST.exists():
     app.mount("/assets", StaticFiles(directory=str(_DIST / "assets")), name="assets")
 
-    @app.get("/{ruta:path}", include_in_schema=False)
-    async def spa(ruta: str) -> FileResponse:
+    @app.get("/{ruta:path}", include_in_schema=False, response_model=None)
+    async def spa(ruta: str) -> FileResponse | JSONResponse:
         """Cualquier ruta no-API devuelve index.html (enrutado del lado del cliente).
 
         Se fuerza no-cache porque index.html referencia los nombres (con hash)
         de los bundles JS/CSS actuales: si el navegador lo cachea, el usuario
         puede quedar atrapado indefinidamente en una versión vieja del sitio
         (página en blanco o funciones/botones faltantes) tras cada despliegue.
+
+        Las rutas bajo ``/api`` que no matchearon ningún router real NO deben
+        caer aquí: si lo hicieran, un `GET /api/ruta-mal-escrita` devolvería
+        `index.html` con 200 en vez de un 404 JSON (S12/E7 del ADR-0008).
         """
+        if ruta == "api" or ruta.startswith("api/"):
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content={"detail": "Ruta de API no encontrada"},
+            )
         return FileResponse(
             str(_DIST / "index.html"),
             headers={
