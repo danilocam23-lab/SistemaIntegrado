@@ -2,6 +2,21 @@ import type { ReactNode } from 'react'
 import type { Entrega } from '../../types'
 import { Campo, Chip, Selector, TablaScroll } from '../../components/ui/primitivos'
 
+type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
+
+/** Mismo criterio semántico que `EntregasActas.tsx` para el estado de una
+ * entrega (ver ADR-0007): aprobada = éxito, rechazada = error, cargada = marca,
+ * el resto (pendiente / en espera / no cargada / en garantía) = alerta. */
+const TONO_ESTADO_ENTREGA: Record<string, TonoChip> = {
+  APROBADA: 'exito',
+  RECHAZADA: 'error',
+  'ENTREGA CARGADA': 'marca',
+  PENDIENTE: 'alerta',
+  'EN ESPERA DE APROBACION': 'alerta',
+  'ENTREGA NO CARGADA': 'alerta',
+  'EN GARANTIA': 'alerta',
+}
+
 interface Props {
   entregas: Entrega[]
   totalHorasEstimadas: number | null
@@ -75,10 +90,26 @@ export default function SeccionEntregas({
               <tr key={en.numero}>
                 <td>{en.numero}</td>
                 <td>{en.horas ?? '—'}</td>
-                <td>{porcentaje}{porcentaje !== '—' ? '%' : ''}</td>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <span className="tabular-nums">{porcentaje}{porcentaje !== '—' ? '%' : ''}</span>
+                    {porcentaje !== '—' && (
+                      <span className="inline-block h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                        <span
+                          className="block h-full rounded-full bg-marca-600"
+                          style={{ width: `${Math.min(100, Math.max(0, Number(porcentaje)))}%` }}
+                        />
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td>{en.fecha_comprometida?.slice(0, 10) ?? '—'}</td>
                 <td>{en.fecha_recepcion?.slice(0, 10) ?? '—'}</td>
-                <td>{en.estado ?? '—'}</td>
+                <td>
+                  {en.estado
+                    ? <Chip tono={TONO_ESTADO_ENTREGA[en.estado.toUpperCase()] ?? 'neutro'}>{en.estado}</Chip>
+                    : '—'}
+                </td>
                 <td>{en.mes_aprobacion ?? '—'}</td>
                 <td>{en.observaciones ?? '—'}</td>
                 <td>

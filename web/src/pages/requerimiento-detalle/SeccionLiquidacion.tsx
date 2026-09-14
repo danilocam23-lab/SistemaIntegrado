@@ -1,3 +1,4 @@
+import { Kpi } from '../../components/ui/primitivos'
 import type { Liquidacion } from '../../types'
 
 interface Props {
@@ -11,19 +12,21 @@ export default function SeccionLiquidacion({ liquidacion }: Props) {
         Liquidación
       </h2>
       {liquidacion ? (
-        <>
-          <p className="mb-2 text-sm">
-            Total: <b className="text-marca-osc">{liquidacion.total.toLocaleString()}</b>
-          </p>
-          <ul className="text-sm text-slate-600">
+        <div className="space-y-3">
+          <Kpi rotulo="Total liquidado" valor={liquidacion.total.toLocaleString()} />
+          <div className="divide-y rounded-md border">
             {liquidacion.entregas.map((le) => (
-              <li key={le.numero}>
-                Entrega {le.numero}:{' '}
-                {le.error ? <span className="text-amber-600">{le.error}</span> : le.valor?.toLocaleString()}
-              </li>
+              <div key={le.numero} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                <span className="text-slate-600">Entrega {le.numero}</span>
+                {le.error ? (
+                  <span className="text-amber-600">{le.error}</span>
+                ) : (
+                  <span className="tabular-nums font-medium text-slate-800">{le.valor?.toLocaleString()}</span>
+                )}
+              </div>
             ))}
-          </ul>
-        </>
+          </div>
+        </div>
       ) : (
         <p className="text-sm text-slate-400">Sin datos de liquidación.</p>
       )}

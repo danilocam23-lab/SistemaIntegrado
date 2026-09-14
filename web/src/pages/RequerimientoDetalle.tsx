@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Aviso, Boton, Chip, EncabezadoPagina, Icono, Selector } from '../components/ui'
 import { useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
-import type { Aplicacion, Persona } from '../types'
+import type { Aplicacion, Entrega, Persona } from '../types'
 import { useHistorialEstados } from './requerimiento-detalle/useHistorialEstados'
 import ModalHistorialEstados from './requerimiento-detalle/ModalHistorialEstados'
+import ModalEditarEntrega from './requerimiento-detalle/ModalEditarEntrega'
 import SeccionLiquidacion from './requerimiento-detalle/SeccionLiquidacion'
 import SeccionBitacora from './requerimiento-detalle/SeccionBitacora'
 import SeccionEntregas from './requerimiento-detalle/SeccionEntregas'
@@ -35,8 +37,22 @@ export default function RequerimientoDetalle() {
   })
   const { req, liquidacion, eventos, aviso, ok, campos } = detalle
 
-  // Formulario de entrega (estados + lógica de cargar/cancelar/limpiar)
+  // Formulario de entrega (estados + lógica de cargar/cancelar/limpiar).
+  // El de alta va al pie de la tabla; el de edición vive en su propio modal y
+  // usa una instancia independiente para no compartir estado con el de alta.
   const form = useFormularioEntrega(estadosEnt)
+  const formEdicion = useFormularioEntrega(estadosEnt)
+  const [modalEdicionAbierto, setModalEdicionAbierto] = useState(false)
+
+  function abrirEdicionEntrega(en: Entrega): void {
+    formEdicion.cargarEntrega(en)
+    setModalEdicionAbierto(true)
+  }
+
+  function cerrarEdicionEntrega(): void {
+    setModalEdicionAbierto(false)
+    formEdicion.cancelar()
+  }
 
   // Historial de estados (popup con cuánto tiempo estuvo en cada estado y a
   // cuál pasó) tanto del requerimiento como de una entrega puntual.
@@ -172,7 +188,7 @@ export default function RequerimientoDetalle() {
         onCancelarTipif={detalle.cancelarTipif}
         onGuardarTipif={detalle.guardarTipifEntrega}
         onVerHistorialEntrega={historial.verHistorialEntrega}
-        onEditarEntrega={form.cargarEntrega}
+        onEditarEntrega={abrirEdicionEntrega}
         onEliminarEntrega={detalle.eliminarEntrega}
       >
         {puedeEditarReq && (
@@ -203,6 +219,15 @@ export default function RequerimientoDetalle() {
         error={historial.error}
         segmentos={historial.segmentos}
         onCerrar={historial.cerrar}
+      />
+
+      <ModalEditarEntrega
+        abierto={modalEdicionAbierto}
+        form={formEdicion}
+        estadosEnt={estadosEnt}
+        estadoRequerimiento={req?.estado ?? ''}
+        onSubmit={(e) => detalle.agregarEntrega(e, formEdicion.cuerpoEntrega, cerrarEdicionEntrega)}
+        onCerrar={cerrarEdicionEntrega}
       />
     </div>
   )
