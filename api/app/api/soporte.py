@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
 from app.security.deps import requiere_permiso
+from app.security.rbac import PERM_ADMIN_ACCESO
 from app.services.soporte_solicitudes_fabrica_service import SoporteSolicitudesFabricaService
  
 router = APIRouter(prefix="/soporte/solicitudes-fabrica", tags=["soporte"])
@@ -137,11 +138,18 @@ async def ultima_sincronizacion(
 
 @router.post("/ejecutar-carga-automatica")
 async def ejecutar_carga_automatica(
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.actualizar")),
+    _: object = Depends(requiere_permiso(PERM_ADMIN_ACCESO)),
 ) -> dict:
     """Dispara manualmente el mismo proceso que corre el scheduler 3x/día
     (Configuración > Carga de Excel), para poder probar que la ruta/archivo
-    configurados funcionan sin tener que esperar al próximo horario."""
+    configurados funcionan sin tener que esperar al próximo horario.
+
+    F1.5 (ADR-0008 S9): el servicio subyacente (``sincronizar_automatico``,
+    el mismo que usa el scheduler) no recibe ``ctx``: sincroniza TODAS las
+    aplicaciones de una vez, no una en particular. Antes bastaba con tener
+    ``soporte.solicitudes_fabrica.actualizar`` en una sola aplicación para
+    disparar esa sincronización global; ahora exige ``admin.acceso``.
+    """
     resultado = await SoporteSolicitudesFabricaService.sincronizar_automatico()
     if resultado is None:
         return {
