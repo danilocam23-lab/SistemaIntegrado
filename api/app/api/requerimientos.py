@@ -20,7 +20,7 @@ from app.schemas.requerimiento import (
     RequerimientoUpdate,
     TransicionIn,
 )
-from app.security.deps import tiene_permiso, usuario_actual
+from app.security.deps import requiere_permiso, tiene_permiso, usuario_actual
 from app.services.ans import ANSService
 from app.services.liquidacion import LiquidacionService
 
@@ -156,7 +156,7 @@ async def _buscar(ctx: ContextoAplicacion, codigo_req: str) -> Requerimiento:
     return req
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(requiere_permiso("requerimientos.ver"))])
 async def listar(
     estado: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
@@ -183,20 +183,22 @@ async def calcular_ans(
     return {"resultado": resultado.value}
 
 
-@router.get("/{codigo_req}")
+@router.get("/{codigo_req}", dependencies=[Depends(requiere_permiso("requerimientos.ver"))])
 async def obtener(codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return await _buscar(ctx, codigo_req)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(requiere_permiso("requerimientos.crear"))],
+)
 async def crear(
     datos: RequerimientoIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Crea un requerimiento con su solicitud embebida."""
-    if not await tiene_permiso(usuario, "requerimientos.crear"):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para crear requerimientos")
     existe = await Requerimiento.find_one({
         "aplicacion_id": ctx.codigo,
         "codigo_req": datos.codigo_req,
@@ -258,7 +260,10 @@ async def crear(
     return req
 
 
-@router.put("/{codigo_req}")
+@router.put(
+    "/{codigo_req}",
+    dependencies=[Depends(requiere_permiso("requerimientos.editar"))],
+)
 async def actualizar(
     codigo_req: str,
     datos: RequerimientoUpdate,
@@ -266,8 +271,6 @@ async def actualizar(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Actualiza los campos enviados de un requerimiento."""
-    if not await tiene_permiso(usuario, "requerimientos.editar"):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para editar requerimientos")
     from app.documents.enums import AnsResultado
     from app.services.fecha_limite import calcular_fecha_limite
 
@@ -353,7 +356,10 @@ async def actualizar(
     return req
 
 
-@router.post("/{codigo_req}/transicion")
+@router.post(
+    "/{codigo_req}/transicion",
+    dependencies=[Depends(requiere_permiso("requerimientos.editar"))],
+)
 async def transicion(
     codigo_req: str,
     datos: TransicionIn,
@@ -361,8 +367,6 @@ async def transicion(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Cambia el estado del requerimiento validando la máquina de estados."""
-    if not await tiene_permiso(usuario, "requerimientos.editar"):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para editar requerimientos")
     req = await _buscar(ctx, codigo_req)
     anterior = req.estado
     req.estado = datos.nuevo_estado
@@ -380,7 +384,10 @@ async def transicion(
     return req
 
 
-@router.post("/{codigo_req}/entregas")
+@router.post(
+    "/{codigo_req}/entregas",
+    dependencies=[Depends(requiere_permiso("requerimientos.editar"))],
+)
 async def guardar_entrega(
     codigo_req: str,
     datos: EntregaIn,
@@ -388,8 +395,6 @@ async def guardar_entrega(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Agrega o reemplaza una entrega (por número) en el requerimiento."""
-    if not await tiene_permiso(usuario, "requerimientos.editar"):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para editar requerimientos")
     req = await _buscar(ctx, codigo_req)
     entrega_anterior = next((e for e in req.entregas if e.numero == datos.numero), None)
     payload_entrega = datos.model_dump()
@@ -451,7 +456,10 @@ async def guardar_entrega(
     return req
 
 
-@router.delete("/{codigo_req}/entregas/{numero}")
+@router.delete(
+    "/{codigo_req}/entregas/{numero}",
+    dependencies=[Depends(requiere_permiso("requerimientos.editar"))],
+)
 async def eliminar_entrega(
     codigo_req: str,
     numero: int,
@@ -459,8 +467,6 @@ async def eliminar_entrega(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Elimina una entrega del requerimiento por su número."""
-    if not await tiene_permiso(usuario, "requerimientos.editar"):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para editar requerimientos")
     req = await _buscar(ctx, codigo_req)
     antes = len(req.entregas)
     req.entregas = [e for e in req.entregas if e.numero != numero]
@@ -484,7 +490,10 @@ async def eliminar_entrega(
     return req
 
 
-@router.get("/{codigo_req}/liquidacion")
+@router.get(
+    "/{codigo_req}/liquidacion",
+    dependencies=[Depends(requiere_permiso("requerimientos.ver"))],
+)
 async def liquidacion(
     codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
 ) -> dict:
@@ -503,7 +512,10 @@ async def liquidacion(
     return {"codigo_req": req.codigo_req, "total": float(total), "entregas": detalle}
 
 
-@router.get("/{codigo_req}/historial-estados")
+@router.get(
+    "/{codigo_req}/historial-estados",
+    dependencies=[Depends(requiere_permiso("requerimientos.ver"))],
+)
 async def historial_estados(
     codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
 ) -> dict:
@@ -514,7 +526,10 @@ async def historial_estados(
     return {"codigo_req": req.codigo_req, "estado_actual": req.estado, "segmentos": segmentos}
 
 
-@router.get("/{codigo_req}/entregas/{numero}/historial-estados")
+@router.get(
+    "/{codigo_req}/entregas/{numero}/historial-estados",
+    dependencies=[Depends(requiere_permiso("requerimientos.ver"))],
+)
 async def historial_estados_entrega(
     codigo_req: str, numero: int, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
 ) -> dict:
@@ -530,14 +545,16 @@ async def historial_estados_entrega(
     }
 
 
-@router.delete("/{codigo_req}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{codigo_req}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(requiere_permiso("requerimientos.eliminar"))],
+)
 async def eliminar(
     codigo_req: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     usuario: Usuario = Depends(usuario_actual),
 ) -> None:
-    if not await tiene_permiso(usuario, "requerimientos.eliminar"):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Falta permiso para eliminar requerimientos")
     req = await _buscar(ctx, codigo_req)
     # Eliminar estimaciones asociadas (cascade)
     await Estimacion.find(
