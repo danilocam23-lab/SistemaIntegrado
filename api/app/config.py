@@ -2,6 +2,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 API_DIR = Path(__file__).resolve().parent.parent
@@ -34,7 +35,10 @@ class Settings(BaseSettings):
     mongo_db: str = "tecnoinsights_unificado"
 
     # Seguridad (JWT)
-    jwt_secret: str = "cambia-esta-clave-en-produccion"
+    # Sin valor por defecto a propósito (F0.5 / ADR-0008 S11): si falta en el
+    # .env, el arranque debe fallar en vez de firmar tokens con una clave
+    # pública y conocida.
+    jwt_secret: str
     jwt_algoritmo: str = "HS256"
     jwt_expira_minutos: int = 480
 
@@ -44,7 +48,8 @@ class Settings(BaseSettings):
     # Superadmin inicial
     superadmin_nombre: str = "Administrador"
     superadmin_email: str = "admin@hitss.com"
-    superadmin_password: str = "Admin123*"
+    # Sin valor por defecto a propósito (F0.5 / ADR-0008 S11): idem jwt_secret.
+    superadmin_password: str
 
     # Integración externa (Power Automate, etc.)
     api_key: str = ""
@@ -62,7 +67,17 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    settings = Settings()
+    try:
+        # mypy no sabe que pydantic-settings completa jwt_secret y
+        # superadmin_password desde variables de entorno / .env en runtime.
+        settings = Settings()  # type: ignore[call-arg]
+    except ValidationError as exc:
+        campos = ", ".join(str(err["loc"][0]) for err in exc.errors())
+        raise RuntimeError(
+            "Configuración incompleta: faltan variables obligatorias en api/.env "
+            f"({campos}). Copia api/.env.example a api/.env y define un valor real "
+            "para cada una (nunca uses el valor de ejemplo en producción)."
+        ) from exc
     if not settings.api_key:
         settings.api_key = _leer_env_file("API_KEY")
     if not settings.api_key_requerimientos:
