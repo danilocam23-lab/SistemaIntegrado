@@ -18,7 +18,7 @@ class PlanAccionIn(BaseModel):
     estado: str = "PENDIENTE"
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(requiere_permiso("planes_accion.ver"))])
 async def listar(
     estado: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),

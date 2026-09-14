@@ -22,7 +22,7 @@ class BacklogFuturoIn(BaseModel):
     responsable_id: str | None = None
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(requiere_permiso("backlog_futuro.ver"))])
 async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     consulta = ctx.filtro()
     return await BacklogFuturo.find(consulta).sort("-creado_en").to_list()

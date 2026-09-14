@@ -126,12 +126,15 @@ def _fecha_excel(value: Any) -> datetime | None:
     return None
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(requiere_permiso("estimaciones.ver"))])
 async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return await Estimacion.find(ctx.filtro()).to_list()
 
 
-@router.get("/por-requerimiento/{requerimiento_id}")
+@router.get(
+    "/por-requerimiento/{requerimiento_id}",
+    dependencies=[Depends(requiere_permiso("estimaciones.ver"))],
+)
 async def obtener_por_requerimiento(
     requerimiento_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
 ):
@@ -241,7 +244,10 @@ async def upload_estimacion(
     return estimacion
 
 
-@router.get("/{estimacion_id}")
+@router.get(
+    "/{estimacion_id}",
+    dependencies=[Depends(requiere_permiso("estimaciones.ver"))],
+)
 async def obtener(
     estimacion_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
 ):
