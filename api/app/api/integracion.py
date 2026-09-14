@@ -3,6 +3,7 @@
 Expone datos aplanados con autenticación por API Key (header ``X-API-Key``).
 No requiere JWT ni sesión de usuario.
 """
+import secrets
 from datetime import date, datetime
 
 from bson import ObjectId
@@ -36,7 +37,7 @@ async def _verificar_api_key(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "API Key no configurada en el servidor. Agregue API_KEY en .env",
         )
-    if x_api_key != settings.api_key:
+    if not secrets.compare_digest(x_api_key, settings.api_key):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "API Key inválida")
     return x_api_key
 
@@ -51,7 +52,7 @@ async def _verificar_api_key_requerimientos(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "API Key de requerimientos no configurada. Agregue API_KEY_REQUERIMIENTOS en .env",
         )
-    if x_api_key != settings.api_key_requerimientos:
+    if not secrets.compare_digest(x_api_key, settings.api_key_requerimientos):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "API Key inválida")
     return x_api_key
 
@@ -66,7 +67,7 @@ async def _verificar_api_key_solicitudes(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "API Key de solicitudes no configurada. Agregue API_KEY_SOLICITUDES en .env",
         )
-    if x_api_key != settings.api_key_solicitudes:
+    if not secrets.compare_digest(x_api_key, settings.api_key_solicitudes):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "API Key inválida")
     return x_api_key
 
