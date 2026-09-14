@@ -24,6 +24,7 @@ from app.documents.soporte_solicitud_fabrica import (
     SoporteSolicitudFabricaSyncLog,
 )
 from app.documents.squad import Squad
+from app.errors import NoEncontrado
 from app.middleware.aplicacion import ContextoAplicacion
 from app.repositories.soporte_solicitudes_fabrica_repository import (
     SoporteSolicitudesFabricaRepository,
@@ -909,7 +910,7 @@ class SoporteSolicitudesFabricaService:
     async def descargar_errores_csv(ctx: ContextoAplicacion, sync_id: str) -> bytes:
         log = await SoporteSolicitudFabricaSyncLog.get(sync_id)
         if log is None or (log.aplicacion_id not in ctx.codigos and log.aplicacion_id != "__todas__"):
-            raise ValueError("Sincronización no encontrada.")
+            raise NoEncontrado("Sincronización no encontrada.")
         out = io.StringIO()
         writer = csv.writer(out)
         writer.writerow(["Fila", "Líder", "Squad", "Motivo"])

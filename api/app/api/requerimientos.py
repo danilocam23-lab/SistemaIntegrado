@@ -173,13 +173,14 @@ async def calcular_ans(
     datos: AnsCalcularIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
 ) -> dict:
-    """Calcula el ANS por días hábiles entre dos fechas."""
-    try:
-        resultado = await ANSService.calcular(
-            ctx.codigo, datos.fecha_inicio, datos.fecha_fin, datos.umbral_dias_habiles
-        )
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    """Calcula el ANS por días hábiles entre dos fechas.
+
+    Un ``ValueError`` de ``ANSService`` (p. ej. rango de fechas inválido) lo
+    traduce a 400 el handler global de ``app/errors.py`` (ADR-0008 F2.6).
+    """
+    resultado = await ANSService.calcular(
+        ctx.codigo, datos.fecha_inicio, datos.fecha_fin, datos.umbral_dias_habiles
+    )
     return {"resultado": resultado.value}
 
 

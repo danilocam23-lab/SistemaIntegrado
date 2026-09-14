@@ -1,5 +1,5 @@
 """API de Soporte / Solicitudes Fábrica."""
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 
@@ -74,16 +74,15 @@ async def actualizar_detalle_ans(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     _: object = Depends(requiere_permiso("soporte.detalle_ans.editar")),
 ) -> dict:
-    try:
-        return await SoporteSolicitudesFabricaService.actualizar_detalle_ans(
-            ctx,
-            registro_id,
-            tipo=datos.tipo,
-            se_levanto_ans=datos.se_levanto_ans,
-            observaciones=datos.observaciones,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # Un ValueError (tipo inválido, registro no encontrado) lo traduce a 400
+    # el handler global (ADR-0008 F2.6).
+    return await SoporteSolicitudesFabricaService.actualizar_detalle_ans(
+        ctx,
+        registro_id,
+        tipo=datos.tipo,
+        se_levanto_ans=datos.se_levanto_ans,
+        observaciones=datos.observaciones,
+    )
  
  
 @router.post("/previsualizar")
@@ -92,17 +91,16 @@ async def previsualizar(
     archivo: UploadFile | None = File(default=None),
     _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.actualizar")),
 ) -> dict:
-    try:
-        if archivo is None:
-            raise ValueError("Debe cargar el archivo Excel para continuar.")
-        contenido = await archivo.read()
-        return await SoporteSolicitudesFabricaService.previsualizar(
-            ctx,
-            contenido_excel=contenido,
-            nombre_archivo=archivo.filename,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # Un ValueError (sin archivo, Excel inválido) lo traduce a 400 el handler
+    # global (ADR-0008 F2.6).
+    if archivo is None:
+        raise ValueError("Debe cargar el archivo Excel para continuar.")
+    contenido = await archivo.read()
+    return await SoporteSolicitudesFabricaService.previsualizar(
+        ctx,
+        contenido_excel=contenido,
+        nombre_archivo=archivo.filename,
+    )
 
 
 @router.post("/sincronizar")
@@ -111,19 +109,24 @@ async def sincronizar(
     archivo: UploadFile | None = File(default=None),
     _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.actualizar")),
 ) -> dict:
-    try:
-        if archivo is None:
-            raise ValueError("Debe cargar el archivo Excel para continuar.")
-        contenido = await archivo.read()
-        return await SoporteSolicitudesFabricaService.sincronizar(
-            ctx,
-            contenido_excel=contenido,
-            nombre_archivo=archivo.filename,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=f"No se pudo sincronizar: {exc}") from exc
+    """Sincroniza el Excel cargado a mano con las solicitudes de fábrica.
+
+    Antes este endpoint capturaba cualquier ``Exception`` y devolvía
+    ``f"No se pudo sincronizar: {exc}"`` en un 500 (ADR-0008 E4): filtraba al
+    cliente el mensaje crudo de la excepción (que puede incluir detalle de
+    ``openpyxl``/``pymongo``). Ahora un ``ValueError`` de negocio lo traduce a
+    400 el handler global, y cualquier otra excepción cae en la red de
+    seguridad de ``main.py`` (500 genérico + ``error_id``, con el traceback
+    completo solo en el log del servidor).
+    """
+    if archivo is None:
+        raise ValueError("Debe cargar el archivo Excel para continuar.")
+    contenido = await archivo.read()
+    return await SoporteSolicitudesFabricaService.sincronizar(
+        ctx,
+        contenido_excel=contenido,
+        nombre_archivo=archivo.filename,
+    )
 
 
 @router.get("/ultima-sincronizacion")
@@ -203,10 +206,10 @@ async def descargar_errores_csv(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
 ) -> Response:
-    try:
-        contenido = await SoporteSolicitudesFabricaService.descargar_errores_csv(ctx, sync_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # El servicio lanza NoEncontrado (404) en vez de ValueError (400): la
+    # sincronización solicitada de verdad no existe (o no es de esta
+    # aplicación), no es un error de validación de la petición.
+    contenido = await SoporteSolicitudesFabricaService.descargar_errores_csv(ctx, sync_id)
     return Response(
         content=contenido,
         media_type="text/csv; charset=utf-8",

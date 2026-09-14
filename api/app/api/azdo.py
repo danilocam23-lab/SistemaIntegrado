@@ -2,11 +2,13 @@
 import logging
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
+from app.errors import ErrorIntegracion
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
 from app.security.deps import requiere_permiso
 from app.services.azdo_sync import sincronizar_iteracion
@@ -414,7 +416,11 @@ async def proyectos(
     try:
         return await svc.obtener_proyectos()
     except RuntimeError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+        # El mensaje de RuntimeError incluye el cuerpo crudo de la respuesta de
+        # Azure DevOps (ADR-0008 E4): ErrorIntegracion queda >=500, así que el
+        # handler global de app/errors.py lo registra completo (con la cadena
+        # `from exc`) y al cliente solo le llega un mensaje neutro + error_id.
+        raise ErrorIntegracion("No se pudo obtener los proyectos de Azure DevOps.") from exc
 
 
 @router.get("/iteraciones", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
@@ -432,7 +438,7 @@ async def iteraciones(
     try:
         return await svc.obtener_iteraciones(proyecto)
     except RuntimeError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+        raise ErrorIntegracion("No se pudo obtener las iteraciones de Azure DevOps.") from exc
 
 
 # ── Work items y sync ──
@@ -453,14 +459,20 @@ async def sincronizar(
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     _: object = Depends(requiere_permiso("azure_devops.editar")),
 ) -> dict:
-    """Sincroniza los work items de una iteración de Azure DevOps."""
+    """Sincroniza los work items de una iteración de Azure DevOps.
+
+    Un ``ValueError`` (falta configurar org_url/PAT) lo traduce a 400 el
+    handler global. Antes también se atrapaba cualquier ``Exception`` y se
+    devolvía ``f"Error de Azure DevOps: {exc}"`` en un 502 (ADR-0008 E4): eso
+    filtraba al cliente el cuerpo crudo de la respuesta de Azure DevOps y,
+    además, un bug de programación propio (no de Azure DevOps) también salía
+    como "Error de Azure DevOps" (ADR-0008 E3). Ahora solo se traducen a
+    ``ErrorIntegracion`` los fallos de red/API reales; cualquier otra
+    excepción cae en la red de seguridad de ``main.py`` (500 genérico).
+    """
     try:
         return await sincronizar_iteracion(
             ctx.codigo, datos.azdo_project, datos.iteration_path, datos.target
         )
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY, f"Error de Azure DevOps: {exc}"
-        ) from exc
+    except (RuntimeError, httpx.HTTPError) as exc:
+        raise ErrorIntegracion("No se pudo sincronizar con Azure DevOps.") from exc

@@ -382,10 +382,9 @@ async def crear_tareas_hitss(
     from app.services.azdo_sync import crear_servicio_azdo, leer_config_azdo
 
     estimacion = await _cargar_estimacion(estimacion_id, ctx)
-    try:
-        svc = await crear_servicio_azdo(ctx.codigo, "azdo_")
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    # Un ValueError de crear_servicio_azdo (sin configuración) lo traduce a
+    # 400 el handler global (ADR-0008 F2.6).
+    svc = await crear_servicio_azdo(ctx.codigo, "azdo_")
     proyecto = await leer_config_azdo(ctx.codigo, "azdo_default_project")
     if not proyecto:
         raise HTTPException(
@@ -529,10 +528,9 @@ async def crear_tareas_epm(
     from app.services.azdo_sync import crear_servicio_azdo
 
     estimacion = await _cargar_estimacion(estimacion_id, ctx)
-    try:
-        svc = await crear_servicio_azdo(ctx.codigo, "azdo2_")
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    # Un ValueError de crear_servicio_azdo (sin configuración) lo traduce a
+    # 400 el handler global (ADR-0008 F2.6).
+    svc = await crear_servicio_azdo(ctx.codigo, "azdo2_")
 
     # Cache de proyecto y WI padre por id_epm.
     proyecto_por_epm: dict[int, str] = {}

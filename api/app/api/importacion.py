@@ -1,4 +1,5 @@
 """Router de importación del Excel 'BITÁCORA GENERAL'."""
+import logging
 from datetime import datetime
 from io import BytesIO
 
@@ -16,12 +17,15 @@ from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
 from app.documents.squad import Squad
 from app.documents.tarifa import Tarifa
+from app.errors import ErrorDominio
 from app.importer.excel_importer import ImportadorExcel
 from app.middleware.aplicacion import (
     ContextoAplicacion,
     contexto_aplicacion,
 )
 from app.security.deps import requiere_permiso
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/importacion", tags=["importacion"])
 
@@ -52,11 +56,15 @@ async def importar_excel(
             resultado = await _importar_consolidado(ctx, contenido, hoja)
         else:
             resultado = await ImportadorExcel(ctx.codigo, contenido, hoja).ejecutar()
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, f"No se pudo importar el archivo: {exc}"
+    except ValueError:
+        # Mensaje de negocio escrito a mano por ImportadorExcel: lo traduce a
+        # 400 el handler global (ADR-0008 F2.6). No se atrapa aquí para no
+        # duplicar el mapeo en cada router (E1 del ADR).
+        raise
+    except Exception as exc:  # noqa: BLE001 - openpyxl/zipfile ante un .xlsx corrupto (ADR-0008 E2)
+        logger.exception("No se pudo importar el archivo Excel")
+        raise ErrorDominio(
+            "No se pudo leer el archivo. Verifique que sea un .xlsx válido y no esté dañado."
         ) from exc
 
     return {
@@ -250,12 +258,12 @@ async def previsualizar_importacion(
         if ctx.modo_consolidado:
             return await _previsualizar_consolidado(ctx, contenido, hoja)
         return await ImportadorExcel(ctx.codigo, contenido, hoja).previsualizar()
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            f"No se pudo previsualizar el archivo: {exc}",
+    except ValueError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - openpyxl/zipfile ante un .xlsx corrupto (ADR-0008 E2)
+        logger.exception("No se pudo previsualizar el archivo Excel")
+        raise ErrorDominio(
+            "No se pudo leer el archivo. Verifique que sea un .xlsx válido y no esté dañado."
         ) from exc
 
 
