@@ -2,14 +2,12 @@ import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import SelectorAplicacion from './SelectorAplicacion'
-import { useAuth } from '../context/AuthContext'
 import { Boton } from './ui'
 
 // Rutas donde el selector de squad no aplica (datos globales)
 const RUTAS_SIN_SELECTOR = ['/configuracion']
 
 export default function Layout() {
-  const { usuario, logout } = useAuth()
   const { pathname } = useLocation()
   const [menuAbierto, setMenuAbierto] = useState(false)
   const mostrarSelector = !RUTAS_SIN_SELECTOR.some((r) => pathname.startsWith(r))
@@ -38,15 +36,6 @@ export default function Layout() {
             ) : (
               <span className="text-sm italic text-slate-400">Datos globales del proyecto</span>
             )}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2 text-sm">
-            <span className="hidden min-w-0 max-w-[220px] truncate text-slate-600 sm:inline">
-              {usuario?.nombre} · <b className="text-marca-osc">{usuario?.rol_nombre ?? usuario?.rol}</b>
-            </span>
-            <Boton variante="secundario" tamano="sm" onClick={logout}>
-              Salir
-            </Boton>
           </div>
         </header>
 
