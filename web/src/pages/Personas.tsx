@@ -36,6 +36,7 @@ export default function Personas() {
   const puedeCrearPersonas = tienePermiso('personas.crear')
   const puedeEditarPersonas = tienePermiso('personas.editar')
   const puedeEliminarPersonas = tienePermiso('personas.eliminar')
+  const puedeDeduplicar = tienePermiso('admin.acceso')
   const esGerente = tienePermiso('personas.ver_valores')
   const [roles, setRoles] = useState<string[]>(ROLES_DEFAULT)
   const [tiposContratacion, setTiposContratacion] = useState<string[]>([])
@@ -71,7 +72,7 @@ export default function Personas() {
   // Recargar la lista cuando cambia la aplicación activa
   useEffect(() => {
     recargar()
-    cargarDuplicados()
+    if (puedeDeduplicar) cargarDuplicados()
   }, [activa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -90,7 +91,7 @@ export default function Personas() {
         if (r.data.length > 0) setTiposContratacion(r.data)
       })
       .catch(() => {})
-    cargarDuplicados()
+    if (puedeDeduplicar) cargarDuplicados()
   }, [])
 
   const filtradas = useMemo(() => {
@@ -256,10 +257,17 @@ export default function Personas() {
 
   async function deduplicar(): Promise<void> {
     if (!window.confirm(`¿Fusionar ${duplicados.length} grupo(s) de duplicados? Se conservará la persona con más información completa y se redirigirán todas las referencias.`)) return
+    // El body debe llevar la lista explícita de fusiones a aplicar (contrato ADR-0008 F1.6):
+    // el plan ya calculado y mostrado al usuario en `duplicados` (ganador a conservar +
+    // perdedores a eliminar por cada grupo), tal como lo entrega GET /personas/duplicados.
+    const fusiones = duplicados.map((g) => ({
+      ganador_id: g.ganador.id,
+      perdedor_ids: g.duplicados.map((d) => d.id),
+    }))
     setDeduplicando(true)
     setResultadoDedup(null)
     try {
-      const { data } = await client.post<{ fusionados: number; referencias_actualizadas: number }>('/personas/deduplicar')
+      const { data } = await client.post<{ fusionados: number; referencias_actualizadas: number }>('/personas/deduplicar', { fusiones })
       setResultadoDedup(data)
       setDuplicados([])
       recargar()
@@ -293,7 +301,7 @@ export default function Personas() {
             >
               Ver detalle
             </Boton>
-            {puedeEditarPersonas && (
+            {puedeDeduplicar && (
               <Boton
                 variante="alerta"
                 tamano="sm"
@@ -579,7 +587,7 @@ export default function Personas() {
             <Boton variante="secundario" onClick={cerrarModalDup}>
               Cancelar
             </Boton>
-            {puedeEditarPersonas && (
+            {puedeDeduplicar && (
               <Boton
                 variante="alerta"
                 onClick={() => { cerrarModalDup(); deduplicar() }}
