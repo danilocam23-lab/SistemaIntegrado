@@ -17,7 +17,6 @@ dependencies = [
   "httpx>=0.28.0",
   "apscheduler>=3.10.4",
   "openpyxl>=3.1.5",
-  "aiosmtplib>=3.0.2",
 ]
 
 [project.optional-dependencies]
@@ -41,6 +40,17 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+  "fastapi.Depends",
+  "fastapi.Query",
+  "fastapi.Header",
+  "fastapi.File",
+  "fastapi.Body",
+  "fastapi.Path",
+  "app.security.deps.requiere_permiso",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
