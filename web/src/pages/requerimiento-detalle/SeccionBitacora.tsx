@@ -1,4 +1,5 @@
-import { Boton, Icono } from '../../components/ui'
+import { useState } from 'react'
+import { Boton } from '../../components/ui'
 import type { EventoBitacora } from '../../types'
 
 interface Props {
@@ -7,14 +8,22 @@ interface Props {
   onEliminar: (eventoId: string) => void
 }
 
+/** Entradas visibles por defecto (las más recientes, ya vienen ordenadas así del backend). */
+const LIMITE_VISIBLE = 6
+
 export default function SeccionBitacora({ eventos, puedeEliminar, onEliminar }: Props) {
+  const [mostrarTodo, setMostrarTodo] = useState(false)
+
+  const hayOcultos = eventos.length > LIMITE_VISIBLE
+  const eventosVisibles = mostrarTodo ? eventos : eventos.slice(0, LIMITE_VISIBLE)
+
   return (
     <div className="tarjeta tarjeta-pad">
       <h2 className="etiqueta-sup mb-3">
         Bitácora
       </h2>
       <ul className="space-y-1 text-sm">
-        {eventos.map((ev) => (
+        {eventosVisibles.map((ev) => (
           <li key={ev.id} className="flex items-start justify-between gap-2 border-b py-1 last:border-0">
             <span>
               <span className="text-slate-400">{ev.creado_en?.slice(0, 19).replace('T', ' ')}</span>
@@ -22,19 +31,29 @@ export default function SeccionBitacora({ eventos, puedeEliminar, onEliminar }: 
               {ev.autor ? <span className="text-slate-400"> ({ev.autor})</span> : null}
             </span>
             {puedeEliminar && (
-              <Boton
-                variante="peligro"
-                className="shrink-0"
+              <button
+                type="button"
                 onClick={() => { void onEliminar(ev.id) }}
-                title="Eliminar evento"
+                className="enlace-accion enlace-accion-peligro shrink-0"
               >
-                <Icono nombre="x" />
-              </Boton>
+                Eliminar
+              </button>
             )}
           </li>
         ))}
         {eventos.length === 0 && <li className="text-slate-400">Sin eventos.</li>}
       </ul>
+      {hayOcultos && (
+        <div className="mt-3 flex justify-center">
+          <Boton
+            variante="secundario"
+            tamano="sm"
+            onClick={() => setMostrarTodo((v) => !v)}
+          >
+            {mostrarTodo ? 'Mostrar menos' : `Ver bitácora completa (${eventos.length})`}
+          </Boton>
+        </div>
+      )}
     </div>
   )
 }
