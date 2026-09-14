@@ -10,6 +10,7 @@ const CLAVE_GRUPOS = 'sidebar_grupos_cerrados'
 interface Item {
   to: string
   label: string
+  icono: NombreIcono
   permiso?: string
 }
 interface Grupo {
@@ -23,62 +24,62 @@ const GRUPOS: Grupo[] = [
     titulo: 'Dashboard',
     icono: 'panel',
     items: [
-      { to: '/dashboard', label: 'Dashboard', permiso: 'dashboard.ver' },
-      { to: '/dashboard-estados', label: 'Estados', permiso: 'dashboard.estados.ver' },
-      { to: '/dashboard-backlog', label: 'Backlog', permiso: 'dashboard.squad.ver' },
+      { to: '/dashboard', label: 'Dashboard', icono: 'panel', permiso: 'dashboard.ver' },
+      { to: '/dashboard-estados', label: 'Estados', icono: 'marcador', permiso: 'dashboard.estados.ver' },
+      { to: '/dashboard-backlog', label: 'Backlog', icono: 'portafolio', permiso: 'dashboard.squad.ver' },
     ],
   },
   {
     titulo: 'Desarrollos de fábrica',
     icono: 'fabrica',
     items: [
-      { to: '/requerimientos', label: 'Requerimientos', permiso: 'requerimientos.ver' },
-      { to: '/requerimientos/detalle-ans', label: 'Detalle ANS', permiso: 'requerimientos.ver' },
-      { to: '/entregas-actas', label: 'Entregas de Actas', permiso: 'entregas_actas.ver' },
-      { to: '/predictivos', label: 'Predictivos', permiso: 'predictivos.ver' },
-      { to: '/backlog-futuro', label: 'Backlog futuro', permiso: 'backlog_futuro.ver' },
+      { to: '/requerimientos', label: 'Requerimientos', icono: 'documento', permiso: 'requerimientos.ver' },
+      { to: '/requerimientos/detalle-ans', label: 'Detalle ANS', icono: 'objetivo', permiso: 'requerimientos.ver' },
+      { to: '/entregas-actas', label: 'Entregas de Actas', icono: 'caja', permiso: 'entregas_actas.ver' },
+      { to: '/predictivos', label: 'Predictivos', icono: 'tendencia', permiso: 'predictivos.ver' },
+      { to: '/backlog-futuro', label: 'Backlog futuro', icono: 'calendario', permiso: 'backlog_futuro.ver' },
     ],
   },
   {
     titulo: 'Carga de trabajo',
     icono: 'personas',
     items: [
-      { to: '/personas', label: 'Personas', permiso: 'personas.ver' },
-      { to: '/asignaciones', label: 'Asignaciones', permiso: 'asignaciones.ver' },
-      { to: '/capacidades', label: 'Capacidades', permiso: 'capacidades.ver' },
-      { to: '/planes-accion', label: 'Planes de acción', permiso: 'planes_accion.ver' },
-      { to: '/control-horas-facturable', label: 'Control de Horas Facturable', permiso: 'control_horas_facturable.ver' },
-      { to: '/azure-devops', label: 'Azure DevOps', permiso: 'azure_devops.ver' },
-      { to: '/roadmap', label: 'Roadmap y equipo', permiso: 'roadmap.ver' },
+      { to: '/personas', label: 'Personas', icono: 'personas', permiso: 'personas.ver' },
+      { to: '/asignaciones', label: 'Asignaciones', icono: 'etiqueta', permiso: 'asignaciones.ver' },
+      { to: '/capacidades', label: 'Capacidades', icono: 'grafico-barras', permiso: 'capacidades.ver' },
+      { to: '/planes-accion', label: 'Planes de acción', icono: 'check-circulo', permiso: 'planes_accion.ver' },
+      { to: '/control-horas-facturable', label: 'Control de Horas Facturable', icono: 'estimacion', permiso: 'control_horas_facturable.ver' },
+      { to: '/azure-devops', label: 'Azure DevOps', icono: 'nube', permiso: 'azure_devops.ver' },
+      { to: '/roadmap', label: 'Roadmap y equipo', icono: 'cohete', permiso: 'roadmap.ver' },
     ],
   },
   {
     titulo: 'Facturación',
     icono: 'facturacion',
     items: [
-      { to: '/facturacion/general', label: 'General', permiso: 'facturacion.ver' },
-      { to: '/facturacion/ans-descontados', label: 'Ans descontados', permiso: 'facturacion.ans_descontados.ver' },
-      { to: '/facturacion/valores-proyecto', label: 'Valores de proyecto', permiso: 'facturacion.ver' },
+      { to: '/facturacion/general', label: 'General', icono: 'facturacion', permiso: 'facturacion.ver' },
+      { to: '/facturacion/ans-descontados', label: 'Ans descontados', icono: 'objetivo', permiso: 'facturacion.ans_descontados.ver' },
+      { to: '/facturacion/valores-proyecto', label: 'Valores de proyecto', icono: 'grafico-linea', permiso: 'facturacion.ver' },
     ],
   },
   {
     titulo: 'Soporte',
     icono: 'soporte',
     items: [
-      { to: '/soporte/solicitudes-fabrica', label: 'Solicitudes Fábrica', permiso: 'soporte.solicitudes_fabrica.ver' },
-      { to: '/soporte/detalle-ans', label: 'Detalle ANS', permiso: 'soporte.solicitudes_fabrica.ver' },
-      { to: '/soporte/garantias-wo', label: 'Garantías WO', permiso: 'soporte.solicitudes_fabrica.ver' },
+      { to: '/soporte/solicitudes-fabrica', label: 'Solicitudes Fábrica', icono: 'fabrica', permiso: 'soporte.solicitudes_fabrica.ver' },
+      { to: '/soporte/detalle-ans', label: 'Detalle ANS', icono: 'objetivo', permiso: 'soporte.solicitudes_fabrica.ver' },
+      { to: '/soporte/garantias-wo', label: 'Garantías WO', icono: 'alerta', permiso: 'soporte.solicitudes_fabrica.ver' },
     ],
   },
   {
     titulo: 'Administración',
     icono: 'administracion',
     items: [
-      { to: '/admin/aplicaciones', label: 'Squads', permiso: 'aplicaciones.ver' },
-      { to: '/admin/usuarios', label: 'Usuarios', permiso: 'admin.usuarios.ver' },
-      { to: '/admin/importacion', label: 'Importar / Exportar datos', permiso: 'admin.importacion.ver' },
-      { to: '/admin/endpoints', label: 'Endpoints', permiso: 'admin.endpoints.ver' },
-      { to: '/configuracion', label: 'Configuración', permiso: 'admin.configuracion.ver' },
+      { to: '/admin/aplicaciones', label: 'Squads', icono: 'edificio', permiso: 'aplicaciones.ver' },
+      { to: '/admin/usuarios', label: 'Usuarios', icono: 'personas', permiso: 'admin.usuarios.ver' },
+      { to: '/admin/importacion', label: 'Importar / Exportar datos', icono: 'recargar', permiso: 'admin.importacion.ver' },
+      { to: '/admin/endpoints', label: 'Endpoints', icono: 'globo', permiso: 'admin.endpoints.ver' },
+      { to: '/configuracion', label: 'Configuración', icono: 'administracion', permiso: 'admin.configuracion.ver' },
     ],
   },
 ]
@@ -256,14 +257,15 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                         to={item.to}
                         end={item.to === '/dashboard'}
                         className={({ isActive }) =>
-                          `block rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                          `flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors ${
                             isActive
                               ? 'bg-white/15 font-semibold text-white'
                               : 'text-slate-300 hover:bg-white/10 hover:text-white'
                           }`
                         }
                       >
-                        {item.label}
+                        <Icono nombre={item.icono} className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
                       </NavLink>
                     ))}
                   </div>
