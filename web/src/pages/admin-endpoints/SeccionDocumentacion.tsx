@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { Aviso, Campo, Chip, Selector, TablaScroll } from '../../components/ui'
 import { metodoClase } from './catalogoEndpoints'
+import { ProbadorEndpoint } from './ProbadorEndpoint'
 import { RIESGO_ETIQUETA, RIESGO_TONO } from './tipos'
 import type { Metodo } from './tipos'
 import type { EstadoAdminEndpoints } from './useAdminEndpoints'
+import type { EndpointCatalogo } from '../../types'
 
 type Props = Pick<
   EstadoAdminEndpoints,
@@ -13,7 +16,8 @@ type Props = Pick<
  * Documentación viva de todas las operaciones reales de `/api/*` (F4.5, ADR-0008):
  * sale de `GET /api/admin/endpoints/catalogo`, derivado en caliente de `app.openapi()`,
  * en vez de la lista a mano (`catalogoEndpoints.ts`, 113 entradas) que se
- * desincronizaba del código.
+ * desincronizaba del código. Cada fila abre el probador de endpoints (F4.6-F4.8)
+ * para ejecutar la operación en vivo.
  */
 export function SeccionDocumentacion({
   filtro,
@@ -25,6 +29,8 @@ export function SeccionDocumentacion({
   cargandoCatalogo,
   errorCatalogo,
 }: Props) {
+  const [seleccionado, setSeleccionado] = useState<EndpointCatalogo | null>(null)
+
   return (
     <section className="tarjeta tarjeta-pad">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -32,7 +38,8 @@ export function SeccionDocumentacion({
           <h2 className="titulo-seccion">Documentación de endpoints</h2>
           <p className="text-xs text-slate-500">
             {endpointsFiltrados.length} operaciones reales, leídas en vivo del contrato OpenAPI. Todas requieren
-            JWT salvo login y health; los recursos operativos usan <code>X-Aplicacion</code>.
+            JWT salvo login y health; los recursos operativos usan <code>X-Aplicacion</code>. Haz clic en
+            «Probar» para ejecutar una en vivo (exige el permiso <code>admin.endpoints.probar</code>).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -64,6 +71,7 @@ export function SeccionDocumentacion({
               <th>Resumen</th>
               <th>Riesgo</th>
               <th>Permiso</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -88,11 +96,16 @@ export function SeccionDocumentacion({
                   <Chip tono={RIESGO_TONO[endpoint.riesgo]}>{RIESGO_ETIQUETA[endpoint.riesgo]}</Chip>
                 </td>
                 <td className="font-mono text-xs">{endpoint.permiso ?? '—'}</td>
+                <td className="text-center">
+                  <button onClick={() => setSeleccionado(endpoint)} className="enlace-accion">
+                    Probar
+                  </button>
+                </td>
               </tr>
             ))}
             {!cargandoCatalogo && endpointsFiltrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-slate-400">
+                <td colSpan={7} className="p-4 text-center text-slate-400">
                   Sin operaciones que coincidan con el filtro.
                 </td>
               </tr>
@@ -100,6 +113,8 @@ export function SeccionDocumentacion({
           </tbody>
         </table>
       </TablaScroll>
+
+      {seleccionado && <ProbadorEndpoint endpoint={seleccionado} onCerrar={() => setSeleccionado(null)} />}
     </section>
   )
 }
