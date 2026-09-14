@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from app.documents.asignacion import Asignacion
 from app.documents.persona import Persona
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/reportes", tags=["reportes"])
 
@@ -50,7 +50,7 @@ async def equipo(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> dict
     return {"total_personas": len(personas), "equipo": filas}
 
 
-@router.get("/roadmap", dependencies=[Depends(requiere_permiso("roadmap.ver"))])
+@router.get("/roadmap", dependencies=[permiso("roadmap.ver")])
 async def roadmap(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> dict:
     """Proyectos de todas las asignaciones, con sus fechas y sprints."""
     asignaciones = await Asignacion.find(ctx.filtro()).to_list()

@@ -7,15 +7,15 @@ from app.documents.base import ahora
 from app.documents.garantia_wo import GarantiaWO
 from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabrica
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 # F1.8 (ADR-0008 S3): ninguno de estos endpoints exigía ningún permiso.
 # Se reutilizan los permisos ya existentes del módulo de soporte
 # (la página de garantías vive bajo /soporte/garantias-wo en el frontend
 # y ya se gatea ahí con "soporte.solicitudes_fabrica.ver").
 router = APIRouter(prefix="/garantias-wo", tags=["garantias-wo"])
-_VER = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver"))
-_ACTUALIZAR = Depends(requiere_permiso("soporte.solicitudes_fabrica.actualizar"))
+_VER = permiso("soporte.solicitudes_fabrica.ver")
+_ACTUALIZAR = permiso("soporte.solicitudes_fabrica.actualizar")
 
 
 class GarantiaWOIn(BaseModel):

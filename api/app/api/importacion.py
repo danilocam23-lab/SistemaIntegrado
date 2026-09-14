@@ -24,7 +24,7 @@ from app.middleware.aplicacion import (
     ContextoAplicacion,
     contexto_aplicacion,
 )
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ async def _crear_importador(
     return await asyncio.to_thread(ImportadorExcel, aplicacion_id, contenido, hoja)
 
 
-@router.post("/excel", dependencies=[Depends(requiere_permiso("admin.importacion.ejecutar"))])
+@router.post("/excel", dependencies=[permiso("admin.importacion.ejecutar")])
 async def importar_excel(
     archivo: UploadFile = File(...),
     hoja: str | None = None,
@@ -94,7 +94,7 @@ async def importar_excel(
 
 @router.get(
     "/excel/plantilla",
-    dependencies=[Depends(requiere_permiso("admin.importacion.ver"))],
+    dependencies=[permiso("admin.importacion.ver")],
 )
 async def exportar_plantilla(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
@@ -285,7 +285,7 @@ def _construir_libro_plantilla(
 
 @router.post(
     "/excel/previsualizar",
-    dependencies=[Depends(requiere_permiso("admin.importacion.ver"))],
+    dependencies=[permiso("admin.importacion.ver")],
 )
 async def previsualizar_importacion(
     archivo: UploadFile = File(...),

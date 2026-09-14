@@ -1,10 +1,10 @@
 """Router de gestión de roles y permisos."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.documents.rol import Rol
 from app.documents.usuario import Usuario
 from app.schemas.rol import RolIn, RolOut, RolUpdate
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 from app.security.rbac import PERMISOS_CATALOGO, normalizar_permisos
 
 router = APIRouter(prefix="/roles", tags=["roles"])
@@ -24,14 +24,14 @@ def _out(rol: Rol) -> RolOut:
 
 @router.get("/catalogo", response_model=list[str])
 async def catalogo(
-    _: Usuario = Depends(requiere_permiso("admin.roles.ver")),
+    _: Usuario = permiso("admin.roles.ver"),
 ) -> list[str]:
     return PERMISOS_CATALOGO
 
 
 @router.get("", response_model=list[RolOut])
 async def listar(
-    _: Usuario = Depends(requiere_permiso("admin.roles.ver")),
+    _: Usuario = permiso("admin.roles.ver"),
 ) -> list[RolOut]:
     roles = await Rol.find_all().sort("nombre").to_list()
     return [_out(rol) for rol in roles]
@@ -40,7 +40,7 @@ async def listar(
 @router.post("", response_model=RolOut, status_code=status.HTTP_201_CREATED)
 async def crear(
     datos: RolIn,
-    _: Usuario = Depends(requiere_permiso("admin.roles.crear")),
+    _: Usuario = permiso("admin.roles.crear"),
 ) -> RolOut:
     clave = datos.clave.strip().lower()
     if not clave:
@@ -61,7 +61,7 @@ async def crear(
 async def editar(
     rol_id: str,
     datos: RolUpdate,
-    _: Usuario = Depends(requiere_permiso("admin.roles.editar")),
+    _: Usuario = permiso("admin.roles.editar"),
 ) -> RolOut:
     rol = await Rol.get(rol_id)
     if rol is None:
@@ -82,7 +82,7 @@ async def editar(
 @router.delete("/{rol_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar(
     rol_id: str,
-    _: Usuario = Depends(requiere_permiso("admin.roles.eliminar")),
+    _: Usuario = permiso("admin.roles.eliminar"),
 ) -> None:
     rol = await Rol.get(rol_id)
     if rol is None:

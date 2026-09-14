@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from app.documents.estimacion import Estimacion, FilaEstimacion
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/estimaciones", tags=["estimaciones"])
 
@@ -137,14 +137,14 @@ def _fecha_excel(value: Any) -> datetime | None:
     return None
 
 
-@router.get("", dependencies=[Depends(requiere_permiso("estimaciones.ver"))])
+@router.get("", dependencies=[permiso("estimaciones.ver")])
 async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return await Estimacion.find(ctx.filtro()).to_list()
 
 
 @router.get(
     "/por-requerimiento/{requerimiento_id}",
-    dependencies=[Depends(requiere_permiso("estimaciones.ver"))],
+    dependencies=[permiso("estimaciones.ver")],
 )
 async def obtener_por_requerimiento(
     requerimiento_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
@@ -164,7 +164,7 @@ async def upload_estimacion(
     requerimiento_id: str,
     datos: EstimacionUploadIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("requerimientos.editar")),
+    _: Usuario = permiso("requerimientos.editar"),
 ):
     try:
         buffer = base64.b64decode(datos.file_base64)
@@ -253,7 +253,7 @@ async def upload_estimacion(
 
 @router.get(
     "/{estimacion_id}",
-    dependencies=[Depends(requiere_permiso("estimaciones.ver"))],
+    dependencies=[permiso("estimaciones.ver")],
 )
 async def obtener(
     estimacion_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
@@ -268,7 +268,7 @@ async def obtener(
 async def crear(
     datos: EstimacionIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("requerimientos.editar")),
+    _: Usuario = permiso("requerimientos.editar"),
 ):
     estimacion = Estimacion(
         aplicacion_id=ctx.codigo,
@@ -284,7 +284,7 @@ async def actualizar(
     estimacion_id: str,
     datos: EstimacionIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("requerimientos.editar")),
+    _: Usuario = permiso("requerimientos.editar"),
 ):
     estimacion = await Estimacion.get(estimacion_id)
     if estimacion is None or estimacion.aplicacion_id != ctx.codigo:
@@ -300,7 +300,7 @@ async def actualizar(
 async def eliminar(
     estimacion_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("requerimientos.editar")),
+    _: Usuario = permiso("requerimientos.editar"),
 ) -> None:
     estimacion = await Estimacion.get(estimacion_id)
     if estimacion is None or estimacion.aplicacion_id != ctx.codigo:
@@ -374,7 +374,7 @@ async def _cargar_estimacion(estimacion_id: str, ctx: ContextoAplicacion) -> Est
 async def crear_tareas_hitss(
     estimacion_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("requerimientos.editar")),
+    _: Usuario = permiso("requerimientos.editar"),
 ):
     """Crea la jerarquía Feature → User Story → Task en la org HITSS.
 
@@ -529,7 +529,7 @@ async def crear_tareas_hitss(
 async def crear_tareas_epm(
     estimacion_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("requerimientos.editar")),
+    _: Usuario = permiso("requerimientos.editar"),
 ):
     """Crea las tareas en la org EPM. Cada fila debe traer ``id_epm`` (HU padre)."""
     from app.services.azdo_sync import crear_servicio_azdo

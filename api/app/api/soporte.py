@@ -4,7 +4,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 from app.security.rbac import PERM_ADMIN_ACCESO
 from app.services.soporte_solicitudes_fabrica_service import SoporteSolicitudesFabricaService
  
@@ -20,7 +20,7 @@ class DetalleAnsUpdate(BaseModel):
 @router.get("")
 async def listar(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
+    _: object = permiso("soporte.solicitudes_fabrica.ver"),
 ) -> dict:
     return await SoporteSolicitudesFabricaService.listar(ctx)
 
@@ -31,7 +31,7 @@ async def listar_paginado(
     tamanio: int = 100,
     filtro_wo: str = "",
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
+    _: object = permiso("soporte.solicitudes_fabrica.ver"),
 ) -> dict:
     """Endpoint paginado para tablas grandes. Devuelve una página de registros."""
     return await SoporteSolicitudesFabricaService.listar_paginado(
@@ -42,7 +42,7 @@ async def listar_paginado(
 @router.get("/resumen")
 async def resumen(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
+    _: object = permiso("soporte.solicitudes_fabrica.ver"),
 ) -> dict:
     """Resumen ligero: solo campos clave por registro, sin datos completos."""
     return await SoporteSolicitudesFabricaService.resumen(ctx)
@@ -55,7 +55,7 @@ async def ans_datos(
     filtro_ano: str = "",
     filtro_mes: str = "",
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
+    _: object = permiso("soporte.solicitudes_fabrica.ver"),
 ) -> dict:
     """Datos ligeros para la vista Detalle ANS con filtrado servidor."""
     return await SoporteSolicitudesFabricaService.datos_ans(
@@ -72,7 +72,7 @@ async def actualizar_detalle_ans(
     registro_id: str,
     datos: DetalleAnsUpdate,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: object = Depends(requiere_permiso("soporte.detalle_ans.editar")),
+    _: object = permiso("soporte.detalle_ans.editar"),
 ) -> dict:
     # Un ValueError (tipo inválido, registro no encontrado) lo traduce a 400
     # el handler global (ADR-0008 F2.6).
@@ -89,7 +89,7 @@ async def actualizar_detalle_ans(
 async def previsualizar(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     archivo: UploadFile | None = File(default=None),
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.actualizar")),
+    _: object = permiso("soporte.solicitudes_fabrica.actualizar"),
 ) -> dict:
     # Un ValueError (sin archivo, Excel inválido) lo traduce a 400 el handler
     # global (ADR-0008 F2.6).
@@ -107,7 +107,7 @@ async def previsualizar(
 async def sincronizar(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     archivo: UploadFile | None = File(default=None),
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.actualizar")),
+    _: object = permiso("soporte.solicitudes_fabrica.actualizar"),
 ) -> dict:
     """Sincroniza el Excel cargado a mano con las solicitudes de fábrica.
 
@@ -132,7 +132,7 @@ async def sincronizar(
 @router.get("/ultima-sincronizacion")
 async def ultima_sincronizacion(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
+    _: object = permiso("soporte.solicitudes_fabrica.ver"),
 ) -> dict | None:
     """Resultado de la última sincronización (manual o automática 3x/día),
     para avisar en la vista si quedaron registros con error por revisar."""
@@ -141,7 +141,7 @@ async def ultima_sincronizacion(
 
 @router.post("/ejecutar-carga-automatica")
 async def ejecutar_carga_automatica(
-    _: object = Depends(requiere_permiso(PERM_ADMIN_ACCESO)),
+    _: object = permiso(PERM_ADMIN_ACCESO),
 ) -> dict:
     """Dispara manualmente el mismo proceso que corre el scheduler 3x/día
     (Configuración > Carga de Excel), para poder probar que la ruta/archivo
@@ -204,7 +204,7 @@ async def wo_por_persona(
 async def descargar_errores_csv(
     sync_id: str,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: object = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver")),
+    _: object = permiso("soporte.solicitudes_fabrica.ver"),
 ) -> Response:
     # El servicio lanza NoEncontrado (404) en vez de ValueError (400): la
     # sincronización solicitada de verdad no existe (o no es de esta

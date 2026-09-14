@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.documents.configuracion import Configuracion
-from app.security.deps import requiere_permiso, usuario_actual
+from app.security.deps import (
+    permiso,
+    usuario_actual,
+)
 
 # F1.1 (ADR-0008 S1): GET /api/configuracion no exigía ningún tipo de
 # autenticación; ahora todo el router exige, como mínimo, JWT válido.
@@ -31,7 +34,7 @@ async def listar():
 async def guardar(
     clave: str,
     datos: ConfigIn,
-    _: object = Depends(requiere_permiso("admin.configuracion.editar")),
+    _: object = permiso("admin.configuracion.editar"),
 ):
     """Crea o actualiza un parámetro de configuración global."""
     config = await Configuracion.find_one(
@@ -58,7 +61,7 @@ async def guardar(
 @router.delete("/{clave}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar(
     clave: str,
-    _: object = Depends(requiere_permiso("admin.configuracion.editar")),
+    _: object = permiso("admin.configuracion.editar"),
 ) -> None:
     """Elimina un parámetro de configuración."""
     config = await Configuracion.find_one(Configuracion.clave == clave)

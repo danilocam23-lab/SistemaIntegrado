@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from app.documents.squad import Squad
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/squads", tags=["squads"])
 
@@ -40,7 +40,7 @@ async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(requiere_permiso("squads.editar"))],
+    dependencies=[permiso("squads.editar")],
 )
 async def crear(datos: SquadIn, ctx: ContextoAplicacion = Depends(contexto_escritura)):
     squad = Squad(aplicacion_id=ctx.codigo, **datos.model_dump())
@@ -50,7 +50,7 @@ async def crear(datos: SquadIn, ctx: ContextoAplicacion = Depends(contexto_escri
 
 @router.put(
     "/{squad_id}",
-    dependencies=[Depends(requiere_permiso("squads.editar"))],
+    dependencies=[permiso("squads.editar")],
 )
 async def actualizar(
     squad_id: str, datos: SquadIn, ctx: ContextoAplicacion = Depends(contexto_escritura)
@@ -68,7 +68,7 @@ async def actualizar(
 @router.delete(
     "/{squad_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(requiere_permiso("squads.editar"))],
+    dependencies=[permiso("squads.editar")],
 )
 async def eliminar(
     squad_id: str, ctx: ContextoAplicacion = Depends(contexto_escritura)

@@ -18,7 +18,11 @@ from app.documents.persona import Persona
 from app.documents.squad import Squad
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import es_superadmin, requiere_permiso, usuario_actual
+from app.security.deps import (
+    es_superadmin,
+    permiso,
+    usuario_actual,
+)
 from app.security.rbac import PERM_ADMIN_ACCESO
 
 router = APIRouter(prefix="/personas", tags=["personas"])
@@ -104,7 +108,7 @@ async def obtener_tipos_contratacion():
 
 
 # ── GET /duplicados ────────────────────────────────────────────────────────────
-@router.get("/duplicados", dependencies=[Depends(requiere_permiso(PERM_ADMIN_ACCESO))])
+@router.get("/duplicados", dependencies=[permiso(PERM_ADMIN_ACCESO)])
 async def listar_duplicados(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> list[dict]:
     """Devuelve grupos de personas duplicadas (mismo nombre + rol_operativo) en todas las apps accesibles."""
     # Siempre busca en TODAS las apps del tenant para no perderse duplicados cross-app
@@ -250,7 +254,7 @@ async def _fusionar_personas(
 async def deduplicar_personas(
     body: DeduplicarIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    usuario: Usuario = Depends(requiere_permiso(PERM_ADMIN_ACCESO)),
+    usuario: Usuario = permiso(PERM_ADMIN_ACCESO),
 ) -> dict:
     """Fusiona personas duplicadas según una lista explícita de fusiones.
 
@@ -285,7 +289,7 @@ async def deduplicar_personas(
         return await _fusionar_personas(body.fusiones, usuario.email, session=None)
 
 
-@router.get("", dependencies=[Depends(requiere_permiso("personas.ver"))])
+@router.get("", dependencies=[permiso("personas.ver")])
 async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     if ctx.modo_consolidado:
         return await Persona.find({"aplicacion_id": {"$in": ctx.codigos}}).sort("nombre").to_list()
@@ -314,7 +318,7 @@ def _persona_visible(persona: Persona, ctx: ContextoAplicacion) -> bool:
     return False
 
 
-@router.get("/{persona_id}", dependencies=[Depends(requiere_permiso("personas.ver"))])
+@router.get("/{persona_id}", dependencies=[permiso("personas.ver")])
 async def obtener(persona_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     persona = await Persona.get(persona_id)
     if persona is None or not _persona_visible(persona, ctx):
@@ -343,7 +347,7 @@ async def crear(
     datos: PersonaIn,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     usuario: Usuario = Depends(usuario_actual),
-    _: Usuario = Depends(requiere_permiso("personas.crear")),
+    _: Usuario = permiso("personas.crear"),
 ):
     app_id = await _resolver_app_id(datos, ctx, usuario)
     data = datos.model_dump(exclude={"aplicacion_id"})
@@ -359,7 +363,7 @@ async def actualizar(
     persona_id: str,
     datos: PersonaIn,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: Usuario = Depends(requiere_permiso("personas.editar")),
+    _: Usuario = permiso("personas.editar"),
 ):
     persona = await Persona.get(persona_id)
     if persona is None or not _persona_visible(persona, ctx):
@@ -389,7 +393,7 @@ async def actualizar(
 async def eliminar(
     persona_id: str,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: Usuario = Depends(requiere_permiso("personas.eliminar")),
+    _: Usuario = permiso("personas.eliminar"),
 ) -> None:
     from app.documents.requerimiento import Requerimiento
 

@@ -8,7 +8,7 @@ from pymongo import UpdateOne
 from app.documents.base import ahora
 from app.documents.control_horas import ControlHoras
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/control-horas", tags=["control-horas"])
 
@@ -57,7 +57,7 @@ def _aplicar(doc: ControlHoras, datos: ControlHorasIn) -> None:
             setattr(doc, c, getattr(datos, c))
 
 
-@router.get("", dependencies=[Depends(requiere_permiso("control_horas_facturable.ver"))])
+@router.get("", dependencies=[permiso("control_horas_facturable.ver")])
 async def listar(
     anio: int = Query(0),
     mes: int = Query(0),
@@ -76,7 +76,7 @@ async def listar(
 
 @router.put(
     "/registro",
-    dependencies=[Depends(requiere_permiso("control_horas_facturable.editar"))],
+    dependencies=[permiso("control_horas_facturable.editar")],
 )
 async def guardar_uno(
     datos: ControlHorasIn,
@@ -108,7 +108,7 @@ async def guardar_uno(
 
 @router.put(
     "/todos",
-    dependencies=[Depends(requiere_permiso("control_horas_facturable.editar"))],
+    dependencies=[permiso("control_horas_facturable.editar")],
 )
 async def guardar_todos(
     datos: ControlHorasBulkIn,

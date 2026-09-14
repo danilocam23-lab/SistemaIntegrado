@@ -1,6 +1,9 @@
 """Dependencias FastAPI de autenticación y autorización."""
+from typing import Any
+
 from beanie import PydanticObjectId
-from fastapi import Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.documents.enums import RolUsuario
@@ -101,11 +104,93 @@ def requiere_rol(*roles: RolUsuario):
 
 
 def requiere_permiso(permiso: str):
-    """Dependencia que exige un permiso concreto."""
+    """Dependencia que exige un permiso concreto.
+
+    Marca la clausura devuelta con ``.permiso_requerido`` (F4.2, ADR-0008): es lo
+    que permite que ``sincronizar_permisos_openapi`` publique el permiso de cada
+    ruta en su propio contrato OpenAPI sin que nadie tenga que repetirlo a mano.
+    """
 
     async def _dep(usuario: Usuario = Depends(usuario_actual)) -> Usuario:
         if not await tiene_permiso(usuario, permiso):
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"Falta el permiso: {permiso}")
         return usuario
 
+    _dep.permiso_requerido = permiso  # type: ignore[attr-defined]
     return _dep
+
+
+def permiso(nombre: str) -> Any:
+    """Azúcar sobre ``Depends(requiere_permiso(nombre))`` (F4.2, ADR-0008).
+
+    Funcionalmente es exactamente lo mismo (mismo objeto ``Depends``), pero dejar
+    ``permiso("requerimientos.editar")`` en la firma o en ``dependencies=[...]``
+    de la ruta lee mejor como "esto exige este permiso" que repetir
+    ``Depends(requiere_permiso(...))`` en cada endpoint. El dato en sí —qué
+    permiso exige la ruta— no depende de usar este helper: cualquier
+    ``Depends(requiere_permiso(...))``, se llame como se llame, queda marcado
+    igual y ``sincronizar_permisos_openapi`` lo detecta recorriendo el árbol de
+    dependencias real de la ruta.
+    """
+    return Depends(requiere_permiso(nombre))
+
+
+def _permisos_de_dependant(dependant: Any) -> list[str]:
+    """Recorre el árbol de dependencias de una ruta y devuelve los permisos RBAC
+    que exige, en el orden en que aparecen. Detecta tanto
+    ``Depends(requiere_permiso(...))``/``permiso(...)`` puestos como parámetro de
+    la función como los declarados en ``dependencies=[...]`` del decorador: en
+    ambos casos FastAPI los deja en el mismo árbol ``Dependant.dependencies``.
+    """
+    encontrados: list[str] = []
+    vistos: set[int] = set()
+    pendientes = [dependant]
+    while pendientes:
+        actual = pendientes.pop()
+        if actual is None or id(actual) in vistos:
+            continue
+        vistos.add(id(actual))
+        marcado = getattr(actual.call, "permiso_requerido", None)
+        if marcado and marcado not in encontrados:
+            encontrados.append(marcado)
+        pendientes.extend(actual.dependencies)
+    return encontrados
+
+
+def permiso_de_ruta(route: APIRoute) -> str | None:
+    """Permiso RBAC que exige una ``APIRoute`` ya construida, o ``None`` si no
+    exige ninguno. Es la fuente de verdad que consume tanto
+    ``sincronizar_permisos_openapi`` (F4.2) como el catálogo de
+    ``GET /api/admin/endpoints/catalogo`` (F4.1): si una ruta combina más de un
+    permiso (patrón OR comprobado a mano en el cuerpo, ver
+    ``actualizar_detalle_ans_req``), se devuelve el primero declarado por
+    ``Depends``; esos casos puntuales no pasan por aquí.
+    """
+    dependant = getattr(route, "dependant", None)
+    if dependant is None:
+        return None
+    permisos = _permisos_de_dependant(dependant)
+    return permisos[0] if permisos else None
+
+
+def sincronizar_permisos_openapi(router: APIRouter) -> None:
+    """Publica en el contrato OpenAPI (``x-permiso``) el permiso que cada ruta ya
+    exige en tiempo de ejecución (F4.2, ADR-0008).
+
+    Se invoca una única vez, en ``app/api/router.py`` justo después de montar
+    ``api_router`` con todos sus sub-routers, y antes de que algo dispare la
+    primera generación del esquema (``FastAPI.openapi()`` la cachea en cuanto se
+    llama). No requiere migrar cada router al helper ``permiso()``: cualquier
+    ruta que dependa —directa o indirectamente— de ``requiere_permiso`` queda
+    detectada igual, porque la marca vive en la propia dependencia, no en cómo
+    se la invocó.
+    """
+    for route in router.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        permiso_ruta = permiso_de_ruta(route)
+        if permiso_ruta is None:
+            continue
+        extra = dict(route.openapi_extra or {})
+        extra["x-permiso"] = permiso_ruta
+        route.openapi_extra = extra

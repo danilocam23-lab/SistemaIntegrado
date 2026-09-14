@@ -10,7 +10,7 @@ from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
 from app.errors import ErrorIntegracion
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 from app.services.azdo_sync import sincronizar_iteracion
 from app.services.azure_devops import AzureDevOpsService
 
@@ -119,7 +119,7 @@ async def _crear_servicio_desde_config(cfg: AzdoConfig) -> AzureDevOpsService:
 
 # ── Endpoints de configuración ──
 
-@router.get("/config", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
+@router.get("/config", dependencies=[permiso("azure_devops.ver")])
 async def obtener_config(
     target: str = "hitss",
     squad_id: str | None = None,
@@ -154,7 +154,7 @@ async def obtener_config(
     }
 
 
-@router.get("/config/all", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
+@router.get("/config/all", dependencies=[permiso("azure_devops.ver")])
 async def listar_configs(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     """Lista todas las configuraciones AzDO de la aplicación (app, squads, users)."""
     configs = await AzdoConfig.find(
@@ -180,7 +180,7 @@ async def listar_configs(ctx: ContextoAplicacion = Depends(contexto_aplicacion))
 async def guardar_config(
     datos: AzdoConfigIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: object = Depends(requiere_permiso("azure_devops.editar")),
+    _: object = permiso("azure_devops.editar"),
 ):
     """Guarda la config AzDO para HITSS o EPM según ``target``."""
     target = _normalizar_target(datos.target)
@@ -230,7 +230,7 @@ async def eliminar_config(
     squad_id: str | None = None,
     usuario_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: object = Depends(requiere_permiso("azure_devops.editar")),
+    _: object = permiso("azure_devops.editar"),
 ):
     """Elimina una config de squad o usuario (no permite eliminar la de app)."""
     if not squad_id and not usuario_id:
@@ -253,7 +253,7 @@ async def eliminar_config(
 
 # ── Test de conexión ──
 
-@router.get("/test", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
+@router.get("/test", dependencies=[permiso("azure_devops.ver")])
 async def test_conexion(
     target: str = "hitss",
     squad_id: str | None = None,
@@ -276,7 +276,7 @@ async def campos_requeridos(
     squad_id: str | None = None,
     usuario_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: object = Depends(requiere_permiso("azure_devops.editar")),
+    _: object = permiso("azure_devops.editar"),
 ) -> dict[str, list[dict]]:
     """Descubre los campos requeridos para Feature, User Story/PBI y Task.
 
@@ -402,7 +402,7 @@ async def campos_requeridos(
 
 # ── Proyectos e iteraciones ──
 
-@router.get("/proyectos", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
+@router.get("/proyectos", dependencies=[permiso("azure_devops.ver")])
 async def proyectos(
     target: str = "hitss",
     squad_id: str | None = None,
@@ -423,7 +423,7 @@ async def proyectos(
         raise ErrorIntegracion("No se pudo obtener los proyectos de Azure DevOps.") from exc
 
 
-@router.get("/iteraciones", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
+@router.get("/iteraciones", dependencies=[permiso("azure_devops.ver")])
 async def iteraciones(
     proyecto: str,
     target: str = "hitss",
@@ -443,12 +443,12 @@ async def iteraciones(
 
 # ── Work items y sync ──
 
-@router.get("/work-items", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
+@router.get("/work-items", dependencies=[permiso("azure_devops.ver")])
 async def listar_work_items(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return await AzdoWorkItem.find(ctx.filtro()).to_list()
 
 
-@router.get("/sync-log", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
+@router.get("/sync-log", dependencies=[permiso("azure_devops.ver")])
 async def listar_sync_log(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return await AzdoSyncLog.find(ctx.filtro()).sort("-iniciado_en").to_list()
 
@@ -457,7 +457,7 @@ async def listar_sync_log(ctx: ContextoAplicacion = Depends(contexto_aplicacion)
 async def sincronizar(
     datos: SyncIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: object = Depends(requiere_permiso("azure_devops.editar")),
+    _: object = permiso("azure_devops.editar"),
 ) -> dict:
     """Sincroniza los work items de una iteración de Azure DevOps.
 

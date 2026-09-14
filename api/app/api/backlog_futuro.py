@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from app.documents.backlog_futuro import BacklogFuturo
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/backlog-futuro", tags=["backlog_futuro"])
 
@@ -22,7 +22,7 @@ class BacklogFuturoIn(BaseModel):
     responsable_id: str | None = None
 
 
-@router.get("", dependencies=[Depends(requiere_permiso("backlog_futuro.ver"))])
+@router.get("", dependencies=[permiso("backlog_futuro.ver")])
 async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     consulta = ctx.filtro()
     return await BacklogFuturo.find(consulta).sort("-creado_en").to_list()
@@ -32,7 +32,7 @@ async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
 async def crear(
     datos: BacklogFuturoIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("backlog_futuro.editar")),
+    _: Usuario = permiso("backlog_futuro.editar"),
 ):
     item = BacklogFuturo(aplicacion_id=ctx.codigo, **datos.model_dump())
     await item.insert()
@@ -44,7 +44,7 @@ async def actualizar(
     item_id: str,
     datos: BacklogFuturoIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("backlog_futuro.editar")),
+    _: Usuario = permiso("backlog_futuro.editar"),
 ):
     item = await BacklogFuturo.get(item_id)
     if item is None or item.aplicacion_id != ctx.codigo:
@@ -60,7 +60,7 @@ async def actualizar(
 async def eliminar(
     item_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("backlog_futuro.editar")),
+    _: Usuario = permiso("backlog_futuro.editar"),
 ) -> None:
     item = await BacklogFuturo.get(item_id)
     if item is None or item.aplicacion_id != ctx.codigo:

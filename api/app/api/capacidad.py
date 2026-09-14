@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from app.documents.capacidad import Capacidad
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/capacidades", tags=["capacidad"])
 
@@ -20,7 +20,7 @@ class CapacidadIn(BaseModel):
     notas: str | None = None
 
 
-@router.get("", dependencies=[Depends(requiere_permiso("capacidades.ver"))])
+@router.get("", dependencies=[permiso("capacidades.ver")])
 async def listar(
     mes: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
@@ -35,7 +35,7 @@ async def listar(
 async def crear(
     datos: CapacidadIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("capacidades.editar")),
+    _: Usuario = permiso("capacidades.editar"),
 ):
     capacidad = Capacidad(aplicacion_id=ctx.codigo, **datos.model_dump())
     await capacidad.insert()
@@ -47,7 +47,7 @@ async def actualizar(
     capacidad_id: str,
     datos: CapacidadIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("capacidades.editar")),
+    _: Usuario = permiso("capacidades.editar"),
 ):
     capacidad = await Capacidad.get(capacidad_id)
     if capacidad is None or capacidad.aplicacion_id != ctx.codigo:
@@ -63,7 +63,7 @@ async def actualizar(
 async def eliminar(
     capacidad_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = Depends(requiere_permiso("capacidades.editar")),
+    _: Usuario = permiso("capacidades.editar"),
 ) -> None:
     capacidad = await Capacidad.get(capacidad_id)
     if capacidad is None or capacidad.aplicacion_id != ctx.codigo:

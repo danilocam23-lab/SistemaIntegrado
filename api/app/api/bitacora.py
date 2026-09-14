@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.documents.bitacora import Bitacora
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/bitacora", tags=["bitacora"])
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ async def listar(
 @router.delete(
     "/{evento_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(requiere_permiso("admin.roles.editar"))],
+    dependencies=[permiso("admin.roles.editar")],
 )
 async def eliminar(
     evento_id: PydanticObjectId,

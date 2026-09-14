@@ -1,5 +1,5 @@
 """Router de gestión de usuarios."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.documents.rol import Rol
 from app.documents.usuario import Usuario
@@ -8,8 +8,8 @@ from app.schemas.usuario import CambioPasswordIn, UsuarioIn, UsuarioUpdate
 from app.security.deps import (
     es_admin_app,
     es_superadmin,
+    permiso,
     permisos_usuario,
-    requiere_permiso,
     rol_actual,
 )
 from app.security.hashing import hash_password
@@ -35,7 +35,7 @@ async def _out(u: Usuario) -> UsuarioOut:
 
 
 @router.get("", response_model=list[UsuarioOut])
-async def listar(me: Usuario = Depends(requiere_permiso("admin.usuarios.ver"))) -> list[UsuarioOut]:
+async def listar(me: Usuario = permiso("admin.usuarios.ver")) -> list[UsuarioOut]:
     todos = await Usuario.find_all().to_list()
     if not await es_superadmin(me) and not (await es_admin_app(me) and len(me.aplicaciones_codigos) == 0):
         mis_apps = set(me.aplicaciones_codigos)
@@ -63,7 +63,7 @@ async def _resolver_rol_obj(rol_id: str | None, rol_clave: str | None) -> Rol:
 @router.post("", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
 async def crear(
     datos: UsuarioIn,
-    me: Usuario = Depends(requiere_permiso("admin.usuarios.crear")),
+    me: Usuario = permiso("admin.usuarios.crear"),
 ) -> UsuarioOut:
     """Crea una cuenta de usuario."""
     rol_obj = await _resolver_rol_obj(datos.rol_id, datos.rol)
@@ -88,7 +88,7 @@ async def crear(
 async def editar(
     usuario_id: str,
     datos: UsuarioUpdate,
-    me: Usuario = Depends(requiere_permiso("admin.usuarios.editar")),
+    me: Usuario = permiso("admin.usuarios.editar"),
 ) -> UsuarioOut:
     """Edita un usuario; al cambiar el rol se recalculan sus permisos."""
     usuario = await Usuario.get(usuario_id)
@@ -116,7 +116,7 @@ async def editar(
 async def cambiar_password(
     usuario_id: str,
     datos: CambioPasswordIn,
-    _: Usuario = Depends(requiere_permiso("admin.usuarios.editar")),
+    _: Usuario = permiso("admin.usuarios.editar"),
 ) -> None:
     """Restablece la contraseña de un usuario."""
     usuario = await Usuario.get(usuario_id)
@@ -130,7 +130,7 @@ async def cambiar_password(
 @router.delete("/{usuario_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar(
     usuario_id: str,
-    me: Usuario = Depends(requiere_permiso("admin.usuarios.editar")),
+    me: Usuario = permiso("admin.usuarios.editar"),
 ) -> None:
     """Elimina definitivamente el registro de acceso de un usuario."""
     usuario = await Usuario.get(usuario_id)

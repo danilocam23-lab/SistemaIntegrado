@@ -12,7 +12,7 @@ from app.documents.categoria import Categoria
 from app.documents.persona import Persona
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -30,7 +30,7 @@ async def _conteos_por_aplicacion(modelo: type[Document], codigos: list[str]) ->
 
 @router.get("/consolidado")
 async def consolidado(
-    _: Usuario = Depends(requiere_permiso("consolidado.ver")),
+    _: Usuario = permiso("consolidado.ver"),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     """Cifras agregadas por aplicación para el dashboard unificado.

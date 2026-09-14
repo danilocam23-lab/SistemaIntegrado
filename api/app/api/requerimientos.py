@@ -20,7 +20,11 @@ from app.schemas.requerimiento import (
     RequerimientoUpdate,
     TransicionIn,
 )
-from app.security.deps import requiere_permiso, tiene_permiso, usuario_actual
+from app.security.deps import (
+    permiso,
+    tiene_permiso,
+    usuario_actual,
+)
 from app.services.ans import ANSService
 from app.services.liquidacion import LiquidacionService
 
@@ -156,7 +160,7 @@ async def _buscar(ctx: ContextoAplicacion, codigo_req: str) -> Requerimiento:
     return req
 
 
-@router.get("", dependencies=[Depends(requiere_permiso("requerimientos.ver"))])
+@router.get("", dependencies=[permiso("requerimientos.ver")])
 async def listar(
     estado: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
@@ -184,7 +188,7 @@ async def calcular_ans(
     return {"resultado": resultado.value}
 
 
-@router.get("/{codigo_req}", dependencies=[Depends(requiere_permiso("requerimientos.ver"))])
+@router.get("/{codigo_req}", dependencies=[permiso("requerimientos.ver")])
 async def obtener(codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return await _buscar(ctx, codigo_req)
 
@@ -192,7 +196,7 @@ async def obtener(codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_ap
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(requiere_permiso("requerimientos.crear"))],
+    dependencies=[permiso("requerimientos.crear")],
 )
 async def crear(
     datos: RequerimientoIn,
@@ -263,7 +267,7 @@ async def crear(
 
 @router.put(
     "/{codigo_req}",
-    dependencies=[Depends(requiere_permiso("requerimientos.editar"))],
+    dependencies=[permiso("requerimientos.editar")],
 )
 async def actualizar(
     codigo_req: str,
@@ -359,7 +363,7 @@ async def actualizar(
 
 @router.post(
     "/{codigo_req}/transicion",
-    dependencies=[Depends(requiere_permiso("requerimientos.editar"))],
+    dependencies=[permiso("requerimientos.editar")],
 )
 async def transicion(
     codigo_req: str,
@@ -387,7 +391,7 @@ async def transicion(
 
 @router.post(
     "/{codigo_req}/entregas",
-    dependencies=[Depends(requiere_permiso("requerimientos.editar"))],
+    dependencies=[permiso("requerimientos.editar")],
 )
 async def guardar_entrega(
     codigo_req: str,
@@ -459,7 +463,7 @@ async def guardar_entrega(
 
 @router.delete(
     "/{codigo_req}/entregas/{numero}",
-    dependencies=[Depends(requiere_permiso("requerimientos.editar"))],
+    dependencies=[permiso("requerimientos.editar")],
 )
 async def eliminar_entrega(
     codigo_req: str,
@@ -493,7 +497,7 @@ async def eliminar_entrega(
 
 @router.get(
     "/{codigo_req}/liquidacion",
-    dependencies=[Depends(requiere_permiso("requerimientos.ver"))],
+    dependencies=[permiso("requerimientos.ver")],
 )
 async def liquidacion(
     codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
@@ -515,7 +519,7 @@ async def liquidacion(
 
 @router.get(
     "/{codigo_req}/historial-estados",
-    dependencies=[Depends(requiere_permiso("requerimientos.ver"))],
+    dependencies=[permiso("requerimientos.ver")],
 )
 async def historial_estados(
     codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
@@ -529,7 +533,7 @@ async def historial_estados(
 
 @router.get(
     "/{codigo_req}/entregas/{numero}/historial-estados",
-    dependencies=[Depends(requiere_permiso("requerimientos.ver"))],
+    dependencies=[permiso("requerimientos.ver")],
 )
 async def historial_estados_entrega(
     codigo_req: str, numero: int, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
@@ -549,7 +553,7 @@ async def historial_estados_entrega(
 @router.delete(
     "/{codigo_req}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(requiere_permiso("requerimientos.eliminar"))],
+    dependencies=[permiso("requerimientos.eliminar")],
 )
 async def eliminar(
     codigo_req: str,

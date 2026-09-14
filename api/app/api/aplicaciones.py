@@ -10,8 +10,8 @@ from app.schemas.auth import UsuarioOut
 from app.security.deps import (
     es_admin_app,
     es_superadmin,
+    permiso,
     permisos_usuario,
-    requiere_permiso,
     rol_actual,
     usuario_actual,
 )
@@ -61,7 +61,7 @@ async def listar(usuario: Usuario = Depends(usuario_actual)) -> list[AplicacionO
 @router.post("", response_model=AplicacionOut, status_code=status.HTTP_201_CREATED)
 async def crear(
     datos: AplicacionIn,
-    usuario: Usuario = Depends(requiere_permiso("aplicaciones.crear")),
+    usuario: Usuario = permiso("aplicaciones.crear"),
 ) -> AplicacionOut:
     """Crea una aplicación nueva y provisiona su estructura base."""
     codigo = datos.codigo.strip().lower()
@@ -83,7 +83,7 @@ async def crear(
 async def editar(
     codigo: str,
     datos: AplicacionUpdate,
-    _: Usuario = Depends(requiere_permiso("aplicaciones.editar")),
+    _: Usuario = permiso("aplicaciones.editar"),
 ) -> AplicacionOut:
     """Edita el nombre o la descripción de un squad."""
     app = await Aplicacion.find_one(Aplicacion.codigo == codigo)
@@ -102,7 +102,7 @@ async def editar(
 async def cambiar_estado(
     codigo: str,
     datos: EstadoIn,
-    _: Usuario = Depends(requiere_permiso("aplicaciones.editar")),
+    _: Usuario = permiso("aplicaciones.editar"),
 ) -> AplicacionOut:
     """Activa o desactiva un squad (sin borrar sus datos)."""
     app = await Aplicacion.find_one(Aplicacion.codigo == codigo)
@@ -117,7 +117,7 @@ async def cambiar_estado(
 @router.get("/{codigo}/usuarios", response_model=list[UsuarioOut])
 async def usuarios_de_aplicacion(
     codigo: str,
-    _: Usuario = Depends(requiere_permiso("admin.usuarios.ver")),
+    _: Usuario = permiso("admin.usuarios.ver"),
 ) -> list[UsuarioOut]:
     """Lista los usuarios asignados a un squad."""
     usuarios = await Usuario.find(In(Usuario.aplicaciones_codigos, [codigo])).to_list()
@@ -128,7 +128,7 @@ async def usuarios_de_aplicacion(
 async def asignar_usuario(
     codigo: str,
     usuario_id: str,
-    _: Usuario = Depends(requiere_permiso("admin.usuarios.editar")),
+    _: Usuario = permiso("admin.usuarios.editar"),
 ) -> UsuarioOut:
     """Asigna un usuario existente a un squad."""
     if await Aplicacion.find_one(Aplicacion.codigo == codigo) is None:
@@ -147,7 +147,7 @@ async def asignar_usuario(
 async def quitar_usuario(
     codigo: str,
     usuario_id: str,
-    _: Usuario = Depends(requiere_permiso("admin.usuarios.editar")),
+    _: Usuario = permiso("admin.usuarios.editar"),
 ) -> UsuarioOut:
     """Quita la asignación de un usuario a un squad."""
     usuario = await Usuario.get(usuario_id)

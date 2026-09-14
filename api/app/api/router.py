@@ -31,6 +31,48 @@ from app.api import (
     tarifas,
     usuarios,
 )
+from app.security.deps import sincronizar_permisos_openapi
+
+_SUBROUTERS = (
+    auth.router,
+    aplicaciones.router,
+    usuarios.router,
+    roles.router,
+    endpoints_admin.router,
+    dashboard.router,
+    requerimientos.router,
+    tarifas.router,
+    festivos.router,
+    actas.router,
+    personas.router,
+    squads.router,
+    categorias.router,
+    asignaciones.router,
+    capacidad.router,
+    plan_accion.router,
+    backlog_futuro.router,
+    estimaciones.router,
+    configuracion.router,
+    azdo.router,
+    importacion.router,
+    soporte.router,
+    garantias_wo.router,
+    control_horas.router,
+    bitacora.router,
+    reportes.router,
+    cifras.router,
+    integracion.router,
+)
+
+# F4.2 (ADR-0008): publica en el OpenAPI de cada ruta el permiso que ya exige en
+# tiempo de ejecución. Se hace sobre cada sub-router ANTES de `include_router`
+# porque, desde FastAPI >= 0.140, `include_router` no copia las `APIRoute`: las
+# envuelve en un `_IncludedRouter` perezoso y solo expone el objeto original en
+# el momento de generar el esquema. Iterar `api_router.routes` después de
+# incluirlos no encuentra ninguna `APIRoute` (verificado); hay que marcar el
+# permiso directamente sobre el router original de cada módulo.
+for _router in _SUBROUTERS:
+    sincronizar_permisos_openapi(_router)
 
 api_router = APIRouter(prefix="/api")
 # Plataforma y seguridad
@@ -71,5 +113,3 @@ api_router.include_router(integracion.router)
 @api_router.get("/health", tags=["health"])
 async def health() -> dict:
     return {"status": "ok"}
-
-# reload trigger

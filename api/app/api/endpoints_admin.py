@@ -1,10 +1,10 @@
 """Router de administración de endpoints — catálogo editable de rutas documentadas."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.documents.endpoint_admin import EndpointAdmin
 from app.documents.usuario import Usuario
 from app.schemas.endpoint_admin import EndpointAdminIn, EndpointAdminOut, EndpointAdminUpdate
-from app.security.deps import requiere_permiso
+from app.security.deps import permiso
 
 router = APIRouter(prefix="/admin/endpoints", tags=["admin-endpoints"])
 
@@ -34,7 +34,7 @@ def _validar_metodo(metodo: str) -> str:
 
 @router.get("", response_model=list[EndpointAdminOut])
 async def listar(
-    _: Usuario = Depends(requiere_permiso("admin.endpoints.ver")),
+    _: Usuario = permiso("admin.endpoints.ver"),
 ) -> list[EndpointAdminOut]:
     endpoints = await EndpointAdmin.find_all().sort("modulo", "ruta").to_list()
     return [_out(e) for e in endpoints]
@@ -43,7 +43,7 @@ async def listar(
 @router.post("", response_model=EndpointAdminOut, status_code=status.HTTP_201_CREATED)
 async def crear(
     datos: EndpointAdminIn,
-    _: Usuario = Depends(requiere_permiso("admin.endpoints.crear")),
+    _: Usuario = permiso("admin.endpoints.crear"),
 ) -> EndpointAdminOut:
     modulo = datos.modulo.strip()
     ruta = datos.ruta.strip()
@@ -68,7 +68,7 @@ async def crear(
 async def actualizar(
     endpoint_id: str,
     datos: EndpointAdminUpdate,
-    _: Usuario = Depends(requiere_permiso("admin.endpoints.editar")),
+    _: Usuario = permiso("admin.endpoints.editar"),
 ) -> EndpointAdminOut:
     endpoint = await EndpointAdmin.get(endpoint_id)
     if endpoint is None:
@@ -97,7 +97,7 @@ async def actualizar(
 @router.delete("/{endpoint_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar(
     endpoint_id: str,
-    _: Usuario = Depends(requiere_permiso("admin.endpoints.eliminar")),
+    _: Usuario = permiso("admin.endpoints.eliminar"),
 ) -> None:
     endpoint = await EndpointAdmin.get(endpoint_id)
     if endpoint is None:

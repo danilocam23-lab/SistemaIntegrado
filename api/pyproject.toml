@@ -51,6 +51,7 @@ extend-immutable-calls = [
   "fastapi.Body",
   "fastapi.Path",
   "app.security.deps.requiere_permiso",
+  "app.security.deps.permiso",
 ]
 
 [tool.ruff.lint.per-file-ignores]

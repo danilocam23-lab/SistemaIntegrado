@@ -8,7 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.documents.festivo import Festivo
-from app.security.deps import requiere_permiso, usuario_actual
+from app.security.deps import (
+    permiso,
+    usuario_actual,
+)
 
 # F1.1 (ADR-0008 S1): el router entero exigía cero autenticación; ahora toda
 # operación requiere JWT válido, y las de escritura además el permiso de
@@ -33,7 +36,7 @@ async def listar():
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(requiere_permiso("admin.configuracion.editar"))],
+    dependencies=[permiso("admin.configuracion.editar")],
 )
 async def crear(datos: FestivoIn):
     festivo = Festivo(aplicacion_id=_APP_GLOBAL, **datos.model_dump())
@@ -44,7 +47,7 @@ async def crear(datos: FestivoIn):
 @router.delete(
     "/{festivo_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(requiere_permiso("admin.configuracion.editar"))],
+    dependencies=[permiso("admin.configuracion.editar")],
 )
 async def eliminar(festivo_id: str) -> None:
     festivo = await Festivo.get(festivo_id)
