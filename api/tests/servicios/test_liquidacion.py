@@ -1,10 +1,10 @@
-"""Tests de ``LiquidacionService`` (ADR-0008 F2.2), incluida la regresión C2.
+"""Tests de ``LiquidacionService`` (ADR-0008 F2.2/F3.6), incluida la regresión C2.
 
-Cada test usa un año de tarifa distinto (2101, 2102, ...) a propósito: C2
-documenta que ``_tarifa_vigente`` no filtra por ``aplicacion_id`` (busca
-``Tarifa.anio == anio`` en toda la base), así que dos tests que compartieran
-año podrían "verse" la tarifa del otro. Usar años que ningún otro test toca
-aísla estos tests del bug sin necesidad de limpiar la colección entre tests.
+``_tarifa_vigente`` filtra por ``aplicacion_id`` (más el catálogo "global"), así
+que cada aplicación creada con ``fabrica_aplicacion`` está aislada de las demás
+sin necesidad de limpiar la colección entre tests. Se mantienen años distintos
+por test (2101, 2102, ...) solo para que las aserciones sean fáciles de leer,
+no como mecanismo de aislamiento.
 """
 from datetime import datetime
 from decimal import Decimal
@@ -71,19 +71,8 @@ async def test_sin_tarifa_para_el_anio_ni_ninguna_otra_lanza_value_error():
         await LiquidacionService._tarifa_vigente("app-sin-tarifas", None, datetime(2103, 1, 1))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "ADR-0008 C2: _tarifa_vigente recibe aplicacion_id pero NO lo usa en la "
-        "consulta (Tarifa.find(Tarifa.anio == anio) es global, sin filtro de "
-        "aplicacion_id): una aplicación sin tarifa propia para el año puede terminar "
-        "facturando con la tarifa de OTRA aplicación en vez de fallar. Además, con más "
-        "de una candidata del mismo año, 'candidatas[0]' no tiene orden determinista. "
-        "Pendiente de corregir en F3.6 (filtrar por aplicacion_id y desempatar con un "
-        "criterio explícito)."
-    ),
-)
-async def test_c2_tarifa_vigente_no_deberia_cruzar_aplicaciones(fabrica_aplicacion):
+async def test_c2_tarifa_vigente_no_cruza_aplicaciones(fabrica_aplicacion):
+    """Regresión ADR-0008 C2: corregido — ver `_tarifa_vigente` (filtro $in + orden)."""
     propietaria = await fabrica_aplicacion()
     otra = await fabrica_aplicacion()
     await Tarifa(aplicacion_id=propietaria.codigo, anio=2104, valor_hora=Decimal("100")).insert()

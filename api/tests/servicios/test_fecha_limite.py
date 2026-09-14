@@ -1,8 +1,6 @@
 """Tests de ``calcular_fecha_limite`` (ADR-0008 F2.2), incluida la regresión C1."""
 from datetime import datetime, time
 
-import pytest
-
 from app.documents.festivo import Festivo
 from app.services.fecha_limite import calcular_fecha_limite
 
@@ -58,19 +56,15 @@ async def test_la_fecha_limite_siempre_es_a_las_18_00(fabrica_aplicacion):
     assert limite.time() == time(18, 0)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "ADR-0008 C1: calcular_fecha_limite filtra Festivo.aplicacion_id == "
-        "aplicacion_id pero POST /api/festivos crea todos los festivos con "
-        "aplicacion_id='global', así que un festivo cargado desde la UI nunca se "
-        "descuenta y la fecha límite del acta sale más temprana de lo debido. "
-        "Pendiente de corregir en F3.6."
-    ),
-)
-async def test_c1_un_festivo_global_tambien_deberia_descontarse(fabrica_aplicacion):
+async def test_c1_un_festivo_global_tambien_se_descuenta(fabrica_aplicacion):
+    """Regresión ADR-0008 C1: corregido — ver `calcular_fecha_limite` (filtro $in)."""
     app = await fabrica_aplicacion()
-    await Festivo(aplicacion_id="global", fecha=datetime(2025, 1, 7)).insert()
-    solicitud = datetime(2025, 1, 6, 10, 0)
-    limite = await calcular_fecha_limite(app.codigo, solicitud, 10)
-    assert limite == datetime(2025, 1, 10, 18, 0)
+    # "global" es compartido entre TODOS los tests de la sesión (a diferencia de los
+    # festivos con app.codigo, único por `fabrica_aplicacion`): se borra al terminar.
+    festivo = await Festivo(aplicacion_id="global", fecha=datetime(2025, 1, 7)).insert()
+    try:
+        solicitud = datetime(2025, 1, 6, 10, 0)
+        limite = await calcular_fecha_limite(app.codigo, solicitud, 10)
+        assert limite == datetime(2025, 1, 10, 18, 0)
+    finally:
+        await festivo.delete()

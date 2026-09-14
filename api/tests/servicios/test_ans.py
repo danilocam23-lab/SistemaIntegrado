@@ -42,22 +42,16 @@ async def test_fecha_fin_anterior_a_inicio_lanza_value_error(fabrica_aplicacion)
         await ANSService.calcular(app.codigo, date(2025, 1, 10), date(2025, 1, 6), 3)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "ADR-0008 C1: ANSService.calcular filtra Festivo.aplicacion_id == aplicacion_id "
-        "pero POST /api/festivos crea todos los festivos con aplicacion_id='global' "
-        "(festivos.py), así que un festivo cargado desde la UI nunca se descuenta del "
-        "ANS. Pendiente de corregir en F3.6 (unificar el criterio a "
-        "{'$in': [aplicacion_id, 'global']}). Este test documenta el bug: hoy falla "
-        "porque el festivo global se ignora y el resultado sale NO_CUMPLE en vez de "
-        "CUMPLE."
-    ),
-)
-async def test_c1_un_festivo_global_tambien_deberia_descontarse(fabrica_aplicacion):
+async def test_c1_un_festivo_global_tambien_se_descuenta(fabrica_aplicacion):
+    """Regresión ADR-0008 C1: corregido — ver `ANSService.calcular` (filtro $in)."""
     app = await fabrica_aplicacion()
     # Igual que el test anterior pero con aplicacion_id="global" (como los crea
-    # POST /api/festivos hoy) en vez del código real de la aplicación.
-    await Festivo(aplicacion_id="global", fecha=datetime(2025, 1, 8)).insert()
-    resultado = await ANSService.calcular(app.codigo, date(2025, 1, 6), date(2025, 1, 10), 4)
-    assert resultado == AnsResultado.CUMPLE
+    # POST /api/festivos hoy) en vez del código real de la aplicación. Se borra al
+    # terminar porque "global" es compartido entre TODOS los tests de la sesión
+    # (a diferencia de los festivos con app.codigo, único por `fabrica_aplicacion`).
+    festivo = await Festivo(aplicacion_id="global", fecha=datetime(2025, 1, 8)).insert()
+    try:
+        resultado = await ANSService.calcular(app.codigo, date(2025, 1, 6), date(2025, 1, 10), 4)
+        assert resultado == AnsResultado.CUMPLE
+    finally:
+        await festivo.delete()

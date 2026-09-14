@@ -4,6 +4,12 @@ from datetime import date, datetime, time, timedelta
 from app.documents.enums import AnsResultado
 from app.documents.festivo import Festivo
 
+# Los festivos son un catálogo compartido: `POST /api/festivos` los crea todos con
+# aplicacion_id="global" (ver api/app/api/festivos.py), igual que tarifas/categorías/
+# configuración. Toda lectura de festivos debe acotarse a [aplicacion_id, "global"]
+# para no perder ni mezclar aplicaciones (ADR-0008 C1).
+_APP_GLOBAL = "global"
+
 
 class ANSService:
     """Determina si un trabajo cumple el ANS según los días hábiles transcurridos."""
@@ -21,7 +27,7 @@ class ANSService:
         inicio = datetime.combine(fecha_inicio, time.min)
         fin = datetime.combine(fecha_fin, time.max)
         docs = await Festivo.find(
-            Festivo.aplicacion_id == aplicacion_id,
+            {"aplicacion_id": {"$in": [aplicacion_id, _APP_GLOBAL]}},
             Festivo.fecha >= inicio,
             Festivo.fecha <= fin,
         ).to_list()
