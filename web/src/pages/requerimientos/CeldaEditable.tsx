@@ -27,6 +27,10 @@ export function crearRenderCelda(ctx: ContextoCeldaEditable) {
     displayValue: string,
     type?: 'select' | 'select-persona' | 'number',
     rolFiltro?: string | string[],
+    /** Clases opcionales para el `<span>` de solo-lectura (p. ej. look de chip en la
+     *  tarjeta de móvil). No afecta el control de edición ni ningún otro llamado que
+     *  no lo pase. */
+    claseSpan?: string,
   ): JSX.Element {
     if (ctx.isEditing(req.id, campo)) {
       if (type === 'select') {
@@ -59,7 +63,7 @@ export function crearRenderCelda(ctx: ContextoCeldaEditable) {
     }
     return (
       <span onDoubleClick={ctx.puedeEditar ? () => ctx.iniciarEdicionCelda(req, campo) : undefined}
-        className={`block w-full rounded px-1 py-0.5 ${ctx.puedeEditar ? 'cursor-pointer hover:bg-slate-100' : ''}`}
+        className={claseSpan ?? `block w-full rounded px-1 py-0.5 ${ctx.puedeEditar ? 'cursor-pointer hover:bg-slate-100' : ''}`}
         title={ctx.puedeEditar ? 'Doble clic para editar' : undefined}>
         {displayValue || '—'}
       </span>

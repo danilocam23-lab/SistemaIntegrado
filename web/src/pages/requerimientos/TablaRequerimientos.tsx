@@ -7,6 +7,7 @@ import type { crearRenderCelda } from './CeldaEditable'
 import { FilaRequerimiento } from './FilaRequerimiento'
 import { SubfilaEntregas } from './SubfilaEntregas'
 import { SubfilaEstimacionHU } from './SubfilaEstimacionHU'
+import { TarjetaRequerimiento } from './TarjetaRequerimiento'
 
 interface TablaRequerimientosProps {
   datosFiltrados: Requerimiento[]
@@ -49,106 +50,189 @@ export function TablaRequerimientos({
   puedeEditar, puedeEliminar, eliminar,
 }: TablaRequerimientosProps) {
   return (
-    <TablaScroll>
-      <table className="tabla">
-        <thead>
-          <tr>
-            <th className="w-8"></th>
-            {columnasActivas.has('codigoReq') && <th>Código REQ</th>}
-            {columnasActivas.has('sc') && <th>SC</th>}
-            {columnasActivas.has('squad') && <th>Squad</th>}
-            {columnasActivas.has('nombreActa') && <th>Nombre de acta</th>}
-            {columnasActivas.has('aplicacionEpm') && <th>Aplicación EPM</th>}
-            {columnasActivas.has('estado') && <th>Estado</th>}
-            {columnasActivas.has('ansEstimacion') && <th className="text-center">ANS Estimación</th>}
-            {columnasActivas.has('ltHitss') && <th>Líder técnico</th>}
-            {columnasActivas.has('scrum') && <th>Scrum</th>}
-            {columnasActivas.has('horas') && <th className="text-right">Horas</th>}
-            {columnasActivas.has('fechaSolicitud') && <th className="text-center">F. Solicitud</th>}
-            {columnasActivas.has('fechaLimite') && <th className="text-center">F. Límite</th>}
-            {columnasActivas.has('fechaReal') && <th className="text-center">F. Real</th>}
-            {columnasActivas.has('diasTranscurridos') && <th className="text-right">Días transcurridos</th>}
-            {columnasActivas.has('entregasCount') && <th className="text-center">Entregas</th>}
-            <th className="text-center">Est.</th>
-            {columnasExtra.map((c) => (
-              <th key={c.key} className="whitespace-nowrap">{c.label}</th>
-            ))}
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {datosFiltrados.map((req) => {
-            const isExpanded = expandedReqs.has(req.id)
-            const hasEst = estimacionIds.has(req.id)
-            const estCargada = estimacionesMap[req.id]
-            return (
-              <Fragment key={req.id}>{/* Fila principal del requerimiento */}
-                <FilaRequerimiento
-                  req={req}
-                  isExpanded={isExpanded}
-                  hasEst={hasEst}
-                  isLoadingEstimacion={loadingReqEst.has(req.id)}
-                  toggleExpandReq={toggleExpandReq}
-                  columnasActivas={columnasActivas}
-                  columnasExtra={columnasExtra}
-                  renderCelda={renderCelda}
-                  squadPorId={squadPorId}
-                  nombrePersona={nombrePersona}
-                  CAMPO_ACCESOR_REQ={CAMPO_ACCESOR_REQ}
-                  expandedEntregas={expandedEntregas}
-                  setExpandedEntregas={setExpandedEntregas}
-                  uploadingId={uploadingId}
-                  puedeGestionarEstimaciones={puedeGestionarEstimaciones}
-                  handleUploadClick={handleUploadClick}
-                  openEstimationModal={openEstimationModal}
-                  puedeEditar={puedeEditar}
-                  puedeEliminar={puedeEliminar}
-                  eliminar={eliminar}
-                />
+    <>
+      {/* Escritorio (>= md, mismo umbral que el colapso del Sidebar): tabla sin cambios */}
+      <div className="hidden md:block">
+        <TablaScroll>
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th className="w-8"></th>
+                {columnasActivas.has('codigoReq') && <th>Código REQ</th>}
+                {columnasActivas.has('sc') && <th>SC</th>}
+                {columnasActivas.has('squad') && <th>Squad</th>}
+                {columnasActivas.has('nombreActa') && <th>Nombre de acta</th>}
+                {columnasActivas.has('aplicacionEpm') && <th>Aplicación EPM</th>}
+                {columnasActivas.has('estado') && <th>Estado</th>}
+                {columnasActivas.has('ansEstimacion') && <th className="text-center">ANS Estimación</th>}
+                {columnasActivas.has('ltHitss') && <th>Líder técnico</th>}
+                {columnasActivas.has('scrum') && <th>Scrum</th>}
+                {columnasActivas.has('horas') && <th className="text-right">Horas</th>}
+                {columnasActivas.has('fechaSolicitud') && <th className="text-center">F. Solicitud</th>}
+                {columnasActivas.has('fechaLimite') && <th className="text-center">F. Límite</th>}
+                {columnasActivas.has('fechaReal') && <th className="text-center">F. Real</th>}
+                {columnasActivas.has('diasTranscurridos') && <th className="text-right">Días transcurridos</th>}
+                {columnasActivas.has('entregasCount') && <th className="text-center">Entregas</th>}
+                <th className="text-center">Est.</th>
+                {columnasExtra.map((c) => (
+                  <th key={c.key} className="whitespace-nowrap">{c.label}</th>
+                ))}
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {datosFiltrados.map((req) => {
+                const isExpanded = expandedReqs.has(req.id)
+                const hasEst = estimacionIds.has(req.id)
+                const estCargada = estimacionesMap[req.id]
+                return (
+                  <Fragment key={req.id}>{/* Fila principal del requerimiento */}
+                    <FilaRequerimiento
+                      req={req}
+                      isExpanded={isExpanded}
+                      hasEst={hasEst}
+                      isLoadingEstimacion={loadingReqEst.has(req.id)}
+                      toggleExpandReq={toggleExpandReq}
+                      columnasActivas={columnasActivas}
+                      columnasExtra={columnasExtra}
+                      renderCelda={renderCelda}
+                      squadPorId={squadPorId}
+                      nombrePersona={nombrePersona}
+                      CAMPO_ACCESOR_REQ={CAMPO_ACCESOR_REQ}
+                      expandedEntregas={expandedEntregas}
+                      setExpandedEntregas={setExpandedEntregas}
+                      uploadingId={uploadingId}
+                      puedeGestionarEstimaciones={puedeGestionarEstimaciones}
+                      handleUploadClick={handleUploadClick}
+                      openEstimationModal={openEstimationModal}
+                      puedeEditar={puedeEditar}
+                      puedeEliminar={puedeEliminar}
+                      eliminar={eliminar}
+                    />
 
-                {/* Sub-fila: detalle de entregas */}
-                <SubfilaEntregas
-                  reqId={req.id}
-                  entregas={req.entregas}
-                  expandido={expandedEntregas.has(req.id)}
-                  totalColumnasTabla={totalColumnasTabla}
-                />
+                    {/* Sub-fila: detalle de entregas */}
+                    <SubfilaEntregas
+                      reqId={req.id}
+                      entregas={req.entregas}
+                      expandido={expandedEntregas.has(req.id)}
+                      totalColumnasTabla={totalColumnasTabla}
+                    />
 
-                {/* Sub-filas: Historias de Usuario agrupadas + vacío */}
-                <SubfilaEstimacionHU
-                  reqId={req.id}
-                  isExpanded={isExpanded}
-                  estCargada={estCargada}
-                  isLoading={loadingReqEst.has(req.id)}
-                  totalColumnasTabla={totalColumnasTabla}
-                />
-              </Fragment>
-            )
-          })}
-          {datosFiltrados.length === 0 && (
-            <tr><td colSpan={totalColumnasTabla} className="p-4 text-center text-slate-400">
-              {hayFiltrosActivos ? 'Sin resultados con los filtros aplicados.' : 'Sin requerimientos.'}
-            </td></tr>
-          )}
-        </tbody>
+                    {/* Sub-filas: Historias de Usuario agrupadas + vacío */}
+                    <SubfilaEstimacionHU
+                      reqId={req.id}
+                      isExpanded={isExpanded}
+                      estCargada={estCargada}
+                      isLoading={loadingReqEst.has(req.id)}
+                      totalColumnasTabla={totalColumnasTabla}
+                    />
+                  </Fragment>
+                )
+              })}
+              {datosFiltrados.length === 0 && (
+                <tr><td colSpan={totalColumnasTabla} className="p-4 text-center text-slate-400">
+                  {hayFiltrosActivos ? 'Sin resultados con los filtros aplicados.' : 'Sin requerimientos.'}
+                </td></tr>
+              )}
+            </tbody>
+            {datosFiltrados.length > 0 && (() => {
+              const totalHoras = datosFiltrados.reduce((s, r) => s + (r.total_horas_estimadas ?? 0), 0)
+              const totalEntregas = datosFiltrados.reduce((s, r) => s + (r.entregas?.length ?? 0), 0)
+              // Label ocupa todas las columnas activas no numéricas (lead + Est. + extras + acciones vacía).
+              const leadCount = coreVisibleCount - metricasVisibles.length + columnasExtra.length + 1
+              return (
+                <tfoot>
+                  <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
+                    <td className="p-2"></td>
+                    <td className="p-2" colSpan={leadCount}>Total ({datosFiltrados.length} requerimientos)</td>
+                    {columnasActivas.has('horas') && <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>}
+                    {columnasActivas.has('entregasCount') && <td className="p-2 text-center">{totalEntregas}</td>}
+                    <td className="p-2"></td>
+                  </tr>
+                </tfoot>
+              )
+            })()}
+          </table>
+        </TablaScroll>
+      </div>
+
+      {/* Móvil (< md): cada fila se agrupa como tarjeta en vez de fila horizontal.
+       *  Mismos datos/handlers/permisos que la tabla de escritorio — ver
+       *  `TarjetaRequerimiento`; ninguna columna se omite. */}
+      <div className="space-y-3 md:hidden">
+        {datosFiltrados.map((req) => {
+          const isExpanded = expandedReqs.has(req.id)
+          const hasEst = estimacionIds.has(req.id)
+          const estCargada = estimacionesMap[req.id]
+          return (
+            <div key={req.id}>
+              <TarjetaRequerimiento
+                req={req}
+                isExpanded={isExpanded}
+                hasEst={hasEst}
+                isLoadingEstimacion={loadingReqEst.has(req.id)}
+                toggleExpandReq={toggleExpandReq}
+                columnasActivas={columnasActivas}
+                columnasExtra={columnasExtra}
+                renderCelda={renderCelda}
+                squadPorId={squadPorId}
+                nombrePersona={nombrePersona}
+                CAMPO_ACCESOR_REQ={CAMPO_ACCESOR_REQ}
+                expandedEntregas={expandedEntregas}
+                setExpandedEntregas={setExpandedEntregas}
+                uploadingId={uploadingId}
+                puedeGestionarEstimaciones={puedeGestionarEstimaciones}
+                handleUploadClick={handleUploadClick}
+                openEstimationModal={openEstimationModal}
+                puedeEditar={puedeEditar}
+                puedeEliminar={puedeEliminar}
+                eliminar={eliminar}
+              />
+
+              {/* Detalle de entregas / HU: mismos sub-componentes que en escritorio,
+               *  envueltos en una tabla mínima de una columna para reutilizarlos sin
+               *  duplicar su lógica (usan <tr>/<td colSpan>). */}
+              {(expandedEntregas.has(req.id) || isExpanded) && (
+                <table className="w-full">
+                  <tbody>
+                    <SubfilaEntregas
+                      reqId={req.id}
+                      entregas={req.entregas}
+                      expandido={expandedEntregas.has(req.id)}
+                      totalColumnasTabla={1}
+                    />
+                    <SubfilaEstimacionHU
+                      reqId={req.id}
+                      isExpanded={isExpanded}
+                      estCargada={estCargada}
+                      isLoading={loadingReqEst.has(req.id)}
+                      totalColumnasTabla={1}
+                    />
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )
+        })}
+        {datosFiltrados.length === 0 && (
+          <p className="p-4 text-center text-slate-400">
+            {hayFiltrosActivos ? 'Sin resultados con los filtros aplicados.' : 'Sin requerimientos.'}
+          </p>
+        )}
         {datosFiltrados.length > 0 && (() => {
           const totalHoras = datosFiltrados.reduce((s, r) => s + (r.total_horas_estimadas ?? 0), 0)
           const totalEntregas = datosFiltrados.reduce((s, r) => s + (r.entregas?.length ?? 0), 0)
-          // Label ocupa todas las columnas activas no numéricas (lead + Est. + extras + acciones vacía).
-          const leadCount = coreVisibleCount - metricasVisibles.length + columnasExtra.length + 1
           return (
-            <tfoot>
-              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
-                <td className="p-2"></td>
-                <td className="p-2" colSpan={leadCount}>Total ({datosFiltrados.length} requerimientos)</td>
-                {columnasActivas.has('horas') && <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>}
-                {columnasActivas.has('entregasCount') && <td className="p-2 text-center">{totalEntregas}</td>}
-                <td className="p-2"></td>
-              </tr>
-            </tfoot>
+            <div className="tarjeta tarjeta-pad flex flex-wrap items-center justify-between gap-2 bg-slate-50 text-sm font-semibold text-slate-700">
+              <span>Total ({datosFiltrados.length} requerimientos)</span>
+              <span className="flex gap-4">
+                {columnasActivas.has('horas') && <span>Horas: {totalHoras.toLocaleString('es-CO')}</span>}
+                {columnasActivas.has('entregasCount') && <span>Entregas: {totalEntregas}</span>}
+              </span>
+            </div>
           )
         })()}
-      </table>
-    </TablaScroll>
+      </div>
+    </>
   )
 }
