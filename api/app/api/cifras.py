@@ -2,8 +2,8 @@
 from fastapi import APIRouter, Depends
 
 from app.documents.aplicacion import Aplicacion
-from app.documents.squad import Squad
 from app.documents.requerimiento import Requerimiento
+from app.documents.squad import Squad
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
 
 router = APIRouter(prefix="/cifras", tags=["cifras"])

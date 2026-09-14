@@ -3,9 +3,8 @@
 Usa el cliente asíncrono nativo de PyMongo (``AsyncMongoClient``). Motor quedó
 obsoleto y las versiones recientes de Beanie ya no lo soportan.
 """
-from pymongo import AsyncMongoClient
-
 from beanie import init_beanie
+from pymongo import AsyncMongoClient
 
 from app.config import get_settings
 from app.documents import ALL_DOCUMENTS

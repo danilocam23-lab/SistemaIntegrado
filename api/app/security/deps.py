@@ -1,14 +1,13 @@
 """Dependencias FastAPI de autenticación y autorización."""
+from beanie import PydanticObjectId
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
-from beanie import PydanticObjectId
 
 from app.documents.enums import RolUsuario
 from app.documents.rol import Rol
 from app.documents.usuario import Usuario
-from app.security.rbac import PERM_ADMIN_ACCESO, normalizar_permisos
 from app.security.jwt import decodificar_token
+from app.security.rbac import PERM_ADMIN_ACCESO, normalizar_permisos
 
 _bearer = HTTPBearer(auto_error=False)
 

@@ -1,5 +1,5 @@
 """Sincronización de work items de Azure DevOps hacia la plataforma."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
@@ -68,8 +68,11 @@ async def crear_servicio_azdo(
     org_url = await leer_config_azdo(aplicacion_id, f"{prefijo}org_url")
     pat = await leer_config_azdo(aplicacion_id, f"{prefijo}pat")
     if not org_url or not pat:
+        target = "EPM" if prefijo == "azdo2_" else "HITSS"
+        campo_faltante = "org_url" if not org_url else "pat"
         raise ValueError(
-            f"Falta configurar la conexión a Azure DevOps en la vista de Azure DevOps."
+            f"Falta configurar '{campo_faltante}' de Azure DevOps ({target}) "
+            "en la vista de Azure DevOps."
         )
     return AzureDevOpsService(org_url, pat)
 
@@ -91,7 +94,7 @@ async def sincronizar_iteracion(
     if not org_url or not pat:
         raise ValueError("Falta configurar 'azdo_org_url' o 'azdo_pat' para la aplicación")
 
-    inicio = datetime.now(timezone.utc)
+    inicio = datetime.now(UTC)
     servicio = AzureDevOpsService(org_url, pat)
 
     try:
@@ -102,7 +105,7 @@ async def sincronizar_iteracion(
             estado="error",
             error=str(exc),
             iniciado_en=inicio,
-            finalizado_en=datetime.now(timezone.utc),
+            finalizado_en=datetime.now(UTC),
         ).insert()
         raise
 
@@ -120,7 +123,7 @@ async def sincronizar_iteracion(
             **item,
             "persona_id": persona_id,
             "iteration_path": iteration_path,
-            "ultima_sync": datetime.now(timezone.utc),
+            "ultima_sync": datetime.now(UTC),
         }
         existente = await AzdoWorkItem.find_one(
             AzdoWorkItem.aplicacion_id == aplicacion_id,
@@ -146,7 +149,7 @@ async def sincronizar_iteracion(
         total_restante=restante,
         total_original=original,
         iniciado_en=inicio,
-        finalizado_en=datetime.now(timezone.utc),
+        finalizado_en=datetime.now(UTC),
     ).insert()
 
     return {

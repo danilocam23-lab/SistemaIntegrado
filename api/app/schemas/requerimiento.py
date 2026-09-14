@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from app.documents.enums import (
     AnsResultado,
     EstadoFacturacion,
-    TipoCosto,
     Tipificacion,
+    TipoCosto,
 )
 
 

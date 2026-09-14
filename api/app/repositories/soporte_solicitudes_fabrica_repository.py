@@ -1,10 +1,9 @@
 """Acceso a datos para Solicitudes Fábrica."""
 from datetime import datetime
- 
+
 from bson import ObjectId
 
 from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabrica
- 
 
 ANS_DETALLE_KEYS = (
     "Se_levanto_ANS_Oportunidad",

@@ -1,5 +1,5 @@
 """Clases base de los documentos Beanie."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from beanie import Document
 from pydantic import Field
@@ -7,7 +7,7 @@ from pydantic import Field
 
 def ahora() -> datetime:
     """Marca de tiempo UTC actual."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class DocumentoBase(Document):

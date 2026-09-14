@@ -1,5 +1,5 @@
 """Router de requerimientos — núcleo del dominio de liquidación."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from beanie.operators import In
@@ -48,11 +48,11 @@ async def _registrar_bitacora(
 
 
 def _asegurar_utc(fecha: datetime) -> datetime:
-    return fecha if fecha.tzinfo is not None else fecha.replace(tzinfo=timezone.utc)
+    return fecha if fecha.tzinfo is not None else fecha.replace(tzinfo=UTC)
 
 
 def _calcular_duracion(segmentos: list[dict]) -> list[dict]:
-    ahora = datetime.now(timezone.utc)
+    ahora = datetime.now(UTC)
     for seg in segmentos:
         inicio = seg.get("desde")
         if inicio is None:
@@ -241,11 +241,11 @@ async def crear(
 
     try:
         await req.insert()
-    except DuplicateKeyError:
+    except DuplicateKeyError as exc:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             "Ya existe un requerimiento con el mismo Código REQ, Squad y SC",
-        )
+        ) from exc
     await _registrar_bitacora(
         ctx.codigo,
         str(req.id),
@@ -275,7 +275,7 @@ async def actualizar(
     solicitud = cambios.pop("solicitud", None)
 
     # Registrar qué campos cambiaron para la bitácora
-    _ETIQUETAS = {
+    etiquetas = {
         "nombre": "Nombre de acta",
         "total_horas_estimadas": "Horas estimadas",
         "fecha_solicitud_acta": "Fecha solicitud acta",
@@ -297,13 +297,13 @@ async def actualizar(
         estado_despues = cambios.get("estado")
     if solicitud is not None:
         sol_vieja = req.solicitud.model_dump()
-        _SOL_ETIQUETAS = {
+        sol_etiquetas = {
             "codigo_sc": "Código SC", "tipo_costo": "Tipo costo",
             "squad_id": "Squad", "lt_hitss_id": "LT HITSS",
             "lt_epm_id": "LT EPM", "scrum_id": "Scrum",
             "analista_requerimientos_id": "Analista de requerimientos",
         }
-        for k, label in _SOL_ETIQUETAS.items():
+        for k, label in sol_etiquetas.items():
             v_old = str(sol_vieja.get(k) or "")
             v_new = str(solicitud.get(k) or "")
             if v_old != v_new:
@@ -313,7 +313,7 @@ async def actualizar(
     for campo, valor in cambios.items():
         viejo = getattr(req, campo, None)
         if str(viejo or "") != str(valor or ""):
-            label = _ETIQUETAS.get(campo, campo)
+            label = etiquetas.get(campo, campo)
             detalle_cambios.append(f"{label}: '{viejo or ''}' → '{valor or ''}'")
         setattr(req, campo, valor)
 

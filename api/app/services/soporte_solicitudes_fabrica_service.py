@@ -7,7 +7,7 @@ import logging
 import re
 import time
 import unicodedata
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urlparse, urlunparse
 
@@ -770,7 +770,7 @@ class SoporteSolicitudesFabricaService:
         contenido_excel: bytes,
         nombre_archivo: str | None = None,
     ) -> dict:
-        inicio = datetime.now(timezone.utc)
+        inicio = datetime.now(UTC)
         url = "archivo_local"
         if not contenido_excel:
             raise ValueError("El archivo cargado está vacío.")
@@ -784,7 +784,7 @@ class SoporteSolicitudesFabricaService:
 
             creados = await SoporteSolicitudesFabricaRepository.reemplazar_por_aplicacion(filas_por_aplicacion)
             _cache_invalidar()
-            fin = datetime.now(timezone.utc)
+            fin = datetime.now(UTC)
             duracion_ms = int((fin - inicio).total_seconds() * 1000)
             log_app_id = "__todas__" if ctx.modo_consolidado else ctx.codigo
 
@@ -814,7 +814,7 @@ class SoporteSolicitudesFabricaService:
                 "tiempo_ejecucion_ms": duracion_ms,
             }
         except Exception as exc:  # noqa: BLE001
-            fin = datetime.now(timezone.utc)
+            fin = datetime.now(UTC)
             duracion_ms = int((fin - inicio).total_seconds() * 1000)
             logger.exception("Error sincronizando Solicitudes Fábrica")
             log_app_id = "__todas__" if ctx.modo_consolidado else ctx.codigo

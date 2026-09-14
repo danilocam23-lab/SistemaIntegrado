@@ -1,10 +1,7 @@
 """Documento para garantías de Work Orders."""
-from beanie import Document
-from pydantic import Field
-from pymongo import IndexModel, ASCENDING
+from pymongo import ASCENDING, IndexModel
 
-from .base import DocumentoBase, ahora
-from datetime import datetime
+from .base import DocumentoBase
 
 
 class GarantiaWO(DocumentoBase):

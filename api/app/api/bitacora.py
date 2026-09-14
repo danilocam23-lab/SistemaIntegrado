@@ -10,9 +10,9 @@ from bson.decimal128 import Decimal128
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.documents.bitacora import Bitacora
+from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
 from app.security.deps import tiene_permiso, usuario_actual
-from app.documents.usuario import Usuario
 
 router = APIRouter(prefix="/bitacora", tags=["bitacora"])
 logger = logging.getLogger(__name__)

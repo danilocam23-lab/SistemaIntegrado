@@ -5,7 +5,13 @@ from app.documents.rol import Rol
 from app.documents.usuario import Usuario
 from app.schemas.auth import UsuarioOut
 from app.schemas.usuario import CambioPasswordIn, UsuarioIn, UsuarioUpdate
-from app.security.deps import es_admin_app, es_superadmin, permisos_usuario, requiere_permiso, rol_actual
+from app.security.deps import (
+    es_admin_app,
+    es_superadmin,
+    permisos_usuario,
+    requiere_permiso,
+    rol_actual,
+)
 from app.security.hashing import hash_password
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])

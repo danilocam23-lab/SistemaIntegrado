@@ -180,7 +180,10 @@ class ImportadorExcel:
             raise ValueError(f"La hoja '{self.hoja}' no existe en el archivo")
         ws = self.workbook[self.hoja]
         headers = self._headers(ws)
-        return [dict(zip(headers, fila)) for fila in ws.iter_rows(min_row=2, values_only=True)]
+        return [
+            dict(zip(headers, fila, strict=False))
+            for fila in ws.iter_rows(min_row=2, values_only=True)
+        ]
 
     def _filas_desde_hojas_separadas(self) -> list[dict]:
         ws_req = self.workbook["REQUERIMIENTOS"]
@@ -195,7 +198,7 @@ class ImportadorExcel:
         req_por_clave: dict[tuple[str, str], dict] = {}
         reqs_por_codigo_req: dict[str, list[dict]] = {}
         for fila in ws_req.iter_rows(min_row=2, values_only=True):
-            payload_req = dict(zip(headers_req, fila))
+            payload_req = dict(zip(headers_req, fila, strict=False))
             codigo_req = self._txt(self._valor(payload_req, "COD. DEL REQ", "COD DEL REQ", "CODIGO DEL REQ"))
             if not codigo_req:
                 continue
@@ -207,7 +210,7 @@ class ImportadorExcel:
         filas: list[dict] = []
         claves_con_entrega: set[tuple[str, str]] = set()
         for fila in ws_ent.iter_rows(min_row=2, values_only=True):
-            payload_ent = dict(zip(headers_ent, fila))
+            payload_ent = dict(zip(headers_ent, fila, strict=False))
             codigo_req = self._txt(self._valor(payload_ent, "COD. DEL REQ", "COD DEL REQ", "CODIGO DEL REQ"))
             if not codigo_req:
                 if self._fila_tiene_entrega(payload_ent):
@@ -345,14 +348,14 @@ class ImportadorExcel:
             if self._norm_text(db_val) != self._norm_text(excel_val):
                 add(campo, db_val, excel_val)
 
-        def chk_decimal(campo: str, db_val: "Decimal | None", excel_raw: object) -> None:
+        def chk_decimal(campo: str, db_val: Decimal | None, excel_raw: object) -> None:
             excel_val = self._dec(excel_raw)
             if not self._decimal_eq(db_val, excel_val):
                 add(campo,
                     str(db_val) if db_val is not None else None,
                     str(excel_val) if excel_val is not None else None)
 
-        def chk_dt(campo: str, db_val: "datetime | None", excel_raw: object) -> None:
+        def chk_dt(campo: str, db_val: datetime | None, excel_raw: object) -> None:
             excel_val = self._dt(excel_raw)
             if not self._datetime_eq(db_val, excel_val):
                 add(campo,
@@ -413,14 +416,14 @@ class ImportadorExcel:
             if self._norm_text(db_val) != self._norm_text(excel_val):
                 add(campo, db_val, excel_val)
 
-        def chk_decimal(campo: str, db_val: "Decimal | None", excel_raw: object) -> None:
+        def chk_decimal(campo: str, db_val: Decimal | None, excel_raw: object) -> None:
             excel_val = self._dec(excel_raw)
             if not self._decimal_eq(db_val, excel_val):
                 add(campo,
                     str(db_val) if db_val is not None else None,
                     str(excel_val) if excel_val is not None else None)
 
-        def chk_dt(campo: str, db_val: "datetime | None", excel_raw: object) -> None:
+        def chk_dt(campo: str, db_val: datetime | None, excel_raw: object) -> None:
             excel_val = self._dt(excel_raw)
             if not self._datetime_eq(db_val, excel_val):
                 add(campo,
@@ -464,7 +467,7 @@ class ImportadorExcel:
         if valor is None:
             return None
         if hasattr(valor, "value"):
-            s = str(getattr(valor, "value")).strip()
+            s = str(valor.value).strip()
         else:
             s = str(valor).strip()
         return s or None
@@ -474,7 +477,7 @@ class ImportadorExcel:
         if valor is None:
             return None
         if hasattr(valor, "value"):
-            valor = getattr(valor, "value")
+            valor = valor.value
         texto = str(valor).replace("\xa0", " ").strip()
         return " ".join(texto.split()).lower() or None
 
@@ -483,7 +486,7 @@ class ImportadorExcel:
         if valor is None:
             return None
         if hasattr(valor, "value"):
-            return str(getattr(valor, "value")).strip().lower()
+            return str(valor.value).strip().lower()
         return str(valor).strip().lower()
 
     @staticmethod

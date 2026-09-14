@@ -22,11 +22,11 @@ from app.documents.orden_compra import OrdenCompra
 from app.documents.persona import Persona
 from app.documents.plan_accion import PlanAccion
 from app.documents.requerimiento import Requerimiento
+from app.documents.rol import Rol
 from app.documents.soporte_solicitud_fabrica import (
     SoporteSolicitudFabrica,
     SoporteSolicitudFabricaSyncLog,
 )
-from app.documents.rol import Rol
 from app.documents.squad import Squad
 from app.documents.tarifa import Tarifa
 from app.documents.usuario import Usuario

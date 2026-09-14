@@ -1,14 +1,20 @@
 """Router de administración de aplicaciones (tenants) y sus usuarios."""
-from fastapi import APIRouter, Depends, HTTPException, status
-
 from beanie.operators import In
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.documents.aplicacion import Aplicacion
 from app.documents.rol import Rol
 from app.documents.usuario import Usuario
 from app.schemas.aplicacion import AplicacionIn, AplicacionOut, AplicacionUpdate, EstadoIn
 from app.schemas.auth import UsuarioOut
-from app.security.deps import es_admin_app, es_superadmin, permisos_usuario, requiere_permiso, rol_actual, usuario_actual
+from app.security.deps import (
+    es_admin_app,
+    es_superadmin,
+    permisos_usuario,
+    requiere_permiso,
+    rol_actual,
+    usuario_actual,
+)
 from app.services.provision_aplicacion import provisionar_aplicacion
 
 router = APIRouter(prefix="/aplicaciones", tags=["aplicaciones"])

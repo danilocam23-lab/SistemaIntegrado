@@ -15,11 +15,9 @@ from pymongo import ASCENDING, IndexModel
 from app.documents.base import DocumentoOperativo
 from app.documents.enums import (
     AnsResultado,
-    EstadoEntrega,
     EstadoFacturacion,
-    EstadoRequerimiento,
-    TipoCosto,
     Tipificacion,
+    TipoCosto,
 )
 
 
