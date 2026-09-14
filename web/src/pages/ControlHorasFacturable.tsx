@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { AreaTexto, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { useAuth } from '../context/AuthContext'
 import type { Festivo, Persona } from '../types'
 
 interface Fila {
@@ -61,6 +62,8 @@ function calcularHorasMeta(anio: number, mes: number, festivos: Festivo[]): numb
 }
 
 export default function ControlHorasFacturable() {
+  const { tienePermiso } = useAuth()
+  const puedeEditarHoras = tienePermiso('control_horas_facturable.editar')
   const { datos: personas, cargando } = useLista<Persona>('/personas')
   const { datos: festivos } = useLista<Festivo>('/festivos')
   const hoy = new Date()
@@ -274,6 +277,7 @@ export default function ControlHorasFacturable() {
   }
 
   async function guardarUno(fila: Fila) {
+    if (!puedeEditarHoras) return
     setGuardandoFila((prev) => new Set(prev).add(fila.key))
     setAviso('')
     setAvisoOk('')
@@ -288,6 +292,7 @@ export default function ControlHorasFacturable() {
   }
 
   async function guardarTodos() {
+    if (!puedeEditarHoras) return
     setGuardandoTodos(true)
     setAviso('')
     setAvisoOk('')
@@ -386,16 +391,18 @@ export default function ControlHorasFacturable() {
       {aviso && <div className="aviso aviso-error">{aviso}</div>}
       {avisoOk && <div className="aviso aviso-exito">{avisoOk}</div>}
 
-      <div className="flex justify-end">
-        <Boton
-          variante="primario"
-          type="button"
-          onClick={() => void guardarTodos()}
-          disabled={guardandoTodos || filas.length === 0}
-        >
-          {guardandoTodos ? 'Guardando…' : <><Icono nombre="guardar" /> Guardar todos ({filas.length})</>}
-        </Boton>
-      </div>
+      {puedeEditarHoras && (
+        <div className="flex justify-end">
+          <Boton
+            variante="primario"
+            type="button"
+            onClick={() => void guardarTodos()}
+            disabled={guardandoTodos || filas.length === 0}
+          >
+            {guardandoTodos ? 'Guardando…' : <><Icono nombre="guardar" /> Guardar todos ({filas.length})</>}
+          </Boton>
+        </div>
+      )}
 
       <TablaScroll className="max-h-[70vh] overflow-y-auto">
         <table className="tabla">
@@ -620,16 +627,18 @@ export default function ControlHorasFacturable() {
                     />
                   </td>
                   <td className="text-center">
-                    <Boton
-                      variante="primario"
-                      tamano="sm"
-                      type="button"
-                      onClick={() => void guardarUno(f)}
-                      disabled={guardandoFila.has(f.key)}
-                      title="Guardar este registro"
-                    >
-                      {guardandoFila.has(f.key) ? '…' : <Icono nombre="guardar" />}
-                    </Boton>
+                    {puedeEditarHoras && (
+                      <Boton
+                        variante="primario"
+                        tamano="sm"
+                        type="button"
+                        onClick={() => void guardarUno(f)}
+                        disabled={guardandoFila.has(f.key)}
+                        title="Guardar este registro"
+                      >
+                        {guardandoFila.has(f.key) ? '…' : <Icono nombre="guardar" />}
+                      </Boton>
+                    )}
                   </td>
                   <td className="text-center">
                     <Boton
