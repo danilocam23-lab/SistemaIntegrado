@@ -172,16 +172,21 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
       >
         {/* Cabecera */}
         <div className="flex items-center justify-between gap-3 border-b border-white/10 p-3 md:p-4">
-          <div className={`min-w-0 ${colapsado ? 'md:hidden' : ''}`}>
-            <div className="text-base font-bold leading-tight text-white">Sistema Integrado</div>
-            <div className="text-xs text-slate-300">HITSS</div>
+          <div className={`flex min-w-0 items-center gap-2.5 ${colapsado ? 'md:hidden' : ''}`}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-marca-500 text-sm font-bold tracking-tight text-white shadow-sm">
+              SI
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold leading-tight text-white">Sistema Integrado</div>
+              <div className="text-2xs font-semibold uppercase tracking-widest text-marca-200/80">HITSS</div>
+            </div>
           </div>
           {/* Colapsar (escritorio) */}
           <button
             type="button"
             onClick={() => setColapsado((v) => !v)}
             title={colapsado ? 'Expandir menú' : 'Colapsar menú'}
-            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 transition-colors hover:bg-white/15 hover:text-white md:flex"
+            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 transition-colors hover:border-marca-400/50 hover:bg-marca-500/20 hover:text-white md:flex"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className={`h-4 w-4 transition-transform duration-200 ${colapsado ? 'rotate-180' : ''}`}>
               <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 0 1 0 1.06L9.06 10l3.73 3.71a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
@@ -192,7 +197,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
             type="button"
             onClick={onCerrar}
             title="Cerrar menú"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white md:hidden"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 hover:border-marca-400/50 hover:bg-marca-500/20 hover:text-white md:hidden"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
@@ -200,7 +205,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
           </button>
         </div>
 
-        <nav className="space-y-1 px-3 pb-6 pt-3 md:px-2.5">
+        <nav className="space-y-1.5 px-3 pb-6 pt-3 md:px-2.5">
           {GRUPOS.map((grupo) => {
             const items = grupo.items.filter((i) => !i.permiso || tienePermiso(i.permiso))
             if (items.length === 0) return null
@@ -224,7 +229,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                   }}
                   className={`hidden h-11 w-11 items-center justify-center rounded-lg border text-xl transition-colors md:flex ${
                     activoGrupo
-                      ? 'border-white/20 bg-white/15 text-white'
+                      ? 'border-marca-400/60 bg-marca-500/20 text-white'
                       : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
@@ -238,7 +243,9 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                 <button
                   type="button"
                   onClick={() => alternarGrupo(grupo.titulo)}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-2xs font-bold uppercase tracking-wider text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+                  className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-2xs font-bold uppercase tracking-widest transition-colors hover:bg-white/5 hover:text-white ${
+                    activoGrupo ? 'text-marca-200' : 'text-slate-400'
+                  }`}
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <Icono nombre={grupo.icono} className="h-4 w-4" />
@@ -250,17 +257,17 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                 </button>
 
                 {abiertoGrupo && (
-                  <div className="mb-2 mt-0.5 flex flex-col gap-0.5 border-l border-white/10 pl-2">
+                  <div className="mb-3 mt-1 flex flex-col gap-0.5 pl-2">
                     {items.map((item) => (
                       <NavLink
                         key={item.to}
                         to={item.to}
                         end={item.to === '/dashboard'}
                         className={({ isActive }) =>
-                          `flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                          `flex items-center gap-2.5 rounded-lg border-l-2 py-2.5 pl-2.5 pr-2.5 text-sm transition-colors ${
                             isActive
-                              ? 'bg-white/15 font-semibold text-white'
-                              : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                              ? 'border-marca-400 bg-marca-500/20 font-semibold text-white'
+                              : 'border-transparent text-slate-300 hover:border-white/15 hover:bg-white/10 hover:text-white'
                           }`
                         }
                       >
