@@ -1,10 +1,11 @@
 """Punto de entrada de la API FastAPI."""
 import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -14,9 +15,11 @@ from app.api.router import api_router
 from app.bootstrap import bootstrap
 from app.config import get_settings
 from app.db import cerrar_db, init_db
+from app.errors import ErrorDominio
 from app.services.scheduler import detener_scheduler, iniciar_scheduler
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("app.errores")
 settings = get_settings()
 
 # Frontend compilado (web/dist), si existe.
@@ -50,6 +53,55 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# --- Manejo centralizado de errores (ADR-0008 F2.6) ---
+#
+# Reemplaza los ~10 `try/except ValueError -> HTTPException(400, str(exc))`
+# duplicados en los routers (E1 del ADR) y evita que una excepción de bajo
+# nivel (openpyxl, httpx, pymongo) llegue al cliente con su mensaje crudo
+# (E4): éste solo se registra en el log, con un `error_id` correlacionable
+# que sí viaja en la respuesta para que el usuario lo reporte.
+@app.exception_handler(ErrorDominio)
+async def _manejar_error_dominio(_request: Request, exc: ErrorDominio) -> JSONResponse:
+    error_id = None
+    if exc.status_code >= 500:
+        error_id = str(uuid.uuid4())
+        # `exc_info=exc` conserva la cadena `raise ... from causa_original`
+        # completa en el log aunque el mensaje mostrado al cliente sea neutro.
+        logger.error("[%s] %s", error_id, exc.mensaje, exc_info=exc)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.mensaje, "error_id": error_id},
+    )
+
+
+@app.exception_handler(ValueError)
+async def _manejar_value_error(_request: Request, exc: ValueError) -> JSONResponse:
+    """Compatibilidad con el código de ``services/`` que aún no migró a ``ErrorDominio``.
+
+    En este backend un ``ValueError`` que llega hasta el router siempre fue
+    escrito a mano como mensaje de negocio (nunca envuelve sin traducir una
+    excepción de bajo nivel), así que es seguro mostrarlo tal cual.
+    """
+    return JSONResponse(status_code=400, content={"detail": str(exc), "error_id": None})
+
+
+@app.exception_handler(Exception)
+async def _manejar_error_inesperado(request: Request, exc: Exception) -> JSONResponse:
+    """Red de seguridad final: nunca se filtra un traceback ni un ``str(exc)`` al cliente."""
+    error_id = str(uuid.uuid4())
+    logger.exception(
+        "[%s] Error no controlado en %s %s", error_id, request.method, request.url.path
+    )
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "detail": "Ocurrió un error inesperado. Reporte este código a soporte.",
+            "error_id": error_id,
+        },
+    )
+
 
 app.include_router(api_router)
 
