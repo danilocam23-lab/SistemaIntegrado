@@ -1,8 +1,12 @@
 import type { FormEvent } from 'react'
-import { AreaTexto, Boton, Campo, Chip, Selector } from '../../components/ui'
+import { AreaTexto, Campo, Selector } from '../../components/ui'
 import { TIPOS_COSTO } from '../../constantes'
 import type { Aplicacion, Persona, Requerimiento } from '../../types'
 import type { CamposRequerimiento } from './useRequerimientoDetalle'
+
+/** Id del `<form>`; el botón "Guardar cambios" del encabezado lo referencia
+ * con el atributo HTML `form` para poder vivir fuera del propio formulario. */
+export const ID_FORMULARIO_DATOS_GENERALES = 'formulario-datos-generales'
 
 interface Props {
   campos: CamposRequerimiento
@@ -42,12 +46,12 @@ export default function SeccionDatosGenerales({
   const { valores, actualizar } = campos
 
   return (
-    <form onSubmit={onSubmit} className="tarjeta tarjeta-pad">
+    <form id={ID_FORMULARIO_DATOS_GENERALES} onSubmit={onSubmit} className="tarjeta tarjeta-pad">
       <fieldset disabled={!puedeEditarReq}>
       <h2 className="etiqueta-sup mb-3">
         Datos generales
       </h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Código SC</span>
           <Campo value={valores.codigoSc} onChange={(e) => actualizar('codigoSc', e.target.value)} required
@@ -157,49 +161,25 @@ export default function SeccionDatosGenerales({
             className="w-full" />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-slate-600">ANS Estimación</span>
-          {(() => {
-            const cumple =
-              req.fecha_limite && valores.fechaRealEntregaEst
-                ? new Date(valores.fechaRealEntregaEst) <= new Date(req.fecha_limite)
-                : null
-            return (
-              <Chip tono={cumple === true ? 'exito' : cumple === false ? 'error' : 'neutro'}>
-                {cumple === true ? 'Cumple' : cumple === false ? 'No cumple' : '—'}
-              </Chip>
-            )
-          })()}
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Cantidad de entregas</span>
-          <Campo value={req.entregas.length} readOnly disabled
-            className="w-full" />
-        </label>
-        <label className="text-sm">
           <span className="mb-1 block text-slate-600">Acta de trabajo</span>
           <Campo value={valores.actaTrabajo} onChange={(e) => actualizar('actaTrabajo', e.target.value)}
             disabled={!puedeEditarReq}
             placeholder="Número o referencia del acta de trabajo"
             className="w-full" />
         </label>
-        <label className="text-sm sm:col-span-2 lg:col-span-3">
+        <label className="text-sm sm:col-span-2">
           <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
           <AreaTexto value={valores.seguimientoEpm} onChange={(e) => actualizar('seguimientoEpm', e.target.value)} rows={2}
             disabled={!puedeEditarReq}
             className="w-full" />
         </label>
-        <label className="text-sm sm:col-span-2 lg:col-span-3">
+        <label className="text-sm sm:col-span-2">
           <span className="mb-1 block text-slate-600">Motivo de cierre</span>
           <Campo value={valores.motivoCierre} onChange={(e) => actualizar('motivoCierre', e.target.value)}
             className="w-full" />
         </label>
       </div>
       </fieldset>
-      {puedeEditarReq && (
-        <Boton variante="primario" type="submit" className="mt-3">
-          Guardar cambios
-        </Boton>
-      )}
     </form>
   )
 }

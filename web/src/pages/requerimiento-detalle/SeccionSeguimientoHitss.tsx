@@ -7,7 +7,6 @@ interface Props {
   onCambiar: <K extends keyof ValoresRequerimiento>(clave: K, valor: ValoresRequerimiento[K]) => void
   puedeEditarTipificacion: boolean
   onGuardar: () => void
-  onVerHistorial: () => void
 }
 
 /**
@@ -21,7 +20,6 @@ export default function SeccionSeguimientoHitss({
   onCambiar,
   puedeEditarTipificacion,
   onGuardar,
-  onVerHistorial,
 }: Props) {
   return (
     <div className="tarjeta tarjeta-pad">
@@ -51,11 +49,6 @@ export default function SeccionSeguimientoHitss({
           Guardar Seguimiento Hitss / Tipificación
         </Boton>
       )}
-      <div>
-        <Boton variante="secundario" onClick={onVerHistorial} className="mt-3">
-          Historial de estados
-        </Boton>
-      </div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { Aviso, Chip, Selector } from '../components/ui'
+import { Aviso, Boton, Chip, EncabezadoPagina, Icono, Selector } from '../components/ui'
 import { useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
@@ -13,7 +13,8 @@ import FormularioEntrega from './requerimiento-detalle/FormularioEntrega'
 import { useFormularioEntrega } from './requerimiento-detalle/useFormularioEntrega'
 import { usePersonasDelSquad } from './requerimiento-detalle/usePersonasDelSquad'
 import { useRequerimientoDetalle } from './requerimiento-detalle/useRequerimientoDetalle'
-import SeccionDatosGenerales from './requerimiento-detalle/SeccionDatosGenerales'
+import SeccionDatosGenerales, { ID_FORMULARIO_DATOS_GENERALES } from './requerimiento-detalle/SeccionDatosGenerales'
+import SeccionResumen from './requerimiento-detalle/SeccionResumen'
 import SeccionSeguimientoHitss from './requerimiento-detalle/SeccionSeguimientoHitss'
 
 export default function RequerimientoDetalle() {
@@ -68,50 +69,86 @@ export default function RequerimientoDetalle() {
     return <div className="text-slate-500">{aviso || 'Cargando…'}</div>
   }
 
+  // Resumen lateral: reutiliza el mismo cálculo de "cumple ANS estimación"
+  // que antes vivía en la tarjeta de Datos generales, y la última entrega
+  // (por número) para su ANS de entrega — sin traer ni calcular nada nuevo.
+  const cumpleAnsEstimacion =
+    req.fecha_limite && campos.valores.fechaRealEntregaEst
+      ? new Date(campos.valores.fechaRealEntregaEst) <= new Date(req.fecha_limite)
+      : null
+  const entregasOrdenadas = [...req.entregas].sort((a, b) => a.numero - b.numero)
+  const ultimaEntrega = entregasOrdenadas.length > 0
+    ? entregasOrdenadas[entregasOrdenadas.length - 1]
+    : null
+
   return (
     <div className="space-y-6">
-      <div>
-        <Link to="/requerimientos" className="text-sm text-marca hover:underline">
-          ← Requerimientos
-        </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <h1 className="titulo-pagina">{req.codigo_req}</h1>
-          {req.nombre && <span className="text-base text-slate-600">— {req.nombre}</span>}
-          {puedeEditarReq ? (
-            <Selector
-              compacto
-              value={req.estado}
-              onChange={(e) => detalle.transicion(e.target.value)}
-            >
-              {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Selector>
-          ) : (
-            <Chip tono="neutro">{req.estado}</Chip>
-          )}
-        </div>
-      </div>
+      <Link to="/requerimientos" className="text-sm text-marca hover:underline">
+        ← Requerimientos
+      </Link>
+
+      <EncabezadoPagina
+        icono={<Icono nombre="documento" />}
+        titulo={req.codigo_req}
+        descripcion={
+          <span className="flex flex-wrap items-center gap-2">
+            {req.nombre && <span>{req.nombre}</span>}
+            {puedeEditarReq ? (
+              <Selector
+                compacto
+                value={req.estado}
+                onChange={(e) => detalle.transicion(e.target.value)}
+              >
+                {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
+              </Selector>
+            ) : (
+              <Chip tono="neutro">{req.estado}</Chip>
+            )}
+          </span>
+        }
+        acciones={
+          <>
+            <Boton variante="secundario" onClick={historial.verHistorialRequerimiento}>
+              Historial de estados
+            </Boton>
+            {puedeEditarReq && (
+              <Boton variante="primario" type="submit" form={ID_FORMULARIO_DATOS_GENERALES}>
+                Guardar cambios
+              </Boton>
+            )}
+          </>
+        }
+      />
 
       {aviso && <Aviso tono="error">{aviso}</Aviso>}
       {ok && <Aviso tono="exito">{ok}</Aviso>}
 
-      {/* Datos generales */}
-      <SeccionDatosGenerales
-        campos={campos}
-        req={req}
-        puedeEditarReq={puedeEditarReq}
-        squads={squads}
-        resolverNombreSquad={resolverNombreSquad}
-        ltHitss={ltHitss}
-        ltEpm={ltEpm}
-        scrums={scrums}
-        analistas={analistas}
-        personas={personas}
-        personasSquad={personasSquad}
-        scrumAsignado={scrumAsignado}
-        analistaAsignado={analistaAsignado}
-        onCambiarSquad={cambiarSquad}
-        onSubmit={detalle.guardar}
-      />
+      {/* Datos generales + resumen lateral */}
+      <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <SeccionDatosGenerales
+          campos={campos}
+          req={req}
+          puedeEditarReq={puedeEditarReq}
+          squads={squads}
+          resolverNombreSquad={resolverNombreSquad}
+          ltHitss={ltHitss}
+          ltEpm={ltEpm}
+          scrums={scrums}
+          analistas={analistas}
+          personas={personas}
+          personasSquad={personasSquad}
+          scrumAsignado={scrumAsignado}
+          analistaAsignado={analistaAsignado}
+          onCambiarSquad={cambiarSquad}
+          onSubmit={detalle.guardar}
+        />
+        <SeccionResumen
+          squadNombre={resolverNombreSquad(campos.valores.squadId)}
+          cumpleAnsEstimacion={cumpleAnsEstimacion}
+          ultimaEntrega={ultimaEntrega}
+          cantidadEntregas={req.entregas.length}
+        />
+      </div>
 
       {/* Seguimiento Hitss y Tipificación (editable por Administrador de squad) */}
       <SeccionSeguimientoHitss
@@ -120,7 +157,6 @@ export default function RequerimientoDetalle() {
         onCambiar={campos.actualizar}
         puedeEditarTipificacion={puedeEditarTipificacion}
         onGuardar={detalle.guardarTipificacionReq}
-        onVerHistorial={historial.verHistorialRequerimiento}
       />
 
       {/* Entregas */}
