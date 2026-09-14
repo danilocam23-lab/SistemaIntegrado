@@ -30,10 +30,29 @@ async def usuario_actual(
     return usuario
 
 
+_SIN_RESOLVER = object()
+
+
 async def rol_actual(usuario: Usuario) -> Rol | None:
-    if not usuario.rol_id:
-        return None
-    return await Rol.get(usuario.rol_id)
+    """Rol del usuario, resuelto una única vez por petición (F1.7, ADR-0008 P1).
+
+    ``usuario_actual`` es una dependencia de FastAPI: FastAPI cachea su
+    resultado durante toda la petición, así que todo el código que reciba
+    ``usuario`` en la misma petición recibe la MISMA instancia de
+    ``Usuario``. Antes, ``es_superadmin``, ``es_admin_app`` y
+    ``tiene_permiso``/``requiere_permiso`` volvían a consultar ``Rol`` cada
+    vez que se llamaban (hasta 4-6 viajes a Mongo por petición). Cachear el
+    resultado en esa misma instancia (con un centinela para distinguir "no
+    resuelto todavía" de "resuelto a None") reduce eso a una sola consulta
+    por petición, sin tocar ninguno de los ~30 sitios que llaman a estas
+    funciones.
+    """
+    cache = getattr(usuario, "_rol_cache", _SIN_RESOLVER)
+    if cache is not _SIN_RESOLVER:
+        return cache  # type: ignore[return-value]
+    rol = await Rol.get(usuario.rol_id) if usuario.rol_id else None
+    usuario._rol_cache = rol  # type: ignore[attr-defined]
+    return rol
 
 
 async def permisos_usuario(usuario: Usuario) -> list[str]:
