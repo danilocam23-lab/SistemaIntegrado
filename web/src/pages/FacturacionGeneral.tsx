@@ -139,7 +139,7 @@ export default function FacturacionGeneral() {
     } finally {
       setInicializado(true)
     }
-  }, [configFilas, inicializado])
+  }, [configFilas, inicializado, cargando])
 
   function actualizar(id: string, campo: keyof FilaGeneral, valor: string): void {
     if (!puedeEditarFacturacion) return
