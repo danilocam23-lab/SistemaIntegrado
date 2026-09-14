@@ -1,7 +1,9 @@
 """Endpoints para gestión de garantías de Work Orders."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from pymongo import UpdateOne
 
+from app.documents.base import ahora
 from app.documents.garantia_wo import GarantiaWO
 from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabrica
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
@@ -27,37 +29,55 @@ class GarantiaWOUpdate(BaseModel):
 
 @router.get("", dependencies=[_VER])
 async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
-    """Listar todas las garantías WO filtradas por aplicación activa."""
+    """Listar todas las garantías WO filtradas por aplicación activa.
+
+    ADR-0008 F3.3/C4 (P7): el backfill de registros antiguos sin
+    descripción/estado (creados antes de corregir el mapeo de columnas de
+    soporte) hacía un ``find_one`` + ``save`` por documento dentro del bucle
+    (N+1). Se resuelve en dos consultas — una para traer TODAS las WO de
+    soporte que hacen falta, y un único ``bulk_write`` para los cambios—, sin
+    tocar el contrato del endpoint (sigue siendo un único `GET`).
+    """
     filtro = ctx.filtro()
     docs = await GarantiaWO.find(filtro).sort("-creado_en").to_list()
 
-    # Autocompletar registros antiguos que quedaron sin descripción/estado
-    # (creados antes de que se corrigiera el mapeo de columnas de soporte).
-    # La búsqueda se restringe a la aplicación del propio documento (S7): antes
-    # cruzaba aplicaciones porque no llevaba ningún filtro de aplicacion_id.
-    for doc in docs:
-        if doc.descripcion and doc.estado_wo:
-            continue
-        wo = await SoporteSolicitudFabrica.find_one(
-            {"datos.Work Order ID": doc.work_order_id, "aplicacion_id": doc.aplicacion_id}
-        )
-        if not wo:
-            continue
-        datos = wo.datos or {}
-        cambio = False
-        if not doc.descripcion:
-            nueva_desc = datos.get("Detailed Description") or datos.get("Summary") or None
-            if nueva_desc:
-                doc.descripcion = nueva_desc
-                cambio = True
-        if not doc.estado_wo:
-            nuevo_estado = datos.get("Status WO") or None
-            if nuevo_estado:
-                doc.estado_wo = nuevo_estado
-                cambio = True
-        if cambio:
-            doc.marcar_actualizado()
-            await doc.save()
+    pendientes = [d for d in docs if not (d.descripcion and d.estado_wo)]
+    if pendientes:
+        wo_ids = list({d.work_order_id for d in pendientes})
+        # La búsqueda se restringe a las aplicaciones del contexto (S7): antes
+        # cruzaba aplicaciones porque no llevaba ningún filtro de aplicacion_id.
+        soportes = await SoporteSolicitudFabrica.find(
+            {"datos.Work Order ID": {"$in": wo_ids}, "aplicacion_id": {"$in": ctx.codigos}}
+        ).to_list()
+        soporte_por_clave = {
+            (s.aplicacion_id, s.datos.get("Work Order ID")): s for s in soportes
+        }
+
+        marca = ahora()
+        operaciones = []
+        for doc in pendientes:
+            wo = soporte_por_clave.get((doc.aplicacion_id, doc.work_order_id))
+            if wo is None:
+                continue
+            datos = wo.datos or {}
+            cambios: dict = {}
+            if not doc.descripcion:
+                nueva_desc = datos.get("Detailed Description") or datos.get("Summary") or None
+                if nueva_desc:
+                    cambios["descripcion"] = nueva_desc
+            if not doc.estado_wo:
+                nuevo_estado = datos.get("Status WO") or None
+                if nuevo_estado:
+                    cambios["estado_wo"] = nuevo_estado
+            if not cambios:
+                continue
+            cambios["actualizado_en"] = marca
+            operaciones.append(UpdateOne({"_id": doc.id}, {"$set": cambios}))
+            for campo, valor in cambios.items():
+                setattr(doc, campo, valor)
+
+        if operaciones:
+            await GarantiaWO.get_pymongo_collection().bulk_write(operaciones)
 
     return [{**doc.dict(by_alias=True), "_id": str(doc.id)} for doc in docs]
 

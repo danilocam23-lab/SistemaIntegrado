@@ -1,6 +1,8 @@
 """Sincronización de work items de Azure DevOps hacia la plataforma."""
 from datetime import UTC, datetime
 
+from pymongo import UpdateOne
+
 from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
 from app.documents.configuracion import Configuracion
@@ -109,37 +111,47 @@ async def sincronizar_iteracion(
         ).insert()
         raise
 
-    completado = restante = original = 0.0
-    for item in items:
-        persona_id = None
-        if item["asignado_a"]:
-            persona = await Persona.find_one(
-                Persona.aplicacion_id == aplicacion_id,
-                Persona.email == item["asignado_a"],
-            )
-            persona_id = str(persona.id) if persona else None
+    # ADR-0008 F3.3 (P5): antes era un find_one (Persona) + find_one
+    # (AzdoWorkItem) + save por work item = 3N viajes por sprint. Se precargan
+    # las personas por email en una consulta y se reemplazan los N find_one +
+    # save de AzdoWorkItem por un único bulk_write con upsert, apoyado en el
+    # índice único (aplicacion_id, azdo_id).
+    emails = {item["asignado_a"] for item in items if item["asignado_a"]}
+    personas = (
+        await Persona.find(
+            {"aplicacion_id": aplicacion_id, "email": {"$in": list(emails)}}
+        ).to_list()
+        if emails
+        else []
+    )
+    persona_id_por_email = {p.email: str(p.id) for p in personas if p.email}
 
+    completado = restante = original = 0.0
+    marca = datetime.now(UTC)
+    operaciones = []
+    for item in items:
+        persona_id = (
+            persona_id_por_email.get(item["asignado_a"]) if item["asignado_a"] else None
+        )
         datos = {
             **item,
             "persona_id": persona_id,
             "iteration_path": iteration_path,
-            "ultima_sync": datetime.now(UTC),
+            "ultima_sync": marca,
         }
-        existente = await AzdoWorkItem.find_one(
-            AzdoWorkItem.aplicacion_id == aplicacion_id,
-            AzdoWorkItem.azdo_id == item["azdo_id"],
+        operaciones.append(
+            UpdateOne(
+                {"aplicacion_id": aplicacion_id, "azdo_id": item["azdo_id"]},
+                {"$set": {**datos, "actualizado_en": marca}, "$setOnInsert": {"creado_en": marca}},
+                upsert=True,
+            )
         )
-        if existente is not None:
-            for campo, valor in datos.items():
-                setattr(existente, campo, valor)
-            existente.marcar_actualizado()
-            await existente.save()
-        else:
-            await AzdoWorkItem(aplicacion_id=aplicacion_id, **datos).insert()
-
         completado += item["completed_work"]
         restante += item["remaining_work"]
         original += item["original_estimate"]
+
+    if operaciones:
+        await AzdoWorkItem.get_pymongo_collection().bulk_write(operaciones)
 
     await AzdoSyncLog(
         aplicacion_id=aplicacion_id,

@@ -3,7 +3,9 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
+from pymongo import UpdateOne
 
+from app.documents.base import ahora
 from app.documents.control_horas import ControlHoras
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
 from app.security.deps import requiere_permiso
@@ -114,24 +116,37 @@ async def guardar_todos(
     mes: int = Query(0),
     ctx: ContextoAplicacion = Depends(contexto_escritura),
 ) -> dict:
+    """Guarda la rejilla completa.
+
+    ADR-0008 F3.3 (P6): antes hacía un ``find_one`` + ``save`` por registro
+    dentro del bucle (2N viajes a Mongo). Se reemplaza por un único
+    ``bulk_write`` con upsert, apoyado en el índice único
+    ``ix_app_periodo_persona_squad``.
+    """
     hoy = date.today()
     a = anio or hoy.year
     m = mes or hoy.month
-    guardados = 0
-    for r in datos.registros:
-        filtro = {
-            "aplicacion_id": ctx.codigo,
-            "anio": a,
-            "mes": m,
-            "persona_id": r.persona_id,
-            "squad": r.squad,
-        }
-        doc = await ControlHoras.find_one(filtro)
-        if doc is None:
-            doc = ControlHoras(aplicacion_id=ctx.codigo, anio=a, mes=m,
-                               persona_id=r.persona_id, squad=r.squad)
-        _aplicar(doc, r)
-        doc.marcar_actualizado()
-        await doc.save()
-        guardados += 1
-    return {"ok": True, "guardados": guardados}
+    if not datos.registros:
+        return {"ok": True, "guardados": 0}
+
+    marca = ahora()
+    campos_editables = [c for c in _CAMPOS if c not in ("persona_id", "squad", "anio", "mes")]
+    operaciones = [
+        UpdateOne(
+            {
+                "aplicacion_id": ctx.codigo,
+                "anio": a,
+                "mes": m,
+                "persona_id": r.persona_id,
+                "squad": r.squad,
+            },
+            {
+                "$set": {c: getattr(r, c) for c in campos_editables} | {"actualizado_en": marca},
+                "$setOnInsert": {"creado_en": marca},
+            },
+            upsert=True,
+        )
+        for r in datos.registros
+    ]
+    await ControlHoras.get_pymongo_collection().bulk_write(operaciones)
+    return {"ok": True, "guardados": len(datos.registros)}
