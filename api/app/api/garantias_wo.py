@@ -5,8 +5,15 @@ from pydantic import BaseModel
 from app.documents.garantia_wo import GarantiaWO
 from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabrica
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.security.deps import requiere_permiso
 
+# F1.8 (ADR-0008 S3): ninguno de estos endpoints exigía ningún permiso.
+# Se reutilizan los permisos ya existentes del módulo de soporte
+# (la página de garantías vive bajo /soporte/garantias-wo en el frontend
+# y ya se gatea ahí con "soporte.solicitudes_fabrica.ver").
 router = APIRouter(prefix="/garantias-wo", tags=["garantias-wo"])
+_VER = Depends(requiere_permiso("soporte.solicitudes_fabrica.ver"))
+_ACTUALIZAR = Depends(requiere_permiso("soporte.solicitudes_fabrica.actualizar"))
 
 
 class GarantiaWOIn(BaseModel):
@@ -18,7 +25,7 @@ class GarantiaWOUpdate(BaseModel):
     observaciones_resolucion: str | None = None
 
 
-@router.get("")
+@router.get("", dependencies=[_VER])
 async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     """Listar todas las garantías WO filtradas por aplicación activa."""
     filtro = ctx.filtro()
@@ -55,7 +62,7 @@ async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return [{**doc.dict(by_alias=True), "_id": str(doc.id)} for doc in docs]
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[_ACTUALIZAR])
 async def agregar(
     body: GarantiaWOIn,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
@@ -89,7 +96,7 @@ async def agregar(
     return doc.dict(by_alias=True)
 
 
-@router.put("/{garantia_id}")
+@router.put("/{garantia_id}", dependencies=[_ACTUALIZAR])
 async def actualizar(
     garantia_id: str,
     body: GarantiaWOUpdate,
@@ -114,7 +121,7 @@ async def actualizar(
     return doc.dict(by_alias=True)
 
 
-@router.delete("/{garantia_id}", status_code=204)
+@router.delete("/{garantia_id}", status_code=204, dependencies=[_ACTUALIZAR])
 async def eliminar(
     garantia_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
@@ -129,7 +136,7 @@ async def eliminar(
     await doc.delete()
 
 
-@router.get("/buscar-wo")
+@router.get("/buscar-wo", dependencies=[_VER])
 async def buscar_wo(
     q: str = Query(..., min_length=1),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
@@ -153,7 +160,7 @@ async def buscar_wo(
     ]
 
 
-@router.get("/detalle-wo/{work_order_id}")
+@router.get("/detalle-wo/{work_order_id}", dependencies=[_VER])
 async def detalle_wo(
     work_order_id: str,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
