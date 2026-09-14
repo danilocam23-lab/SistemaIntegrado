@@ -21,14 +21,20 @@ from app.middleware.aplicacion import (
     ContextoAplicacion,
     contexto_aplicacion,
 )
+from app.security.deps import requiere_permiso
 
 router = APIRouter(prefix="/importacion", tags=["importacion"])
 
 
-@router.post("/excel")
+@router.post("/excel", dependencies=[Depends(requiere_permiso("admin.importacion.ejecutar"))])
 async def importar_excel(
     archivo: UploadFile = File(...),
     hoja: str | None = None,
+    # A proposito sigue siendo contexto_aplicacion (no contexto_escritura, F1.3
+    # del ADR-0008): el modo consolidado es un caso de uso legitimo aqui -el
+    # Excel puede traer filas de varias aplicaciones a la vez y
+    # _importar_consolidado() las separa y escribe cada una en su propio
+    # aplicacion_id real, nunca en un ctx.codigo arbitrario-.
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     """Importa el Excel 'BITÁCORA GENERAL' a la aplicación activa.
@@ -64,7 +70,10 @@ async def importar_excel(
     }
 
 
-@router.get("/excel/plantilla")
+@router.get(
+    "/excel/plantilla",
+    dependencies=[Depends(requiere_permiso("admin.importacion.ver"))],
+)
 async def exportar_plantilla(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ):
@@ -223,7 +232,10 @@ async def exportar_plantilla(
     )
 
 
-@router.post("/excel/previsualizar")
+@router.post(
+    "/excel/previsualizar",
+    dependencies=[Depends(requiere_permiso("admin.importacion.ver"))],
+)
 async def previsualizar_importacion(
     archivo: UploadFile = File(...),
     hoja: str | None = None,
