@@ -35,3 +35,15 @@ async def cerrar_db() -> None:
     if _client is not None:
         await _client.close()
         _client = None
+
+
+def obtener_cliente() -> AsyncMongoClient:
+    """Devuelve el cliente Mongo activo.
+
+    Lo usan operaciones que necesitan una sesión/transacción explícita (p.
+    ej. ``POST /personas/deduplicar``, F1.6 del ADR-0008) en vez de pasar
+    por Beanie documento a documento.
+    """
+    if _client is None:
+        raise RuntimeError("La base de datos no está inicializada todavía")
+    return _client

@@ -4,17 +4,22 @@ from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from pymongo.asynchronous.client_session import AsyncClientSession
+from pymongo.errors import OperationFailure
 
+from app.db import obtener_cliente
 from app.documents.aplicacion import Aplicacion
 from app.documents.asignacion import Asignacion
 from app.documents.azdo import AzdoWorkItem
 from app.documents.base import ahora
+from app.documents.bitacora import Bitacora
 from app.documents.capacidad import Capacidad
 from app.documents.persona import Persona
 from app.documents.squad import Squad
 from app.documents.usuario import Usuario
-from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
+from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
 from app.security.deps import es_superadmin, requiere_permiso, usuario_actual
+from app.security.rbac import PERM_ADMIN_ACCESO
 
 router = APIRouter(prefix="/personas", tags=["personas"])
 
@@ -124,82 +129,98 @@ async def listar_duplicados(ctx: ContextoAplicacion = Depends(contexto_aplicacio
 
 
 # ── POST /deduplicar ───────────────────────────────────────────────────────────
-@router.post("/deduplicar")
-async def deduplicar_personas(
-    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: Usuario = Depends(requiere_permiso("personas.editar")),
-) -> dict:
-    """Fusiona personas duplicadas conservando la más completa y redirige sus referencias."""
-    from app.documents.requerimiento import Requerimiento
+class FusionPersonas(BaseModel):
+    """Una fusión concreta: conservar ``ganador_id`` y eliminar ``perdedor_ids``."""
 
-    # Opera sobre TODAS las apps para eliminar duplicados cross-app
-    todas = await Persona.find({}).to_list()
-    grupos = _agrupar_duplicados(todas)
+    ganador_id: str
+    perdedor_ids: list[str]
+
+
+class DeduplicarIn(BaseModel):
+    fusiones: list[FusionPersonas]
+
+
+async def _fusionar_personas(
+    fusiones: list[FusionPersonas],
+    autor: str,
+    session: AsyncClientSession | None = None,
+) -> dict:
+    """Aplica la lista explícita de fusiones dentro de la sesión dada (o sin sesión)."""
+    from app.documents.requerimiento import Requerimiento
 
     fusionados = 0
     refs_actualizadas = 0
 
-    for lista in grupos.values():
-        if len(lista) < 2:
-            continue
+    for fusion in fusiones:
+        ganador = await Persona.get(fusion.ganador_id, session=session)
+        if ganador is None:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, f"Persona ganadora {fusion.ganador_id} no encontrada"
+            )
 
-        ordenada = sorted(lista, key=_score_persona, reverse=True)
-        ganador = ordenada[0]
-        perdedores = ordenada[1:]
-        gid = str(ganador.id)
+        for perdedor_id in fusion.perdedor_ids:
+            if perdedor_id == fusion.ganador_id:
+                continue
+            perdedor = await Persona.get(perdedor_id, session=session)
+            if perdedor is None:
+                continue
+            gid = str(ganador.id)
+            pid = str(perdedor.id)
 
-        # Fusionar squads, email y usuario_id al ganador
-        squads_union = list(ganador.squads or [])
-        for p in perdedores:
-            for sq in (p.squads or []):
+            # Fusionar squads, email y usuario_id al ganador
+            squads_union = list(ganador.squads or [])
+            for sq in (perdedor.squads or []):
                 if sq not in squads_union:
                     squads_union.append(sq)
             # Si el perdedor es de otra app, agregar el nombre de esa app como squad
-            if p.aplicacion_id and p.aplicacion_id != ganador.aplicacion_id:
-                app_doc = await Aplicacion.find_one(Aplicacion.codigo == p.aplicacion_id)
+            if perdedor.aplicacion_id and perdedor.aplicacion_id != ganador.aplicacion_id:
+                app_doc = await Aplicacion.find_one(
+                    Aplicacion.codigo == perdedor.aplicacion_id, session=session
+                )
                 if app_doc and app_doc.nombre and app_doc.nombre not in squads_union:
                     squads_union.append(app_doc.nombre)
-            if not ganador.email and p.email:
-                ganador.email = p.email
-            if not ganador.usuario_id and p.usuario_id:
-                ganador.usuario_id = p.usuario_id
-        ganador.squads = squads_union
-        ganador.marcar_actualizado()
-        await ganador.save()
-
-        for perdedor in perdedores:
-            pid = str(perdedor.id)
+            if not ganador.email and perdedor.email:
+                ganador.email = perdedor.email
+            if not ganador.usuario_id and perdedor.usuario_id:
+                ganador.usuario_id = perdedor.usuario_id
+            ganador.squads = squads_union
+            ganador.marcar_actualizado()
+            await ganador.save(session=session)
 
             # Redirigir referencias sin rehidratar documentos completos; algunos
             # registros históricos pueden tener esquemas parciales.
             for campo in ("solicitud.lt_hitss_id", "solicitud.lt_epm_id", "solicitud.scrum_id"):
                 resultado = await Requerimiento.get_pymongo_collection().update_many(
-                    {campo: pid}, {"$set": {campo: gid}}
+                    {campo: pid}, {"$set": {campo: gid}}, session=session
                 )
                 refs_actualizadas += resultado.modified_count
 
-            desarrolladores = await Requerimiento.get_pymongo_collection().update_many(
-                {"developers_asignados": pid}, {"$addToSet": {"developers_asignados": gid}}
-            )
             await Requerimiento.get_pymongo_collection().update_many(
-                {"developers_asignados": pid}, {"$pull": {"developers_asignados": pid}}
+                {"developers_asignados": pid},
+                {"$addToSet": {"developers_asignados": gid}},
+                session=session,
+            )
+            desarrolladores = await Requerimiento.get_pymongo_collection().update_many(
+                {"developers_asignados": pid},
+                {"$pull": {"developers_asignados": pid}},
+                session=session,
             )
             refs_actualizadas += desarrolladores.modified_count
 
-            squads = await Squad.get_pymongo_collection().update_many(
-                {"lt_hitss_id": pid}, {"$set": {"lt_hitss_id": gid}}
+            squads_upd = await Squad.get_pymongo_collection().update_many(
+                {"lt_hitss_id": pid}, {"$set": {"lt_hitss_id": gid}}, session=session
             )
-            refs_actualizadas += squads.modified_count
+            refs_actualizadas += squads_upd.modified_count
 
             # Redirigir asignaciones, capacidades y work items (no eliminar, reasignar)
             asignaciones = await Asignacion.get_pymongo_collection().update_many(
-                {"persona_id": pid}, {"$set": {"persona_id": gid}}
+                {"persona_id": pid}, {"$set": {"persona_id": gid}}, session=session
             )
             capacidades = await Capacidad.get_pymongo_collection().update_many(
-                {"persona_id": pid}, {"$set": {"persona_id": gid}}
+                {"persona_id": pid}, {"$set": {"persona_id": gid}}, session=session
             )
             work_items = await AzdoWorkItem.get_pymongo_collection().update_many(
-                {"persona_id": pid}, {"$set": {"persona_id": gid}}
+                {"persona_id": pid}, {"$set": {"persona_id": gid}}, session=session
             )
             refs_actualizadas += (
                 asignaciones.modified_count
@@ -207,10 +228,61 @@ async def deduplicar_personas(
                 + work_items.modified_count
             )
 
-            await perdedor.delete()
+            await perdedor.delete(session=session)
             fusionados += 1
 
+            await Bitacora(
+                aplicacion_id=ganador.aplicacion_id,
+                entidad_tipo="persona",
+                entidad_id=gid,
+                accion="deduplicar",
+                descripcion=(
+                    f"Persona '{perdedor.nombre}' ({pid}) fusionada en "
+                    f"'{ganador.nombre}' ({gid})"
+                ),
+                autor=autor,
+            ).insert(session=session)
+
     return {"fusionados": fusionados, "referencias_actualizadas": refs_actualizadas}
+
+
+@router.post("/deduplicar")
+async def deduplicar_personas(
+    body: DeduplicarIn,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    usuario: Usuario = Depends(requiere_permiso(PERM_ADMIN_ACCESO)),
+) -> dict:
+    """Fusiona personas duplicadas según una lista explícita de fusiones.
+
+    F1.6 (ADR-0008 C5): antes recalculaba los grupos de duplicados en cada
+    llamada y los fusionaba TODOS sin confirmación, sobre ``Persona.find({})``
+    -es decir, TODAS las aplicaciones, ignorando ``ctx``-, sin dry-run, sin
+    transacción y sin bitácora, protegido solo con ``personas.editar``. Un
+    error de agrupación era irreversible.
+
+    Ahora exige la lista explícita de fusiones a aplicar (el plan que ya
+    entrega ``GET /personas/duplicados``), el permiso ``admin.acceso``, y
+    ``contexto_escritura`` (rechaza el modo consolidado). Cada fusión queda
+    registrada en ``Bitacora``. Si el despliegue es un replica set (o
+    mongos), toda la operación corre dentro de una transacción Mongo; si es
+    un mongod standalone (no soporta transacciones multi-documento), se
+    ejecuta igual pero sin esa garantía transaccional -mismo comportamiento
+    que tenía antes este endpoint, ahora explícito en vez de silencioso-.
+    """
+    # ``ctx`` solo se exige para bloquear el modo consolidado (contexto_escritura);
+    # el código de aplicación no se usa: las fusiones ya vienen con ids explícitos.
+    if not body.fusiones:
+        return {"fusionados": 0, "referencias_actualizadas": 0}
+
+    cliente = obtener_cliente()
+    try:
+        async with cliente.start_session() as session:
+            async with await session.start_transaction():
+                return await _fusionar_personas(body.fusiones, usuario.email, session=session)
+    except OperationFailure as exc:
+        if exc.code != 20:  # 20 = IllegalOperation: no es un replica set/mongos
+            raise
+        return await _fusionar_personas(body.fusiones, usuario.email, session=None)
 
 
 @router.get("")
