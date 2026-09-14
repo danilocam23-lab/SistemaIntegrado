@@ -10,9 +10,8 @@ from bson.decimal128 import Decimal128
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.documents.bitacora import Bitacora
-from app.documents.usuario import Usuario
-from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
-from app.security.deps import tiene_permiso, usuario_actual
+from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.security.deps import requiere_permiso
 
 router = APIRouter(prefix="/bitacora", tags=["bitacora"])
 logger = logging.getLogger(__name__)
@@ -79,15 +78,18 @@ async def listar(
         ) from exc
 
 
-@router.delete("/{evento_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{evento_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(requiere_permiso("admin.roles.editar"))],
+)
 async def eliminar(
     evento_id: PydanticObjectId,
-    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    usuario: Usuario = Depends(usuario_actual),
+    # F1.3 (ADR-0008 S8): antes contexto_aplicacion permitía borrar en modo
+    # consolidado, cayendo en aplicacion_id=codigos[0] (arbitrario).
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
 ):
     """Elimina un evento de bitácora (requiere permiso de administración)."""
-    if not await tiene_permiso(usuario, "admin.roles.editar"):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "No autorizado para eliminar eventos de bitácora.")
     consulta = ctx.filtro()
     consulta["_id"] = evento_id
     evento = await Bitacora.find_one(consulta)
