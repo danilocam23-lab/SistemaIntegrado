@@ -16,6 +16,7 @@ from app.documents.enums import EstadoEntrega, EstadoRequerimiento
 from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
 from app.documents.squad import Squad
+from app.errors import EntradaInvalida
 
 router = APIRouter(prefix="/integracion", tags=["integracion"])
 
@@ -171,6 +172,16 @@ def _es_mes_actual_o_anterior(
     return fecha_comprometida is not None and fecha_comprometida < limite_exclusivo
 
 
+async def _validar_aplicacion(aplicacion: str | None) -> None:
+    """422 si ``aplicacion`` viene informado pero no existe (ADR-0008 E6).
+
+    Antes, un ``aplicacion`` mal escrito devolvía ``[]`` con 200 — indistinguible
+    de "no hay datos" para el flujo de Power Automate que consume este router.
+    """
+    if aplicacion and not await Aplicacion.find_one(Aplicacion.codigo == aplicacion):
+        raise EntradaInvalida(f"La aplicación '{aplicacion}' no existe.")
+
+
 # ── Endpoint ──────────────────────────────────────────────────────────────────
 
 @router.get(
@@ -191,6 +202,7 @@ async def listar_entregas(
     ),
     _: str = Depends(_verificar_api_key),
 ) -> list[EntregaPlana]:
+    await _validar_aplicacion(aplicacion)
     limite_fecha = _primer_dia_mes_siguiente()
     filtro: dict = {
         "estado": ESTADO_REQUERIMIENTO_ENTREGA_PENDIENTE,
@@ -275,6 +287,7 @@ async def listar_requerimientos(
     ),
     _: str = Depends(_verificar_api_key_requerimientos),
 ) -> list[RequerimientoPlano]:
+    await _validar_aplicacion(aplicacion)
     filtro: dict = {}
     if aplicacion:
         filtro["aplicacion_id"] = aplicacion
@@ -339,6 +352,7 @@ async def listar_solicitudes(
     ),
     _: str = Depends(_verificar_api_key_solicitudes),
 ) -> list[SolicitudPlana]:
+    await _validar_aplicacion(aplicacion)
     filtro: dict = {}
     if aplicacion:
         filtro["aplicacion_id"] = aplicacion
@@ -396,6 +410,7 @@ async def listar_solicitudes_entregas(
     ),
     _: str = Depends(_verificar_api_key_solicitudes),
 ) -> list[EntregaSolicitudPlana]:
+    await _validar_aplicacion(aplicacion)
     filtro: dict = {}
     if aplicacion:
         filtro["aplicacion_id"] = aplicacion
