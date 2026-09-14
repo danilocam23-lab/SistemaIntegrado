@@ -86,10 +86,13 @@ async def cambiar_prioridad(
     nueva_prioridad = not asignacion.prioridad
 
     if nueva_prioridad:
-        # Desmarcar todas las demás asignaciones de la misma persona
-        otras = await Asignacion.find(
-            {"persona_id": asignacion.persona_id, "_id": {"$ne": asignacion.id}}
-        ).to_list()
+        # Desmarcar todas las demás asignaciones de la misma persona, sin
+        # cruzar aplicaciones (S6/F1.4 del ADR-0008: antes no filtraba por
+        # aplicacion_id y podía desmarcar asignaciones de otra aplicación).
+        filtro_otras = ctx.filtro()
+        filtro_otras["persona_id"] = asignacion.persona_id
+        filtro_otras["_id"] = {"$ne": asignacion.id}
+        otras = await Asignacion.find(filtro_otras).to_list()
         for otra in otras:
             if otra.prioridad:
                 otra.prioridad = False
@@ -102,7 +105,7 @@ async def cambiar_prioridad(
     return asignacion
 
 
-@router.delete("/{asignacion_id}")
+@router.delete("/{asignacion_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar(
     asignacion_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
