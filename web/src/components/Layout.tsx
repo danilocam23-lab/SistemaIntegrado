@@ -30,7 +30,7 @@ export default function Layout() {
             </svg>
           </Boton>
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 sm:flex-none">
             {mostrarSelector ? (
               <SelectorAplicacion />
             ) : (
