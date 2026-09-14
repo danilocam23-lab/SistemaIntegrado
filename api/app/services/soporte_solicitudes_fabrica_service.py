@@ -1,6 +1,7 @@
 """Lógica de negocio de Soporte / Solicitudes Fábrica."""
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import logging
@@ -342,7 +343,9 @@ class SoporteSolicitudesFabricaService:
 
     @staticmethod
     async def _parsear_y_validar(contenido: bytes, codigos: list[str]) -> dict:
-        wb = openpyxl.load_workbook(io.BytesIO(contenido), data_only=True)
+        # ADR-0008 P4: openpyxl es síncrono; se corre en un hilo para no bloquear
+        # el event loop mientras se parsea el archivo descargado de OneDrive.
+        wb = await asyncio.to_thread(openpyxl.load_workbook, io.BytesIO(contenido), data_only=True)
         if not wb.worksheets:
             raise ValueError("El archivo Excel no contiene hojas.")
         ws = wb.worksheets[0]

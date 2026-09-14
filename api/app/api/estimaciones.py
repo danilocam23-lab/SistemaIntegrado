@@ -1,4 +1,5 @@
 """Router de estimaciones."""
+import asyncio
 import base64
 import binascii
 from datetime import date, datetime, time
@@ -82,6 +83,16 @@ def _construir_summary(estimacion: Estimacion) -> dict[str, dict[str, dict[str, 
     return {"byType": by_type, "bySprint": by_sprint, "byComplexity": by_complexity}
 
 
+def _leer_filas_excel(buffer: bytes) -> list[list[Any]]:
+    """Parsea el libro subido (síncrono: se corre con ``asyncio.to_thread``)."""
+    wb = load_workbook(BytesIO(buffer), read_only=True, data_only=True)
+    try:
+        sheet = wb.active
+        return [list(row) for row in sheet.iter_rows(values_only=True)]
+    finally:
+        wb.close()
+
+
 def _celda(row: list[Any], index: int) -> Any:
     return row[index] if len(row) > index else None
 
@@ -161,17 +172,13 @@ async def upload_estimacion(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Archivo base64 inválido") from exc
 
     try:
-        wb = load_workbook(BytesIO(buffer), read_only=True, data_only=True)
+        # ADR-0008 P4: openpyxl es síncrono; se corre en un hilo para no
+        # bloquear el event loop mientras se parsea el archivo.
+        raw = await asyncio.to_thread(_leer_filas_excel, buffer)
     except Exception as exc:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "No se pudo leer el archivo Excel"
         ) from exc
-
-    try:
-        sheet = wb.active
-        raw = [list(row) for row in sheet.iter_rows(values_only=True)]
-    finally:
-        wb.close()
 
     meta_title = _celda(raw[0], 0) if len(raw) > 0 else None
     meta_client = _celda(raw[1], 1) if len(raw) > 1 else None

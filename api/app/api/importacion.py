@@ -1,4 +1,5 @@
 """Router de importación del Excel 'BITÁCORA GENERAL'."""
+import asyncio
 import logging
 from datetime import datetime
 from io import BytesIO
@@ -30,6 +31,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/importacion", tags=["importacion"])
 
 
+async def _crear_importador(
+    aplicacion_id: str, contenido: bytes, hoja: str | None
+) -> ImportadorExcel:
+    """Construye ``ImportadorExcel`` fuera del event loop.
+
+    ``ImportadorExcel.__init__`` corre ``openpyxl.load_workbook`` de forma
+    síncrona (ADR-0008 P4): mientras dura el parseo del libro, el proceso no
+    atendería ninguna otra petición. ``asyncio.to_thread`` lo mueve a un hilo.
+    """
+    return await asyncio.to_thread(ImportadorExcel, aplicacion_id, contenido, hoja)
+
+
 @router.post("/excel", dependencies=[Depends(requiere_permiso("admin.importacion.ejecutar"))])
 async def importar_excel(
     archivo: UploadFile = File(...),
@@ -55,7 +68,8 @@ async def importar_excel(
         if ctx.modo_consolidado:
             resultado = await _importar_consolidado(ctx, contenido, hoja)
         else:
-            resultado = await ImportadorExcel(ctx.codigo, contenido, hoja).ejecutar()
+            importador = await _crear_importador(ctx.codigo, contenido, hoja)
+            resultado = await importador.ejecutar()
     except ValueError:
         # Mensaje de negocio escrito a mano por ImportadorExcel: lo traduce a
         # 400 el handler global (ADR-0008 F2.6). No se atrapa aquí para no
@@ -110,6 +124,41 @@ async def exportar_plantilla(
         if t.ramificacion
     }
 
+    # ADR-0008 P4: construir el libro (openpyxl.Workbook + N filas + .save) es
+    # trabajo síncrono de CPU; se mueve a un hilo para no bloquear el event loop
+    # mientras se genera la plantilla.
+    contenido = await asyncio.to_thread(
+        _construir_libro_plantilla,
+        reqs=reqs,
+        squads=squads,
+        personas=personas,
+        tarifas=tarifas,
+        tarifas_por_anio_tecnologia=tarifas_por_anio_tecnologia,
+        squads_por_nombre=squads_por_nombre,
+        personas_por_nombre=personas_por_nombre,
+        apps=apps,
+    )
+    codigo_archivo = "consolidado" if ctx.modo_consolidado else ctx.codigo
+    nombre = f"plantilla_requerimientos_entregas_{codigo_archivo}.xlsx"
+    return StreamingResponse(
+        contenido,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
+
+
+def _construir_libro_plantilla(
+    *,
+    reqs: list,
+    squads: dict,
+    personas: dict,
+    tarifas: dict,
+    tarifas_por_anio_tecnologia: dict,
+    squads_por_nombre: dict,
+    personas_por_nombre: dict,
+    apps: list,
+) -> BytesIO:
+    """Arma el libro de Excel de la plantilla (síncrono, corre en un hilo)."""
     libro = openpyxl.Workbook()
     hoja_req = libro.active
     hoja_req.title = "REQUERIMIENTOS"
@@ -231,13 +280,7 @@ async def exportar_plantilla(
     contenido = BytesIO()
     libro.save(contenido)
     contenido.seek(0)
-    codigo_archivo = "consolidado" if ctx.modo_consolidado else ctx.codigo
-    nombre = f"plantilla_requerimientos_entregas_{codigo_archivo}.xlsx"
-    return StreamingResponse(
-        contenido,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
-    )
+    return contenido
 
 
 @router.post(
@@ -257,7 +300,8 @@ async def previsualizar_importacion(
     try:
         if ctx.modo_consolidado:
             return await _previsualizar_consolidado(ctx, contenido, hoja)
-        return await ImportadorExcel(ctx.codigo, contenido, hoja).previsualizar()
+        importador = await _crear_importador(ctx.codigo, contenido, hoja)
+        return await importador.previsualizar()
     except ValueError:
         raise
     except Exception as exc:  # noqa: BLE001 - openpyxl/zipfile ante un .xlsx corrupto (ADR-0008 E2)
@@ -470,7 +514,9 @@ def _definir_nombre(libro, nombre: str, referencia: str) -> None:
 
 async def _importar_consolidado(ctx: ContextoAplicacion, contenido: bytes, hoja: str | None) -> object:
     apps = await Aplicacion.find({"codigo": {"$in": ctx.codigos}}).to_list()
-    archivos_por_app = _separar_archivo_por_aplicacion(contenido, apps, hoja)
+    archivos_por_app = await asyncio.to_thread(
+        _separar_archivo_por_aplicacion, contenido, apps, hoja
+    )
     resultado_total = {
         "filas_procesadas": 0,
         "requerimientos_creados": 0,
@@ -481,7 +527,8 @@ async def _importar_consolidado(ctx: ContextoAplicacion, contenido: bytes, hoja:
         "errores": [],
     }
     for codigo, archivo_app in archivos_por_app.items():
-        res = await ImportadorExcel(codigo, archivo_app, hoja).ejecutar()
+        importador = await _crear_importador(codigo, archivo_app, hoja)
+        res = await importador.ejecutar()
         resultado_total["filas_procesadas"] += res.filas_procesadas
         resultado_total["requerimientos_creados"] += res.requerimientos_creados
         resultado_total["requerimientos_actualizados"] += res.requerimientos_actualizados
@@ -505,7 +552,9 @@ async def _importar_consolidado(ctx: ContextoAplicacion, contenido: bytes, hoja:
 
 async def _previsualizar_consolidado(ctx: ContextoAplicacion, contenido: bytes, hoja: str | None) -> dict:
     apps = await Aplicacion.find({"codigo": {"$in": ctx.codigos}}).to_list()
-    archivos_por_app = _separar_archivo_por_aplicacion(contenido, apps, hoja)
+    archivos_por_app = await asyncio.to_thread(
+        _separar_archivo_por_aplicacion, contenido, apps, hoja
+    )
     total = {
         "filas_requerimientos": 0,
         "filas_entregas": 0,
@@ -519,7 +568,8 @@ async def _previsualizar_consolidado(ctx: ContextoAplicacion, contenido: bytes, 
         "detalle_entregas_actualizadas": [],
     }
     for codigo, archivo_app in archivos_por_app.items():
-        res = await ImportadorExcel(codigo, archivo_app, hoja).previsualizar()
+        importador = await _crear_importador(codigo, archivo_app, hoja)
+        res = await importador.previsualizar()
         total["filas_requerimientos"] += int(res.get("filas_requerimientos", 0))
         total["filas_entregas"] += int(res.get("filas_entregas", 0))
         total["requerimientos_nuevos"] += int(res.get("requerimientos_nuevos", 0))
