@@ -135,14 +135,20 @@ def permiso(nombre: str) -> Any:
     return Depends(requiere_permiso(nombre))
 
 
-def _permisos_de_dependant(dependant: Any) -> list[str]:
-    """Recorre el árbol de dependencias de una ruta y devuelve los permisos RBAC
-    que exige, en el orden en que aparecen. Detecta tanto
-    ``Depends(requiere_permiso(...))``/``permiso(...)`` puestos como parámetro de
-    la función como los declarados en ``dependencies=[...]`` del decorador: en
-    ambos casos FastAPI los deja en el mismo árbol ``Dependant.dependencies``.
+def calls_de_ruta(route: APIRoute) -> list[Any]:
+    """Todas las funciones (``Dependant.call``) del árbol de dependencias de una
+    ruta, a cualquier profundidad, sin duplicados.
+
+    Es la base compartida para leer metadatos "de dato, no de prosa" desde el
+    contrato real de la ruta: ``permiso_de_ruta`` la usa para encontrar
+    ``requiere_permiso``, y el catálogo de
+    ``GET /api/admin/endpoints/catalogo`` (F4.1) la usa para saber si una ruta
+    depende de ``contexto_aplicacion``/``contexto_escritura``.
     """
-    encontrados: list[str] = []
+    dependant = getattr(route, "dependant", None)
+    if dependant is None:
+        return []
+    encontradas: list[Any] = []
     vistos: set[int] = set()
     pendientes = [dependant]
     while pendientes:
@@ -150,11 +156,10 @@ def _permisos_de_dependant(dependant: Any) -> list[str]:
         if actual is None or id(actual) in vistos:
             continue
         vistos.add(id(actual))
-        marcado = getattr(actual.call, "permiso_requerido", None)
-        if marcado and marcado not in encontrados:
-            encontrados.append(marcado)
+        if actual.call is not None:
+            encontradas.append(actual.call)
         pendientes.extend(actual.dependencies)
-    return encontrados
+    return encontradas
 
 
 def permiso_de_ruta(route: APIRoute) -> str | None:
@@ -166,11 +171,12 @@ def permiso_de_ruta(route: APIRoute) -> str | None:
     ``actualizar_detalle_ans_req``), se devuelve el primero declarado por
     ``Depends``; esos casos puntuales no pasan por aquí.
     """
-    dependant = getattr(route, "dependant", None)
-    if dependant is None:
-        return None
-    permisos = _permisos_de_dependant(dependant)
-    return permisos[0] if permisos else None
+    encontrados: list[str] = []
+    for call in calls_de_ruta(route):
+        marcado = getattr(call, "permiso_requerido", None)
+        if marcado and marcado not in encontrados:
+            encontrados.append(marcado)
+    return encontrados[0] if encontrados else None
 
 
 def sincronizar_permisos_openapi(router: APIRouter) -> None:

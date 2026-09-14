@@ -1,5 +1,6 @@
 """Agrega todos los routers bajo el prefijo /api."""
 from fastapi import APIRouter
+from fastapi.routing import APIRoute
 
 from app.api import (
     actas,
@@ -31,7 +32,8 @@ from app.api import (
     tarifas,
     usuarios,
 )
-from app.security.deps import sincronizar_permisos_openapi
+from app.middleware.aplicacion import contexto_aplicacion, contexto_escritura
+from app.security.deps import calls_de_ruta, sincronizar_permisos_openapi
 
 _SUBROUTERS = (
     auth.router,
@@ -64,15 +66,35 @@ _SUBROUTERS = (
     integracion.router,
 )
 
-# F4.2 (ADR-0008): publica en el OpenAPI de cada ruta el permiso que ya exige en
-# tiempo de ejecución. Se hace sobre cada sub-router ANTES de `include_router`
-# porque, desde FastAPI >= 0.140, `include_router` no copia las `APIRoute`: las
-# envuelve en un `_IncludedRouter` perezoso y solo expone el objeto original en
-# el momento de generar el esquema. Iterar `api_router.routes` después de
-# incluirlos no encuentra ninguna `APIRoute` (verificado); hay que marcar el
-# permiso directamente sobre el router original de cada módulo.
+# F4.1/F4.2 (ADR-0008): publica en el OpenAPI de cada ruta datos que hoy solo
+# existen en el árbol de dependencias de Python, para que
+# GET /api/admin/endpoints/catalogo los lea del propio `app.openapi()` en vez
+# de adivinarlos. Se hace sobre cada sub-router ANTES de `include_router`
+# porque, desde FastAPI >= 0.140, `include_router` no copia las `APIRoute`:
+# las envuelve en un `_IncludedRouter` perezoso y solo expone el objeto
+# original en el momento de generar el esquema. Iterar `api_router.routes`
+# después de incluirlos no encuentra ninguna `APIRoute` (verificado); hay que
+# marcar los datos directamente sobre el router original de cada módulo.
+_DEPENDENCIAS_APLICACION = {contexto_aplicacion, contexto_escritura}
+
+
+def _marcar_requiere_aplicacion(router: APIRouter) -> None:
+    """Publica ``x-requiere-aplicacion`` (F4.1): ``true`` si la ruta depende,
+    directa o indirectamente, de ``contexto_aplicacion``/``contexto_escritura``
+    (exige la cabecera ``X-Aplicacion`` y aplica el aislamiento multi-tenant).
+    """
+    for route in router.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        requiere = any(c in _DEPENDENCIAS_APLICACION for c in calls_de_ruta(route))
+        extra = dict(route.openapi_extra or {})
+        extra["x-requiere-aplicacion"] = requiere
+        route.openapi_extra = extra
+
+
 for _router in _SUBROUTERS:
     sincronizar_permisos_openapi(_router)
+    _marcar_requiere_aplicacion(_router)
 
 api_router = APIRouter(prefix="/api")
 # Plataforma y seguridad

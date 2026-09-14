@@ -54,6 +54,7 @@ PERMISOS_CATALOGO: list[str] = [
     "admin.endpoints.crear",
     "admin.endpoints.editar",
     "admin.endpoints.eliminar",
+    "admin.endpoints.probar",
     "admin.configuracion.ver",
     "admin.configuracion.editar",
     "soporte.solicitudes_fabrica.ver",
