@@ -6,9 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.documents.configuracion import Configuracion
-from app.security.deps import requiere_permiso
+from app.security.deps import requiere_permiso, usuario_actual
 
-router = APIRouter(prefix="/configuracion", tags=["configuracion"])
+# F1.1 (ADR-0008 S1): GET /api/configuracion no exigía ningún tipo de
+# autenticación; ahora todo el router exige, como mínimo, JWT válido.
+router = APIRouter(
+    prefix="/configuracion", tags=["configuracion"], dependencies=[Depends(usuario_actual)]
+)
 
 _APP_GLOBAL = "global"
 

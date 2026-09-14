@@ -6,12 +6,18 @@ escritura no exigen un squad activo en particular.
 """
 from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.documents.tarifa import Tarifa
+from app.security.deps import requiere_permiso, usuario_actual
 
-router = APIRouter(prefix="/tarifas", tags=["tarifas"])
+# F1.1 (ADR-0008 S1): el router entero exigía cero autenticación; ahora toda
+# operación requiere JWT válido, y las de escritura además el permiso de
+# configuración administrativa.
+router = APIRouter(
+    prefix="/tarifas", tags=["tarifas"], dependencies=[Depends(usuario_actual)]
+)
 
 # aplicacion_id fijo para registros globales
 _APP_GLOBAL = "global"
@@ -29,14 +35,21 @@ async def listar():
     return await Tarifa.find_all().sort("-anio").to_list()
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(requiere_permiso("admin.configuracion.editar"))],
+)
 async def crear(datos: TarifaIn):
     tarifa = Tarifa(aplicacion_id=_APP_GLOBAL, **datos.model_dump())
     await tarifa.insert()
     return tarifa
 
 
-@router.put("/{tarifa_id}")
+@router.put(
+    "/{tarifa_id}",
+    dependencies=[Depends(requiere_permiso("admin.configuracion.editar"))],
+)
 async def actualizar(tarifa_id: str, datos: TarifaIn):
     tarifa = await Tarifa.get(tarifa_id)
     if tarifa is None:
@@ -48,7 +61,11 @@ async def actualizar(tarifa_id: str, datos: TarifaIn):
     return tarifa
 
 
-@router.delete("/{tarifa_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{tarifa_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(requiere_permiso("admin.configuracion.editar"))],
+)
 async def eliminar(tarifa_id: str) -> None:
     tarifa = await Tarifa.get(tarifa_id)
     if tarifa is None:

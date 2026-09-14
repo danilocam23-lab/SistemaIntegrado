@@ -110,6 +110,8 @@ ROLES_BASE: list[dict] = [
             "admin.roles.ver",
             "admin.importacion.ver",
             "admin.importacion.ejecutar",
+            "admin.configuracion.ver",
+            "admin.configuracion.editar",
             "soporte.solicitudes_fabrica.ver",
             "soporte.solicitudes_fabrica.actualizar",
             "soporte.detalle_ans.editar",
