@@ -20,6 +20,17 @@ class GarantiaWO(DocumentoBase):
     class Settings:
         name = "garantias_wo"
         indexes = [
-            IndexModel([("work_order_id", ASCENDING)], name="ix_wo_id", unique=True),
-            IndexModel([("aplicacion_id", ASCENDING)], name="ix_app"),
+            # F1.4 (ADR-0008 S7): antes era único por work_order_id a secas,
+            # así que dos aplicaciones no podían registrar jamás la misma WO
+            # como garantía. Pasa a compuesto: sigue impidiendo duplicados
+            # dentro de una misma aplicación, pero deja de bloquear a otra.
+            # Es una migración segura: el índice viejo ya garantizaba
+            # unicidad global, así que no puede haber datos existentes que
+            # violen la nueva restricción (más laxa). Beanie lo reemplaza
+            # solo al arrancar (allow_index_dropping=True en db.py).
+            IndexModel(
+                [("aplicacion_id", ASCENDING), ("work_order_id", ASCENDING)],
+                name="ix_app_wo_id",
+                unique=True,
+            ),
         ]

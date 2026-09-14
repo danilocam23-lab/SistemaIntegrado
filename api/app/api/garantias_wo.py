@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from app.documents.garantia_wo import GarantiaWO
 from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabrica
-from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
+from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
 
 router = APIRouter(prefix="/garantias-wo", tags=["garantias-wo"])
 
@@ -26,10 +26,14 @@ async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
 
     # Autocompletar registros antiguos que quedaron sin descripción/estado
     # (creados antes de que se corrigiera el mapeo de columnas de soporte).
+    # La búsqueda se restringe a la aplicación del propio documento (S7): antes
+    # cruzaba aplicaciones porque no llevaba ningún filtro de aplicacion_id.
     for doc in docs:
         if doc.descripcion and doc.estado_wo:
             continue
-        wo = await SoporteSolicitudFabrica.find_one({"datos.Work Order ID": doc.work_order_id})
+        wo = await SoporteSolicitudFabrica.find_one(
+            {"datos.Work Order ID": doc.work_order_id, "aplicacion_id": doc.aplicacion_id}
+        )
         if not wo:
             continue
         datos = wo.datos or {}
@@ -54,10 +58,14 @@ async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
 @router.post("", status_code=201)
 async def agregar(
     body: GarantiaWOIn,
-    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
 ):
     """Agregar una WO como garantía buscándola en soporte."""
-    existente = await GarantiaWO.find_one({"work_order_id": body.work_order_id})
+    # F1.3/S7 (ADR-0008): antes usaba contexto_aplicacion (permitía escribir en
+    # modo consolidado con una aplicación arbitraria) y comprobaba duplicados
+    # sin filtrar por aplicacion_id (dos aplicaciones no podían registrar la
+    # misma WO por el índice único global; ver documents/garantia_wo.py).
+    existente = await GarantiaWO.find_one({"work_order_id": body.work_order_id, **ctx.filtro()})
     if existente:
         raise HTTPException(409, "Esta WO ya está registrada como garantía")
 
@@ -82,11 +90,20 @@ async def agregar(
 
 
 @router.put("/{garantia_id}")
-async def actualizar(garantia_id: str, body: GarantiaWOUpdate):
+async def actualizar(
+    garantia_id: str,
+    body: GarantiaWOUpdate,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+):
     """Actualizar observaciones de una garantía WO."""
     from bson import ObjectId
+
+    # F1.4 (ADR-0008): antes no recibía ``ctx`` en absoluto — ni exigía
+    # X-Aplicacion ni comprobaba que la garantía perteneciera a una
+    # aplicación autorizada; cualquier usuario autenticado podía editar la
+    # garantía de cualquier aplicación conociendo su id.
     doc = await GarantiaWO.get(ObjectId(garantia_id))
-    if not doc:
+    if not doc or doc.aplicacion_id != ctx.codigo:
         raise HTTPException(404, "Garantía no encontrada")
     if body.observaciones is not None:
         doc.observaciones = body.observaciones
@@ -98,11 +115,16 @@ async def actualizar(garantia_id: str, body: GarantiaWOUpdate):
 
 
 @router.delete("/{garantia_id}", status_code=204)
-async def eliminar(garantia_id: str):
+async def eliminar(
+    garantia_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+):
     """Eliminar una garantía WO."""
     from bson import ObjectId
+
+    # F1.4 (ADR-0008): mismo caso que ``actualizar`` — sin ``ctx`` antes.
     doc = await GarantiaWO.get(ObjectId(garantia_id))
-    if not doc:
+    if not doc or doc.aplicacion_id != ctx.codigo:
         raise HTTPException(404, "Garantía no encontrada")
     await doc.delete()
 

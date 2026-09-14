@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError
 
+from app.documents.aplicacion import Aplicacion
 from app.documents.bitacora import Bitacora
 from app.documents.estimacion import Estimacion
 from app.documents.requerimiento import Entrega, Requerimiento, Solicitud
@@ -557,24 +558,36 @@ async def reasignar_aplicacion(
     usuario: Usuario = Depends(usuario_actual),
 ) -> dict:
     """[ADMIN] Reasigna un requerimiento a otra aplicación.
-    
-    Nota: Solo disponible en modo consolidado (__todas__).
+
+    Nota: Solo disponible en modo consolidado (__todas__). Esta es una
+    operación legítimamente cruzada entre aplicaciones (F1.3 del ADR-0008):
+    a propósito usa ``contexto_aplicacion`` y no ``contexto_escritura`` (que
+    rechazaría el modo consolidado que el propio endpoint exige), pero toda
+    consulta se restringe explícitamente a ``ctx.codigos`` (las aplicaciones
+    autorizadas para este usuario), nunca a la colección entera (S4).
     Busca por codigo_req O por solicitud.codigo_sc si es numérico.
     """
     if not await tiene_permiso(usuario, "requerimientos.editar"):
          raise HTTPException(status.HTTP_403_FORBIDDEN, "No autorizado")
     if not ctx.modo_consolidado:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo en modo consolidado")
-    
-    # Buscar en TODAS las aplicaciones
-    req = await Requerimiento.find_one({"codigo_req": codigo_req})
+
+    aplicacion_destino = await Aplicacion.find_one(Aplicacion.codigo == nueva_aplicacion)
+    if aplicacion_destino is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"La aplicación '{nueva_aplicacion}' no existe",
+        )
+
+    # Buscar solo entre las aplicaciones autorizadas para este usuario (S4)
+    req = await Requerimiento.find_one({**ctx.filtro(), "codigo_req": codigo_req})
     # Si no, buscar por SC
     if not req:
-        req = await Requerimiento.find_one({"solicitud.codigo_sc": codigo_req})
-    
+        req = await Requerimiento.find_one({**ctx.filtro(), "solicitud.codigo_sc": codigo_req})
+
     if not req:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo_req} no encontrado")
-    
+
     app_anterior = req.aplicacion_id
     req.aplicacion_id = nueva_aplicacion
     req.marcar_actualizado()
@@ -610,14 +623,17 @@ async def diagnostico(
     """
     if not await tiene_permiso(usuario, "requerimientos.editar"):
        raise HTTPException(status.HTTP_403_FORBIDDEN, "No autorizado")
-    
-    # Buscar en TODAS las aplicaciones si estamos en consolidado
+
+    # Buscar en modo consolidado, pero solo entre las aplicaciones
+    # autorizadas para este usuario, nunca en la colección entera (S5).
     if ctx.modo_consolidado:
         # Primero buscar por codigo_req
-        req = await Requerimiento.find_one({"codigo_req": codigo_req})
+        req = await Requerimiento.find_one({**ctx.filtro(), "codigo_req": codigo_req})
         # Si no, buscar por SC
         if not req:
-            req = await Requerimiento.find_one({"solicitud.codigo_sc": codigo_req})
+            req = await Requerimiento.find_one(
+                {**ctx.filtro(), "solicitud.codigo_sc": codigo_req}
+            )
     else:
         req = await _buscar(ctx, codigo_req)
     
