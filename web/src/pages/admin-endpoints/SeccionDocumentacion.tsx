@@ -1,23 +1,47 @@
-import { Campo, Chip, Selector, TablaScroll } from '../../components/ui'
-import { ENDPOINTS, metodoClase } from './catalogoEndpoints'
+import { Aviso, Campo, Chip, Selector, TablaScroll } from '../../components/ui'
+import { metodoClase } from './catalogoEndpoints'
+import { RIESGO_ETIQUETA, RIESGO_TONO } from './tipos'
+import type { Metodo } from './tipos'
 import type { EstadoAdminEndpoints } from './useAdminEndpoints'
 
-type Props = Pick<EstadoAdminEndpoints, 'filtro' | 'setFiltro' | 'modulo' | 'setModulo' | 'modulos' | 'endpointsFiltrados'>
+type Props = Pick<
+  EstadoAdminEndpoints,
+  'filtro' | 'setFiltro' | 'modulo' | 'setModulo' | 'modulos' | 'endpointsFiltrados' | 'cargandoCatalogo' | 'errorCatalogo'
+>
 
-/** Tabla de documentación de todas las rutas FastAPI, con filtro por módulo y texto libre. */
-export function SeccionDocumentacion({ filtro, setFiltro, modulo, setModulo, modulos, endpointsFiltrados }: Props) {
+/**
+ * Documentación viva de todas las operaciones reales de `/api/*` (F4.5, ADR-0008):
+ * sale de `GET /api/admin/endpoints/catalogo`, derivado en caliente de `app.openapi()`,
+ * en vez de la lista a mano (`catalogoEndpoints.ts`, 113 entradas) que se
+ * desincronizaba del código.
+ */
+export function SeccionDocumentacion({
+  filtro,
+  setFiltro,
+  modulo,
+  setModulo,
+  modulos,
+  endpointsFiltrados,
+  cargandoCatalogo,
+  errorCatalogo,
+}: Props) {
   return (
     <section className="tarjeta tarjeta-pad">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="titulo-seccion">Documentación de endpoints</h2>
           <p className="text-xs text-slate-500">
-            {endpointsFiltrados.length} de {ENDPOINTS.length} rutas documentadas. Todas requieren JWT salvo login y health; los recursos operativos usan <code>X-Aplicacion</code>.
+            {endpointsFiltrados.length} operaciones reales, leídas en vivo del contrato OpenAPI. Todas requieren
+            JWT salvo login y health; los recursos operativos usan <code>X-Aplicacion</code>.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Selector value={modulo} onChange={(e) => setModulo(e.target.value)}>
-            {modulos.map((m) => <option key={m} value={m}>{m}</option>)}
+            {modulos.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
           </Selector>
           <Campo
             value={filtro}
@@ -28,6 +52,8 @@ export function SeccionDocumentacion({ filtro, setFiltro, modulo, setModulo, mod
         </div>
       </div>
 
+      {errorCatalogo && <Aviso tono="error" className="mb-3">{errorCatalogo}</Aviso>}
+
       <TablaScroll>
         <table className="tabla">
           <thead>
@@ -35,8 +61,8 @@ export function SeccionDocumentacion({ filtro, setFiltro, modulo, setModulo, mod
               <th>Módulo</th>
               <th>Método</th>
               <th>Ruta</th>
-              <th>Descripción</th>
-              <th>Parámetros / cuerpo</th>
+              <th>Resumen</th>
+              <th>Riesgo</th>
               <th>Permiso</th>
             </tr>
           </thead>
@@ -45,20 +71,32 @@ export function SeccionDocumentacion({ filtro, setFiltro, modulo, setModulo, mod
               <tr key={`${endpoint.metodo}-${endpoint.ruta}`}>
                 <td>{endpoint.modulo}</td>
                 <td>
-                  <Chip tono="categoria" className={metodoClase[endpoint.metodo]}>
+                  <Chip tono="categoria" className={metodoClase[endpoint.metodo as Metodo] ?? 'chip-neutro'}>
                     {endpoint.metodo}
                   </Chip>
                 </td>
-                <td className="font-mono">{endpoint.ruta}</td>
-                <td>{endpoint.descripcion}</td>
-                <td>
-                  {endpoint.parametros && <div><span className="font-semibold">Query:</span> {endpoint.parametros}</div>}
-                  {endpoint.cuerpo && <div><span className="font-semibold">Body:</span> {endpoint.cuerpo}</div>}
-                  {!endpoint.parametros && !endpoint.cuerpo && <span className="text-slate-400">—</span>}
+                <td className="font-mono">
+                  {endpoint.ruta}
+                  {endpoint.requiere_aplicacion && (
+                    <span className="ml-1 text-2xs text-slate-400" title="Exige X-Aplicacion">
+                      ⚙
+                    </span>
+                  )}
                 </td>
-                <td className="font-mono">{endpoint.permisos ?? 'JWT / rol según ruta'}</td>
+                <td>{endpoint.resumen ?? endpoint.enriquecimiento?.descripcion ?? '—'}</td>
+                <td>
+                  <Chip tono={RIESGO_TONO[endpoint.riesgo]}>{RIESGO_ETIQUETA[endpoint.riesgo]}</Chip>
+                </td>
+                <td className="font-mono text-xs">{endpoint.permiso ?? '—'}</td>
               </tr>
             ))}
+            {!cargandoCatalogo && endpointsFiltrados.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-4 text-center text-slate-400">
+                  Sin operaciones que coincidan con el filtro.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </TablaScroll>

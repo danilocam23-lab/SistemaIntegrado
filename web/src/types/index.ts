@@ -198,6 +198,34 @@ export interface EndpointAdmin {
   activo: boolean
 }
 
+/** Parameter object crudo de OpenAPI (path/query/header), tal como lo sirve `app.openapi()`. */
+export interface ParametroEndpoint {
+  name: string
+  in: string
+  required?: boolean
+  schema?: Record<string, unknown>
+  description?: string
+}
+
+/**
+ * Una operación real de `/api/*`, tal como la sirve `GET /api/admin/endpoints/catalogo`
+ * (F4.1, ADR-0008): se deriva en caliente de `app.openapi()`, no puede desincronizarse.
+ */
+export interface EndpointCatalogo {
+  metodo: string
+  ruta: string
+  operation_id: string | null
+  modulo: string
+  resumen: string | null
+  parametros: ParametroEndpoint[]
+  /** `requestBody` crudo de OpenAPI (puede traer `$ref` sin resolver); null si no aplica. */
+  esquema_de_cuerpo: Record<string, unknown> | null
+  permiso: string | null
+  requiere_aplicacion: boolean
+  riesgo: 'seguro' | 'mutante' | 'destructivo'
+  enriquecimiento: EndpointAdmin | null
+}
+
 export interface Proyecto {
   id: string
   nombre: string

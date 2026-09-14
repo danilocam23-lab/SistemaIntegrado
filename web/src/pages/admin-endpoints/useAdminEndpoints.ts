@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../../api/client'
 import { mensajeError, useLista } from '../../api/hooks'
-import type { Aplicacion, EndpointAdmin } from '../../types'
-import { ENDPOINTS } from './catalogoEndpoints'
+import type { Aplicacion, EndpointAdmin, EndpointCatalogo } from '../../types'
 import { consultarIntegracion } from './consultarIntegracion'
 import type { Metodo } from './tipos'
 
@@ -12,12 +11,17 @@ const HEADER_CONSOLIDADO = { headers: { 'X-Aplicacion': '__todas__' } }
 /**
  * Estado y acciones de la pantalla "Administración de Endpoints": diagnóstico y
  * reasignación de requerimientos, los cuatro formularios de "probar integración",
- * el catálogo administrable de endpoints y el filtro de documentación.
+ * el catálogo administrable de endpoints (notas de negocio) y el catálogo vivo
+ * de `GET /api/admin/endpoints/catalogo` (F4.1/F4.5, ADR-0008) que alimenta la
+ * documentación y el probador de endpoints.
  */
 export function useAdminEndpoints() {
   const { datos: apps } = useLista<Aplicacion>('/aplicaciones')
   const { datos: endpointsAdmin, error: errorEndpointsAdmin, recargar: recargarEndpointsAdmin } =
     useLista<EndpointAdmin>('/admin/endpoints')
+  // F4.5 (ADR-0008): catalogo vivo derivado de app.openapi(), reemplaza la lista a mano.
+  const { datos: catalogo, error: errorCatalogo, cargando: cargandoCatalogo, recargar: recargarCatalogo } =
+    useLista<EndpointCatalogo>('/admin/endpoints/catalogo')
   const [nuevoModulo, setNuevoModulo] = useState('')
   const [nuevoMetodo, setNuevoMetodo] = useState<Metodo>('GET')
   const [nuevaRuta, setNuevaRuta] = useState('')
@@ -45,23 +49,25 @@ export function useAdminEndpoints() {
   const [aplicacionSolicitudesIntegracion, setAplicacionSolicitudesIntegracion] = useState('')
   const [cargandoSolicitudesEntregasIntegracion, setCargandoSolicitudesEntregasIntegracion] = useState(false)
 
-  const modulos = useMemo(() => ['Todos', ...Array.from(new Set(ENDPOINTS.map((e) => e.modulo))).sort()], [])
+  const modulos = useMemo(
+    () => ['Todos', ...Array.from(new Set(catalogo.map((e) => e.modulo))).sort()],
+    [catalogo],
+  )
   const endpointsFiltrados = useMemo(() => {
     const texto = filtro.trim().toLowerCase()
-    return ENDPOINTS.filter((endpoint) => {
+    return catalogo.filter((endpoint) => {
       const coincideModulo = modulo === 'Todos' || endpoint.modulo === modulo
       const coincideTexto = !texto || [
         endpoint.modulo,
         endpoint.metodo,
         endpoint.ruta,
-        endpoint.descripcion,
-        endpoint.parametros,
-        endpoint.cuerpo,
-        endpoint.permisos,
+        endpoint.resumen,
+        endpoint.permiso,
+        endpoint.enriquecimiento?.descripcion,
       ].some((valor) => valor?.toLowerCase().includes(texto))
       return coincideModulo && coincideTexto
     })
-  }, [filtro, modulo])
+  }, [catalogo, filtro, modulo])
 
   async function ejecutarDiagnostico(e: FormEvent): Promise<void> {
     e.preventDefault()
@@ -242,6 +248,10 @@ export function useAdminEndpoints() {
     apps,
     endpointsAdmin,
     errorEndpointsAdmin,
+    catalogo,
+    errorCatalogo,
+    cargandoCatalogo,
+    recargarCatalogo,
     nuevoModulo,
     setNuevoModulo,
     nuevoMetodo,
