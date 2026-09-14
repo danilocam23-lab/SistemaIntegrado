@@ -117,7 +117,7 @@ async def _crear_servicio_desde_config(cfg: AzdoConfig) -> AzureDevOpsService:
 
 # ── Endpoints de configuración ──
 
-@router.get("/config")
+@router.get("/config", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
 async def obtener_config(
     target: str = "hitss",
     squad_id: str | None = None,
@@ -152,7 +152,7 @@ async def obtener_config(
     }
 
 
-@router.get("/config/all")
+@router.get("/config/all", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
 async def listar_configs(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     """Lista todas las configuraciones AzDO de la aplicación (app, squads, users)."""
     configs = await AzdoConfig.find(
@@ -251,7 +251,7 @@ async def eliminar_config(
 
 # ── Test de conexión ──
 
-@router.get("/test")
+@router.get("/test", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
 async def test_conexion(
     target: str = "hitss",
     squad_id: str | None = None,
@@ -400,7 +400,7 @@ async def campos_requeridos(
 
 # ── Proyectos e iteraciones ──
 
-@router.get("/proyectos")
+@router.get("/proyectos", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
 async def proyectos(
     target: str = "hitss",
     squad_id: str | None = None,
@@ -417,7 +417,7 @@ async def proyectos(
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
 
 
-@router.get("/iteraciones")
+@router.get("/iteraciones", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
 async def iteraciones(
     proyecto: str,
     target: str = "hitss",
@@ -437,12 +437,12 @@ async def iteraciones(
 
 # ── Work items y sync ──
 
-@router.get("/work-items")
+@router.get("/work-items", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
 async def listar_work_items(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return await AzdoWorkItem.find(ctx.filtro()).to_list()
 
 
-@router.get("/sync-log")
+@router.get("/sync-log", dependencies=[Depends(requiere_permiso("azure_devops.ver"))])
 async def listar_sync_log(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     return await AzdoSyncLog.find(ctx.filtro()).sort("-iniciado_en").to_list()
 
