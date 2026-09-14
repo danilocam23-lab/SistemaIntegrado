@@ -104,7 +104,7 @@ async def obtener_tipos_contratacion():
 
 
 # ── GET /duplicados ────────────────────────────────────────────────────────────
-@router.get("/duplicados")
+@router.get("/duplicados", dependencies=[Depends(requiere_permiso(PERM_ADMIN_ACCESO))])
 async def listar_duplicados(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> list[dict]:
     """Devuelve grupos de personas duplicadas (mismo nombre + rol_operativo) en todas las apps accesibles."""
     # Siempre busca en TODAS las apps del tenant para no perderse duplicados cross-app
@@ -285,7 +285,7 @@ async def deduplicar_personas(
         return await _fusionar_personas(body.fusiones, usuario.email, session=None)
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(requiere_permiso("personas.ver"))])
 async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     if ctx.modo_consolidado:
         return await Persona.find({"aplicacion_id": {"$in": ctx.codigos}}).sort("nombre").to_list()
@@ -314,7 +314,7 @@ def _persona_visible(persona: Persona, ctx: ContextoAplicacion) -> bool:
     return False
 
 
-@router.get("/{persona_id}")
+@router.get("/{persona_id}", dependencies=[Depends(requiere_permiso("personas.ver"))])
 async def obtener(persona_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     persona = await Persona.get(persona_id)
     if persona is None or not _persona_visible(persona, ctx):
