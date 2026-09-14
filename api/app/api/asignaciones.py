@@ -22,7 +22,7 @@ class AsignacionIn(BaseModel):
     proyectos: list[Proyecto] = []
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(requiere_permiso("asignaciones.ver"))])
 async def listar(
     persona_id: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
@@ -34,7 +34,7 @@ async def listar(
     return await Asignacion.find(consulta).to_list()
 
 
-@router.get("/{asignacion_id}")
+@router.get("/{asignacion_id}", dependencies=[Depends(requiere_permiso("asignaciones.ver"))])
 async def obtener(
     asignacion_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)
 ):

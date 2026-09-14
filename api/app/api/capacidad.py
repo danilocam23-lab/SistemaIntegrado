@@ -20,7 +20,7 @@ class CapacidadIn(BaseModel):
     notas: str | None = None
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(requiere_permiso("capacidades.ver"))])
 async def listar(
     mes: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),

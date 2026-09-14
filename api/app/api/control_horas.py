@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from app.documents.control_horas import ControlHoras
-from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
+from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.security.deps import requiere_permiso
 
 router = APIRouter(prefix="/control-horas", tags=["control-horas"])
 
@@ -54,7 +55,7 @@ def _aplicar(doc: ControlHoras, datos: ControlHorasIn) -> None:
             setattr(doc, c, getattr(datos, c))
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(requiere_permiso("control_horas_facturable.ver"))])
 async def listar(
     anio: int = Query(0),
     mes: int = Query(0),
@@ -71,12 +72,17 @@ async def listar(
     return [_doc_a_dict(d) for d in docs]
 
 
-@router.put("/registro")
+@router.put(
+    "/registro",
+    dependencies=[Depends(requiere_permiso("control_horas_facturable.editar"))],
+)
 async def guardar_uno(
     datos: ControlHorasIn,
     anio: int = Query(0),
     mes: int = Query(0),
-    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    # F1.3 (ADR-0008 S8): antes contexto_aplicacion permitía escribir en modo
+    # consolidado, cayendo en `codigos[0]` (una aplicación arbitraria).
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
 ) -> dict:
     hoy = date.today()
     a = anio or hoy.year
@@ -98,12 +104,15 @@ async def guardar_uno(
     return {"ok": True, "id": str(doc.id)}
 
 
-@router.put("/todos")
+@router.put(
+    "/todos",
+    dependencies=[Depends(requiere_permiso("control_horas_facturable.editar"))],
+)
 async def guardar_todos(
     datos: ControlHorasBulkIn,
     anio: int = Query(0),
     mes: int = Query(0),
-    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
 ) -> dict:
     hoy = date.today()
     a = anio or hoy.year
