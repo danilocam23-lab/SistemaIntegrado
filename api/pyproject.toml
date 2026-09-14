@@ -61,3 +61,9 @@ extend-immutable-calls = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Toda la suite comparte un único event loop de sesión: la fixture de
+# infraestructura (`tests/conftest.py::_infra_bd`) abre el AsyncMongoClient una
+# sola vez por sesión, y pymongo ata el cliente asíncrono al loop en el que se
+# creó (falla con RuntimeError si un test corriera en un loop distinto).
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
