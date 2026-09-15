@@ -16,6 +16,48 @@ deploy/     Publicación en IIS (web.config + publicar-iis.bat)
 docs/       Documentos HTML generados (arquitectura, modelo de datos, grafos)
 ```
 
+## Ramas
+
+Dos ramas con contenidos que **no se mezclan**:
+
+| Rama | Contenido | Stack |
+|---|---|---|
+| `main` | El sistema en producción y su evolución diaria | FastAPI + **MongoDB** + React |
+| `version-sql` | La migración y solo la migración | **SQL Server + .NET 9** + React |
+
+### Regla de flujo (una sola dirección)
+
+```
+main  ──────────>  version-sql        PERMITIDO
+main  <──X──────   version-sql        PROHIBIDO
+```
+
+- `main` puede enviar cambios a `version-sql`: la migración parte del sistema
+  actual y debe mantenerse al día con él.
+- `version-sql` **nunca** envía nada a `main`. Sin merge, sin cherry-pick, sin
+  pull request en esa dirección.
+
+### Qué no puede aparecer en `main`
+
+- El plan de migración y sus micro-planes por fase.
+- Los scripts de migración de datos (`.bat`, `.py` de export/import, `.sql` de
+  staging y promoción).
+- Código .NET, proyectos `.csproj`/`.sln`, `DbContext`, migraciones de EF Core.
+- Cadenas de conexión o configuración de SQL Server.
+
+Todo eso vive en `version-sql` (o en el vault, si aún no toca el repositorio).
+
+### Antes de commitear
+
+Comprobar la rama y que el cambio corresponde a su stack:
+
+```bash
+git branch --show-current
+```
+
+Si el cambio es de migración y estás en `main`: **no commitear**. Cambiar de
+rama primero.
+
 ## Comandos
 
 ### Backend (`api/`)
