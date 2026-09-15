@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import client from '../../api/client'
 import { useLista } from '../../api/hooks'
-import type { Capacidad, Categoria, Configuracion, Persona, Requerimiento } from '../../types'
+import type { BacklogFuturo, Capacidad, Categoria, Configuracion, Persona, Requerimiento } from '../../types'
 import type { AsignacionItem } from './tipos'
 
 /**
- * Carga de datos de la pantalla de Asignaciones: las 5 listas (`/asignaciones`,
- * `/personas`, `/categorias`, `/requerimientos`, `/configuracion`) y las
- * capacidades del mes en curso. `error` y `recargar` son los de `/asignaciones`.
+ * Carga de datos de la pantalla de Asignaciones: las listas base
+ * (`/asignaciones`, `/personas`, `/categorias`, `/requerimientos`,
+ * `/configuracion`, `/backlog-futuro`) y las capacidades del mes en curso.
+ * `error` y `recargar` son los de `/asignaciones`.
  */
 export function useDatosAsignaciones() {
   const { datos: asignacionesBase, error, recargar } = useLista<AsignacionItem>('/asignaciones')
@@ -15,6 +16,7 @@ export function useDatosAsignaciones() {
   const { datos: categorias } = useLista<Categoria>('/categorias')
   const { datos: requerimientos } = useLista<Requerimiento>('/requerimientos')
   const { datos: configuraciones } = useLista<Configuracion>('/configuracion')
+  const { datos: backlogFuturo } = useLista<BacklogFuturo>('/backlog-futuro')
 
   const asignaciones = useMemo(() => asignacionesBase as AsignacionItem[], [asignacionesBase])
 
@@ -32,5 +34,15 @@ export function useDatosAsignaciones() {
       .catch(() => {})
   }, [mesSel])
 
-  return { asignaciones, personas, categorias, requerimientos, configuraciones, capacidades, error, recargar }
+  return {
+    asignaciones,
+    personas,
+    categorias,
+    requerimientos,
+    configuraciones,
+    backlogFuturo,
+    capacidades,
+    error,
+    recargar,
+  }
 }

@@ -1,4 +1,4 @@
-import type { Categoria } from '../../types'
+import type { BacklogFuturo, Categoria } from '../../types'
 import type { GrupoPersona, WoPersona } from './tipos'
 import { TarjetaPersona } from './TarjetaPersona'
 
@@ -7,6 +7,7 @@ interface Props {
   personasExpandidas: Set<string>
   onAlternarPersona: (personaId: string) => void
   wosPorPersonaMap: Map<string, WoPersona[]>
+  backlogPorPersonaMap: Map<string, BacklogFuturo[]>
   categoriaPorId: Map<string, Categoria>
 }
 
@@ -16,6 +17,7 @@ export function VistaPorPersonas({
   personasExpandidas,
   onAlternarPersona,
   wosPorPersonaMap,
+  backlogPorPersonaMap,
   categoriaPorId,
 }: Props) {
   return (
@@ -28,6 +30,7 @@ export function VistaPorPersonas({
           onToggle={() => onAlternarPersona(grupo.persona.id)}
           categoriaPorId={categoriaPorId}
           wos={wosPorPersonaMap.get(grupo.persona.id) ?? []}
+          backlogFuturo={backlogPorPersonaMap.get(grupo.persona.id) ?? []}
         />
       ))}
       {gruposPorPersona.length === 0 && (

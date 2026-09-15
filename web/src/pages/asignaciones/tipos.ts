@@ -1,4 +1,4 @@
-import type { Asignacion, Persona } from '../../types'
+import type { Asignacion, BacklogFuturo, Persona } from '../../types'
 
 export const ESTADO_ACTIVO = 'ESTIMACION APROBADA ENTREGA PENDIENTE'
 
@@ -53,3 +53,5 @@ export interface WoPersona {
   created_date: string
   descripcion: string
 }
+
+export type BacklogPorPersonaMap = Map<string, BacklogFuturo[]>

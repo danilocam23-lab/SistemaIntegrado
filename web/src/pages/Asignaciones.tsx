@@ -12,14 +12,16 @@ import { useDatosAsignaciones } from './asignaciones/useDatosAsignaciones'
 import { useDerivadosAsignaciones } from './asignaciones/useDerivadosAsignaciones'
 import { useEscriturasAsignaciones } from './asignaciones/useEscriturasAsignaciones'
 import { useFormularioAsignacion } from './asignaciones/useFormularioAsignacion'
+import { useBacklogFuturoPorPersona } from './asignaciones/useBacklogFuturoPorPersona'
 import { useWorkOrdersPorPersona } from './asignaciones/useWorkOrdersPorPersona'
 
 export default function Asignaciones() {
-  const { asignaciones, personas, categorias, requerimientos, configuraciones, capacidades, error, recargar } =
+  const { asignaciones, personas, categorias, requerimientos, configuraciones, backlogFuturo, capacidades, error, recargar } =
     useDatosAsignaciones()
   const { modoConsolidado, activa } = useAplicacion()
   const { tienePermiso } = useAuth()
   const { wosPorPersonaMap } = useWorkOrdersPorPersona(personas)
+  const { backlogPorPersonaMap } = useBacklogFuturoPorPersona(backlogFuturo)
 
   const puedeEditarAsignaciones = tienePermiso('asignaciones.editar')
 
@@ -52,6 +54,7 @@ export default function Asignaciones() {
     configuraciones,
     capacidades,
     wosPorPersonaMap,
+    backlogPorPersonaMap,
     filtroEstado,
     filtroPersona,
     busquedaPersona,
@@ -197,6 +200,7 @@ export default function Asignaciones() {
           personasExpandidas={personasExpandidas}
           onAlternarPersona={onAlternarPersona}
           wosPorPersonaMap={wosPorPersonaMap}
+          backlogPorPersonaMap={backlogPorPersonaMap}
           categoriaPorId={categoriaPorId}
         />
       )}

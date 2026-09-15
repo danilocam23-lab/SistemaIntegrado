@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import type { Capacidad, Categoria, Configuracion, Persona, Requerimiento } from '../../types'
 import { ESTADO_ACTIVO, ROLES_EXCLUIDOS } from './tipos'
-import type { AsignacionItem, GrupoPersona, GrupoReq, OpcionReq, WoPersona } from './tipos'
+import type { AsignacionItem, BacklogPorPersonaMap, GrupoPersona, GrupoReq, OpcionReq, WoPersona } from './tipos'
 
 interface ParametrosDerivados {
   asignaciones: AsignacionItem[]
@@ -11,6 +11,7 @@ interface ParametrosDerivados {
   configuraciones: Configuracion[]
   capacidades: Capacidad[]
   wosPorPersonaMap: Map<string, WoPersona[]>
+  backlogPorPersonaMap: BacklogPorPersonaMap
   filtroEstado: string
   filtroPersona: string
   busquedaPersona: string
@@ -20,7 +21,8 @@ interface ParametrosDerivados {
  * Todos los datos derivados de la pantalla de Asignaciones: mapas de apoyo,
  * opciones de requerimiento, cálculo de capacidad/porcentaje sugerido y el
  * agrupado por acta (`gruposReq` -> `gruposFiltrados`) y por persona
- * (`gruposPorPersona`, que deriva de `gruposFiltrados`).
+ * (`gruposPorPersona`, que deriva de `gruposFiltrados` y además incorpora WO y
+ * backlog futuro informativo).
  */
 export function useDerivadosAsignaciones({
   asignaciones,
@@ -30,6 +32,7 @@ export function useDerivadosAsignaciones({
   configuraciones,
   capacidades,
   wosPorPersonaMap,
+  backlogPorPersonaMap,
   filtroEstado,
   filtroPersona,
   busquedaPersona,
@@ -214,7 +217,7 @@ export function useDerivadosAsignaciones({
   // ahí. `busquedaPersona` se filtra en 2 niveles: aquí dentro de
   // `gruposFiltrados` (a nivel de `item`, arriba) y otra vez aquí a nivel de
   // `persona.nombre` (abajo) para excluir personas sin ninguna asignación que
-  // matchee pero que sí tienen WO (agregadas por `wosPorPersonaMap`).
+  // matchee pero que sí tienen WO o backlog futuro (agregados por sus mapas).
   const gruposPorPersona = useMemo(() => {
     const map = new Map<string, GrupoPersona>()
     for (const grupo of gruposFiltrados) {
@@ -235,13 +238,20 @@ export function useDerivadosAsignaciones({
         if (persona) map.set(pid, { persona, reqs: [] })
       }
     }
+    // Incluir personas que tienen backlog futuro pero no asignaciones reales
+    for (const [pid] of backlogPorPersonaMap) {
+      if (!map.has(pid)) {
+        const persona = personaPorId.get(pid)
+        if (persona) map.set(pid, { persona, reqs: [] })
+      }
+    }
     let resultado = Array.from(map.values()).sort((a, b) => a.persona.nombre.localeCompare(b.persona.nombre, 'es'))
     if (busquedaPersona.trim()) {
       const q = busquedaPersona.toLowerCase().trim()
       resultado = resultado.filter((g) => g.persona.nombre.toLowerCase().includes(q))
     }
     return resultado
-  }, [gruposFiltrados, personaPorId, busquedaPersona, wosPorPersonaMap])
+  }, [gruposFiltrados, personaPorId, busquedaPersona, wosPorPersonaMap, backlogPorPersonaMap])
 
   return {
     personasDisponibles,
