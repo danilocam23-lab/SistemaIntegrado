@@ -439,6 +439,21 @@ export interface RespuestaTiposAzure {
   jerarquia: NivelJerarquiaAzure[]
 }
 
+export interface PersonaConfigAzure {
+  id: string
+  nombre: string
+  email: string | null
+  tiene_config: boolean
+  org_url: string | null
+  default_project: string | null
+}
+
+export interface RespuestaPersonasConfigAzure {
+  puede_elegir_cualquiera: boolean
+  persona_propia_id: string | null
+  personas: PersonaConfigAzure[]
+}
+
 export interface AzdoWorkItem {
   id: string
   azdo_id: number

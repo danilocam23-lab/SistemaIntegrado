@@ -1,15 +1,9 @@
 import { useEffect, useState } from 'react'
 import client from '../api/client'
-import { mensajeError, useLista } from '../api/hooks'
+import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
-
-interface Persona {
-  id: string
-  nombre: string
-  email?: string
-  activo: boolean
-}
+import type { RespuestaPersonasConfigAzure } from '../types'
 
 interface TestResp {
   ok: boolean
@@ -63,10 +57,9 @@ const paletaTipoCampo: Record<string, string> = {
 }
 
 /* ── Panel reutilizable para cada instancia Azure DevOps ── */
-function PanelAzdo({ titulo, target, personas }: {
+function PanelAzdo({ titulo, target }: {
   titulo: string
   target: 'hitss' | 'epm'
-  personas: Persona[]
 }) {
   const { tienePermiso } = useAuth()
   const puedeEditar = tienePermiso('azure_devops.editar')
@@ -87,6 +80,36 @@ function PanelAzdo({ titulo, target, personas }: {
   const [descubriendo, setDescubriendo] = useState(false)
 
   const [scopeUsuarioId, setScopeUsuarioId] = useState<string | null>(null)
+
+  const [configPersonas, setConfigPersonas] = useState<RespuestaPersonasConfigAzure | null>(null)
+
+  const puedeElegirCualquiera = configPersonas?.puede_elegir_cualquiera ?? false
+  const personas = configPersonas?.personas ?? []
+  const sinPersonaVinculada =
+    configPersonas !== null && !puedeElegirCualquiera && configPersonas.persona_propia_id === null
+  const formularioDeshabilitado = !puedeEditar || sinPersonaVinculada
+
+  useEffect(() => {
+    let cancelado = false
+    async function cargarPersonas(): Promise<void> {
+      try {
+        const { data } = await client.get<RespuestaPersonasConfigAzure>(
+          `/azdo/personas-config?target=${target}`,
+        )
+        if (cancelado) return
+        setConfigPersonas(data)
+        if (!data.puede_elegir_cualquiera && data.persona_propia_id) {
+          setScopeUsuarioId(data.persona_propia_id)
+        }
+      } catch {
+        if (!cancelado) setConfigPersonas(null)
+      }
+    }
+    void cargarPersonas()
+    return () => {
+      cancelado = true
+    }
+  }, [target])
 
   useEffect(() => {
     cargarConfig()
@@ -190,6 +213,12 @@ function PanelAzdo({ titulo, target, personas }: {
 
         {aviso && <div className="mb-3 rounded bg-red-50 p-2.5 text-xs text-red-700">{aviso}</div>}
         {ok && <div className="mb-3 rounded bg-emerald-50 p-2.5 text-xs text-emerald-700">{ok}</div>}
+        {sinPersonaVinculada && (
+          <div className="mb-3 rounded bg-amber-50 p-2.5 text-xs text-amber-700">
+            Tu usuario no está vinculado a una persona; pide a un administrador que te vincule para
+            poder configurar Azure DevOps.
+          </div>
+        )}
 
         {/* Persona */}
         <div className="mb-4">
@@ -197,12 +226,14 @@ function PanelAzdo({ titulo, target, personas }: {
             etiqueta="Persona"
             value={scopeUsuarioId ?? ''}
             onChange={(e) => setScopeUsuarioId(e.target.value || null)}
-            disabled={!puedeEditar}
+            disabled={!puedeEditar || !puedeElegirCualquiera}
             className="w-full"
           >
-            <option value="">Ninguno (config global)</option>
-            {personas.filter((p) => p.activo).map((p) => (
-              <option key={p.id} value={p.id}>{p.nombre} {p.email ? `(${p.email})` : ''}</option>
+            {puedeElegirCualquiera && <option value="">Ninguno (config global)</option>}
+            {personas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}{p.email ? ` (${p.email})` : ''}{p.tiene_config ? ' — configurado' : ''}
+              </option>
             ))}
           </Selector>
         </div>
@@ -213,7 +244,7 @@ function PanelAzdo({ titulo, target, personas }: {
             etiqueta="URL de la organización"
             value={orgUrl}
             onChange={(e) => setOrgUrl(e.target.value)}
-            readOnly={!puedeEditar}
+            readOnly={formularioDeshabilitado}
             placeholder="https://dev.azure.com/TuOrganizacion"
             className="w-full"
           />
@@ -227,7 +258,7 @@ function PanelAzdo({ titulo, target, personas }: {
               type={mostrarPat ? 'text' : 'password'}
               value={pat}
               onChange={(e) => setPat(e.target.value)}
-              readOnly={!puedeEditar}
+              readOnly={formularioDeshabilitado}
               placeholder={patGuardado ? '••••••••••••••••••••' : 'Ingresa tu PAT'}
               className="flex-1"
             />
@@ -250,7 +281,7 @@ function PanelAzdo({ titulo, target, personas }: {
             variante="secundario"
             tamano="sm"
             onClick={probar}
-            disabled={probando}
+            disabled={probando || sinPersonaVinculada}
             icono={<Icono nombre="recargar" />}
           >
             {probando ? 'Probando…' : 'Probar conexión'}
@@ -268,7 +299,7 @@ function PanelAzdo({ titulo, target, personas }: {
             etiqueta="Proyecto por defecto"
             value={proyecto}
             onChange={(e) => setProyecto(e.target.value)}
-            readOnly={!puedeEditar}
+            readOnly={formularioDeshabilitado}
             placeholder="Nombre del proyecto"
             className="w-full"
           />
@@ -280,7 +311,7 @@ function PanelAzdo({ titulo, target, personas }: {
             etiqueta="Frecuencia de sincronización"
             value={frecuencia}
             onChange={(e) => setFrecuencia(e.target.value)}
-            disabled={!puedeEditar}
+            disabled={formularioDeshabilitado}
             className="w-full"
           >
             {Object.entries(frecuenciaLabel).map(([val, label]) => (
@@ -290,7 +321,7 @@ function PanelAzdo({ titulo, target, personas }: {
         </div>
 
         {/* Guardar */}
-        {puedeEditar && (
+        {puedeEditar && !sinPersonaVinculada && (
           <Boton
             variante="primario"
             onClick={guardarConfig}
@@ -379,16 +410,13 @@ function PanelAzdo({ titulo, target, personas }: {
 
 /* ── Vista principal con 2 columnas ── */
 export default function AzureDevOps() {
-  const { datos: personas } = useLista<Persona>('/personas')
-  const listaPersonas = personas ?? []
-
   return (
     <div>
       <EncabezadoPagina icono={<Icono nombre="nube" />} titulo="Integración Azure DevOps" />
       <div className="mx-auto max-w-7xl pt-4">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <PanelAzdo titulo="Azure DevOps — HITSS" target="hitss" personas={listaPersonas} />
-          <PanelAzdo titulo="Azure DevOps — EPM" target="epm" personas={listaPersonas} />
+          <PanelAzdo titulo="Azure DevOps — HITSS" target="hitss" />
+          <PanelAzdo titulo="Azure DevOps — EPM" target="epm" />
         </div>
       </div>
     </div>

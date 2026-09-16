@@ -1,17 +1,21 @@
 """Router de integración con Azure DevOps."""
 import logging
+import re
 from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
+from app.config import get_settings
 from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
+from app.documents.persona import Persona
+from app.documents.usuario import Usuario
 from app.errors import ErrorIntegracion
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import permiso
-from app.services.azdo_sync import leer_config_azdo, sincronizar_iteracion
+from app.security.deps import permiso, usuario_actual
+from app.services.azdo_sync import sincronizar_iteracion
 from app.services.azure_devops import AzureDevOpsService
 
 logger = logging.getLogger(__name__)
@@ -148,16 +152,63 @@ def _separar_csv(valor: str | None) -> list[str]:
     return [parte.strip() for parte in valor.split(",") if parte.strip()]
 
 
+async def _persona_de_usuario(usuario: Usuario) -> str | None:
+    """Devuelve el id de la Persona vinculada al usuario, si existe."""
+    persona = await Persona.find_one(Persona.usuario_id == str(usuario.id))
+    if persona:
+        return str(persona.id)
+    email = (usuario.email or "").strip().lower()
+    if not email:
+        return None
+    persona = await Persona.find_one(
+        {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+    )
+    return str(persona.id) if persona else None
+
+
+def _es_superadmin_configurado(usuario: Usuario) -> bool:
+    """Indica si el usuario es el superadministrador configurado en settings."""
+    settings = get_settings()
+    return usuario.email.strip().lower() == settings.superadmin_email.strip().lower()
+
+
+async def _usuario_id_efectivo(usuario: Usuario, usuario_id: str | None) -> str | None:
+    """Devuelve el usuario_id solicitado si está permitido, o la persona del usuario.
+
+    Solo el superadministrador configurado puede consultar con la configuración de
+    otra persona; el resto queda restringido a la suya.
+    """
+    propia = await _persona_de_usuario(usuario)
+    if not usuario_id:
+        return propia
+    if usuario_id == propia:
+        return usuario_id
+    if _es_superadmin_configurado(usuario):
+        return usuario_id
+    raise HTTPException(
+        status.HTTP_403_FORBIDDEN,
+        "Solo puedes consultar Azure DevOps con tu propia configuración.",
+    )
+
+
+async def _validar_propiedad_usuario(usuario: Usuario, usuario_id: str | None) -> None:
+    """Impide configurar el Azure DevOps de otra persona salvo al superadmin."""
+    if not usuario_id:
+        return
+    if _es_superadmin_configurado(usuario):
+        return
+    if usuario_id != await _persona_de_usuario(usuario):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Solo puedes configurar tu propio Azure DevOps.",
+        )
+
+
 async def _resolver_proyecto_esquema(
-    aplicacion_id: str,
     proyecto: str | None,
     cfg: AzdoConfig,
 ) -> str:
-    proyecto_resuelto = (proyecto or "").strip()
-    if proyecto_resuelto:
-        return proyecto_resuelto
-    proyecto_resuelto = await leer_config_azdo(aplicacion_id, "azdo_default_project")
-    proyecto_resuelto = proyecto_resuelto or cfg.default_project
+    proyecto_resuelto = (proyecto or "").strip() or (cfg.default_project or "").strip()
     if not proyecto_resuelto:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -300,11 +351,13 @@ async def listar_configs(ctx: ContextoAplicacion = Depends(contexto_aplicacion))
 @router.put("/config")
 async def guardar_config(
     datos: AzdoConfigIn,
+    usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     _: object = permiso("azure_devops.editar"),
 ):
     """Guarda la config AzDO para HITSS o EPM según ``target``."""
     target = _normalizar_target(datos.target)
+    await _validar_propiedad_usuario(usuario, datos.usuario_id)
     scope = _scope_config(_scope_base(datos.squad_id, datos.usuario_id), target)
 
     cfg = await AzdoConfig.find_one(
@@ -350,6 +403,7 @@ async def eliminar_config(
     target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     _: object = permiso("azure_devops.editar"),
 ):
@@ -359,6 +413,7 @@ async def eliminar_config(
             status.HTTP_400_BAD_REQUEST,
             "Solo se pueden eliminar configs de squad o usuario, no la global.",
         )
+    await _validar_propiedad_usuario(usuario, usuario_id)
     target = _normalizar_target(target)
     scope = _scope_config("user" if usuario_id else "squad", target)
     cfg = await AzdoConfig.find_one(
@@ -370,6 +425,59 @@ async def eliminar_config(
     if cfg:
         await cfg.delete()
     return {"ok": True}
+
+
+@router.get("/personas-config", dependencies=[permiso("azure_devops.ver")])
+async def personas_config(
+    target: str = "hitss",
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    """Lista las personas que el usuario puede configurar y su estado de config.
+
+    Solo el superadmin puede elegir cualquier persona; el resto solo se ve a sí
+    mismo. Para cada persona se indica si ya tiene config de Azure DevOps para el
+    ``target`` dado, sin exponer nunca el PAT.
+    """
+    target = _normalizar_target(target)
+    puede_elegir_cualquiera = _es_superadmin_configurado(usuario)
+    persona_propia_id = await _persona_de_usuario(usuario)
+
+    if puede_elegir_cualquiera:
+        personas = (
+            await Persona.find(ctx.filtro(), Persona.activo == True)  # noqa: E712
+            .sort("nombre")
+            .to_list()
+        )
+    elif persona_propia_id:
+        persona = await Persona.get(persona_propia_id)
+        personas = [persona] if persona else []
+    else:
+        personas = []
+
+    scope_user = _scope_config("user", target)
+    configs = await AzdoConfig.find(ctx.filtro(), AzdoConfig.scope == scope_user).to_list()
+    mapa_config = {c.usuario_id: c for c in configs if c.usuario_id}
+
+    salida = []
+    for persona in personas:
+        cfg = mapa_config.get(str(persona.id))
+        salida.append(
+            {
+                "id": str(persona.id),
+                "nombre": persona.nombre,
+                "email": persona.email or "",
+                "tiene_config": cfg is not None,
+                "org_url": cfg.org_url if cfg else "",
+                "default_project": cfg.default_project if cfg else "",
+            }
+        )
+
+    return {
+        "puede_elegir_cualquiera": puede_elegir_cualquiera,
+        "persona_propia_id": persona_propia_id,
+        "personas": salida,
+    }
 
 
 # ── Test de conexión ──
@@ -580,9 +688,11 @@ async def proyectos(
     target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> list[dict]:
-    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id_efectivo)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     svc = await _crear_servicio_desde_config(cfg)
@@ -602,9 +712,11 @@ async def iteraciones(
     target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> list[dict]:
-    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id_efectivo)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     svc = await _crear_servicio_desde_config(cfg)
@@ -620,13 +732,16 @@ async def iteraciones(
 async def esquema_tipos(
     target: str = "hitss",
     proyecto: str | None = None,
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     target = _normalizar_target(target)
-    cfg, aplicacion_id = await _resolver_config_contexto(ctx, target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
-    proyecto_resuelto = await _resolver_proyecto_esquema(aplicacion_id, proyecto, cfg)
+    proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
     svc = await _crear_servicio_desde_config(cfg)
     try:
         return {
@@ -647,13 +762,16 @@ async def esquema_arbol(
     iteration_path: str | None = None,
     estados: str | None = None,
     limite: int = 2000,
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     target = _normalizar_target(target)
-    cfg, aplicacion_id = await _resolver_config_contexto(ctx, target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
-    proyecto_resuelto = await _resolver_proyecto_esquema(aplicacion_id, proyecto, cfg)
+    proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
     svc = await _crear_servicio_desde_config(cfg)
     limite = min(limite, 5000)
     tipos_consultados = _separar_csv(tipos)
