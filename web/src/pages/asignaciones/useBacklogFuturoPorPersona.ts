@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import type { BacklogFuturo } from '../../types'
 import type { BacklogPorPersonaMap } from './tipos'
 
+const ESTADOS_BACKLOG_VISIBLES = new Set(['PENDIENTE', 'EN_PROGRESO'])
+
 /**
  * Agrupa el backlog futuro por `responsable_id` para reutilizarlo en la vista
  * "Por Personas" sin mezclarlo con las asignaciones reales.
@@ -12,6 +14,7 @@ export function useBacklogFuturoPorPersona(backlogFuturo: BacklogFuturo[]) {
 
     for (const item of backlogFuturo) {
       if (!item.responsable_id) continue
+      if (!ESTADOS_BACKLOG_VISIBLES.has(item.estado)) continue
       if (!map.has(item.responsable_id)) map.set(item.responsable_id, [])
       map.get(item.responsable_id)!.push(item)
     }

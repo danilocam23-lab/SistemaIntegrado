@@ -1,6 +1,7 @@
 import type { BacklogFuturo, Categoria } from '../../types'
 import type { GrupoPersona, WoPersona } from './tipos'
 import { TarjetaPersona } from './TarjetaPersona'
+import type { useEscriturasAsignaciones } from './useEscriturasAsignaciones'
 
 interface Props {
   gruposPorPersona: GrupoPersona[]
@@ -9,6 +10,8 @@ interface Props {
   wosPorPersonaMap: Map<string, WoPersona[]>
   backlogPorPersonaMap: Map<string, BacklogFuturo[]>
   categoriaPorId: Map<string, Categoria>
+  puedeEditarAsignaciones: boolean
+  escrituras: ReturnType<typeof useEscriturasAsignaciones>
 }
 
 /** Vista "Por Personas": lista de tarjetas de persona expandibles + estado vacío. */
@@ -19,6 +22,8 @@ export function VistaPorPersonas({
   wosPorPersonaMap,
   backlogPorPersonaMap,
   categoriaPorId,
+  puedeEditarAsignaciones,
+  escrituras,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -31,6 +36,8 @@ export function VistaPorPersonas({
           categoriaPorId={categoriaPorId}
           wos={wosPorPersonaMap.get(grupo.persona.id) ?? []}
           backlogFuturo={backlogPorPersonaMap.get(grupo.persona.id) ?? []}
+          puedeEditarAsignaciones={puedeEditarAsignaciones}
+          escrituras={escrituras}
         />
       ))}
       {gruposPorPersona.length === 0 && (

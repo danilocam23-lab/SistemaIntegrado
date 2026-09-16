@@ -1,8 +1,9 @@
-import { Chip, Icono, TablaScroll } from '../../components/ui'
+import { Campo, Chip, Icono, TablaScroll } from '../../components/ui'
 import type { BacklogFuturo, Categoria } from '../../types'
 import { tonoEstadoChip } from './estados'
 import type { GrupoPersona, WoPersona } from './tipos'
 import { TablaWoPersona } from './TablaWoPersona'
+import type { useEscriturasAsignaciones } from './useEscriturasAsignaciones'
 
 const ESTADO_BACKLOG_LABEL: Record<string, string> = {
   PENDIENTE: 'Pendiente',
@@ -25,6 +26,8 @@ interface Props {
   categoriaPorId: Map<string, Categoria>
   wos: WoPersona[]
   backlogFuturo: BacklogFuturo[]
+  puedeEditarAsignaciones: boolean
+  escrituras: ReturnType<typeof useEscriturasAsignaciones>
 }
 
 /**
@@ -33,7 +36,16 @@ interface Props {
  * requerimientos asignados + bloque informativo de backlog futuro + tabla de
  * WO de soporte.
  */
-export function TarjetaPersona({ grupo, expandida, onToggle, categoriaPorId, wos, backlogFuturo }: Props) {
+export function TarjetaPersona({
+  grupo,
+  expandida,
+  onToggle,
+  categoriaPorId,
+  wos,
+  backlogFuturo,
+  puedeEditarAsignaciones,
+  escrituras,
+}: Props) {
   const totalHoras = grupo.reqs.reduce((s, r) => s + r.horasCarga, 0)
 
   return (
@@ -70,21 +82,56 @@ export function TarjetaPersona({ grupo, expandida, onToggle, categoriaPorId, wos
                 </tr>
               </thead>
               <tbody>
-                {grupo.reqs.map((r, idx) => (
-                  <tr key={idx}>
-                    <td className="font-medium">{r.reqLabel}</td>
-                    <td>
-                      {r.reqEstado && (
-                        <Chip tono={tonoEstadoChip(r.reqEstado)} className="px-2 py-0.5 text-[10px]">
-                          {r.reqEstado}
-                        </Chip>
-                      )}
-                    </td>
-                    <td>{categoriaPorId.get(r.asig.categoria_id)?.nombre ?? '—'}</td>
-                    <td className="text-right">{r.asig.total_porcentaje}%</td>
-                    <td className="text-right font-mono">{r.horasCarga.toFixed(1)}</td>
-                  </tr>
-                ))}
+                {grupo.reqs.map((r) => {
+                  const enEdicionInline = escrituras.edicionInlineId === r.asig.id
+
+                  return (
+                    <tr key={r.asig.id}>
+                      <td className="font-medium">{r.reqLabel}</td>
+                      <td>
+                        {r.reqEstado && (
+                          <Chip tono={tonoEstadoChip(r.reqEstado)} className="px-2 py-0.5 text-[10px]">
+                            {r.reqEstado}
+                          </Chip>
+                        )}
+                      </td>
+                      <td>{categoriaPorId.get(r.asig.categoria_id)?.nombre ?? '—'}</td>
+                      <td className="text-right font-medium">
+                        {enEdicionInline ? (
+                          <Campo
+                            autoFocus
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={escrituras.edicionInlineValor}
+                            onChange={(e) => escrituras.setEdicionInlineValor(e.target.value)}
+                            onBlur={() => void escrituras.guardarEdicionInline(r.asig)}
+                            onKeyDown={escrituras.onInlineKeyDown}
+                            compacto
+                            className="ml-auto w-20 text-right"
+                          />
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <span className={r.asig.total_porcentaje === 0 ? 'text-red-500' : ''}>
+                              {r.asig.total_porcentaje}%
+                            </span>
+                            {puedeEditarAsignaciones && (
+                              <button
+                                type="button"
+                                onClick={() => escrituras.iniciarEdicionInline(r.asig)}
+                                title="Editar %"
+                                className="text-slate-400 hover:text-marca"
+                              >
+                                <Icono nombre="lapiz" tamano={14} />
+                              </button>
+                            )}
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-right font-mono">{r.horasCarga.toFixed(1)}</td>
+                    </tr>
+                  )
+                })}
                 {grupo.reqs.length === 0 && (
                   <tr>
                     <td colSpan={5} className="py-4 text-center text-sm text-slate-400">

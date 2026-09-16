@@ -202,6 +202,8 @@ export default function Asignaciones() {
           wosPorPersonaMap={wosPorPersonaMap}
           backlogPorPersonaMap={backlogPorPersonaMap}
           categoriaPorId={categoriaPorId}
+          puedeEditarAsignaciones={puedeEditarAsignaciones}
+          escrituras={escrituras}
         />
       )}
     </div>
