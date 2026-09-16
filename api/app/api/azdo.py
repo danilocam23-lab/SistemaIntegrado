@@ -108,6 +108,31 @@ async def _resolver_config(
     )
 
 
+async def _resolver_config_contexto(
+    ctx: ContextoAplicacion,
+    target: str = "hitss",
+    squad_id: str | None = None,
+    usuario_id: str | None = None,
+) -> tuple[AzdoConfig | None, str]:
+    """Resuelve la config de Azure DevOps válida para el contexto.
+
+    En modo operativo usa la aplicación activa. En modo consolidado recorre las
+    aplicaciones autorizadas y devuelve la primera que tenga org_url y PAT, para
+    que un administrador con varias aplicaciones pueda consultar Azure DevOps sin
+    tener que seleccionar una concreta.
+
+    Devuelve la config y el código de aplicación con el que se resolvió.
+    """
+    if not ctx.modo_consolidado:
+        return await _resolver_config(ctx.codigo, target, squad_id, usuario_id), ctx.codigo
+
+    for codigo in ctx.codigos:
+        cfg = await _resolver_config(codigo, target, squad_id, usuario_id)
+        if cfg and cfg.org_url and cfg.pat:
+            return cfg, codigo
+    return None, ctx.codigos[0] if ctx.codigos else ""
+
+
 async def _crear_servicio_desde_config(cfg: AzdoConfig) -> AzureDevOpsService:
     if not cfg.org_url or not cfg.pat:
         raise HTTPException(
@@ -225,7 +250,7 @@ async def obtener_config(
 ):
     """Devuelve la config AzDO por target (hitss|epm) y jerarquía user > squad > app."""
     target = _normalizar_target(target)
-    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id)
     if not cfg:
         return {
             "scope": "app",
@@ -254,12 +279,11 @@ async def obtener_config(
 @router.get("/config/all", dependencies=[permiso("azure_devops.ver")])
 async def listar_configs(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
     """Lista todas las configuraciones AzDO de la aplicación (app, squads, users)."""
-    configs = await AzdoConfig.find(
-        AzdoConfig.aplicacion_id == ctx.codigo
-    ).sort("scope").to_list()
+    configs = await AzdoConfig.find(ctx.filtro()).sort("scope").to_list()
     return [
         {
             "id": str(c.id),
+            "aplicacion_id": c.aplicacion_id,
             "scope": _describir_scope(c.scope)[0],
             "target": _describir_scope(c.scope)[1],
             "org_url": c.org_url,
@@ -355,10 +379,10 @@ async def test_conexion(
     target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
-    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     """Verifica la conexión con Azure DevOps usando la config resuelta."""
-    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id)
     if not cfg or not cfg.org_url or not cfg.pat:
         return {"ok": False, "error": "Falta configurar URL y/o PAT de Azure DevOps."}
     svc = AzureDevOpsService(cfg.org_url, cfg.pat)
@@ -556,9 +580,9 @@ async def proyectos(
     target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
-    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> list[dict]:
-    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     svc = await _crear_servicio_desde_config(cfg)
@@ -578,9 +602,9 @@ async def iteraciones(
     target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
-    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> list[dict]:
-    cfg = await _resolver_config(ctx.codigo, target, squad_id, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     svc = await _crear_servicio_desde_config(cfg)
@@ -599,10 +623,10 @@ async def esquema_tipos(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     target = _normalizar_target(target)
-    cfg = await _resolver_config(ctx.codigo, target)
+    cfg, aplicacion_id = await _resolver_config_contexto(ctx, target)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
-    proyecto_resuelto = await _resolver_proyecto_esquema(ctx.codigo, proyecto, cfg)
+    proyecto_resuelto = await _resolver_proyecto_esquema(aplicacion_id, proyecto, cfg)
     svc = await _crear_servicio_desde_config(cfg)
     try:
         return {
@@ -626,10 +650,10 @@ async def esquema_arbol(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     target = _normalizar_target(target)
-    cfg = await _resolver_config(ctx.codigo, target)
+    cfg, aplicacion_id = await _resolver_config_contexto(ctx, target)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
-    proyecto_resuelto = await _resolver_proyecto_esquema(ctx.codigo, proyecto, cfg)
+    proyecto_resuelto = await _resolver_proyecto_esquema(aplicacion_id, proyecto, cfg)
     svc = await _crear_servicio_desde_config(cfg)
     limite = min(limite, 5000)
     tipos_consultados = _separar_csv(tipos)

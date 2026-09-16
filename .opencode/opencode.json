@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "LiteLLM/glm-5.2",
+  "small_model": "LiteLLM/glm-5.1",
+  "instructions": ["CLAUDE.md"],
+  "subagent_depth": 2,
+  "skills": {
+    "paths": [".claude/skills", ".agents/skills"]
+  }
+}
