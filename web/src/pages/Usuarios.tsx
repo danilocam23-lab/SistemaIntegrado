@@ -1,75 +1,19 @@
 import { useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { ComponentProps, FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import Modal from '../components/Modal'
-import { Boton, Campo, Chip, Selector, TablaScroll } from '../components/ui'
 import type { Aplicacion, Rol, Usuario } from '../types'
+import FormularioRol from './usuarios/FormularioRol'
+import ListaUsuarios from './usuarios/ListaUsuarios'
+import ModalUsuario from './usuarios/ModalUsuario'
+import PanelRoles from './usuarios/PanelRoles'
+import { agruparPermisosPorModulo, permisoInfo, permisosConModulo } from './usuarios/utilidades'
 
 type Tab = 'usuarios' | 'roles'
+type ModoPanelRol = 'nuevo' | 'editar' | 'vacio'
 
-const PERMISOS_INFO: Record<string, { modulo: string; nombre: string; descripcion: string }> = {
-  'dashboard.ver': { modulo: 'Dashboard', nombre: 'Ver Dashboard General', descripcion: 'Permite consultar indicadores generales.' },
-  'dashboard.estados.ver': { modulo: 'Dashboard', nombre: 'Ver Estados', descripcion: 'Permite consultar el dashboard de estados.' },
-  'dashboard.squad.ver': { modulo: 'Dashboard', nombre: 'Ver Backlog', descripcion: 'Permite consultar backlog, capacidad y WO.' },
-  'requerimientos.ver': { modulo: 'Desarrollos de fábrica', nombre: 'Ver requerimientos', descripcion: 'Consulta requerimientos, entregas y detalle ANS.' },
-  'requerimientos.detalle_ans.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar detalle ANS Req.', descripcion: 'Permite modificar Se levantó ANS y Observaciones en requerimientos/entregas.' },
-  'requerimientos.crear': { modulo: 'Desarrollos de fábrica', nombre: 'Crear requerimientos', descripcion: 'Permite registrar nuevos requerimientos.' },
-  'requerimientos.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar requerimientos', descripcion: 'Permite actualizar requerimientos, entregas y estimaciones.' },
-  'requerimientos.tipificacion.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar Seguimiento Hitss / Tipificación', descripcion: 'Permite editar Seguimiento Hitss y Tipificación del requerimiento, y Observaciones Hitss y Tipificación de la entrega, sin permiso completo de edición.' },
-  'requerimientos.eliminar': { modulo: 'Desarrollos de fábrica', nombre: 'Eliminar requerimientos', descripcion: 'Permite borrar requerimientos.' },
-  'entregas_actas.ver': { modulo: 'Desarrollos de fábrica', nombre: 'Ver entregas de actas', descripcion: 'Permite consultar entregas de actas.' },
-  'entregas_actas.exportar': { modulo: 'Desarrollos de fábrica', nombre: 'Exportar entregas de actas', descripcion: 'Permite exportar a Excel el listado de entregas de actas con los filtros aplicados.' },
-  'requerimientos.exportar': { modulo: 'Desarrollos de fábrica', nombre: 'Exportar requerimientos', descripcion: 'Permite exportar a Excel el listado de requerimientos con los filtros aplicados.' },
-  'predictivos.ver': { modulo: 'Desarrollos de fábrica', nombre: 'Ver predictivos', descripcion: 'Permite consultar la vista de Predictivos.' },
-  'backlog_futuro.ver': { modulo: 'Desarrollos de fábrica', nombre: 'Ver backlog futuro', descripcion: 'Permite consultar la vista de Backlog futuro (ítems planificados a futuro por squad).' },
-  'backlog_futuro.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar backlog futuro', descripcion: 'Permite crear, editar y eliminar registros del Backlog futuro.' },
-  'personas.ver': { modulo: 'Carga de trabajo', nombre: 'Ver personas', descripcion: 'Consulta el equipo registrado.' },
-  'personas.crear': { modulo: 'Carga de trabajo', nombre: 'Crear personas', descripcion: 'Permite registrar personas.' },
-  'personas.editar': { modulo: 'Carga de trabajo', nombre: 'Editar personas', descripcion: 'Permite actualizar personas.' },
-  'personas.eliminar': { modulo: 'Carga de trabajo', nombre: 'Eliminar personas', descripcion: 'Permite eliminar personas.' },
-  'personas.ver_valores': { modulo: 'Carga de trabajo', nombre: 'Ver valores personas', descripcion: 'Ver y editar valor de persona y periféricos.' },
-  'asignaciones.ver': { modulo: 'Carga de trabajo', nombre: 'Ver asignaciones', descripcion: 'Consulta asignaciones de trabajo.' },
-  'asignaciones.editar': { modulo: 'Carga de trabajo', nombre: 'Editar asignaciones', descripcion: 'Permite crear o modificar asignaciones.' },
-  'squads.editar': { modulo: 'Carga de trabajo', nombre: 'Editar squads de trabajo', descripcion: 'Permite crear, actualizar y eliminar los squads de personas usados en asignaciones, capacidades y control de horas.' },
-  'capacidades.ver': { modulo: 'Carga de trabajo', nombre: 'Ver capacidades', descripcion: 'Consulta capacidad disponible.' },
-  'capacidades.editar': { modulo: 'Carga de trabajo', nombre: 'Editar capacidades', descripcion: 'Permite actualizar capacidades.' },
-  'planes_accion.ver': { modulo: 'Carga de trabajo', nombre: 'Ver planes de acción', descripcion: 'Permite consultar los planes de acción.' },
-  'planes_accion.editar': { modulo: 'Carga de trabajo', nombre: 'Editar planes de acción', descripcion: 'Permite crear, editar y eliminar planes de acción.' },
-  'control_horas_facturable.ver': { modulo: 'Carga de trabajo', nombre: 'Ver Control de Horas Facturable', descripcion: 'Permite abrir la vista de Control de Horas Facturable.' },
-  'control_horas_facturable.editar': { modulo: 'Carga de trabajo', nombre: 'Editar Control de Horas Facturable', descripcion: 'Permite guardar registros de horas facturables por persona.' },
-  'roadmap.ver': { modulo: 'Carga de trabajo', nombre: 'Ver roadmap y equipo', descripcion: 'Consulta roadmap y equipo.' },
-  'azure_devops.ver': { modulo: 'Azure DevOps', nombre: 'Ver Azure DevOps', descripcion: 'Permite abrir la integración Azure DevOps.' },
-  'azure_devops.editar': { modulo: 'Azure DevOps', nombre: 'Configurar Azure DevOps', descripcion: 'Permite editar conexión, probar y sincronizar.' },
-  'estimaciones.ver': { modulo: 'Estimaciones', nombre: 'Ver estimaciones', descripcion: 'Permite consultar estimaciones.' },
-  'facturacion.ver': { modulo: 'Facturación', nombre: 'Ver facturación', descripcion: 'Permite consultar General y Valores de proyecto.' },
-  'facturacion.ans_descontados.ver': { modulo: 'Facturación', nombre: 'Ver ANS descontados', descripcion: 'Permite consultar la vista de ANS descontados en Facturación.' },
-  'aplicaciones.ver': { modulo: 'Administración', nombre: 'Ver squads', descripcion: 'Consulta la administración de squads.' },
-  'aplicaciones.crear': { modulo: 'Administración', nombre: 'Crear squads', descripcion: 'Permite crear squads.' },
-  'aplicaciones.editar': { modulo: 'Administración', nombre: 'Editar squads', descripcion: 'Permite actualizar squads.' },
-  'admin.usuarios.ver': { modulo: 'Administración', nombre: 'Ver usuarios', descripcion: 'Consulta usuarios y roles.' },
-  'admin.usuarios.crear': { modulo: 'Administración', nombre: 'Crear usuarios', descripcion: 'Permite crear usuarios.' },
-  'admin.usuarios.editar': { modulo: 'Administración', nombre: 'Editar usuarios', descripcion: 'Permite actualizar usuarios.' },
-  'admin.roles.ver': { modulo: 'Administración', nombre: 'Ver roles y permisos', descripcion: 'Consulta roles y catálogo de permisos.' },
-  'admin.roles.crear': { modulo: 'Administración', nombre: 'Crear roles', descripcion: 'Permite crear roles personalizados.' },
-  'admin.roles.editar': { modulo: 'Administración', nombre: 'Editar roles', descripcion: 'Permite modificar permisos de roles.' },
-  'admin.roles.eliminar': { modulo: 'Administración', nombre: 'Eliminar roles', descripcion: 'Permite eliminar roles personalizados.' },
-  'admin.importacion.ver': { modulo: 'Administración', nombre: 'Ver importación/exportación', descripcion: 'Permite abrir importación y exportación.' },
-  'admin.importacion.ejecutar': { modulo: 'Administración', nombre: 'Ejecutar importaciones', descripcion: 'Permite importar datos.' },
-  'admin.endpoints.ver': { modulo: 'Administración', nombre: 'Ver endpoints', descripcion: 'Consulta el catálogo técnico de endpoints.' },
-  'admin.configuracion.ver': { modulo: 'Administración', nombre: 'Ver configuración', descripcion: 'Consulta configuración general.' },
-  'admin.configuracion.editar': { modulo: 'Administración', nombre: 'Editar configuración', descripcion: 'Permite modificar configuración general.' },
-  'soporte.solicitudes_fabrica.ver': { modulo: 'Soporte', nombre: 'Ver soporte', descripcion: 'Consulta solicitudes fábrica y detalle ANS.' },
-  'soporte.solicitudes_fabrica.actualizar': { modulo: 'Soporte', nombre: 'Sincronizar soporte', descripcion: 'Permite cargar y sincronizar solicitudes fábrica.' },
-  'soporte.detalle_ans.editar': { modulo: 'Soporte', nombre: 'Editar detalle ANS', descripcion: 'Permite modificar Se levantó ANS y Observaciones.' },
-  'admin.acceso': { modulo: 'Administración', nombre: 'Acceso administrativo', descripcion: 'Habilita funciones administrativas avanzadas.' },
-  'consolidado.ver': { modulo: 'Consolidado', nombre: 'Ver todos los squads', descripcion: 'Permite usar el selector Todos los squads.' },
-}
-
-function permisoInfo(permiso: string) {
-  return PERMISOS_INFO[permiso] ?? { modulo: 'Otros', nombre: permiso, descripcion: 'Permiso técnico sin descripción configurada.' }
-}
+const TAMANIO_PAGINA_USUARIOS = 18
 
 export default function Usuarios() {
   const { usuario: yo, tienePermiso } = useAuth()
@@ -118,13 +62,77 @@ export default function Usuarios() {
     })
   }, [catalogoPermisos])
 
+  const gruposPermisos = useMemo(
+    () => agruparPermisosPorModulo(catalogoPermisosOrdenado),
+    [catalogoPermisosOrdenado],
+  )
+
+  // ── Filtros y paginación de la lista de usuarios (client-side) ──────────
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroRol, setFiltroRol] = useState('')
+  const [filtroSquad, setFiltroSquad] = useState('')
+  const [paginaUsuarios, setPaginaUsuarios] = useState(1)
+
+  function onCambiarBusqueda(v: string): void {
+    setBusqueda(v)
+    setPaginaUsuarios(1)
+  }
+  function onCambiarFiltroRol(v: string): void {
+    setFiltroRol(v)
+    setPaginaUsuarios(1)
+  }
+  function onCambiarFiltroSquad(v: string): void {
+    setFiltroSquad(v)
+    setPaginaUsuarios(1)
+  }
+
+  const usuariosBuscados = useMemo(() => {
+    const termino = busqueda.trim().toLowerCase()
+    return usuariosFiltrados.filter((u) => {
+      if (termino && !`${u.nombre} ${u.email}`.toLowerCase().includes(termino)) return false
+      if (filtroRol && u.rol_id !== filtroRol) return false
+      if (filtroSquad && !u.aplicaciones_codigos.includes(filtroSquad)) return false
+      return true
+    })
+  }, [usuariosFiltrados, busqueda, filtroRol, filtroSquad])
+
+  const opcionesRolFiltro = useMemo(() => {
+    const mapa = new Map<string, string>()
+    for (const u of usuariosFiltrados) {
+      if (u.rol_id) mapa.set(u.rol_id, u.rol_nombre || u.rol_id)
+    }
+    return Array.from(mapa, ([clave, etiqueta]) => ({ clave, etiqueta }))
+      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'))
+  }, [usuariosFiltrados])
+
+  const opcionesSquadFiltro = useMemo(() => {
+    const codigos = new Set<string>()
+    for (const u of usuariosFiltrados) for (const c of u.aplicaciones_codigos) codigos.add(c)
+    return Array.from(codigos)
+      .map((codigo) => ({ clave: codigo, etiqueta: apps.find((a) => a.codigo === codigo)?.nombre ?? codigo }))
+      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es'))
+  }, [usuariosFiltrados, apps])
+
+  const totalPaginasUsuarios = Math.max(1, Math.ceil(usuariosBuscados.length / TAMANIO_PAGINA_USUARIOS))
+  const paginaUsuariosSegura = Math.min(paginaUsuarios, totalPaginasUsuarios)
+  const usuariosPagina = useMemo(
+    () => usuariosBuscados.slice(
+      (paginaUsuariosSegura - 1) * TAMANIO_PAGINA_USUARIOS,
+      paginaUsuariosSegura * TAMANIO_PAGINA_USUARIOS,
+    ),
+    [usuariosBuscados, paginaUsuariosSegura],
+  )
+
+  // ── Alta de usuario (modal "Nuevo usuario") ──────────────────────────────
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rolId, setRolId] = useState('')
   const [aplicacionesNuevo, setAplicacionesNuevo] = useState<string[]>([])
   const [aviso, setAviso] = useState('')
+  const [modalNuevoAbierto, setModalNuevoAbierto] = useState(false)
 
+  // ── Edición de usuario (modal "Editar") ──────────────────────────────────
   const [editando, setEditando] = useState<Usuario | null>(null)
   const [editNombre, setEditNombre] = useState('')
   const [editEmail, setEditEmail] = useState('')
@@ -133,12 +141,24 @@ export default function Usuarios() {
   const [editAviso, setEditAviso] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
 
+  // ── Maestro-detalle de roles ──────────────────────────────────────────────
   const [nuevoRolClave, setNuevoRolClave] = useState('')
   const [nuevoRolNombre, setNuevoRolNombre] = useState('')
   const [nuevoRolDescripcion, setNuevoRolDescripcion] = useState('')
   const [nuevoRolPermisos, setNuevoRolPermisos] = useState<string[]>([])
   const [rolEditando, setRolEditando] = useState<Rol | null>(null)
+  const [mostrandoNuevoRol, setMostrandoNuevoRol] = useState(false)
   const [avisoRoles, setAvisoRoles] = useState('')
+
+  function abrirCrear(): void {
+    setNombre('')
+    setEmail('')
+    setPassword('')
+    setRolId('')
+    setAplicacionesNuevo([])
+    setAviso('')
+    setModalNuevoAbierto(true)
+  }
 
   function abrirEditar(u: Usuario): void {
     setEditando(u)
@@ -190,6 +210,7 @@ export default function Usuarios() {
       setPassword('')
       setRolId('')
       setAplicacionesNuevo([])
+      setModalNuevoAbierto(false)
       recargar()
     } catch (err) {
       setAviso(mensajeError(err))
@@ -239,6 +260,24 @@ export default function Usuarios() {
     ))
   }
 
+  function togglePermisoEdicion(permiso: string): void {
+    setRolEditando((prev) => {
+      if (!prev) return prev
+      const permisos = prev.permisos.includes(permiso)
+        ? prev.permisos.filter((p) => p !== permiso)
+        : [...prev.permisos, permiso]
+      return { ...prev, permisos }
+    })
+  }
+
+  function alternarModuloNuevo(permisosModulo: string[], marcar: boolean): void {
+    setNuevoRolPermisos((prev) => permisosConModulo(prev, permisosModulo, marcar))
+  }
+
+  function alternarModuloEdicion(permisosModulo: string[], marcar: boolean): void {
+    setRolEditando((prev) => (prev ? { ...prev, permisos: permisosConModulo(prev.permisos, permisosModulo, marcar) } : prev))
+  }
+
   function alternarSquadNuevo(codigo: string): void {
     setAplicacionesNuevo((prev) => (
       prev.includes(codigo) ? prev.filter((c) => c !== codigo) : [...prev, codigo]
@@ -259,6 +298,22 @@ export default function Usuarios() {
     return u.aplicaciones_codigos.map((c) => apps.find((a) => a.codigo === c)?.nombre ?? c).join(', ') || '—'
   }
 
+  function abrirNuevoRol(): void {
+    setNuevoRolClave('')
+    setNuevoRolNombre('')
+    setNuevoRolDescripcion('')
+    setNuevoRolPermisos([])
+    setAvisoRoles('')
+    setRolEditando(null)
+    setMostrandoNuevoRol(true)
+  }
+
+  function seleccionarRol(rol: Rol): void {
+    setRolEditando({ ...rol })
+    setMostrandoNuevoRol(false)
+    setAvisoRoles('')
+  }
+
   async function crearRol(e: FormEvent): Promise<void> {
     e.preventDefault()
     setAvisoRoles('')
@@ -273,6 +328,7 @@ export default function Usuarios() {
       setNuevoRolNombre('')
       setNuevoRolDescripcion('')
       setNuevoRolPermisos([])
+      setMostrandoNuevoRol(false)
       recargarRoles()
       recargar()
     } catch (err) {
@@ -304,12 +360,56 @@ export default function Usuarios() {
     setAvisoRoles('')
     try {
       await client.delete(`/roles/${rol.id}`)
+      setRolEditando(null)
       recargarRoles()
       recargar()
     } catch (err) {
       setAvisoRoles(mensajeError(err))
     }
   }
+
+  const modoPanelRol: ModoPanelRol = mostrandoNuevoRol ? 'nuevo' : rolEditando ? 'editar' : 'vacio'
+
+  const propsFormularioRol: ComponentProps<typeof FormularioRol> | null =
+    modoPanelRol === 'nuevo'
+      ? {
+          modo: 'nuevo',
+          clave: nuevoRolClave,
+          onCambiarClave: setNuevoRolClave,
+          nombre: nuevoRolNombre,
+          onCambiarNombre: setNuevoRolNombre,
+          descripcion: nuevoRolDescripcion,
+          onCambiarDescripcion: setNuevoRolDescripcion,
+          permisosSeleccionados: nuevoRolPermisos,
+          grupos: gruposPermisos,
+          onTogglePermiso: toggleNuevoPermiso,
+          onToggleModulo: alternarModuloNuevo,
+          puedeGuardar: puedeCrearRoles,
+          aviso: avisoRoles,
+          onSubmit: crearRol,
+        }
+      : modoPanelRol === 'editar' && rolEditando
+        ? {
+            modo: 'editar',
+            clave: rolEditando.clave,
+            nombre: rolEditando.nombre,
+            onCambiarNombre: (v: string) => setRolEditando({ ...rolEditando, nombre: v }),
+            descripcion: rolEditando.descripcion,
+            onCambiarDescripcion: (v: string) => setRolEditando({ ...rolEditando, descripcion: v }),
+            activo: rolEditando.activo,
+            onCambiarActivo: (v: boolean) => setRolEditando({ ...rolEditando, activo: v }),
+            esSistema: rolEditando.es_sistema,
+            permisosSeleccionados: rolEditando.permisos,
+            grupos: gruposPermisos,
+            onTogglePermiso: togglePermisoEdicion,
+            onToggleModulo: alternarModuloEdicion,
+            puedeGuardar: puedeEditarRoles,
+            puedeEliminar: puedeEliminarRoles,
+            aviso: avisoRoles,
+            onSubmit: guardarRol,
+            onEliminar: () => { void eliminarRol(rolEditando) },
+          }
+        : null
 
   return (
     <div>
@@ -333,352 +433,90 @@ export default function Usuarios() {
       </div>
 
       {tab === 'usuarios' && (
-        <>
-          {puedeCrearUsuarios && (
-            <form onSubmit={crear} className="barra-filtros mb-4">
-              <label className="text-sm">
-                <span className="mb-1 block text-slate-600">Nombre</span>
-                <Campo value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-slate-600">Correo</span>
-                <Campo value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-slate-600">Contraseña</span>
-                <Campo value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-slate-600">Rol</span>
-                <Selector value={rolId} onChange={(e) => setRolId(e.target.value)}>
-                  <option value="">Seleccione</option>
-                  {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                </Selector>
-              </label>
-              <div className="min-w-64 text-sm">
-                <div className="mb-1 flex items-center justify-between gap-3">
-                  <span className="block text-slate-600">Squads</span>
-                  <div className="flex gap-2 text-[11px] font-semibold">
-                    <button type="button" className="enlace-accion" onClick={() => setAplicacionesNuevo(appsActivasDisponibles.map((a) => a.codigo))}>
-                      Todos
-                    </button>
-                    <button type="button" className="enlace-accion-sutil" onClick={() => setAplicacionesNuevo([])}>
-                      Limpiar
-                    </button>
-                  </div>
-                </div>
-                <div className="max-h-28 overflow-y-auto rounded border px-3 py-2">
-                  <label className="mb-1 flex cursor-pointer items-center gap-2 rounded px-1 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                    <input
-                      type="checkbox"
-                      checked={appsActivasDisponibles.length > 0 && appsActivasDisponibles.every((a) => aplicacionesNuevo.includes(a.codigo))}
-                      onChange={(e) => setAplicacionesNuevo(e.target.checked ? appsActivasDisponibles.map((a) => a.codigo) : [])}
-                    />
-                    ★ Todos los squads
-                  </label>
-                  {appsActivasDisponibles.map((a) => (
-                    <label key={a.codigo} className="flex cursor-pointer items-center gap-2 rounded px-1 text-sm hover:bg-slate-50">
-                      <input type="checkbox" checked={aplicacionesNuevo.includes(a.codigo)} onChange={() => alternarSquadNuevo(a.codigo)} />
-                      <span>{a.nombre}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <Boton variante="primario" type="submit">Crear</Boton>
-            </form>
-          )}
-
-          {(aviso || error) && (
-            <div className="aviso aviso-error mb-3">{aviso || error}</div>
-          )}
-
-          <TablaScroll>
-          <table className="tabla">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Squads</th>
-                <th className="text-center">Activo</th>
-                <th className="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.nombre}</td>
-                  <td>{u.email}</td>
-                  <td>
-                    <Selector
-                      value={u.rol_id ?? ''}
-                      onChange={(e) => cambiarRol(u, e.target.value)}
-                      disabled={!puedeEditarUsuarios}
-                      compacto
-                    >
-                      {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                    </Selector>
-                  </td>
-                  <td>{nombresSquadsUsuario(u)}</td>
-                  <td className="text-center">
-                    <Chip tono={u.activo ? 'exito' : 'neutro'}>{u.activo ? 'Sí' : 'No'}</Chip>
-                  </td>
-                  <td className="text-center whitespace-nowrap">
-                    <button onClick={() => abrirEditar(u)} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs mr-2">
-                      Editar
-                    </button>
-                    <button onClick={() => alternarActivo(u)} disabled={!puedeEditarUsuarios} className={`enlace-accion text-xs mr-2 ${u.activo ? 'enlace-accion-alerta' : 'enlace-accion-exito'}`}>
-                      {u.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                    <button onClick={() => resetPassword(u)} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs mr-2">
-                      Resetear clave
-                    </button>
-                    <button
-                      onClick={() => eliminarAcceso(u)}
-                      disabled={!puedeEditarUsuarios || u.id === yo?.id}
-                      className="enlace-accion enlace-accion-peligro text-xs"
-                      title={u.id === yo?.id ? 'No puedes eliminar tu propio acceso' : 'Elimina definitivamente el registro del usuario'}
-                    >
-                      Eliminar acceso
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {datos.length === 0 && (
-                <tr><td colSpan={6} className="p-4 text-center text-slate-400">Sin usuarios.</td></tr>
-              )}
-            </tbody>
-          </table>
-          </TablaScroll>
-        </>
+        <ListaUsuarios
+          usuariosPagina={usuariosPagina}
+          totalFiltrados={usuariosBuscados.length}
+          totalSinFiltrar={datos.length}
+          pagina={paginaUsuariosSegura}
+          totalPaginas={totalPaginasUsuarios}
+          onCambiarPagina={setPaginaUsuarios}
+          busqueda={busqueda}
+          onCambiarBusqueda={onCambiarBusqueda}
+          filtroRol={filtroRol}
+          onCambiarFiltroRol={onCambiarFiltroRol}
+          opcionesRol={opcionesRolFiltro}
+          filtroSquad={filtroSquad}
+          onCambiarFiltroSquad={onCambiarFiltroSquad}
+          opcionesSquad={opcionesSquadFiltro}
+          puedeCrearUsuarios={puedeCrearUsuarios}
+          onNuevoUsuario={abrirCrear}
+          aviso={aviso || error}
+          rolesDisponibles={rolesDisponibles}
+          puedeEditarUsuarios={puedeEditarUsuarios}
+          yoId={yo?.id}
+          nombresSquadsUsuario={nombresSquadsUsuario}
+          onCambiarRol={cambiarRol}
+          onAlternarActivo={alternarActivo}
+          onEditar={abrirEditar}
+          onResetPassword={resetPassword}
+          onEliminar={eliminarAcceso}
+        />
       )}
 
       {tab === 'roles' && puedeVerRoles && (
-        <div className="space-y-4">
-          {(avisoRoles || errorRoles) && (
-            <div className="aviso aviso-error">{avisoRoles || errorRoles}</div>
-          )}
-
-          {puedeCrearRoles && (
-            <form onSubmit={crearRol} className="rounded-xl border bg-white p-4 space-y-3">
-              <h2 className="titulo-seccion text-sm">Crear rol</h2>
-              <div className="flex flex-wrap gap-3">
-                <Campo placeholder="Clave (ej: auditor)" value={nuevoRolClave} onChange={(e) => setNuevoRolClave(e.target.value)} required />
-                <Campo placeholder="Nombre" value={nuevoRolNombre} onChange={(e) => setNuevoRolNombre(e.target.value)} required />
-                <Campo className="min-w-72" placeholder="Descripción" value={nuevoRolDescripcion} onChange={(e) => setNuevoRolDescripcion(e.target.value)} />
-              </div>
-              <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto rounded border p-2 md:grid-cols-2">
-                {catalogoPermisosOrdenado.map((permiso) => {
-                  const info = permisoInfo(permiso)
-                  return (
-                    <label key={permiso} className="flex cursor-pointer items-start gap-2 rounded border border-slate-100 p-2 text-xs hover:bg-slate-50">
-                      <input type="checkbox" checked={nuevoRolPermisos.includes(permiso)} onChange={() => toggleNuevoPermiso(permiso)} className="mt-1" />
-                      <span>
-                        <span className="block font-semibold text-slate-800">{info.nombre}</span>
-                        <span className="block text-[11px] text-slate-500">{info.modulo} · {info.descripcion}</span>
-                        <span className="block font-mono text-[10px] text-slate-400">{permiso}</span>
-                      </span>
-                    </label>
-                  )
-                })}
-              </div>
-              <Boton variante="primario" type="submit">Crear rol</Boton>
-            </form>
-          )}
-
-          <TablaScroll>
-          <table className="tabla">
-            <thead>
-              <tr>
-                <th>Rol</th>
-                <th>Clave</th>
-                <th>Permisos</th>
-                <th className="text-center">Activo</th>
-                <th className="text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((rol) => (
-                <tr key={rol.id}>
-                  <td>{rol.nombre}</td>
-                  <td className="font-mono">{rol.clave}</td>
-                  <td>{rol.permisos.length}</td>
-                  <td className="text-center">
-                    <Chip tono={rol.activo ? 'exito' : 'neutro'}>{rol.activo ? 'Sí' : 'No'}</Chip>
-                  </td>
-                  <td className="text-center whitespace-nowrap">
-                    <button
-                      onClick={() => setRolEditando({ ...rol })}
-                      disabled={!puedeEditarRoles}
-                      className="enlace-accion text-xs mr-2"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => eliminarRol(rol)}
-                      disabled={!puedeEliminarRoles || rol.es_sistema}
-                      className="enlace-accion enlace-accion-peligro text-xs"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {roles.length === 0 && (
-                <tr><td colSpan={5} className="p-4 text-center text-slate-400">Sin roles.</td></tr>
-              )}
-            </tbody>
-          </table>
-          </TablaScroll>
-        </div>
+        <PanelRoles
+          roles={roles}
+          rolSeleccionadoId={rolEditando?.id ?? null}
+          puedeCrearRoles={puedeCrearRoles}
+          puedeEditarRoles={puedeEditarRoles}
+          onNuevoRol={abrirNuevoRol}
+          onSeleccionarRol={seleccionarRol}
+          errorRoles={errorRoles}
+          propsFormulario={propsFormularioRol}
+        />
       )}
 
-      <Modal
-        titulo={editando ? `Editar: ${editando.nombre}` : 'Editar usuario'}
+      <ModalUsuario
+        abierto={modalNuevoAbierto}
+        onCerrar={() => setModalNuevoAbierto(false)}
+        titulo="Nuevo usuario"
+        onSubmit={crear}
+        aviso={aviso}
+        nombre={nombre}
+        setNombre={setNombre}
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        rolId={rolId}
+        setRolId={setRolId}
+        rolesDisponibles={rolesDisponibles}
+        squads={aplicacionesNuevo}
+        setSquads={setAplicacionesNuevo}
+        onToggleSquad={alternarSquadNuevo}
+        appsActivasDisponibles={appsActivasDisponibles}
+        textoSubmit="Crear"
+      />
+
+      <ModalUsuario
         abierto={modalAbierto}
         onCerrar={cerrarModal}
-      >
-        <form onSubmit={guardarEdicion} className="space-y-3">
-          {editAviso && <div className="aviso aviso-error">{editAviso}</div>}
-          <label className="block text-sm">
-            <span className="mb-1 block text-slate-600">Nombre</span>
-            <Campo value={editNombre} onChange={(e) => setEditNombre(e.target.value)} required
-              className="w-full" />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block text-slate-600">Correo</span>
-            <Campo value={editEmail} onChange={(e) => setEditEmail(e.target.value)} type="email" required
-              className="w-full" />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block text-slate-600">Rol</span>
-            <Selector value={editRolId} onChange={(e) => setEditRolId(e.target.value)}
-              className="w-full">
-              {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-            </Selector>
-          </label>
-          <div className="block text-sm">
-            <div className="mb-1 flex items-center justify-between gap-3">
-              <span className="block text-slate-600">Squads</span>
-              <div className="flex gap-2 text-[11px] font-semibold">
-                <button type="button" className="enlace-accion" onClick={() => setEditApps(appsActivasDisponibles.map((a) => a.codigo))}>
-                  Todos
-                </button>
-                <button type="button" className="enlace-accion-sutil" onClick={() => setEditApps([])}>
-                  Limpiar
-                </button>
-              </div>
-            </div>
-            <div className="max-h-40 overflow-y-auto rounded border px-3 py-2 space-y-1">
-              <label className="flex cursor-pointer items-center gap-2 rounded px-1 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <input
-                  type="checkbox"
-                  checked={appsActivasDisponibles.length > 0 && appsActivasDisponibles.every((a) => editApps.includes(a.codigo))}
-                  onChange={(e) => setEditApps(e.target.checked ? appsActivasDisponibles.map((a) => a.codigo) : [])}
-                  className="rounded"
-                />
-                <span>★ Todos los squads</span>
-              </label>
-              {appsActivasDisponibles.map((a) => (
-                <label key={a.codigo} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 rounded px-1">
-                  <input
-                    type="checkbox"
-                    checked={editApps.includes(a.codigo)}
-                    onChange={() => alternarSquadEdicion(a.codigo)}
-                    className="rounded"
-                  />
-                  <span>{a.nombre}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Boton type="button" variante="secundario" onClick={cerrarModal}>
-              Cancelar
-            </Boton>
-            <Boton variante="primario" type="submit">
-              Guardar cambios
-            </Boton>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        titulo={rolEditando ? `Editar rol: ${rolEditando.nombre}` : 'Editar rol'}
-        abierto={!!rolEditando}
-        onCerrar={() => setRolEditando(null)}
-      >
-        {rolEditando && (
-          <div className="space-y-3">
-            <label className="block text-sm">
-              <span className="mb-1 block text-slate-600">Nombre</span>
-              <Campo
-                value={rolEditando.nombre}
-                onChange={(e) => setRolEditando({ ...rolEditando, nombre: e.target.value })}
-                className="w-full"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-slate-600">Descripción</span>
-              <Campo
-                value={rolEditando.descripcion}
-                onChange={(e) => setRolEditando({ ...rolEditando, descripcion: e.target.value })}
-                className="w-full"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={rolEditando.activo}
-                onChange={(e) => setRolEditando({ ...rolEditando, activo: e.target.checked })}
-              />
-              <span>Activo</span>
-            </label>
-            <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto rounded border p-2">
-              {catalogoPermisosOrdenado.map((permiso) => {
-                const info = permisoInfo(permiso)
-                return (
-                  <label key={permiso} className="flex cursor-pointer items-start gap-2 rounded border border-slate-100 p-2 text-xs hover:bg-slate-50">
-                    <input
-                      type="checkbox"
-                      checked={rolEditando.permisos.includes(permiso)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setRolEditando({ ...rolEditando, permisos: [...rolEditando.permisos, permiso] })
-                        } else {
-                          setRolEditando({ ...rolEditando, permisos: rolEditando.permisos.filter((p) => p !== permiso) })
-                        }
-                      }}
-                      className="mt-1"
-                    />
-                    <span>
-                      <span className="block font-semibold text-slate-800">{info.nombre}</span>
-                      <span className="block text-[11px] text-slate-500">{info.modulo} · {info.descripcion}</span>
-                      <span className="block font-mono text-[10px] text-slate-400">{permiso}</span>
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
-            <div className="flex justify-end gap-2">
-              <Boton
-                type="button"
-                variante="secundario"
-                onClick={() => setRolEditando(null)}
-              >
-                Cancelar
-              </Boton>
-              <Boton
-                type="button"
-                variante="primario"
-                onClick={guardarRol}
-              >
-                Guardar
-              </Boton>
-            </div>
-          </div>
-        )}
-      </Modal>
+        titulo={editando ? `Editar: ${editando.nombre}` : 'Editar usuario'}
+        onSubmit={guardarEdicion}
+        aviso={editAviso}
+        nombre={editNombre}
+        setNombre={setEditNombre}
+        email={editEmail}
+        setEmail={setEditEmail}
+        rolId={editRolId}
+        setRolId={setEditRolId}
+        rolesDisponibles={rolesDisponibles}
+        squads={editApps}
+        setSquads={setEditApps}
+        onToggleSquad={alternarSquadEdicion}
+        appsActivasDisponibles={appsActivasDisponibles}
+        textoSubmit="Guardar cambios"
+      />
     </div>
   )
 }
