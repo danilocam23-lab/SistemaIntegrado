@@ -11,7 +11,7 @@ from app.documents.azdo_config import AzdoConfig
 from app.errors import ErrorIntegracion
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
 from app.security.deps import permiso
-from app.services.azdo_sync import sincronizar_iteracion
+from app.services.azdo_sync import leer_config_azdo, sincronizar_iteracion
 from app.services.azure_devops import AzureDevOpsService
 
 logger = logging.getLogger(__name__)
@@ -115,6 +115,103 @@ async def _crear_servicio_desde_config(cfg: AzdoConfig) -> AzureDevOpsService:
             "Falta configurar URL de organización y/o PAT en la vista de Azure DevOps.",
         )
     return AzureDevOpsService(cfg.org_url, cfg.pat)
+
+
+def _separar_csv(valor: str | None) -> list[str]:
+    if not valor:
+        return []
+    return [parte.strip() for parte in valor.split(",") if parte.strip()]
+
+
+async def _resolver_proyecto_esquema(
+    aplicacion_id: str,
+    proyecto: str | None,
+    cfg: AzdoConfig,
+) -> str:
+    proyecto_resuelto = (proyecto or "").strip()
+    if proyecto_resuelto:
+        return proyecto_resuelto
+    proyecto_resuelto = await leer_config_azdo(aplicacion_id, "azdo_default_project")
+    proyecto_resuelto = proyecto_resuelto or cfg.default_project
+    if not proyecto_resuelto:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Falta configurar el proyecto por defecto de Azure DevOps.",
+        )
+    return proyecto_resuelto
+
+
+def _tipos_desde_jerarquia(jerarquia: list[dict]) -> list[str]:
+    tipos: list[str] = []
+    vistos: set[str] = set()
+    for nivel in jerarquia:
+        for tipo in nivel.get("tipos", []):
+            if tipo and tipo not in vistos:
+                tipos.append(tipo)
+                vistos.add(tipo)
+    return tipos
+
+
+async def _tipos_esquema_por_defecto(svc: AzureDevOpsService, proyecto: str) -> list[str]:
+    jerarquia = await svc.obtener_jerarquia_backlog(proyecto)
+    tipos = _tipos_desde_jerarquia(jerarquia)
+    if tipos:
+        return tipos
+
+    mapa_tipos = await svc.obtener_tipos_work_item(proyecto)
+    tipos = [
+        mapa_tipos[clave]
+        for clave in ("feature", "userStory", "task", "bug")
+        if mapa_tipos.get(clave)
+    ]
+    nombres_proceso = await svc.obtener_tipos_proceso(proyecto)
+    epic = next(
+        (tipo["nombre"] for tipo in nombres_proceso if tipo.get("nombre", "").lower() == "epic"),
+        None,
+    )
+    if epic and epic not in tipos:
+        tipos.insert(0, epic)
+    return tipos
+
+
+def _construir_arbol(items: list[dict]) -> list[dict]:
+    indice = {item["azdo_id"]: {**item, "hijos": []} for item in items}
+    raices: list[dict] = []
+    colocados: set[int] = set()
+
+    def crea_ciclo(nodo_id: int, padre_id: int) -> bool:
+        visitados = {nodo_id}
+        actual_id: int | None = padre_id
+        while actual_id is not None and actual_id in indice:
+            if actual_id in visitados:
+                return True
+            visitados.add(actual_id)
+            siguiente_id = indice[actual_id].get("parent_id")
+            actual_id = siguiente_id if isinstance(siguiente_id, int) else None
+        return False
+
+    for nodo_id in sorted(indice):
+        if nodo_id in colocados:
+            continue
+        nodo = indice[nodo_id]
+        parent_id = nodo.get("parent_id")
+        if (
+            isinstance(parent_id, int)
+            and parent_id in indice
+            and not crea_ciclo(nodo_id, parent_id)
+        ):
+            indice[parent_id]["hijos"].append(nodo)
+        else:
+            raices.append(nodo)
+        colocados.add(nodo_id)
+
+    def ordenar(nodos: list[dict]) -> None:
+        nodos.sort(key=lambda n: n["azdo_id"])
+        for nodo in nodos:
+            ordenar(nodo["hijos"])
+
+    ordenar(raices)
+    return raices
 
 
 # ── Endpoints de configuración ──
@@ -331,31 +428,83 @@ async def campos_requeridos(
         field_map = await svc._obtener_field_map(proyecto)
         inv_map = {v["referenceName"]: k for k, v in field_map.items()}
 
-        campos_lista = []
+        campos_lista: list[dict[str, Any]] = []
         # Campos estándar siempre requeridos
-        standard = {
-            "System.Title": {"name": "Title", "type": "string", "default": "(nombre de la tarea)"},
+        standard: dict[str, dict[str, Any]] = {
+            "System.Title": {
+                "name": "Title",
+                "type": "string",
+                "default": "(nombre de la tarea)",
+            },
         }
         if logical_name == "task":
             standard.update({
-                "Microsoft.VSTS.Common.Activity": {"name": "Activity", "type": "string", "default": "Development"},
-                "Microsoft.VSTS.Scheduling.OriginalEstimate": {"name": "Original Estimate", "type": "double", "default": 0},
-                "Microsoft.VSTS.Scheduling.RemainingWork": {"name": "Remaining Work", "type": "double", "default": 0},
-                "Microsoft.VSTS.Scheduling.CompletedWork": {"name": "Completed Work", "type": "double", "default": 0},
-                "Microsoft.VSTS.Scheduling.StartDate": {"name": "Start Date", "type": "dateTime", "default": "(fecha actual)"},
-                "Microsoft.VSTS.Scheduling.FinishDate": {"name": "Finish Date", "type": "dateTime", "default": "(fecha actual)"},
+                "Microsoft.VSTS.Common.Activity": {
+                    "name": "Activity",
+                    "type": "string",
+                    "default": "Development",
+                },
+                "Microsoft.VSTS.Scheduling.OriginalEstimate": {
+                    "name": "Original Estimate",
+                    "type": "double",
+                    "default": 0,
+                },
+                "Microsoft.VSTS.Scheduling.RemainingWork": {
+                    "name": "Remaining Work",
+                    "type": "double",
+                    "default": 0,
+                },
+                "Microsoft.VSTS.Scheduling.CompletedWork": {
+                    "name": "Completed Work",
+                    "type": "double",
+                    "default": 0,
+                },
+                "Microsoft.VSTS.Scheduling.StartDate": {
+                    "name": "Start Date",
+                    "type": "dateTime",
+                    "default": "(fecha actual)",
+                },
+                "Microsoft.VSTS.Scheduling.FinishDate": {
+                    "name": "Finish Date",
+                    "type": "dateTime",
+                    "default": "(fecha actual)",
+                },
             })
         elif logical_name == "userStory":
             standard.update({
-                "System.Description": {"name": "Description", "type": "html", "default": "<div>(título)</div>"},
-                "Microsoft.VSTS.Common.AcceptanceCriteria": {"name": "Acceptance Criteria", "type": "html", "default": "<div>(título)</div>"},
-                "Microsoft.VSTS.Scheduling.StartDate": {"name": "Start Date", "type": "dateTime", "default": "(fecha actual)"},
-                "Microsoft.VSTS.Scheduling.FinishDate": {"name": "Finish Date", "type": "dateTime", "default": "(fecha actual)"},
+                "System.Description": {
+                    "name": "Description",
+                    "type": "html",
+                    "default": "<div>(título)</div>",
+                },
+                "Microsoft.VSTS.Common.AcceptanceCriteria": {
+                    "name": "Acceptance Criteria",
+                    "type": "html",
+                    "default": "<div>(título)</div>",
+                },
+                "Microsoft.VSTS.Scheduling.StartDate": {
+                    "name": "Start Date",
+                    "type": "dateTime",
+                    "default": "(fecha actual)",
+                },
+                "Microsoft.VSTS.Scheduling.FinishDate": {
+                    "name": "Finish Date",
+                    "type": "dateTime",
+                    "default": "(fecha actual)",
+                },
             })
         elif logical_name == "feature":
             standard.update({
-                "Microsoft.VSTS.Scheduling.StartDate": {"name": "Start Date", "type": "dateTime", "default": "(fecha actual)"},
-                "Microsoft.VSTS.Scheduling.TargetDate": {"name": "Target Date", "type": "dateTime", "default": "(fecha actual)"},
+                "Microsoft.VSTS.Scheduling.StartDate": {
+                    "name": "Start Date",
+                    "type": "dateTime",
+                    "default": "(fecha actual)",
+                },
+                "Microsoft.VSTS.Scheduling.TargetDate": {
+                    "name": "Target Date",
+                    "type": "dateTime",
+                    "default": "(fecha actual)",
+                },
             })
 
         for ref, info in standard.items():
@@ -439,6 +588,73 @@ async def iteraciones(
         return await svc.obtener_iteraciones(proyecto)
     except RuntimeError as exc:
         raise ErrorIntegracion("No se pudo obtener las iteraciones de Azure DevOps.") from exc
+
+
+# ── Esquema de Azure DevOps (solo lectura en vivo) ──
+
+@router.get("/esquema/tipos", dependencies=[permiso("azure_devops.ver")])
+async def esquema_tipos(
+    target: str = "hitss",
+    proyecto: str | None = None,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    target = _normalizar_target(target)
+    cfg = await _resolver_config(ctx.codigo, target)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    proyecto_resuelto = await _resolver_proyecto_esquema(ctx.codigo, proyecto, cfg)
+    svc = await _crear_servicio_desde_config(cfg)
+    try:
+        return {
+            "proyecto": proyecto_resuelto,
+            "tipos": await svc.obtener_tipos_proceso(proyecto_resuelto),
+            "jerarquia": await svc.obtener_jerarquia_backlog(proyecto_resuelto),
+        }
+    except (RuntimeError, httpx.HTTPError) as exc:
+        raise ErrorIntegracion("No se pudo obtener el esquema de Azure DevOps.") from exc
+
+
+@router.get("/esquema/arbol", dependencies=[permiso("azure_devops.ver")])
+async def esquema_arbol(
+    target: str = "hitss",
+    proyecto: str | None = None,
+    tipos: str | None = None,
+    area_path: str | None = None,
+    iteration_path: str | None = None,
+    estados: str | None = None,
+    limite: int = 2000,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    target = _normalizar_target(target)
+    cfg = await _resolver_config(ctx.codigo, target)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    proyecto_resuelto = await _resolver_proyecto_esquema(ctx.codigo, proyecto, cfg)
+    svc = await _crear_servicio_desde_config(cfg)
+    limite = min(limite, 5000)
+    tipos_consultados = _separar_csv(tipos)
+    estados_consultados = _separar_csv(estados)
+
+    try:
+        if not tipos_consultados:
+            tipos_consultados = await _tipos_esquema_por_defecto(svc, proyecto_resuelto)
+        items, truncado = await svc.obtener_work_items_esquema(
+            proyecto_resuelto,
+            tipos_consultados,
+            area_path=area_path,
+            iteration_path=iteration_path,
+            estados=estados_consultados or None,
+            limite=limite,
+        )
+        return {
+            "proyecto": proyecto_resuelto,
+            "total": len(items),
+            "truncado": truncado,
+            "tipos_consultados": tipos_consultados,
+            "nodos": _construir_arbol(items),
+        }
+    except (RuntimeError, httpx.HTTPError) as exc:
+        raise ErrorIntegracion("No se pudo obtener el esquema de Azure DevOps.") from exc
 
 
 # ── Work items y sync ──

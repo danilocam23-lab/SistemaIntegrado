@@ -19,6 +19,7 @@ import ControlHorasFacturable from './pages/ControlHorasFacturable'
 import Roadmap from './pages/Roadmap'
 import Estimaciones from './pages/Estimaciones'
 import AzureDevOps from './pages/AzureDevOps'
+import EsquemaAzure from './pages/EsquemaAzure'
 import Configuracion from './pages/Configuracion'
 import EntregasActas from './pages/EntregasActas'
 import Predictivos from './pages/Predictivos'
@@ -81,6 +82,10 @@ export default function App() {
               <Route
                 path="admin/endpoints"
                 element={<RoleRoute permiso="admin.endpoints.ver"><AdminEndpoints /></RoleRoute>}
+              />
+              <Route
+                path="admin/esquema-azure"
+                element={<RoleRoute permiso="azure_devops.ver"><EsquemaAzure /></RoleRoute>}
               />
               <Route
                 path="admin/importacion"

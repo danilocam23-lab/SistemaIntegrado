@@ -24,6 +24,7 @@ WORK_ITEM_FIELDS = [
     "Microsoft.VSTS.Scheduling.CompletedWork",
     "Microsoft.VSTS.Scheduling.RemainingWork",
 ]
+CAMPOS_ESQUEMA = [*WORK_ITEM_FIELDS, "System.Parent"]
 
 
 def _parse_fecha(valor) -> datetime | None:
@@ -58,7 +59,11 @@ class AzureDevOpsService:
         return f"{self.org_url}{path}?{urlencode(params)}"
 
     async def _fetch(
-        self, cliente: httpx.AsyncClient, url: str, metodo: str = "GET", cuerpo: dict | list | None = None
+        self,
+        cliente: httpx.AsyncClient,
+        url: str,
+        metodo: str = "GET",
+        cuerpo: dict | list | None = None,
     ) -> dict:
         resp = await cliente.request(metodo, url, headers=self.headers, json=cuerpo)
         if resp.status_code >= 400:
@@ -117,6 +122,56 @@ class AzureDevOpsService:
         recorrer(data, "")
         return resultados
 
+    async def obtener_tipos_proceso(self, proyecto: str) -> list[dict]:
+        """Lista los tipos de work item disponibles en el proceso del proyecto."""
+        async with httpx.AsyncClient(timeout=30) as cliente:
+            data = await self._fetch(
+                cliente,
+                self._url(f"/{quote(proyecto)}/_apis/wit/workitemtypes"),
+            )
+        tipos = [
+            {
+                "nombre": t.get("name", ""),
+                "referencia": t.get("referenceName", ""),
+                "descripcion": t.get("description", ""),
+                "color": t.get("color", ""),
+                "icono": (t.get("icon") or {}).get("id", ""),
+            }
+            for t in data.get("value", [])
+        ]
+        return sorted(tipos, key=lambda t: t["nombre"])
+
+    async def obtener_jerarquia_backlog(self, proyecto: str) -> list[dict]:
+        """Obtiene la jerarquía real de backlogs configurada en Azure DevOps."""
+        async with httpx.AsyncClient(timeout=30) as cliente:
+            try:
+                data = await self._fetch(
+                    cliente,
+                    self._url(f"/{quote(proyecto)}/_apis/work/backlogconfiguration"),
+                )
+            except RuntimeError:
+                return []
+
+        backlogs = [
+            *data.get("portfolioBacklogs", []),
+            data.get("requirementBacklog") or {},
+            data.get("taskBacklog") or {},
+        ]
+        jerarquia = [
+            {
+                "nombre": backlog.get("name", ""),
+                "rango": backlog.get("rank", 0),
+                "tipos": [
+                    wit.get("name", "")
+                    for wit in backlog.get("workItemTypes", [])
+                    if wit.get("name")
+                ],
+            }
+            for backlog in backlogs
+            if backlog
+        ]
+        return sorted(jerarquia, key=lambda b: b["rango"], reverse=True)
+
     def construir_wiql(self, iteration_path: str, asignado_a: str | None = None) -> str:
         """Arma la consulta WIQL para traer Task/Bug/User Story de una iteración,
         opcionalmente filtrada por asignado."""
@@ -126,6 +181,38 @@ class AzureDevOpsService:
         ]
         if asignado_a:
             condiciones.append(f"[System.AssignedTo] = '{asignado_a}'")
+        return (
+            "SELECT [System.Id] FROM workitems "
+            f"WHERE {' AND '.join(condiciones)} ORDER BY [System.Id]"
+        )
+
+    @staticmethod
+    def _escapar_wiql(valor: str) -> str:
+        return valor.replace("'", "''")
+
+    def construir_wiql_esquema(
+        self,
+        proyecto: str,
+        tipos: list[str],
+        area_path: str | None = None,
+        iteration_path: str | None = None,
+        estados: list[str] | None = None,
+    ) -> str:
+        """Arma una WIQL segura para consultar el esquema vivo de Azure DevOps."""
+        tipos_escapados = "', '".join(self._escapar_wiql(tipo) for tipo in tipos)
+        condiciones = [
+            f"[System.TeamProject] = '{self._escapar_wiql(proyecto)}'",
+            f"[System.WorkItemType] IN ('{tipos_escapados}')",
+        ]
+        if area_path:
+            condiciones.append(f"[System.AreaPath] UNDER '{self._escapar_wiql(area_path)}'")
+        if iteration_path:
+            condiciones.append(
+                f"[System.IterationPath] UNDER '{self._escapar_wiql(iteration_path)}'"
+            )
+        if estados:
+            estados_escapados = "', '".join(self._escapar_wiql(estado) for estado in estados)
+            condiciones.append(f"[System.State] IN ('{estados_escapados}')")
         return (
             "SELECT [System.Id] FROM workitems "
             f"WHERE {' AND '.join(condiciones)} ORDER BY [System.Id]"
@@ -158,6 +245,46 @@ class AzureDevOpsService:
                 crudos.extend(lote.get("value", []))
         return [self._normalizar(wi) for wi in crudos]
 
+    async def obtener_work_items_esquema(
+        self,
+        proyecto: str,
+        tipos: list[str],
+        area_path=None,
+        iteration_path=None,
+        estados=None,
+        limite: int = 2000,
+    ) -> tuple[list[dict], bool]:
+        """Consulta work items para el árbol de esquema, sin persistirlos."""
+        wiql = self.construir_wiql_esquema(
+            proyecto,
+            tipos,
+            area_path=area_path,
+            iteration_path=iteration_path,
+            estados=estados,
+        )
+        async with httpx.AsyncClient(timeout=120) as cliente:
+            data = await self._fetch(
+                cliente,
+                self._url(f"/{quote(proyecto)}/_apis/wit/wiql"),
+                "POST",
+                {"query": wiql},
+            )
+            ids = [wi["id"] for wi in data.get("workItems", [])]
+            truncado = len(ids) > limite
+            ids = ids[:limite]
+            if not ids:
+                return [], truncado
+            crudos: list[dict] = []
+            for i in range(0, len(ids), 200):
+                lote = await self._fetch(
+                    cliente,
+                    self._url("/_apis/wit/workitemsbatch"),
+                    "POST",
+                    {"ids": ids[i : i + 200], "fields": CAMPOS_ESQUEMA},
+                )
+                crudos.extend(lote.get("value", []))
+        return [self._normalizar_esquema(wi, proyecto) for wi in crudos], truncado
+
     def _normalizar(self, wi: dict) -> dict:
         f = wi.get("fields", {})
         return {
@@ -175,6 +302,16 @@ class AzureDevOpsService:
             "tags": f.get("System.Tags", ""),
             "url": wi.get("url", ""),
         }
+
+    def _normalizar_esquema(self, wi: dict, proyecto: str) -> dict:
+        normalizado = self._normalizar(wi)
+        parent_id = wi.get("fields", {}).get("System.Parent")
+        normalizado["parent_id"] = int(parent_id) if parent_id else None
+        normalizado["url_api"] = normalizado.get("url", "")
+        normalizado["url"] = (
+            f"{self.org_url}/{quote(proyecto)}/_workitems/edit/{normalizado['azdo_id']}"
+        )
+        return normalizado
 
     @staticmethod
     def _email(asignado_a) -> str | None:
@@ -209,7 +346,12 @@ class AzureDevOpsService:
             return candidatos[0]
 
         mapa = {
-            "userStory": resolver(["User Story", "Historia de usuario", "Historia de Usuario", "Product Backlog Item"]),
+            "userStory": resolver([
+                "User Story",
+                "Historia de usuario",
+                "Historia de Usuario",
+                "Product Backlog Item",
+            ]),
             "task": resolver(["Task", "Tarea"]),
             "feature": resolver(["Feature", "Característica"]),
             "bug": resolver(["Bug", "Error"]),
@@ -425,7 +567,9 @@ class AzureDevOpsService:
                         continue
                     ref = info["referenceName"]
                     if ref in _blocked:
-                        allowed = await self._obtener_valores_permitidos(cliente, proyecto, tipo, ref)
+                        allowed = await self._obtener_valores_permitidos(
+                            cliente, proyecto, tipo, ref
+                        )
                         if allowed:
                             _blocked.discard(ref)
                             campos[ref] = allowed[0]

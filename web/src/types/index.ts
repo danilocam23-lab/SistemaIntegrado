@@ -394,6 +394,51 @@ export interface AzdoIteracion {
   path: string
 }
 
+export interface TipoWorkItemAzure {
+  nombre: string
+  referencia: string
+  descripcion: string | null
+  color: string | null
+  icono: string | null
+}
+
+export interface NivelJerarquiaAzure {
+  nombre: string
+  rango: number
+  tipos: string[]
+}
+
+export interface NodoEsquemaAzure {
+  azdo_id: number
+  tipo: string
+  titulo: string
+  estado: string | null
+  asignado_a: string | null
+  area_path: string | null
+  iteration_path: string | null
+  tags: string | null
+  original_estimate: number | null
+  completed_work: number | null
+  remaining_work: number | null
+  url: string
+  parent_id: number | null
+  hijos: NodoEsquemaAzure[]
+}
+
+export interface RespuestaEsquemaAzure {
+  proyecto: string
+  total: number
+  truncado: boolean
+  tipos_consultados: string[]
+  nodos: NodoEsquemaAzure[]
+}
+
+export interface RespuestaTiposAzure {
+  proyecto: string
+  tipos: TipoWorkItemAzure[]
+  jerarquia: NivelJerarquiaAzure[]
+}
+
 export interface AzdoWorkItem {
   id: string
   azdo_id: number

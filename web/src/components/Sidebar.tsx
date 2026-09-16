@@ -79,6 +79,7 @@ const GRUPOS: Grupo[] = [
       { to: '/admin/usuarios', label: 'Usuarios', icono: 'personas', permiso: 'admin.usuarios.ver' },
       { to: '/admin/importacion', label: 'Importar / Exportar datos', icono: 'recargar', permiso: 'admin.importacion.ver' },
       { to: '/admin/endpoints', label: 'Endpoints', icono: 'globo', permiso: 'admin.endpoints.ver' },
+      { to: '/admin/esquema-azure', label: 'Esquema de Azure', icono: 'nube', permiso: 'azure_devops.ver' },
       { to: '/configuracion', label: 'Configuración', icono: 'administracion', permiso: 'admin.configuracion.ver' },
     ],
   },
