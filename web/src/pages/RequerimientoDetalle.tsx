@@ -236,6 +236,7 @@ export default function RequerimientoDetalle() {
           eventos={eventos}
           puedeEliminar={puedeEliminarBitacora}
           onEliminar={detalle.eliminarEvento}
+          ocultarTitulo
         />
       </Modal>
 

@@ -6,12 +6,19 @@ interface Props {
   eventos: EventoBitacora[]
   puedeEliminar: boolean
   onEliminar: (eventoId: string) => void
+  /** Omite el rótulo "Bitácora" interno cuando el contenedor (p. ej. un Modal) ya trae su propio título. */
+  ocultarTitulo?: boolean
 }
 
 /** Entradas visibles por defecto (las más recientes, ya vienen ordenadas así del backend). */
 const LIMITE_VISIBLE = 6
 
-export default function SeccionBitacora({ eventos, puedeEliminar, onEliminar }: Props) {
+export default function SeccionBitacora({
+  eventos,
+  puedeEliminar,
+  onEliminar,
+  ocultarTitulo = false,
+}: Props) {
   const [mostrarTodo, setMostrarTodo] = useState(false)
 
   const hayOcultos = eventos.length > LIMITE_VISIBLE
@@ -19,9 +26,11 @@ export default function SeccionBitacora({ eventos, puedeEliminar, onEliminar }: 
 
   return (
     <div className="tarjeta tarjeta-pad">
-      <h2 className="etiqueta-sup mb-3">
-        Bitácora
-      </h2>
+      {!ocultarTitulo && (
+        <h2 className="etiqueta-sup mb-3">
+          Bitácora
+        </h2>
+      )}
       <ul className="space-y-1 text-sm">
         {eventosVisibles.map((ev) => (
           <li key={ev.id} className="flex items-start justify-between gap-2 border-b py-1 last:border-0">
