@@ -157,7 +157,10 @@ async def ejecutar_carga_automatica(
     if resultado is None:
         return {
             "ejecutado": False,
-            "mensaje": "No se encontró un archivo para cargar. Verifique la ruta configurada y que el archivo exista con el nombre esperado.",
+            "mensaje": (
+                "No se encontró un archivo para cargar. Verifique la ruta "
+                "configurada y que el archivo exista con el nombre esperado."
+            ),
         }
     from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabricaSyncLog
 
@@ -194,8 +197,8 @@ async def wo_por_persona(
             "assigned_to": assigned,
             "status": d.get("Status WO", ""),
             "priority": d.get("Priority", ""),
-            "created_date": d.get("Created Date", ""),
-            "descripcion": d.get("Short Description", d.get("Descripción", "")),
+            "created_date": d.get("Fecha_Requerida_Inicio", ""),
+            "descripcion": d.get("Detailed Description", ""),
         })
     return resultado
 
@@ -213,5 +216,9 @@ async def descargar_errores_csv(
     return Response(
         content=contenido,
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="errores_solicitudes_fabrica_{sync_id}.csv"'},
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="errores_solicitudes_fabrica_{sync_id}.csv"'
+            )
+        },
     )

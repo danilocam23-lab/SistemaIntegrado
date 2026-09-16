@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { TablaScroll } from '../../components/ui'
 import type { WoPersona } from './tipos'
 
@@ -30,7 +31,18 @@ export function TablaWoPersona({ wos }: Props) {
           <tbody>
             {wos.map((wo) => (
               <tr key={wo.id}>
-                <td className="font-mono font-medium">{wo.wo_id}</td>
+                <td className="font-mono font-medium">
+                  {wo.wo_id ? (
+                    <Link
+                      to={`/soporte/solicitudes-fabrica?wo=${encodeURIComponent(wo.wo_id)}`}
+                      className="enlace-accion"
+                    >
+                      {wo.wo_id}
+                    </Link>
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td>{wo.status}</td>
                 <td>{wo.priority}</td>
                 <td>{wo.created_date}</td>

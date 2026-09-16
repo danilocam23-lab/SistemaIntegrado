@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
@@ -195,6 +196,8 @@ const FilaRegistro = memo(function FilaRegistro({ registro: r, headers, onVerDes
 })
 
 export default function SoporteSolicitudesFabrica() {
+  const [searchParams] = useSearchParams()
+  const filtroWoUrl = (searchParams.get('wo') ?? '').trim()
   const { tienePermiso } = useAuth()
   const puedeActualizar = tienePermiso('soporte.solicitudes_fabrica.actualizar')
   const [cargando, setCargando] = useState(true)
@@ -209,7 +212,7 @@ export default function SoporteSolicitudesFabrica() {
   const inputArchivoRef = useRef<HTMLInputElement | null>(null)
   const [descripcionSeleccionada, setDescripcionSeleccionada] = useState<string | null>(null)
   const [taskSeleccionada, setTaskSeleccionada] = useState<{ datos: Record<string, string>; campos: string[]; titulo: string } | null>(null)
-  const [filtroWorkOrderID, setFiltroWorkOrderID] = useState('')
+  const [filtroWorkOrderID, setFiltroWorkOrderID] = useState(filtroWoUrl)
   const [pagina, setPagina] = useState(1)
   const [tamanio] = useState(100)
   const filtroTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -255,7 +258,9 @@ export default function SoporteSolicitudesFabrica() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    void cargar(1)
+    setFiltroWorkOrderID(filtroWoUrl)
+    setPagina(1)
+    void cargar(1, filtroWoUrl)
     void verificarUltimaSync(false)
 
     // Refresca solo el estado de sincronización cada 60s (liviano) para
@@ -277,7 +282,7 @@ export default function SoporteSolicitudesFabrica() {
       window.clearInterval(intervalo)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [verificarUltimaSync])
+  }, [filtroWoUrl, verificarUltimaSync])
 
 
   function onFiltroChange(valor: string): void {
