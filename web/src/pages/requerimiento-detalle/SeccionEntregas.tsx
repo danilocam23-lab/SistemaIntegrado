@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { Entrega } from '../../types'
-import { Campo, Chip, Selector, TablaScroll } from '../../components/ui/primitivos'
+import { Campo, Chip, Selector } from '../../components/ui/primitivos'
 
 type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 
@@ -32,6 +32,17 @@ interface Props {
   onEditarEntrega: (en: Entrega) => void
   onEliminarEntrega: (numero: number) => void
   children: ReactNode
+}
+
+/** Par label/valor compacto de una mini-tarjeta de entrega — mismo patrón que
+ * `CampoTarjeta` en `TarjetaRequerimiento.tsx` (móvil de Requerimientos). */
+function CampoEntrega({ label, ancho = 1, children }: { label: string; ancho?: 1 | 2; children: ReactNode }) {
+  return (
+    <div className={ancho === 2 ? 'col-span-2' : undefined}>
+      <p className="etiqueta-sup mb-0.5">{label}</p>
+      <div className="text-sm text-slate-800">{children}</div>
+    </div>
+  )
 }
 
 export default function SeccionEntregas({
@@ -68,51 +79,41 @@ export default function SeccionEntregas({
           </>
         )}
       </p>
-      <TablaScroll>
-      <table className="tabla mb-3">
-        <thead>
-          <tr>
-            <th>N°</th><th>Horas</th>
-            <th>% Avance</th><th>F. Comprometida</th>
-            <th>F. Real</th><th>Estado</th><th>Mes aprobación</th>
-            <th>Observaciones EPM</th><th>Observaciones Hitss</th>
-            <th>Tipificación</th>
-            <th>ANS</th><th>Garantía</th><th>N° Garantía</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {entregas.map((en) => {
-            const porcentaje = en.horas != null && totalHorasEstimadas
-              ? ((Number(en.horas) * 100) / Number(totalHorasEstimadas)).toFixed(1)
-              : '—'
-            return (
-              <tr key={en.numero}>
-                <td>{en.numero}</td>
-                <td>{en.horas ?? '—'}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    <span className="tabular-nums">{porcentaje}{porcentaje !== '—' ? '%' : ''}</span>
-                    {porcentaje !== '—' && (
-                      <span className="inline-block h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-slate-100">
-                        <span
-                          className="block h-full rounded-full bg-marca-600"
-                          style={{ width: `${Math.min(100, Math.max(0, Number(porcentaje)))}%` }}
-                        />
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td>{en.fecha_comprometida?.slice(0, 10) ?? '—'}</td>
-                <td>{en.fecha_recepcion?.slice(0, 10) ?? '—'}</td>
-                <td>
-                  {en.estado
-                    ? <Chip tono={TONO_ESTADO_ENTREGA[en.estado.toUpperCase()] ?? 'neutro'}>{en.estado}</Chip>
-                    : '—'}
-                </td>
-                <td>{en.mes_aprobacion ?? '—'}</td>
-                <td>{en.observaciones ?? '—'}</td>
-                <td>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {entregas.map((en) => {
+          const porcentaje = en.horas != null && totalHorasEstimadas
+            ? ((Number(en.horas) * 100) / Number(totalHorasEstimadas)).toFixed(1)
+            : '—'
+          return (
+            <div key={en.numero} className="rounded-lg border border-slate-200 p-3">
+              {/* Cabecera destacada: N°, Estado (Chip) y %Avance (barra de progreso) */}
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <span className="text-sm font-semibold text-slate-800">Entrega N° {en.numero}</span>
+                {en.estado
+                  ? <Chip tono={TONO_ESTADO_ENTREGA[en.estado.toUpperCase()] ?? 'neutro'}>{en.estado}</Chip>
+                  : <Chip tono="neutro">—</Chip>}
+              </div>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="tabular-nums text-sm text-slate-600">{porcentaje}{porcentaje !== '—' ? '%' : ''}</span>
+                {porcentaje !== '—' && (
+                  <span className="inline-block h-1.5 w-full shrink-0 overflow-hidden rounded-full bg-slate-100">
+                    <span
+                      className="block h-full rounded-full bg-marca-600"
+                      style={{ width: `${Math.min(100, Math.max(0, Number(porcentaje)))}%` }}
+                    />
+                  </span>
+                )}
+              </div>
+
+              {/* Resto de campos como pares etiqueta/valor compactos */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                <CampoEntrega label="Horas">{en.horas ?? '—'}</CampoEntrega>
+                <CampoEntrega label="F. Comprometida">{en.fecha_comprometida?.slice(0, 10) ?? '—'}</CampoEntrega>
+                <CampoEntrega label="F. Real">{en.fecha_recepcion?.slice(0, 10) ?? '—'}</CampoEntrega>
+                <CampoEntrega label="Mes aprobación">{en.mes_aprobacion ?? '—'}</CampoEntrega>
+                <CampoEntrega label="Observaciones EPM" ancho={2}>{en.observaciones ?? '—'}</CampoEntrega>
+                <CampoEntrega label="Observaciones Hitss" ancho={2}>
                   {tipifEdicion[en.numero] ? (
                     <Campo
                       value={tipifEdicion[en.numero].obs}
@@ -121,8 +122,8 @@ export default function SeccionEntregas({
                       className="w-full"
                     />
                   ) : (en.observaciones_hitss ?? '—')}
-                </td>
-                <td>
+                </CampoEntrega>
+                <CampoEntrega label="Tipificación">
                   {tipifEdicion[en.numero] ? (
                     <Selector
                       value={tipifEdicion[en.numero].tip}
@@ -134,85 +135,86 @@ export default function SeccionEntregas({
                       <option value="EPM">EPM</option>
                     </Selector>
                   ) : (en.tipificacion ?? '—')}
-                </td>
-                <td>
+                </CampoEntrega>
+                <CampoEntrega label="ANS">
                   {en.ans_entrega === 'CUMPLE' ? (
                     <Chip tono="exito">Cumple</Chip>
                   ) : en.ans_entrega === 'NO_CUMPLE' ? (
                     <Chip tono="error">No cumple</Chip>
                   ) : '—'}
-                </td>
-                <td>{en.garantia ? <Chip tono="marca">Sí</Chip> : <Chip tono="neutro">No</Chip>}</td>
-                <td>{en.numero_garantia ?? '—'}</td>
-                <td>
-                  <div className="flex gap-2">
+                </CampoEntrega>
+                <CampoEntrega label="Garantía">
+                  {en.garantia ? <Chip tono="marca">Sí</Chip> : <Chip tono="neutro">No</Chip>}
+                </CampoEntrega>
+                <CampoEntrega label="N° Garantía">{en.numero_garantia ?? '—'}</CampoEntrega>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onVerHistorialEntrega(en.numero)}
+                  className="enlace-accion enlace-accion-sutil"
+                >
+                  Historial
+                </button>
+                {puedeEditarReq && (
+                  <>
                     <button
                       type="button"
-                      onClick={() => onVerHistorialEntrega(en.numero)}
-                      className="enlace-accion enlace-accion-sutil"
+                      onClick={() => onEditarEntrega(en)}
+                      className="enlace-accion"
                     >
-                      Historial
+                      Editar
                     </button>
-                    {puedeEditarReq && (
+                    <button
+                      type="button"
+                      onClick={() => onEliminarEntrega(en.numero)}
+                      className="enlace-accion enlace-accion-peligro"
+                    >
+                      Eliminar
+                    </button>
+                  </>
+                )}
+                {!puedeEditarReq && puedeEditarTipificacion && (
+                  <>
+                    {tipifEdicion[en.numero] ? (
                       <>
                         <button
                           type="button"
-                          onClick={() => onEditarEntrega(en)}
-                          className="enlace-accion"
+                          disabled={guardandoTipif.has(en.numero)}
+                          onClick={() => onGuardarTipif(en.numero)}
+                          className="enlace-accion disabled:opacity-50"
                         >
-                          Editar
+                          Guardar
                         </button>
                         <button
                           type="button"
-                          onClick={() => onEliminarEntrega(en.numero)}
-                          className="enlace-accion enlace-accion-peligro"
+                          onClick={() => onCancelarTipif(en.numero)}
+                          className="enlace-accion enlace-accion-sutil"
                         >
-                          Eliminar
+                          Cancelar
                         </button>
                       </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onIniciarEdicionTipif(en)}
+                        className="enlace-accion"
+                      >
+                        Editar Hitss
+                      </button>
                     )}
-                  </div>
-                  {!puedeEditarReq && puedeEditarTipificacion && (
-                    <div className="flex gap-2">
-                      {tipifEdicion[en.numero] ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={guardandoTipif.has(en.numero)}
-                            onClick={() => onGuardarTipif(en.numero)}
-                            className="enlace-accion disabled:opacity-50"
-                          >
-                            Guardar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onCancelarTipif(en.numero)}
-                            className="enlace-accion enlace-accion-sutil"
-                          >
-                            Cancelar
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => onIniciarEdicionTipif(en)}
-                          className="enlace-accion"
-                        >
-                          Editar Hitss
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
-          {entregas.length === 0 && (
-            <tr><td colSpan={13} className="text-slate-400">Sin entregas.</td></tr>
-          )}
-        </tbody>
-      </table>
-      </TablaScroll>
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })}
+        {entregas.length === 0 && (
+          <p className="col-span-full text-sm text-slate-400">Sin entregas.</p>
+        )}
+      </div>
+
       {children}
     </div>
   )

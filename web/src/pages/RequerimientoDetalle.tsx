@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Aviso, Boton, Chip, EncabezadoPagina, Icono, Selector } from '../components/ui'
+import Modal from '../components/Modal'
 import { useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
@@ -43,6 +44,7 @@ export default function RequerimientoDetalle() {
   const form = useFormularioEntrega(estadosEnt)
   const formEdicion = useFormularioEntrega(estadosEnt)
   const [modalEdicionAbierto, setModalEdicionAbierto] = useState(false)
+  const [bitacoraAbierta, setBitacoraAbierta] = useState(false)
 
   function abrirEdicionEntrega(en: Entrega): void {
     formEdicion.cargarEntrega(en)
@@ -139,78 +141,103 @@ export default function RequerimientoDetalle() {
       {aviso && <Aviso tono="error">{aviso}</Aviso>}
       {ok && <Aviso tono="exito">{ok}</Aviso>}
 
-      {/* Datos generales + resumen lateral */}
-      <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <SeccionDatosGenerales
-          campos={campos}
-          req={req}
-          puedeEditarReq={puedeEditarReq}
-          squads={squads}
-          resolverNombreSquad={resolverNombreSquad}
-          ltHitss={ltHitss}
-          ltEpm={ltEpm}
-          scrums={scrums}
-          analistas={analistas}
-          personas={personas}
-          personasSquad={personasSquad}
-          scrumAsignado={scrumAsignado}
-          analistaAsignado={analistaAsignado}
-          onCambiarSquad={cambiarSquad}
-          onSubmit={detalle.guardar}
-        />
-        <SeccionResumen
-          squadNombre={resolverNombreSquad(campos.valores.squadId)}
-          cumpleAnsEstimacion={cumpleAnsEstimacion}
-          ultimaEntrega={ultimaEntrega}
-          cantidadEntregas={req.entregas.length}
-        />
+      {/* Bento: fila superior Datos generales + Resumen (mitad cada uno);
+          fila inferior Seguimiento Hitss (1/4) + Entregas (2/4) + Liquidación (1/4). */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-4">
+        <div className="lg:col-span-2">
+          <SeccionDatosGenerales
+            campos={campos}
+            req={req}
+            puedeEditarReq={puedeEditarReq}
+            squads={squads}
+            resolverNombreSquad={resolverNombreSquad}
+            ltHitss={ltHitss}
+            ltEpm={ltEpm}
+            scrums={scrums}
+            analistas={analistas}
+            personas={personas}
+            personasSquad={personasSquad}
+            scrumAsignado={scrumAsignado}
+            analistaAsignado={analistaAsignado}
+            onCambiarSquad={cambiarSquad}
+            onSubmit={detalle.guardar}
+          />
+        </div>
+        <div className="lg:col-span-2">
+          <SeccionResumen
+            squadNombre={resolverNombreSquad(campos.valores.squadId)}
+            cumpleAnsEstimacion={cumpleAnsEstimacion}
+            ultimaEntrega={ultimaEntrega}
+            cantidadEntregas={req.entregas.length}
+          />
+        </div>
+
+        <div>
+          <SeccionSeguimientoHitss
+            seguimiento={campos.valores.seguimiento}
+            tipificacion={campos.valores.tipificacion}
+            onCambiar={campos.actualizar}
+            puedeEditarTipificacion={puedeEditarTipificacion}
+            onGuardar={detalle.guardarTipificacionReq}
+          />
+        </div>
+
+        <div className="lg:col-span-2">
+          <SeccionEntregas
+            entregas={req.entregas}
+            totalHorasEstimadas={req.total_horas_estimadas}
+            puedeEditarReq={puedeEditarReq}
+            puedeEditarTipificacion={puedeEditarTipificacion}
+            tipifEdicion={detalle.tipifEdicion}
+            guardandoTipif={detalle.guardandoTipif}
+            onIniciarEdicionTipif={detalle.iniciarEdicionTipif}
+            onCambiarTipif={detalle.cambiarTipif}
+            onCancelarTipif={detalle.cancelarTipif}
+            onGuardarTipif={detalle.guardarTipifEntrega}
+            onVerHistorialEntrega={historial.verHistorialEntrega}
+            onEditarEntrega={abrirEdicionEntrega}
+            onEliminarEntrega={detalle.eliminarEntrega}
+          >
+            {puedeEditarReq && (
+              <FormularioEntrega
+                form={form}
+                estadosEnt={estadosEnt}
+                estadoRequerimiento={req?.estado ?? ''}
+                onSubmit={(e) => detalle.agregarEntrega(e, form.cuerpoEntrega, form.limpiarTrasGuardar)}
+                onVerHistorial={() => historial.verHistorialEntrega(form.valores.numero)}
+              />
+            )}
+          </SeccionEntregas>
+        </div>
+
+        <div>
+          <SeccionLiquidacion liquidacion={liquidacion} />
+        </div>
       </div>
 
-      {/* Seguimiento Hitss y Tipificación (editable por Administrador de squad) */}
-      <SeccionSeguimientoHitss
-        seguimiento={campos.valores.seguimiento}
-        tipificacion={campos.valores.tipificacion}
-        onCambiar={campos.actualizar}
-        puedeEditarTipificacion={puedeEditarTipificacion}
-        onGuardar={detalle.guardarTipificacionReq}
-      />
-
-      {/* Entregas */}
-      <SeccionEntregas
-        entregas={req.entregas}
-        totalHorasEstimadas={req.total_horas_estimadas}
-        puedeEditarReq={puedeEditarReq}
-        puedeEditarTipificacion={puedeEditarTipificacion}
-        tipifEdicion={detalle.tipifEdicion}
-        guardandoTipif={detalle.guardandoTipif}
-        onIniciarEdicionTipif={detalle.iniciarEdicionTipif}
-        onCambiarTipif={detalle.cambiarTipif}
-        onCancelarTipif={detalle.cancelarTipif}
-        onGuardarTipif={detalle.guardarTipifEntrega}
-        onVerHistorialEntrega={historial.verHistorialEntrega}
-        onEditarEntrega={abrirEdicionEntrega}
-        onEliminarEntrega={detalle.eliminarEntrega}
+      {/* Bitácora: fuera del flujo, en botón flotante + panel superpuesto */}
+      <Boton
+        variante="primario"
+        icono={<Icono nombre="portafolio" />}
+        onClick={() => setBitacoraAbierta(true)}
+        className="fixed bottom-6 right-6 z-40 rounded-full shadow-lg"
       >
-        {puedeEditarReq && (
-          <FormularioEntrega
-            form={form}
-            estadosEnt={estadosEnt}
-            estadoRequerimiento={req?.estado ?? ''}
-            onSubmit={(e) => detalle.agregarEntrega(e, form.cuerpoEntrega, form.limpiarTrasGuardar)}
-            onVerHistorial={() => historial.verHistorialEntrega(form.valores.numero)}
-          />
-        )}
-      </SeccionEntregas>
+        Bitácora ({eventos.length})
+      </Boton>
 
-      {/* Liquidación */}
-      <SeccionLiquidacion liquidacion={liquidacion} />
-
-      {/* Bitácora */}
-      <SeccionBitacora
-        eventos={eventos}
-        puedeEliminar={puedeEliminarBitacora}
-        onEliminar={detalle.eliminarEvento}
-      />
+      <Modal
+        titulo="Bitácora"
+        icono={<Icono nombre="portafolio" />}
+        abierto={bitacoraAbierta}
+        onCerrar={() => setBitacoraAbierta(false)}
+        ancho="xl"
+      >
+        <SeccionBitacora
+          eventos={eventos}
+          puedeEliminar={puedeEliminarBitacora}
+          onEliminar={detalle.eliminarEvento}
+        />
+      </Modal>
 
       <ModalHistorialEstados
         titulo={historial.titulo}
