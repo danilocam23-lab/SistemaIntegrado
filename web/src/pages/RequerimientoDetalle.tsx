@@ -141,8 +141,9 @@ export default function RequerimientoDetalle() {
       {aviso && <Aviso tono="error">{aviso}</Aviso>}
       {ok && <Aviso tono="exito">{ok}</Aviso>}
 
-      {/* Bento: fila superior Datos generales + Resumen (mitad cada uno);
-          fila inferior Seguimiento Hitss (1/4) + Entregas (2/4) + Liquidación (1/4). */}
+      {/* Bento: fila superior Datos generales (1/2) + columna Resumen/Liquidación
+          apilada (1/2, llena el hueco que deja `items-start` bajo Resumen);
+          fila inferior Seguimiento Hitss (1/4) + Entregas (3/4). */}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <SeccionDatosGenerales
@@ -163,13 +164,14 @@ export default function RequerimientoDetalle() {
             onSubmit={detalle.guardar}
           />
         </div>
-        <div className="lg:col-span-2">
+        <div className="space-y-4 lg:col-span-2">
           <SeccionResumen
             squadNombre={resolverNombreSquad(campos.valores.squadId)}
             cumpleAnsEstimacion={cumpleAnsEstimacion}
             ultimaEntrega={ultimaEntrega}
             cantidadEntregas={req.entregas.length}
           />
+          <SeccionLiquidacion liquidacion={liquidacion} />
         </div>
 
         <div>
@@ -182,7 +184,7 @@ export default function RequerimientoDetalle() {
           />
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <SeccionEntregas
             entregas={req.entregas}
             totalHorasEstimadas={req.total_horas_estimadas}
@@ -208,10 +210,6 @@ export default function RequerimientoDetalle() {
               />
             )}
           </SeccionEntregas>
-        </div>
-
-        <div>
-          <SeccionLiquidacion liquidacion={liquidacion} />
         </div>
       </div>
 

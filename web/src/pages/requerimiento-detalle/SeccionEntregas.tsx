@@ -17,6 +17,17 @@ const TONO_ESTADO_ENTREGA: Record<string, TonoChip> = {
   'EN GARANTIA': 'alerta',
 }
 
+/** Borde izquierdo de la mini-tarjeta según el mismo tono semántico del
+ * `Chip` de estado — mismos colores que `.chip-*` en `index.css` (verde
+ * emerald = éxito, rojo = error, azul marca = cargada, ámbar = alerta). */
+const BORDE_TONO_ENTREGA: Record<TonoChip, string> = {
+  neutro: 'border-l-slate-200',
+  marca: 'border-l-marca-500',
+  exito: 'border-l-emerald-500',
+  alerta: 'border-l-amber-500',
+  error: 'border-l-red-500',
+}
+
 interface Props {
   entregas: Entrega[]
   totalHorasEstimadas: number | null
@@ -80,18 +91,22 @@ export default function SeccionEntregas({
         )}
       </p>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {entregas.map((en) => {
           const porcentaje = en.horas != null && totalHorasEstimadas
             ? ((Number(en.horas) * 100) / Number(totalHorasEstimadas)).toFixed(1)
             : '—'
+          const tonoEstado = en.estado ? TONO_ESTADO_ENTREGA[en.estado.toUpperCase()] ?? 'neutro' : 'neutro'
           return (
-            <div key={en.numero} className="rounded-lg border border-slate-200 p-3">
+            <div
+              key={en.numero}
+              className={`rounded-lg border border-l-4 border-slate-200 p-3 ${BORDE_TONO_ENTREGA[tonoEstado]}`}
+            >
               {/* Cabecera destacada: N°, Estado (Chip) y %Avance (barra de progreso) */}
               <div className="mb-2 flex items-start justify-between gap-2">
                 <span className="text-sm font-semibold text-slate-800">Entrega N° {en.numero}</span>
                 {en.estado
-                  ? <Chip tono={TONO_ESTADO_ENTREGA[en.estado.toUpperCase()] ?? 'neutro'}>{en.estado}</Chip>
+                  ? <Chip tono={tonoEstado}>{en.estado}</Chip>
                   : <Chip tono="neutro">—</Chip>}
               </div>
               <div className="mb-3 flex items-center gap-2">
