@@ -1,87 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
-import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
-
-type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
-
-interface FilaRequerimiento {
-  id: string
-  sc: string
-  codigoReq: string
-  nombre: string
-  squad: string
-  ltHitss: string
-  estado: string
-  ansActa: string | null
-  horasEstimadas: number | null
-  fechaLimite: string | null
-  fechaRealEntregaEstimacion: string | null
-  seLevanto: boolean
-  observacionesAns: string
-  seguimientoHitss: string | null
-  seguimientoEpm: string | null
-  tipificacion: string | null
-}
-
-interface FilaEntrega {
-  id: string
-  reqId: string
-  codigoReq: string
-  nombreReq: string
-  sc: string
-  squad: string
-  ltHitss: string
-  numero: number
-  horas: number | null
-  porcentaje: number | null
-  fechaComprometida: string | null
-  fechaReal: string | null
-  estado: string | null
-  ansEntrega: string | null
-  entregaNumero: number
-  seLevanto: boolean
-  observacionesAns: string
-  observacionesEpm: string | null
-  observacionesHitss: string | null
-  tipificacion: string | null
-}
-
-function normalizarAns(valor: string | null | undefined): string {
-  const v = (valor ?? '').trim()
-  return v || '—'
-}
-
-function tonoAns(valor: string | null | undefined): TonoChip {
-  const v = (valor ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
-  if (v === 'CUMPLE') return 'exito'
-  if (v === 'NO CUMPLE') return 'error'
-  return 'neutro'
-}
-
-function calcularDiasTranscurridos(fechaLimite: string | null, fechaReal: string | null): { dias: number; esNegativo: boolean } | null {
-  if (!fechaLimite) return null
-
-  const hoy = new Date().toISOString().slice(0, 10)
-  const inicio = fechaLimite.slice(0, 10)
-  const fin = fechaReal ? fechaReal.slice(0, 10) : hoy
-
-  const fecha1 = new Date(inicio)
-  const fecha2 = new Date(fin)
-  const diferencia = Math.floor((fecha2.getTime() - fecha1.getTime()) / (1000 * 60 * 60 * 24))
-
-  let esNegativo = false
-  if (!fechaReal && hoy > inicio) {
-    esNegativo = true
-  } else if (fechaReal && fechaReal.slice(0, 10) > inicio) {
-    esNegativo = true
-  }
-
-  return { dias: Math.abs(diferencia), esNegativo }
-}
+import { Boton, Campo, EncabezadoPagina, Icono, Selector } from '../components/ui'
+import ListaEntregasAns from './detalle-ans/ListaEntregasAns'
+import ListaRequerimientosAns from './detalle-ans/ListaRequerimientosAns'
+import type { FilaEntrega, FilaRequerimiento } from './detalle-ans/utilidadesAns'
 
 const MESES = [
   ['01', 'Enero'], ['02', 'Febrero'], ['03', 'Marzo'], ['04', 'Abril'],
@@ -393,117 +318,16 @@ export default function RequerimientosDetalleANS() {
             onYearChange={setAnoLimite} onMonthChange={setMesLimite} />
         </div>
         {mostrarRequerimientos && (
-          <TablaScroll plano>
-          <table className="tabla">
-            <thead>
-            <tr>
-                <th>Código REQ</th>
-                <th>SC</th>
-                <th>Nombre</th>
-                <th>Squad</th>
-                <th>LT HITSS</th>
-                <th>Estado</th>
-                <th>Cumplimiento ANS (Acta)</th>
-                <th className="text-right">Horas estimadas</th>
-                <th>Fecha límite</th>
-                <th>F. Real entrega estimación</th>
-                <th className="text-right">Días de atraso/adelanto</th>
-                <th className="text-center">¿Incumplió ANS?</th>
-                <th>Observaciones</th>
-                <th>Seguimiento Hitss</th>
-                <th>Seguimiento EPM</th>
-                <th>Tipificación</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requerimientosFiltrados.length === 0 ? (
-                <tr>
-                    <td className="p-4 text-center text-slate-400" colSpan={16}>Sin registros</td>
-                  </tr>
-                ) : (
-                  requerimientosFiltrados.map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <Link to={`/requerimientos/${r.id}`} className="font-medium text-marca hover:underline">
-                        {r.codigoReq}
-                      </Link>
-                    </td>
-                    <td className="text-slate-600">{r.sc || '—'}</td>
-                    <td>{r.nombre || '—'}</td>
-                    <td>{r.squad || '—'}</td>
-                    <td>{r.ltHitss || '—'}</td>
-                    <td>{r.estado || '—'}</td>
-                    <td>
-                      <Chip tono={tonoAns(r.ansActa)}>{normalizarAns(r.ansActa)}</Chip>
-                    </td>
-                    <td className="text-right">{r.horasEstimadas ?? '—'}</td>
-                    <td>{r.fechaLimite ? r.fechaLimite.slice(0, 10) : '—'}</td>
-                    <td>
-                      {r.fechaRealEntregaEstimacion ? r.fechaRealEntregaEstimacion.slice(0, 10) : '—'}
-                    </td>
-                    <td className="text-right">
-                      {(() => {
-                        const result = calcularDiasTranscurridos(r.fechaLimite, r.fechaRealEntregaEstimacion)
-                        if (!result) return '—'
-                        const color = result.esNegativo ? 'text-red-600 font-semibold' : 'text-emerald-600'
-                        return (
-                          <span className={color}>
-                            {result.esNegativo ? '-' : '+'}{result.dias}
-                          </span>
-                        )
-                      })()}
-                    </td>
-                    <td className="text-center">
-                      <label className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold ${
-                        r.seLevanto ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-slate-50 text-slate-600'
-                      }`}>
-                        <input
-                          type="checkbox"
-                          checked={r.seLevanto}
-                          disabled={!puedeEditar || guardandoCheck.has(r.id)}
-                          onChange={(ev) => void guardarCheck('requerimiento', r.id, ev.target.checked)}
-                          className="h-4 w-4 rounded border-slate-300 text-marca focus:ring-marca"
-                        />
-                        {guardandoCheck.has(r.id) ? '…' : r.seLevanto ? 'Sí' : 'No'}
-                      </label>
-                    </td>
-                    <td>
-                      <div className="flex min-w-[220px] gap-1.5">
-                        <Campo
-                          value={obsEdicion[r.id] ?? r.observacionesAns}
-                          onChange={(ev) => setObsEdicion((p) => ({ ...p, [r.id]: ev.target.value }))}
-                          readOnly={!puedeEditar}
-                          compacto
-                          className="min-w-0 flex-1"
-                          placeholder={puedeEditar ? 'Observaciones…' : ''}
-                        />
-                        {puedeEditar && (
-                          <Boton variante="primario" tamano="sm" className="shrink-0" type="button"
-                            onClick={() => void guardarObservacion('requerimiento', r.id)}
-                            disabled={guardandoObs.has(r.id)}>
-                            {guardandoObs.has(r.id) ? '…' : 'Guardar'}
-                          </Boton>
-                        )}
-                      </div>
-                    </td>
-                      <td className="max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{r.seguimientoHitss || '—'}</td>
-                      <td className="max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{r.seguimientoEpm || '—'}</td>
-                      <td>{r.tipificacion === 'HITSS' ? 'Hitss' : r.tipificacion === 'EPM' ? 'EPM' : '—'}</td>
-                    </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-slate-700">
-                <td className="p-2" colSpan={7}>Total ({requerimientosFiltrados.length} requerimientos)</td>
-                <td className="p-2 text-right">
-                    {requerimientosFiltrados.reduce((total, r) => total + Number(r.horasEstimadas ?? 0), 0)}
-                </td>
-                <td className="p-2" colSpan={8}></td>
-              </tr>
-            </tfoot>
-          </table>
-          </TablaScroll>
+          <ListaRequerimientosAns
+            filas={requerimientosFiltrados}
+            puedeEditar={puedeEditar}
+            guardandoCheck={guardandoCheck}
+            guardandoObs={guardandoObs}
+            obsEdicion={obsEdicion}
+            onCambiarObs={(id, valor) => setObsEdicion((p) => ({ ...p, [id]: valor }))}
+            onGuardarCheck={(reqId, checked) => void guardarCheck('requerimiento', reqId, checked)}
+            onGuardarObs={(reqId) => void guardarObservacion('requerimiento', reqId)}
+          />
         )}
       </section>
 
@@ -538,117 +362,16 @@ export default function RequerimientosDetalleANS() {
             onYearChange={setAnoComprometida} onMonthChange={setMesComprometida} />
         </div>
         {mostrarEntregas && (
-          <TablaScroll plano>
-          <table className="tabla">
-            <thead>
-            <tr>
-              <th>Código REQ</th>
-              <th>N° Entrega</th>
-              <th>SC</th>
-              <th>Squad</th>
-              <th>LT HITSS</th>
-              <th>Horas</th>
-              <th className="text-right">% Avance</th>
-              <th>F. Comprometida</th>
-              <th>F. Real</th>
-              <th className="text-right">Días de atraso/adelanto</th>
-              <th>Estado</th>
-              <th>Cumplimiento ANS (Entrega)</th>
-              <th className="text-center">¿Incumplió ANS?</th>
-              <th>Observaciones</th>
-              <th>Observaciones EPM</th>
-              <th>Observaciones Hitss</th>
-              <th>Tipificación</th>
-            </tr>
-            </thead>
-            <tbody>
-              {entregasFiltradas.length === 0 ? (
-                <tr>
-                  <td className="p-4 text-center text-slate-400" colSpan={17}>Sin entregas</td>
-                </tr>
-              ) : (
-                entregasFiltradas.map((e) => (
-                  <tr key={e.id}>
-                    <td>
-                      <Link to={`/requerimientos/${e.reqId}`} className="font-medium text-marca hover:underline">
-                        {e.codigoReq}
-                      </Link>
-                    </td>
-                    <td className="text-center">{e.numero}</td>
-                    <td className="text-slate-600">{e.sc || '—'}</td>
-                    <td>{e.squad || '—'}</td>
-                    <td>{e.ltHitss}</td>
-                    <td>{e.horas ?? '—'}</td>
-                    <td className="text-right">{e.porcentaje != null ? `${e.porcentaje}%` : '—'}</td>
-                    <td>{e.fechaComprometida ? e.fechaComprometida.slice(0, 10) : '—'}</td>
-                    <td>{e.fechaReal ? e.fechaReal.slice(0, 10) : '—'}</td>
-                    <td className="text-right">
-                      {(() => {
-                        const result = calcularDiasTranscurridos(e.fechaComprometida, e.fechaReal)
-                        if (!result) return '—'
-                        const color = result.esNegativo ? 'text-red-600 font-semibold' : 'text-emerald-600'
-                        return (
-                          <span className={color}>
-                            {result.esNegativo ? '-' : '+'}{result.dias}
-                          </span>
-                        )
-                      })()}
-                    </td>
-                    <td>{e.estado || '—'}</td>
-                    <td>
-                      <Chip tono={tonoAns(e.ansEntrega)}>{normalizarAns(e.ansEntrega)}</Chip>
-                    </td>
-                    <td className="text-center">
-                      <label className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1 text-xs font-semibold ${
-                        e.seLevanto ? 'border-green-200 bg-green-50 text-green-700' : 'border-slate-200 bg-slate-50 text-slate-600'
-                      }`}>
-                        <input
-                          type="checkbox"
-                          checked={e.seLevanto}
-                          disabled={!puedeEditar || guardandoCheck.has(e.id)}
-                          onChange={(ev) => void guardarCheck('entrega', e.reqId, ev.target.checked, e.entregaNumero)}
-                          className="h-4 w-4 rounded border-slate-300 text-marca focus:ring-marca"
-                        />
-                        {guardandoCheck.has(e.id) ? '…' : e.seLevanto ? 'Sí' : 'No'}
-                      </label>
-                    </td>
-                    <td>
-                      <div className="flex min-w-[220px] gap-1.5">
-                        <Campo
-                          value={obsEdicion[e.id] ?? e.observacionesAns}
-                          onChange={(ev) => setObsEdicion((p) => ({ ...p, [e.id]: ev.target.value }))}
-                          readOnly={!puedeEditar}
-                          compacto
-                          className="min-w-0 flex-1"
-                          placeholder={puedeEditar ? 'Observaciones…' : ''}
-                        />
-                        {puedeEditar && (
-                          <Boton variante="primario" tamano="sm" className="shrink-0" type="button"
-                            onClick={() => void guardarObservacion('entrega', e.reqId, e.entregaNumero)}
-                            disabled={guardandoObs.has(e.id)}>
-                            {guardandoObs.has(e.id) ? '…' : 'Guardar'}
-                          </Boton>
-                        )}
-                      </div>
-                    </td>
-                    <td className="max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{e.observacionesEpm || '—'}</td>
-                    <td className="max-w-[220px] whitespace-pre-wrap text-xs text-slate-600">{e.observacionesHitss || '—'}</td>
-                    <td>{e.tipificacion === 'HITSS' ? 'Hitss' : e.tipificacion === 'EPM' ? 'EPM' : '—'}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold text-slate-700">
-                <td className="p-2" colSpan={5}>Total ({entregasFiltradas.length} entregas)</td>
-                <td className="p-2 text-right">
-                  {entregasFiltradas.reduce((total, e) => total + Number(e.horas ?? 0), 0)}
-                </td>
-                <td className="p-2" colSpan={11}></td>
-              </tr>
-            </tfoot>
-          </table>
-          </TablaScroll>
+          <ListaEntregasAns
+            filas={entregasFiltradas}
+            puedeEditar={puedeEditar}
+            guardandoCheck={guardandoCheck}
+            guardandoObs={guardandoObs}
+            obsEdicion={obsEdicion}
+            onCambiarObs={(id, valor) => setObsEdicion((p) => ({ ...p, [id]: valor }))}
+            onGuardarCheck={(reqId, checked, entregaNumero) => void guardarCheck('entrega', reqId, checked, entregaNumero)}
+            onGuardarObs={(reqId, entregaNumero) => void guardarObservacion('entrega', reqId, entregaNumero)}
+          />
         )}
       </section>
     </div>
