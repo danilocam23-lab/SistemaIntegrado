@@ -3,51 +3,11 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import Modal from '../components/Modal'
-import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { Boton, EncabezadoPagina, Icono, Kpi } from '../components/ui'
+import ModalBacklogFuturo from './backlog-futuro/ModalBacklogFuturo'
+import TableroKanban from './backlog-futuro/TableroKanban'
+import { FORM_VACIO } from './backlog-futuro/tipos'
 import type { Aplicacion, BacklogFuturo, Persona, Requerimiento } from '../types'
-
-const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADO', 'CANCELADO']
-
-const ESTADO_LABEL: Record<string, string> = {
-  PENDIENTE: 'Pendiente',
-  EN_PROGRESO: 'En progreso',
-  COMPLETADO: 'Completado',
-  CANCELADO: 'Cancelado',
-}
-
-const ESTADO_TONO: Record<string, 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'> = {
-  PENDIENTE: 'alerta',
-  EN_PROGRESO: 'marca',
-  COMPLETADO: 'exito',
-  CANCELADO: 'neutro',
-}
-
-interface FormState {
-  id: string | null
-  nombreIniciativa: string
-  tipoDemanda: string
-  squadId: string
-  horasAproximadas: string
-  fechaTentativaInicio: string
-  estado: string
-  volvioActa: boolean
-  actaId: string
-  responsableId: string
-}
-
-const FORM_VACIO: FormState = {
-  id: null,
-  nombreIniciativa: '',
-  tipoDemanda: '',
-  squadId: '',
-  horasAproximadas: '',
-  fechaTentativaInicio: '',
-  estado: 'PENDIENTE',
-  volvioActa: false,
-  actaId: '',
-  responsableId: '',
-}
 
 export default function BacklogFuturoPage() {
   const { datos, error, recargar } = useLista<BacklogFuturo>('/backlog-futuro')
@@ -58,7 +18,7 @@ export default function BacklogFuturoPage() {
   const puedeEditar = tienePermiso('backlog_futuro.editar')
 
   const [modalAbierto, setModalAbierto] = useState(false)
-  const [form, setForm] = useState<FormState>(FORM_VACIO)
+  const [form, setForm] = useState(FORM_VACIO)
   const [aviso, setAviso] = useState('')
 
   const squadPorCodigo = useMemo(() => {
@@ -96,8 +56,8 @@ export default function BacklogFuturoPage() {
     return { registros: datos.length, horas: totalHoras, conActa: totalConActa }
   }, [datos])
 
-  function abrirNuevo(): void {
-    setForm(FORM_VACIO)
+  function abrirNuevo(estadoInicial?: string): void {
+    setForm(estadoInicial ? { ...FORM_VACIO, estado: estadoInicial } : FORM_VACIO)
     setAviso('')
     setModalAbierto(true)
   }
@@ -181,7 +141,7 @@ export default function BacklogFuturoPage() {
         titulo="Backlog futuro"
         acciones={
           puedeEditar ? (
-            <Boton variante="primario" onClick={abrirNuevo}>
+            <Boton variante="primario" onClick={() => abrirNuevo()}>
               + Agregar registro
             </Boton>
           ) : undefined
@@ -190,194 +150,38 @@ export default function BacklogFuturoPage() {
 
       {error && <div className="aviso aviso-error">{error}</div>}
 
-      <TablaScroll>
-        <table className="tabla">
-          <thead>
-            <tr>
-              <th>Nombre de la iniciativa</th>
-              <th>Tipo de demanda</th>
-              <th>Squad</th>
-              <th>AR/QA</th>
-              <th className="text-right">Horas aproximadas</th>
-              <th className="text-center">F. tentativa de inicio</th>
-              <th className="text-center">Estado</th>
-              <th className="text-center">¿Volvió acta?</th>
-              <th>Acta</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {datos.map((item) => (
-              <tr key={item.id}>
-                <td>{item.nombre_iniciativa}</td>
-                <td>{item.tipo_demanda || '—'}</td>
-                <td>{squadPorCodigo.get(item.squad_id) ?? item.squad_id}</td>
-                <td>{personaPorId.get(item.responsable_id ?? '') ?? '—'}</td>
-                <td className="text-right">{item.horas_aproximadas ?? 0}</td>
-                <td className="text-center">{item.fecha_tentativa_inicio || '—'}</td>
-                <td className="text-center">
-                  <Chip tono={ESTADO_TONO[item.estado] ?? 'neutro'}>
-                    {ESTADO_LABEL[item.estado] ?? item.estado}
-                  </Chip>
-                </td>
-                <td className="text-center">
-                  {item.volvio_acta
-                    ? <Chip tono="exito">Sí</Chip>
-                    : <Chip tono="neutro">No</Chip>}
-                </td>
-                <td>
-                  {item.volvio_acta && item.acta_id
-                    ? (actaPorId.get(item.acta_id)?.codigo_req ?? item.acta_id)
-                    : '—'}
-                </td>
-                <td className="text-center whitespace-nowrap">
-                  {puedeEditar && (
-                    <>
-                      <button onClick={() => abrirEditar(item)} className="enlace-accion mr-3">
-                        Editar
-                      </button>
-                      <button onClick={() => eliminar(item)} className="enlace-accion enlace-accion-peligro">
-                        Eliminar
-                      </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {datos.length === 0 && (
-              <tr><td colSpan={10} className="p-4 text-center text-slate-400">Sin registros de backlog futuro.</td></tr>
-            )}
-          </tbody>
-          {datos.length > 0 && (
-            <tfoot>
-              <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
-                <td className="p-2" colSpan={4}>Totales ({totales.registros} registro{totales.registros !== 1 ? 's' : ''})</td>
-                <td className="p-2 text-right">{totales.horas}</td>
-                <td className="p-2"></td>
-                <td className="p-2"></td>
-                <td className="p-2 text-center">{totales.conActa} con acta</td>
-                <td className="p-2"></td>
-                <td className="p-2"></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </TablaScroll>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Kpi
+          rotulo="Registros"
+          valor={totales.registros}
+          nota={`${totales.registros} iniciativa${totales.registros !== 1 ? 's' : ''} en el backlog`}
+        />
+        <Kpi rotulo="Horas aproximadas" valor={totales.horas} />
+        <Kpi rotulo="Con acta" valor={totales.conActa} nota="Iniciativas que ya volvieron acta" />
+      </div>
 
-      <Modal
-        titulo={form.id ? 'Editar registro' : 'Nuevo registro de backlog futuro'}
+      <TableroKanban
+        datos={datos}
+        puedeEditar={puedeEditar}
+        squadPorCodigo={squadPorCodigo}
+        personaPorId={personaPorId}
+        actaPorId={actaPorId}
+        onEditar={abrirEditar}
+        onEliminar={eliminar}
+        onAgregarEnEstado={abrirNuevo}
+      />
+
+      <ModalBacklogFuturo
         abierto={modalAbierto}
+        form={form}
+        setForm={setForm}
+        aviso={aviso}
+        aplicaciones={aplicaciones}
+        personasArQa={personasArQa}
+        actasOrdenadas={actasOrdenadas}
         onCerrar={cerrar}
-      >
-        <form onSubmit={guardar} className="space-y-3">
-          {aviso && <div className="aviso aviso-error">{aviso}</div>}
-
-          <Campo
-            etiqueta="Nombre de la iniciativa"
-            value={form.nombreIniciativa}
-            onChange={(e) => setForm({ ...form, nombreIniciativa: e.target.value })}
-            required
-            className="w-full"
-          />
-
-          <Campo
-            etiqueta="Tipo de demanda"
-            value={form.tipoDemanda}
-            onChange={(e) => setForm({ ...form, tipoDemanda: e.target.value })}
-            className="w-full"
-          />
-
-          <Selector
-            etiqueta="Squad"
-            value={form.squadId}
-            onChange={(e) => setForm({ ...form, squadId: e.target.value })}
-            required
-            className="w-full"
-          >
-            <option value="">— Selecciona —</option>
-            {aplicaciones.map((a) => (
-              <option key={a.codigo} value={a.codigo}>{a.nombre}</option>
-            ))}
-          </Selector>
-
-          <Selector
-            etiqueta="AR/QA"
-            value={form.responsableId}
-            onChange={(e) => setForm({ ...form, responsableId: e.target.value })}
-            className="w-full"
-          >
-            <option value="">— Sin asignar —</option>
-            {personasArQa.map((p) => (
-              <option key={p.id} value={p.id}>{p.nombre}</option>
-            ))}
-          </Selector>
-
-          <Campo
-            etiqueta="Horas aproximadas"
-            type="number"
-            min="0"
-            step="0.5"
-            value={form.horasAproximadas}
-            onChange={(e) => setForm({ ...form, horasAproximadas: e.target.value })}
-            className="w-full"
-          />
-
-          <Campo
-            etiqueta="Fecha tentativa de inicio"
-            type="date"
-            value={form.fechaTentativaInicio}
-            onChange={(e) => setForm({ ...form, fechaTentativaInicio: e.target.value })}
-            className="w-full"
-          />
-
-          <Selector
-            etiqueta="Estado"
-            value={form.estado}
-            onChange={(e) => setForm({ ...form, estado: e.target.value })}
-            className="w-full"
-          >
-            {ESTADOS.map((s) => (
-              <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
-            ))}
-          </Selector>
-
-          <Selector
-            etiqueta="¿Volvió acta?"
-            value={form.volvioActa ? 'si' : 'no'}
-            onChange={(e) => setForm({ ...form, volvioActa: e.target.value === 'si', actaId: e.target.value === 'si' ? form.actaId : '' })}
-            className="w-full"
-          >
-            <option value="no">No</option>
-            <option value="si">Sí</option>
-          </Selector>
-
-          {form.volvioActa && (
-            <Selector
-              etiqueta="Acta en la que se creó"
-              value={form.actaId}
-              onChange={(e) => setForm({ ...form, actaId: e.target.value })}
-              required={form.volvioActa}
-              className="w-full"
-            >
-              <option value="">— Selecciona el acta —</option>
-              {actasOrdenadas.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {[r.codigo_req, r.nombre].filter(Boolean).join(' - ')}
-                </option>
-              ))}
-            </Selector>
-          )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Boton variante="secundario" onClick={cerrar}>
-              Cancelar
-            </Boton>
-            <Boton variante="primario" type="submit">
-              {form.id ? 'Guardar' : 'Crear'}
-            </Boton>
-          </div>
-        </form>
-      </Modal>
+        onGuardar={guardar}
+      />
     </div>
   )
 }
