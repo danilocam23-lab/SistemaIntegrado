@@ -250,3 +250,63 @@ async def test_esquema_arbol_con_usuario_id_ajeno_devuelve_403(
         headers=headers_con_token(token, app.codigo),
     )
     assert resp_propio.status_code != 403
+
+
+async def test_esquema_arbol_404_de_azure_mensaje_menciona_el_proyecto(
+    cliente, fabrica_usuario, fabrica_aplicacion, monkeypatch
+):
+    app = await fabrica_aplicacion()
+    _, token = await fabrica_usuario([app.codigo], permisos=["azure_devops.ver"])
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="app",
+        org_url="https://dev.azure.com/real",
+        pat="pat-real",
+        default_project="EPM_FABRICA DE DESARROLLO_76805",
+    ).insert()
+
+    async def _arbol_404(self, *args, **kwargs):
+        raise RuntimeError(
+            "Azure DevOps API 404: TF200016: The following project does not exist"
+        )
+
+    monkeypatch.setattr(AzureDevOpsService, "obtener_work_items_esquema", _arbol_404)
+
+    resp = await cliente.get(
+        "/api/azdo/esquema/arbol?target=hitss&limite=2000&tipos=Task",
+        headers=headers_con_token(token, app.codigo),
+    )
+
+    assert resp.status_code == 404
+    detalle = resp.json()["detail"]
+    assert "EPM_FABRICA DE DESARROLLO_76805" in detalle
+    assert detalle != "No se pudo obtener el esquema de Azure DevOps."
+    # El cuerpo crudo de Azure no debe filtrarse al cliente.
+    assert "TF200016" not in detalle
+
+
+async def test_esquema_tipos_404_de_azure_mensaje_menciona_el_proyecto(
+    cliente, fabrica_usuario, fabrica_aplicacion, monkeypatch
+):
+    app = await fabrica_aplicacion()
+    _, token = await fabrica_usuario([app.codigo], permisos=["azure_devops.ver"])
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="app",
+        org_url="https://dev.azure.com/real",
+        pat="pat-real",
+        default_project="EPM_FABRICA DE DESARROLLO_76805",
+    ).insert()
+
+    async def _tipos_404(self, proyecto):
+        raise RuntimeError("Azure DevOps API 404: TF200016: does not exist")
+
+    monkeypatch.setattr(AzureDevOpsService, "obtener_tipos_proceso", _tipos_404)
+
+    resp = await cliente.get(
+        "/api/azdo/esquema/tipos",
+        headers=headers_con_token(token, app.codigo),
+    )
+
+    assert resp.status_code == 404
+    assert "EPM_FABRICA DE DESARROLLO_76805" in resp.json()["detail"]

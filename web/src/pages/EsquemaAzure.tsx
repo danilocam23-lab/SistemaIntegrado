@@ -117,27 +117,58 @@ export default function EsquemaAzure() {
     if (usuarioId) paramsProyectos.set('usuario_id', usuarioId)
 
     try {
-      const [respProyectos, respTipos, respArbol] = await Promise.all([
+      const [respProyectos, respTipos, respArbol] = await Promise.allSettled([
         client.get<AzdoProyecto[]>(`/azdo/proyectos?${paramsProyectos.toString()}`),
         client.get<RespuestaTiposAzure>(`/azdo/esquema/tipos?${paramsTipos.toString()}`),
         client.get<RespuestaEsquemaAzure>(`/azdo/esquema/arbol?${paramsArbol.toString()}`),
       ])
 
-      setProyectos(respProyectos.data)
-      setTipos(respTipos.data.tipos)
-      setJerarquia(respTipos.data.jerarquia)
-      setRespuesta(respArbol.data)
-      setExpandidos(new Set(respArbol.data.nodos.map((nodo) => nodo.azdo_id)))
-
-      const proyectoApi = respArbol.data.proyecto || respTipos.data.proyecto
-      if (!proyecto && proyectoApi) setProyecto(proyectoApi)
-    } catch (err) {
-      const mensaje = mensajeError(err)
-      if (estadoHttp(err) === 400 && /organizaci[oó]n|pat|proyecto|configur/i.test(mensaje)) {
+      // Un 400 de configuración global afecta a las tres llamadas: mostramos el aviso
+      // de "integración no configurada" y no seguimos procesando el resto.
+      const rechazos = [respProyectos, respTipos, respArbol]
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .map((r) => r.reason)
+      const errorConfig = rechazos.find(
+        (err) =>
+          estadoHttp(err) === 400 &&
+          /organizaci[oó]n|pat|proyecto|configur/i.test(mensajeError(err)),
+      )
+      if (errorConfig) {
         setSinConfigurar(true)
         setRespuesta(null)
+        setProyectos([])
+        setTipos([])
+        setJerarquia([])
+        return
+      }
+
+      // 1) Proyectos: si resuelve, rellena siempre el desplegable aunque el resto falle.
+      if (respProyectos.status === 'fulfilled') {
+        setProyectos(respProyectos.value.data)
+      }
+
+      // 2) Tipos y jerarquía: si resuelve, se rellenan; si falla, quedan vacíos sin bloquear la vista.
+      if (respTipos.status === 'fulfilled') {
+        setTipos(respTipos.value.data.tipos)
+        setJerarquia(respTipos.value.data.jerarquia)
       } else {
-        setError(mensaje)
+        setTipos([])
+        setJerarquia([])
+      }
+
+      // 3) Árbol: si falla, mostramos el mensaje del backend tal cual, dejando el
+      //    desplegable de proyectos operativo para que el usuario elija otro y reintente.
+      if (respArbol.status === 'fulfilled') {
+        setRespuesta(respArbol.value.data)
+        setExpandidos(new Set(respArbol.value.data.nodos.map((nodo) => nodo.azdo_id)))
+
+        const proyectoApi =
+          respArbol.value.data.proyecto ||
+          (respTipos.status === 'fulfilled' ? respTipos.value.data.proyecto : '')
+        if (!proyecto && proyectoApi) setProyecto(proyectoApi)
+      } else {
+        setRespuesta(null)
+        setError(mensajeError(respArbol.reason))
       }
     } finally {
       setCargando(false)
@@ -263,7 +294,12 @@ export default function EsquemaAzure() {
 
         {error && (
           <Aviso tono="error" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span>{error}</span>
+            <span>
+              {error}
+              {proyectos.length > 0 && (
+                <span className="mt-1 block text-sm font-normal">Selecciona otro proyecto para reintentar.</span>
+              )}
+            </span>
             <Boton variante="peligro-suave" tamano="sm" onClick={() => void cargarDatos()}>Reintentar</Boton>
           </Aviso>
         )}

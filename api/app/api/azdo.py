@@ -12,7 +12,7 @@ from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
 from app.documents.persona import Persona
 from app.documents.usuario import Usuario
-from app.errors import ErrorIntegracion
+from app.errors import ErrorDominio, ErrorIntegracion, NoEncontrado
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
 from app.security.deps import permiso, usuario_actual
 from app.services.azdo_sync import sincronizar_iteracion
@@ -215,6 +215,24 @@ async def _resolver_proyecto_esquema(
             "Falta configurar el proyecto por defecto de Azure DevOps.",
         )
     return proyecto_resuelto
+
+
+def _mapear_error_esquema(exc: Exception, proyecto: str) -> ErrorDominio:
+    """Traduce un fallo de la API de esquema a un error de dominio.
+
+    Un 404 de Azure DevOps sobre una ruta de ámbito de proyecto casi siempre
+    significa que el proyecto configurado no existe o no es accesible; ese caso
+    merece un mensaje accionable. El nombre del proyecto lo escribió el propio
+    usuario en la configuración (no es un dato interno ni sensible), así que sí
+    puede ir en el mensaje; lo que nunca sale es el cuerpo crudo de Azure. El
+    resto de fallos conserva el mensaje neutro de ``ErrorIntegracion``.
+    """
+    if isinstance(exc, RuntimeError) and str(exc).startswith("Azure DevOps API 404:"):
+        return NoEncontrado(
+            f"El proyecto '{proyecto}' no existe o no es accesible en Azure DevOps. "
+            "Revisa el proyecto por defecto configurado."
+        )
+    return ErrorIntegracion("No se pudo obtener el esquema de Azure DevOps.")
 
 
 def _tipos_desde_jerarquia(jerarquia: list[dict]) -> list[str]:
@@ -750,7 +768,7 @@ async def esquema_tipos(
             "jerarquia": await svc.obtener_jerarquia_backlog(proyecto_resuelto),
         }
     except (RuntimeError, httpx.HTTPError) as exc:
-        raise ErrorIntegracion("No se pudo obtener el esquema de Azure DevOps.") from exc
+        raise _mapear_error_esquema(exc, proyecto_resuelto) from exc
 
 
 @router.get("/esquema/arbol", dependencies=[permiso("azure_devops.ver")])
@@ -768,7 +786,7 @@ async def esquema_arbol(
 ) -> dict:
     target = _normalizar_target(target)
     usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
-    cfg, _ = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    cfg, aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
@@ -780,6 +798,14 @@ async def esquema_arbol(
     try:
         if not tipos_consultados:
             tipos_consultados = await _tipos_esquema_por_defecto(svc, proyecto_resuelto)
+            if not tipos_consultados:
+                logger.warning(
+                    "No se pudo determinar ningún tipo de work item para el proyecto "
+                    "(proyecto=%s, aplicacion_id=%s); se consultará el esquema sin "
+                    "filtro de tipo.",
+                    proyecto_resuelto,
+                    aplicacion_id,
+                )
         items, truncado = await svc.obtener_work_items_esquema(
             proyecto_resuelto,
             tipos_consultados,
@@ -796,7 +822,7 @@ async def esquema_arbol(
             "nodos": _construir_arbol(items),
         }
     except (RuntimeError, httpx.HTTPError) as exc:
-        raise ErrorIntegracion("No se pudo obtener el esquema de Azure DevOps.") from exc
+        raise _mapear_error_esquema(exc, proyecto_resuelto) from exc
 
 
 # ── Work items y sync ──

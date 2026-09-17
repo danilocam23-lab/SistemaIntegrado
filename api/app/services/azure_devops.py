@@ -199,11 +199,12 @@ class AzureDevOpsService:
         estados: list[str] | None = None,
     ) -> str:
         """Arma una WIQL segura para consultar el esquema vivo de Azure DevOps."""
-        tipos_escapados = "', '".join(self._escapar_wiql(tipo) for tipo in tipos)
         condiciones = [
             f"[System.TeamProject] = '{self._escapar_wiql(proyecto)}'",
-            f"[System.WorkItemType] IN ('{tipos_escapados}')",
         ]
+        if tipos:
+            tipos_escapados = "', '".join(self._escapar_wiql(tipo) for tipo in tipos)
+            condiciones.append(f"[System.WorkItemType] IN ('{tipos_escapados}')")
         if area_path:
             condiciones.append(f"[System.AreaPath] UNDER '{self._escapar_wiql(area_path)}'")
         if iteration_path:
@@ -378,11 +379,11 @@ class AzureDevOpsService:
         self, proyecto: str, titulo: str, tipo: str
     ) -> dict | None:
         """Busca una work item por título exacto y tipo. Devuelve la primera coincidencia o None."""
-        escaped = titulo.replace("'", "''")
+        escaped = self._escapar_wiql(titulo)
         wiql = (
             f"SELECT [System.Id] FROM workitems "
-            f"WHERE [System.TeamProject] = '{proyecto}' "
-            f"AND [System.WorkItemType] = '{tipo}' "
+            f"WHERE [System.TeamProject] = '{self._escapar_wiql(proyecto)}' "
+            f"AND [System.WorkItemType] = '{self._escapar_wiql(tipo)}' "
             f"AND [System.Title] = '{escaped}' "
             f"ORDER BY [System.Id] DESC"
         )
