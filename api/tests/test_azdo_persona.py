@@ -285,6 +285,112 @@ async def test_esquema_arbol_404_de_azure_mensaje_menciona_el_proyecto(
     assert "TF200016" not in detalle
 
 
+async def test_config_con_usuario_id_propio_devuelve_pat_en_claro(
+    cliente, fabrica_usuario, fabrica_aplicacion
+):
+    app = await fabrica_aplicacion()
+    usuario, token = await fabrica_usuario([app.codigo], permisos=["azure_devops.ver"])
+    persona = await _persona_de(usuario, app)
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="user",
+        usuario_id=str(persona.id),
+        org_url="https://dev.azure.com/user-scope",
+        pat="pat-secreto",
+        default_project="Proyecto Usuario",
+    ).insert()
+
+    resp = await cliente.get(
+        f"/api/azdo/config?usuario_id={persona.id}",
+        headers=headers_con_token(token, app.codigo),
+    )
+
+    assert resp.status_code == 200
+    datos = resp.json()
+    assert datos["pat"] == "pat-secreto"
+    assert datos["pat_guardado"] is True
+
+
+async def test_config_con_usuario_id_ajeno_devuelve_403(
+    cliente, fabrica_usuario, fabrica_aplicacion
+):
+    app = await fabrica_aplicacion()
+    usuario, token = await fabrica_usuario([app.codigo], permisos=["azure_devops.ver"])
+    await _persona_de(usuario, app)
+    otra = await Persona(
+        aplicacion_id=app.codigo, nombre="Ajena", email="ajena@x.com", activo=True
+    ).insert()
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="user",
+        usuario_id=str(otra.id),
+        org_url="https://dev.azure.com/ajeno",
+        pat="pat-ajeno",
+        default_project="Proyecto Ajeno",
+    ).insert()
+
+    resp = await cliente.get(
+        f"/api/azdo/config?usuario_id={otra.id}",
+        headers=headers_con_token(token, app.codigo),
+    )
+
+    assert resp.status_code == 403
+    assert "pat-ajeno" not in resp.text
+
+
+async def test_config_superadmin_obtiene_pat_de_otra_persona(
+    cliente, superadmin_token, fabrica_aplicacion
+):
+    app = await fabrica_aplicacion()
+    otra = await Persona(
+        aplicacion_id=app.codigo, nombre="Ajena", email="ajena@x.com", activo=True
+    ).insert()
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="user",
+        usuario_id=str(otra.id),
+        org_url="https://dev.azure.com/ajeno",
+        pat="pat-ajeno",
+        default_project="Proyecto Ajeno",
+    ).insert()
+
+    resp = await cliente.get(
+        f"/api/azdo/config?usuario_id={otra.id}",
+        headers=headers_con_token(superadmin_token, app.codigo),
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["pat"] == "pat-ajeno"
+
+
+async def test_config_all_no_expone_pat(
+    cliente, fabrica_usuario, fabrica_aplicacion
+):
+    app = await fabrica_aplicacion()
+    usuario, token = await fabrica_usuario([app.codigo], permisos=["azure_devops.ver"])
+    persona = await _persona_de(usuario, app)
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="user",
+        usuario_id=str(persona.id),
+        org_url="https://dev.azure.com/user-scope",
+        pat="pat-secreto",
+        default_project="Proyecto Usuario",
+    ).insert()
+
+    resp = await cliente.get(
+        "/api/azdo/config/all",
+        headers=headers_con_token(token, app.codigo),
+    )
+
+    assert resp.status_code == 200
+    elementos = resp.json()
+    assert elementos, "debe haber al menos una configuración"
+    for elemento in elementos:
+        assert "pat" not in elemento
+    assert "pat-secreto" not in resp.text
+
+
 async def test_esquema_tipos_404_de_azure_mensaje_menciona_el_proyecto(
     cliente, fabrica_usuario, fabrica_aplicacion, monkeypatch
 ):

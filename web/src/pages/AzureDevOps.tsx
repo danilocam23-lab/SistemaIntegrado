@@ -22,6 +22,7 @@ interface CampoRequerido {
 interface AzdoConfigResp {
   scope: string
   org_url: string
+  pat: string
   pat_guardado: boolean
   default_project: string
   sync_interval: string
@@ -127,7 +128,7 @@ function PanelAzdo({ titulo, target }: {
       const { data } = await client.get<AzdoConfigResp>(`/azdo/config?${buildParams()}`)
       setOrgUrl(data.org_url ?? '')
       setPatGuardado(data.pat_guardado)
-      setPat('')
+      setPat(data.pat ?? '')
       setProyecto(data.default_project ?? '')
       setFrecuencia(data.sync_interval ?? 'manual')
     } catch {
@@ -171,7 +172,6 @@ function PanelAzdo({ titulo, target }: {
       setOk('Configuración guardada correctamente.')
       if (pat) {
         setPatGuardado(true)
-        setPat('')
       }
     } catch (err) {
       setAviso(mensajeError(err))
@@ -271,7 +271,7 @@ function PanelAzdo({ titulo, target }: {
             </Boton>
           </div>
           <p className="mt-1 text-xs text-slate-400">
-            El PAT se almacena de forma segura y no se muestra una vez guardado.
+            El PAT se almacena de forma segura. Pulsa «Mostrar» para revelar el token guardado.
           </p>
         </div>
 

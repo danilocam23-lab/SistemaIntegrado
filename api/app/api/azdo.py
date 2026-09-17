@@ -315,10 +315,12 @@ async def obtener_config(
     target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ):
     """Devuelve la config AzDO por target (hitss|epm) y jerarquía user > squad > app."""
     target = _normalizar_target(target)
+    await _validar_propiedad_usuario(usuario, usuario_id)
     cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id)
     if not cfg:
         return {
@@ -326,6 +328,7 @@ async def obtener_config(
             "target": target,
             "org_url": "",
             "pat_guardado": False,
+            "pat": "",
             "default_project": "",
             "sync_interval": "manual",
             "squad_id": None,
@@ -337,6 +340,7 @@ async def obtener_config(
         "target": target,
         "org_url": cfg.org_url,
         "pat_guardado": bool(cfg.pat),
+        "pat": cfg.pat or "",
         "default_project": cfg.default_project,
         "sync_interval": cfg.sync_interval,
         "squad_id": cfg.squad_id,
@@ -505,10 +509,12 @@ async def test_conexion(
     target: str = "hitss",
     squad_id: str | None = None,
     usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     """Verifica la conexión con Azure DevOps usando la config resuelta."""
-    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, squad_id, usuario_id_efectivo)
     if not cfg or not cfg.org_url or not cfg.pat:
         return {"ok": False, "error": "Falta configurar URL y/o PAT de Azure DevOps."}
     svc = AzureDevOpsService(cfg.org_url, cfg.pat)
