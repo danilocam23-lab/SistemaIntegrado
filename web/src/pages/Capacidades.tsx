@@ -3,7 +3,10 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { Boton, Campo, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { Boton, EncabezadoPagina, Icono } from '../components/ui'
+import ModalCapacidad from './capacidades/ModalCapacidad'
+import TablaCapacidadesMatriz from './capacidades/TablaCapacidadesMatriz'
+import { useMatrizCapacidades } from './capacidades/useMatrizCapacidades'
 import type { Capacidad, Persona } from '../types'
 
 const ROLES_EXCLUIDOS_CAPACIDAD_PERSONA = ['LT_EPM']
@@ -13,10 +16,13 @@ export default function Capacidades() {
   const { datos: personas } = useLista<Persona>('/personas')
   const { tienePermiso } = useAuth()
   const puedeEditarCapacidades = tienePermiso('capacidades.editar')
+
+  const [modalAbierto, setModalAbierto] = useState(false)
   const [personaId, setPersonaId] = useState('')
   const [mes, setMes] = useState('')
   const [horas, setHoras] = useState('180')
   const [aviso, setAviso] = useState('')
+
   const [editCell, setEditCell] = useState<{ id: string; campo: string } | null>(null)
   const [editValue, setEditValue] = useState('')
   const cancelarBlurRef = useRef(false)
@@ -44,13 +50,36 @@ export default function Capacidades() {
     [datos, personasPorId],
   )
 
-  const nombrePersona = (id: string | null): string =>
-    (id && personasPorId.get(id)?.nombre) || '—'
+  const { aniosParaPestanas, anioSeleccionado, seleccionarAnio, filas } =
+    useMatrizCapacidades(capacidadesPersona, personasPorId)
 
-  function iniciarEdicion(id: string, campo: string, valorActual: string) {
+  function abrirModalNueva() {
     if (!puedeEditarCapacidades) return
-    setEditCell({ id, campo })
-    setEditValue(valorActual)
+    setPersonaId('')
+    setMes('')
+    setHoras('180')
+    setAviso('')
+    setModalAbierto(true)
+  }
+
+  function abrirModalCeldaVacia(idPersona: string, mesCelda: string) {
+    if (!puedeEditarCapacidades) return
+    setPersonaId(idPersona)
+    setMes(mesCelda)
+    setHoras('180')
+    setAviso('')
+    setModalAbierto(true)
+  }
+
+  function cerrarModal() {
+    setModalAbierto(false)
+    setAviso('')
+  }
+
+  function iniciarEdicion(capacidad: Capacidad) {
+    if (!puedeEditarCapacidades) return
+    setEditCell({ id: capacidad.id, campo: 'horas_disponibles' })
+    setEditValue(String(capacidad.horas_disponibles))
     cancelarBlurRef.current = false
   }
 
@@ -90,7 +119,7 @@ export default function Capacidades() {
         mes,
         horas_disponibles: Number(horas),
       })
-      setMes('')
+      cerrarModal()
       recargar()
     } catch (err) {
       setAviso(mensajeError(err))
@@ -99,103 +128,69 @@ export default function Capacidades() {
 
   async function eliminar(capacidad: Capacidad): Promise<void> {
     if (!puedeEditarCapacidades) return
+    if (editCell?.id === capacidad.id) {
+      cancelarBlurRef.current = true
+      setEditCell(null)
+      setEditValue('')
+    }
     await client.delete(`/capacidades/${capacidad.id}`)
     recargar()
   }
 
   return (
     <div>
-      <EncabezadoPagina icono={<Icono nombre="grafico-barras" />} titulo="Capacidades mensuales" />
+      <EncabezadoPagina
+        icono={<Icono nombre="grafico-barras" />}
+        titulo="Capacidades mensuales"
+        acciones={puedeEditarCapacidades && (
+          <Boton variante="primario" onClick={abrirModalNueva}>Nueva capacidad</Boton>
+        )}
+      />
 
-      {puedeEditarCapacidades && (
-      <form onSubmit={crear} className="barra-filtros mb-4">
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Persona</span>
-          <Selector value={personaId} onChange={(e) => setPersonaId(e.target.value)} required>
-            <option value="">— Seleccionar —</option>
-            {personasDisponibles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </Selector>
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Mes</span>
-          <Campo value={mes} onChange={(e) => setMes(e.target.value)} type="month" required />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Horas disponibles</span>
-          <Campo value={horas} onChange={(e) => setHoras(e.target.value)} type="number" required
-            className="w-32" />
-        </label>
-        <Boton variante="primario" type="submit">Crear</Boton>
-      </form>
-      )}
-
-      {(aviso || error) && (
+      {(aviso || error) && !modalAbierto && (
         <div className="aviso aviso-error mb-3">{aviso || error}</div>
       )}
 
-      <TablaScroll>
-      <table className="tabla">
-        <thead>
-          <tr>
-            <th>Persona</th>
-            <th>Mes</th>
-            <th className="text-right">Horas disponibles</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {capacidadesPersona.map((c) => (
-            <tr key={c.id}>
-              <td>{nombrePersona(c.persona_id)}</td>
-              <td>{c.mes}</td>
-              <td
-                className={`text-right ${puedeEditarCapacidades ? 'cursor-pointer' : ''}`}
-                title={puedeEditarCapacidades ? 'Doble clic para editar' : undefined}
-                onDoubleClick={() => iniciarEdicion(c.id, 'horas_disponibles', String(c.horas_disponibles))}
-              >
-                {editCell?.id === c.id && editCell.campo === 'horas_disponibles' ? (
-                  <Campo
-                    autoFocus
-                    type="number"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => {
-                      if (cancelarBlurRef.current) {
-                        cancelarBlurRef.current = false
-                        return
-                      }
-                      void guardarEdicion(c)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        e.currentTarget.blur()
-                      }
-                      if (e.key === 'Escape') {
-                        e.preventDefault()
-                        cancelarEdicion()
-                      }
-                    }}
-                    compacto
-                    className="w-24 text-right"
-                  />
-                ) : c.horas_disponibles}
-              </td>
-              <td className="text-center">
-                {puedeEditarCapacidades && (
-                  <button onClick={() => eliminar(c)} className="enlace-accion enlace-accion-peligro">
-                    Eliminar
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-          {capacidadesPersona.length === 0 && (
-            <tr><td colSpan={4} className="p-4 text-center text-slate-400">Sin capacidades.</td></tr>
-          )}
-        </tbody>
-      </table>
-      </TablaScroll>
+      <div className="pestanas mb-4">
+        {aniosParaPestanas.map((anio) => (
+          <button
+            key={anio}
+            onClick={() => seleccionarAnio(anio)}
+            className={`pestana ${anio === anioSeleccionado ? 'pestana-activa' : ''}`}
+          >
+            {anio}
+          </button>
+        ))}
+      </div>
+
+      <TablaCapacidadesMatriz
+        filas={filas}
+        anioSeleccionado={anioSeleccionado}
+        puedeEditarCapacidades={puedeEditarCapacidades}
+        editCell={editCell}
+        editValue={editValue}
+        onCambiarEditValue={setEditValue}
+        onIniciarEdicion={iniciarEdicion}
+        onGuardarEdicion={guardarEdicion}
+        onCancelarEdicion={cancelarEdicion}
+        onEliminar={eliminar}
+        cancelarBlurRef={cancelarBlurRef}
+        onAbrirCeldaVacia={abrirModalCeldaVacia}
+      />
+
+      <ModalCapacidad
+        abierto={modalAbierto}
+        onCerrar={cerrarModal}
+        personasDisponibles={personasDisponibles}
+        personaId={personaId}
+        onCambiarPersonaId={setPersonaId}
+        mes={mes}
+        onCambiarMes={setMes}
+        horas={horas}
+        onCambiarHoras={setHoras}
+        aviso={aviso}
+        onSubmit={crear}
+      />
     </div>
   )
 }
