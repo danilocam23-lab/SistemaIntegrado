@@ -32,6 +32,7 @@ class AzdoConfig(DocumentoOperativo):
 
     # Campos requeridos descubiertos (campo_ref → valor por defecto)
     learned_fields: dict[str, dict] | None = None
+    tipos_esquema_activos: list[str] = []
 
     class Settings:
         name = "azdo_config"

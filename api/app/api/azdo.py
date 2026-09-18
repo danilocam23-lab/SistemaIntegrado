@@ -48,6 +48,10 @@ class CampoRequeridoOut(BaseModel):
     default_value: Any = None
 
 
+class TiposEsquemaConfigIn(BaseModel):
+    activos: list[str]
+
+
 # ── Resolución jerárquica de config ──
 
 _TARGETS_VALIDOS = {"hitss", "epm"}
@@ -218,22 +222,51 @@ async def _resolver_proyecto_esquema(
     return proyecto_resuelto
 
 
+def _mensaje_azure(exc: Exception, longitud_maxima: int = 300) -> str | None:
+    """Extrae solo el mensaje seguro de Azure desde el RuntimeError del cliente."""
+    if not isinstance(exc, RuntimeError):
+        return None
+    match = re.match(r"^Azure DevOps API \d+: (?P<mensaje>.*)", str(exc), re.DOTALL)
+    if not match:
+        return None
+    mensaje = " ".join(match.group("mensaje").split())
+    if len(mensaje) > longitud_maxima:
+        return f"{mensaje[:longitud_maxima].rstrip()}..."
+    return mensaje
+
+
 def _mapear_error_esquema(exc: Exception, proyecto: str) -> ErrorDominio:
     """Traduce un fallo de la API de esquema a un error de dominio.
 
     Un 404 de Azure DevOps sobre una ruta de ámbito de proyecto casi siempre
     significa que el proyecto configurado no existe o no es accesible; ese caso
-    merece un mensaje accionable. El nombre del proyecto lo escribió el propio
-    usuario en la configuración (no es un dato interno ni sensible), así que sí
-    puede ir en el mensaje; lo que nunca sale es el cuerpo crudo de Azure. El
-    resto de fallos conserva el mensaje neutro de ``ErrorIntegracion``.
+    merece un mensaje accionable. Para errores de API de Azure se muestra solo
+    el mensaje acotado que devuelve Azure, sin trazas ni datos internos; los
+    fallos de red conservan el mensaje neutro de ``ErrorIntegracion``.
     """
+    mensaje_azure = _mensaje_azure(exc)
     if isinstance(exc, RuntimeError) and str(exc).startswith("Azure DevOps API 404:"):
         return NoEncontrado(
             f"El proyecto '{proyecto}' no existe o no es accesible en Azure DevOps. "
             "Revisa el proyecto por defecto configurado."
         )
-    return ErrorIntegracion("No se pudo obtener el esquema de Azure DevOps.")
+    if not mensaje_azure:
+        return ErrorIntegracion("No se pudo obtener el esquema de Azure DevOps.")
+    if "VS402337" in mensaje_azure:
+        return ErrorIntegracion(
+            "La consulta supera el límite de 20.000 work items de Azure DevOps. "
+            "Acótala configurando iteraciones para el squad. "
+            f"Detalle de Azure: {mensaje_azure}"
+        )
+    if "TF51011" in mensaje_azure:
+        return ErrorIntegracion(
+            "La ruta de iteración configurada no existe en Azure DevOps. Escríbela "
+            "completa, empezando por el nombre del proyecto. "
+            f"Detalle de Azure: {mensaje_azure}"
+        )
+    return ErrorIntegracion(
+        f"No se pudo obtener el esquema de Azure DevOps. Detalle de Azure: {mensaje_azure}"
+    )
 
 
 def _tipos_desde_jerarquia(jerarquia: list[dict]) -> list[str]:
@@ -267,6 +300,17 @@ async def _tipos_esquema_por_defecto(svc: AzureDevOpsService, proyecto: str) -> 
     if epic and epic not in tipos:
         tipos.insert(0, epic)
     return tipos
+
+
+async def _tipos_esquema_activos(
+    cfg: AzdoConfig,
+    svc: AzureDevOpsService,
+    proyecto: str,
+) -> list[str]:
+    """Devuelve tipos configurados o el valor por defecto histórico."""
+    if cfg.tipos_esquema_activos:
+        return cfg.tipos_esquema_activos
+    return await _tipos_esquema_por_defecto(svc, proyecto)
 
 
 def _construir_arbol(items: list[dict]) -> list[dict]:
@@ -313,6 +357,43 @@ def _normalizar_iteracion_para_comparar(iteracion: str) -> str:
     return iteracion.strip(" \t\r\n\\").casefold()
 
 
+def _ruta_empieza_por_proyecto(ruta: str, proyecto: str) -> bool:
+    ruta_normalizada = _normalizar_iteracion_para_comparar(ruta)
+    proyecto_normalizado = _normalizar_iteracion_para_comparar(proyecto)
+    return bool(
+        ruta_normalizada
+        and proyecto_normalizado
+        and (
+            ruta_normalizada == proyecto_normalizado
+            or ruta_normalizada.startswith(f"{proyecto_normalizado}\\")
+        )
+    )
+
+
+def _normalizar_iteracion_con_proyecto(iteracion: str, proyecto: str) -> str:
+    """Completa rutas cortas porque Azure exige iteraciones con nombre de proyecto.
+
+    Los administradores pueden escribir ``CRM`` por comodidad, pero WIQL necesita
+    ``Proyecto\\CRM``. Una ruta que ya empieza por el proyecto se conserva intacta.
+    """
+    ruta = iteracion.strip(" \t\r\n\\")
+    proyecto_limpio = proyecto.strip(" \t\r\n\\")
+    if not ruta or not proyecto_limpio or _ruta_empieza_por_proyecto(ruta, proyecto_limpio):
+        return ruta
+    return f"{proyecto_limpio}\\{ruta}"
+
+
+def _normalizar_iteraciones_con_proyecto(iteraciones: list[str], proyecto: str) -> list[str]:
+    normalizadas: list[str] = []
+    vistas: set[str] = set()
+    for iteracion in iteraciones:
+        normalizada = _normalizar_iteracion_con_proyecto(iteracion, proyecto)
+        if normalizada and normalizada not in vistas:
+            normalizadas.append(normalizada)
+            vistas.add(normalizada)
+    return normalizadas
+
+
 def _iteracion_habilitada(iteracion: str, permitida: str) -> bool:
     """Indica si una iteración coincide con una permitida o cuelga de ella."""
     pedida = _normalizar_iteracion_para_comparar(iteracion)
@@ -340,16 +421,18 @@ async def _iteraciones_permitidas_contexto(ctx: ContextoAplicacion) -> list[str]
 def _resolver_iteraciones_consulta(
     iteraciones_permitidas: list[str],
     iteration_path: str | None,
+    proyecto: str,
 ) -> tuple[list[str] | None, bool]:
     """Resuelve las rutas de iteración que se enviarán a WIQL."""
-    pedida = iteration_path.strip() if iteration_path else ""
-    if not iteraciones_permitidas:
+    permitidas = _normalizar_iteraciones_con_proyecto(iteraciones_permitidas, proyecto)
+    pedida = (
+        _normalizar_iteracion_con_proyecto(iteration_path, proyecto) if iteration_path else ""
+    )
+    if not permitidas:
         return ([pedida] if pedida else None), False
 
     if pedida:
-        habilitada = any(
-            _iteracion_habilitada(pedida, permitida) for permitida in iteraciones_permitidas
-        )
+        habilitada = any(_iteracion_habilitada(pedida, permitida) for permitida in permitidas)
         if not habilitada:
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
@@ -357,7 +440,7 @@ def _resolver_iteraciones_consulta(
             )
         return [pedida], True
 
-    return iteraciones_permitidas, True
+    return permitidas, True
 
 
 # ── Endpoints de configuración ──
@@ -829,6 +912,79 @@ async def esquema_tipos(
         raise _mapear_error_esquema(exc, proyecto_resuelto) from exc
 
 
+@router.get("/esquema/iteraciones-permitidas", dependencies=[permiso("azure_devops.ver")])
+async def esquema_iteraciones_permitidas(
+    target: str = "hitss",
+    proyecto: str | None = None,
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    target = _normalizar_target(target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
+    iteraciones = _normalizar_iteraciones_con_proyecto(
+        await _iteraciones_permitidas_contexto(ctx),
+        proyecto_resuelto,
+    )
+    return {"proyecto": proyecto_resuelto, "iteraciones": iteraciones}
+
+
+@router.get("/esquema/tipos-config", dependencies=[permiso("azure_devops.ver")])
+async def esquema_tipos_config(
+    target: str = "hitss",
+    proyecto: str | None = None,
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    target = _normalizar_target(target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
+    svc = await _crear_servicio_desde_config(cfg)
+    try:
+        disponibles = await svc.obtener_tipos_proceso(proyecto_resuelto)
+        activos = await _tipos_esquema_activos(cfg, svc, proyecto_resuelto)
+        return {"disponibles": disponibles, "activos": activos}
+    except (RuntimeError, httpx.HTTPError) as exc:
+        raise _mapear_error_esquema(exc, proyecto_resuelto) from exc
+
+
+@router.put("/esquema/tipos-config")
+async def guardar_esquema_tipos_config(
+    datos: TiposEsquemaConfigIn,
+    target: str = "hitss",
+    proyecto: str | None = None,
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    _: object = permiso("azure_devops.editar"),
+) -> dict:
+    target = _normalizar_target(target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
+    activos: list[str] = []
+    vistos: set[str] = set()
+    for tipo in datos.activos:
+        nombre = tipo.strip()
+        if nombre and nombre not in vistos:
+            activos.append(nombre)
+            vistos.add(nombre)
+    cfg.tipos_esquema_activos = activos
+    cfg.marcar_actualizado()
+    await cfg.save()
+    return {"proyecto": proyecto_resuelto, "activos": cfg.tipos_esquema_activos}
+
+
 @router.get("/esquema/arbol", dependencies=[permiso("azure_devops.ver")])
 async def esquema_arbol(
     target: str = "hitss",
@@ -856,11 +1012,12 @@ async def esquema_arbol(
     iteraciones_consulta, filtrado_por_squad = _resolver_iteraciones_consulta(
         iteraciones_permitidas,
         iteration_path,
+        proyecto_resuelto,
     )
 
     try:
         if not tipos_consultados:
-            tipos_consultados = await _tipos_esquema_por_defecto(svc, proyecto_resuelto)
+            tipos_consultados = await _tipos_esquema_activos(cfg, svc, proyecto_resuelto)
             if not tipos_consultados:
                 logger.warning(
                     "No se pudo determinar ningún tipo de work item para el proyecto "

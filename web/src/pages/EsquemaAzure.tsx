@@ -4,10 +4,10 @@ import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { Aviso, Boton, EncabezadoPagina, Icono, Selector, Tarjeta } from '../components/ui'
 import type {
-  AzdoIteracion,
   AzdoProyecto,
   NivelJerarquiaAzure,
   RespuestaEsquemaAzure,
+  RespuestaIteracionesPermitidasAzure,
   RespuestaPersonasConfigAzure,
   RespuestaTiposAzure,
   TipoWorkItemAzure,
@@ -53,13 +53,12 @@ function mensajeArbolVacio(sinNodos: boolean, filtradoPorSquad: boolean): string
 
 export default function EsquemaAzure() {
   const [proyectos, setProyectos] = useState<AzdoProyecto[]>([])
-  const [iteraciones, setIteraciones] = useState<AzdoIteracion[]>([])
+  const [iteraciones, setIteraciones] = useState<string[]>([])
   const [tipos, setTipos] = useState<TipoWorkItemAzure[]>([])
   const [jerarquia, setJerarquia] = useState<NivelJerarquiaAzure[]>([])
   const [respuesta, setRespuesta] = useState<RespuestaEsquemaAzure | null>(null)
   const [proyecto, setProyecto] = useState('')
   const [tiposSeleccionados, setTiposSeleccionados] = useState<string[]>([])
-  const [areaPath, setAreaPath] = useState('')
   const [iteracionPath, setIteracionPath] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [cargando, setCargando] = useState(true)
@@ -119,7 +118,6 @@ export default function EsquemaAzure() {
     const paramsArbol = parametrosBase(proyecto, usuarioId)
     paramsArbol.set('limite', String(LIMITE_ARBOL))
     if (tiposSeleccionados.length > 0) paramsArbol.set('tipos', tiposSeleccionados.join(','))
-    if (areaPath.trim()) paramsArbol.set('area_path', areaPath.trim())
     if (iteracionPath) paramsArbol.set('iteration_path', iteracionPath)
 
     const paramsProyectos = new URLSearchParams()
@@ -183,7 +181,7 @@ export default function EsquemaAzure() {
     } finally {
       setCargando(false)
     }
-  }, [areaPath, iteracionPath, proyecto, tiposSeleccionados, usuarioId])
+  }, [iteracionPath, proyecto, tiposSeleccionados, usuarioId])
 
   useEffect(() => {
     const temporizador = window.setTimeout(() => {
@@ -193,15 +191,10 @@ export default function EsquemaAzure() {
   }, [cargarDatos])
 
   useEffect(() => {
-    if (!proyecto) {
-      setIteraciones([])
-      return
-    }
-
     const params = parametrosBase(proyecto, usuarioId)
     client
-      .get<AzdoIteracion[]>(`/azdo/iteraciones?${params.toString()}`)
-      .then((resp) => setIteraciones(resp.data))
+      .get<RespuestaIteracionesPermitidasAzure>(`/azdo/esquema/iteraciones-permitidas?${params.toString()}`)
+      .then((resp) => setIteraciones(resp.data.iteraciones))
       .catch(() => setIteraciones([]))
   }, [proyecto, usuarioId])
 
@@ -282,14 +275,12 @@ export default function EsquemaAzure() {
           proyecto={proyecto}
           tipos={tipos}
           tiposSeleccionados={tiposSeleccionados}
-          areaPath={areaPath}
           iteraciones={iteraciones}
           iteracionPath={iteracionPath}
           busqueda={busqueda}
           cargando={cargando}
           onProyecto={cambiarProyecto}
           onTipos={setTiposSeleccionados}
-          onAreaPath={setAreaPath}
           onIteracionPath={setIteracionPath}
           onBusqueda={setBusqueda}
           onRecargar={() => void cargarDatos()}
@@ -304,7 +295,7 @@ export default function EsquemaAzure() {
 
         {error && (
           <Aviso tono="error" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span>
+            <span className="min-w-0 whitespace-pre-wrap break-words">
               {error}
               {proyectos.length > 0 && (
                 <span className="mt-1 block text-sm font-normal">Selecciona otro proyecto para reintentar.</span>

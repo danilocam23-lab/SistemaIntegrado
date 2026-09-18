@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { ENTREGAS_ACTAS_CONFIG_CLAVES, ENTREGAS_ACTAS_COLUMNAS, ENTREGAS_ACTAS_FILTROS, REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS } from '../constantes'
+import { Icono } from '../components/ui'
+import { SeccionAzureDevOps } from './configuracion/SeccionAzureDevOps'
 import { SeccionCargaExcel } from './configuracion/SeccionCargaExcel'
 import { SeccionCamposConfigurables } from './configuracion/SeccionCamposConfigurables'
 import { SeccionCategorias } from './configuracion/SeccionCategorias'
@@ -10,7 +12,6 @@ import { SeccionParametros } from './configuracion/SeccionParametros'
 import { SeccionTarifas } from './configuracion/SeccionTarifas'
 import { PESTANAS } from './configuracion/tipos'
 import type { Tab } from './configuracion/tipos'
-import { Icono } from '../components/ui'
 import { useCargaExcel } from './configuracion/useCargaExcel'
 import { useCamposConfigurables } from './configuracion/useCamposConfigurables'
 import { useCategorias } from './configuracion/useCategorias'
@@ -130,6 +131,9 @@ export default function Configuracion() {
           error={error}
         />
       )}
+
+      {/* ═══ TAB: Azure DevOps ═══ */}
+      {tab === 'azure_devops' && <SeccionAzureDevOps />}
 
       {/* ═══ TAB: Estados ═══ */}
       {tab === 'estados' && <SeccionEstados {...estadosState} />}

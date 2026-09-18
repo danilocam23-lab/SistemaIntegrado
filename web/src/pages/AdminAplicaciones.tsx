@@ -4,33 +4,7 @@ import client from '../api/client'
 import Modal from '../components/Modal'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion } from '../types'
-import { AreaTexto, Boton, Campo, EncabezadoPagina, cx } from '../components/ui'
-
-/** Interruptor visual para "Activa". Mismo patrón que `FilaUsuario.tsx`; si un
- *  tercer lugar lo necesita, vale la pena promoverlo a un `Interruptor` compartido. */
-function InterruptorActivo({ activo, disabled, onClick }: { activo: boolean; disabled?: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={activo}
-      aria-label={activo ? 'Desactivar squad' : 'Activar squad'}
-      disabled={disabled}
-      onClick={onClick}
-      className={cx(
-        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-        activo ? 'bg-emerald-500' : 'bg-slate-300',
-      )}
-    >
-      <span
-        className={cx(
-          'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-          activo ? 'translate-x-4' : 'translate-x-0.5',
-        )}
-      />
-    </button>
-  )
-}
+import { AreaTexto, Boton, Campo, EncabezadoPagina, Interruptor, cx } from '../components/ui'
 
 function contarIteraciones(valor: string | null | undefined): number {
   if (!valor) return 0
@@ -208,8 +182,10 @@ export default function AdminAplicaciones() {
                       Editar
                     </Boton>
                   )}
-                  <InterruptorActivo
+                  <Interruptor
                     activo={app.activa}
+                    etiquetaActivo="Desactivar squad"
+                    etiquetaInactivo="Activar squad"
                     disabled={!puedeEditar}
                     onClick={() => alternarEstado(app)}
                   />

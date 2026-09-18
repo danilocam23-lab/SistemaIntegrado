@@ -78,6 +78,45 @@ export function Boton({
   )
 }
 
+/* ── Interruptor ──────────────────────────────────────────────── */
+
+interface PropsInterruptor extends ButtonHTMLAttributes<HTMLButtonElement> {
+  activo: boolean
+  etiquetaActivo: string
+  etiquetaInactivo: string
+}
+
+export function Interruptor({
+  activo,
+  etiquetaActivo,
+  etiquetaInactivo,
+  className,
+  type = 'button',
+  ...resto
+}: PropsInterruptor) {
+  return (
+    <button
+      type={type}
+      role="switch"
+      aria-checked={activo}
+      aria-label={activo ? etiquetaActivo : etiquetaInactivo}
+      className={cx(
+        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        activo ? 'bg-emerald-500' : 'bg-slate-300',
+        className,
+      )}
+      {...resto}
+    >
+      <span
+        className={cx(
+          'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+          activo ? 'translate-x-4' : 'translate-x-0.5',
+        )}
+      />
+    </button>
+  )
+}
+
 /* ── Campos de formulario ──────────────────────────────────────── */
 
 interface PropsCampo extends InputHTMLAttributes<HTMLInputElement> {

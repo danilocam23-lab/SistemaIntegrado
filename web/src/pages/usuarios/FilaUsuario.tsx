@@ -1,33 +1,6 @@
-import { Chip, Selector, cx } from '../../components/ui'
+import { Chip, Interruptor, Selector, cx } from '../../components/ui'
 import type { Rol, Usuario } from '../../types'
 import { colorAvatar, inicialesDe, squadsChipsUsuario } from './utilidades'
-
-/** Interruptor visual para "Activo". No es un primitivo de `components/ui`
- *  porque hoy solo lo usa esta fila; si otra pantalla llega a necesitar el
- *  mismo control, vale la pena promoverlo a un `Interruptor` compartido. */
-function InterruptorActivo({ activo, disabled, onClick }: { activo: boolean; disabled?: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={activo}
-      aria-label={activo ? 'Desactivar usuario' : 'Activar usuario'}
-      disabled={disabled}
-      onClick={onClick}
-      className={cx(
-        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-        activo ? 'bg-emerald-500' : 'bg-slate-300',
-      )}
-    >
-      <span
-        className={cx(
-          'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-          activo ? 'translate-x-4' : 'translate-x-0.5',
-        )}
-      />
-    </button>
-  )
-}
 
 interface Props {
   usuario: Usuario
@@ -92,7 +65,13 @@ export default function FilaUsuario({
       {/* Activo */}
       <div className="flex items-center gap-2 sm:justify-center">
         <span className="etiqueta-sup sm:hidden">Activo</span>
-        <InterruptorActivo activo={u.activo} disabled={!puedeEditarUsuarios} onClick={onAlternarActivo} />
+        <Interruptor
+          activo={u.activo}
+          etiquetaActivo="Desactivar usuario"
+          etiquetaInactivo="Activar usuario"
+          disabled={!puedeEditarUsuarios}
+          onClick={onAlternarActivo}
+        />
       </div>
 
       {/* Acciones */}

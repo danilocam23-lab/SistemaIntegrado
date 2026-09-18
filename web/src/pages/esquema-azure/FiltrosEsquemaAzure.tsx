@@ -1,23 +1,25 @@
 ﻿import type { ChangeEvent } from 'react'
 import { BarraFiltros, Boton, Campo, Icono, Selector } from '../../components/ui'
-import type { AzdoIteracion, AzdoProyecto, TipoWorkItemAzure } from '../../types'
+import type { AzdoProyecto, TipoWorkItemAzure } from '../../types'
 
 interface Props {
   proyectos: AzdoProyecto[]
   proyecto: string
   tipos: TipoWorkItemAzure[]
   tiposSeleccionados: string[]
-  areaPath: string
-  iteraciones: AzdoIteracion[]
+  iteraciones: string[]
   iteracionPath: string
   busqueda: string
   cargando: boolean
   onProyecto: (valor: string) => void
   onTipos: (valores: string[]) => void
-  onAreaPath: (valor: string) => void
   onIteracionPath: (valor: string) => void
   onBusqueda: (valor: string) => void
   onRecargar: () => void
+}
+
+function etiquetaIteracion(ruta: string): string {
+  return ruta.split('\\').pop()?.trim() || ruta
 }
 
 export function FiltrosEsquemaAzure({
@@ -25,14 +27,12 @@ export function FiltrosEsquemaAzure({
   proyecto,
   tipos,
   tiposSeleccionados,
-  areaPath,
   iteraciones,
   iteracionPath,
   busqueda,
   cargando,
   onProyecto,
   onTipos,
-  onAreaPath,
   onIteracionPath,
   onBusqueda,
   onRecargar,
@@ -70,15 +70,6 @@ export function FiltrosEsquemaAzure({
         ))}
       </Selector>
 
-      <Campo
-        etiqueta="Área"
-        value={areaPath}
-        onChange={(evento) => onAreaPath(evento.target.value)}
-        placeholder="Area path"
-        className="min-w-56"
-        compacto
-      />
-
       <Selector
         etiqueta="Iteración"
         value={iteracionPath}
@@ -86,9 +77,15 @@ export function FiltrosEsquemaAzure({
         className="min-w-56"
         compacto
       >
-        <option value="">Todas</option>
+        <option value="">
+          {iteraciones.length === 0
+            ? 'Sin iteraciones configuradas; revisa Administración → Aplicaciones'
+            : 'Todas las permitidas'}
+        </option>
         {iteraciones.map((iteracion) => (
-          <option key={iteracion.path} value={iteracion.path}>{iteracion.path || iteracion.nombre}</option>
+          <option key={iteracion} value={iteracion} title={iteracion}>
+            {etiquetaIteracion(iteracion)}
+          </option>
         ))}
       </Selector>
 

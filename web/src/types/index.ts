@@ -395,12 +395,27 @@ export interface AzdoIteracion {
   path: string
 }
 
+export interface RespuestaIteracionesPermitidasAzure {
+  proyecto: string
+  iteraciones: string[]
+}
+
 export interface TipoWorkItemAzure {
   nombre: string
   referencia: string
   descripcion: string | null
   color: string | null
   icono: string | null
+}
+
+export interface TipoWorkItemAzureConfig {
+  nombre: string
+  color?: string | null
+}
+
+export interface RespuestaTiposConfigAzure {
+  disponibles: TipoWorkItemAzureConfig[]
+  activos: string[]
 }
 
 export interface NivelJerarquiaAzure {

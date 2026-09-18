@@ -1,6 +1,7 @@
 export {
   cx,
   Boton,
+  Interruptor,
   Campo,
   Selector,
   AreaTexto,
