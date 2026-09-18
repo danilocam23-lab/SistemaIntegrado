@@ -43,6 +43,14 @@ function VistaCargando() {
   )
 }
 
+function mensajeArbolVacio(sinNodos: boolean, filtradoPorSquad: boolean): string {
+  if (!sinNodos) return 'No hay coincidencias por título o ID en el árbol cargado.'
+  if (filtradoPorSquad) {
+    return 'El proyecto no devolvió work items con esos filtros. Puede deberse a que las iteraciones configuradas para el squad no contienen work items; revísalas en Administración → Aplicaciones.'
+  }
+  return 'El proyecto no devolvió work items con esos filtros.'
+}
+
 export default function EsquemaAzure() {
   const [proyectos, setProyectos] = useState<AzdoProyecto[]>([])
   const [iteraciones, setIteraciones] = useState<AzdoIteracion[]>([])
@@ -72,6 +80,8 @@ export default function EsquemaAzure() {
   const conteo = useMemo(() => contarPorTipo(nodos), [nodos])
   const resumen = useMemo(() => resumenConteo(conteo), [conteo])
   const proyectoMostrado = respuesta?.proyecto || proyecto || 'Proyecto Azure DevOps'
+  const totalIteracionesAplicadas = respuesta?.iteraciones_aplicadas.length ?? 0
+  const detalleIteracionesAplicadas = respuesta?.iteraciones_aplicadas.join('\n') || undefined
 
   useEffect(() => {
     let cancelado = false
@@ -316,12 +326,19 @@ export default function EsquemaAzure() {
           <>
             <PanelJerarquia jerarquia={jerarquia} />
 
+            {respuesta.filtrado_por_squad && (
+              <Aviso tono="info" className="text-sm">
+                <span title={detalleIteracionesAplicadas}>
+                  Vista limitada a las iteraciones configuradas para el squad: {totalIteracionesAplicadas}{' '}
+                  {totalIteracionesAplicadas === 1 ? 'ruta aplicada' : 'rutas aplicadas'}.
+                </span>
+              </Aviso>
+            )}
+
             {nodosFiltrados.length === 0 ? (
               <Tarjeta>
                 <div className="py-10 text-center text-sm text-slate-500">
-                  {nodos.length === 0
-                    ? 'El proyecto no devolvió work items con esos filtros.'
-                    : 'No hay coincidencias por título o ID en el árbol cargado.'}
+                  {mensajeArbolVacio(nodos.length === 0, respuesta.filtrado_por_squad)}
                 </div>
               </Tarjeta>
             ) : (

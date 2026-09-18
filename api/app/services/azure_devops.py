@@ -195,7 +195,7 @@ class AzureDevOpsService:
         proyecto: str,
         tipos: list[str],
         area_path: str | None = None,
-        iteration_path: str | None = None,
+        iteration_paths: list[str] | None = None,
         estados: list[str] | None = None,
     ) -> str:
         """Arma una WIQL segura para consultar el esquema vivo de Azure DevOps."""
@@ -207,10 +207,16 @@ class AzureDevOpsService:
             condiciones.append(f"[System.WorkItemType] IN ('{tipos_escapados}')")
         if area_path:
             condiciones.append(f"[System.AreaPath] UNDER '{self._escapar_wiql(area_path)}'")
-        if iteration_path:
-            condiciones.append(
-                f"[System.IterationPath] UNDER '{self._escapar_wiql(iteration_path)}'"
+        rutas_iteracion = [ruta for ruta in iteration_paths or [] if ruta]
+        if len(rutas_iteracion) == 1:
+            ruta = self._escapar_wiql(rutas_iteracion[0])
+            condiciones.append(f"[System.IterationPath] UNDER '{ruta}'")
+        elif rutas_iteracion:
+            condiciones_iteracion = " OR ".join(
+                f"[System.IterationPath] UNDER '{self._escapar_wiql(ruta)}'"
+                for ruta in rutas_iteracion
             )
+            condiciones.append(f"({condiciones_iteracion})")
         if estados:
             estados_escapados = "', '".join(self._escapar_wiql(estado) for estado in estados)
             condiciones.append(f"[System.State] IN ('{estados_escapados}')")
@@ -250,9 +256,9 @@ class AzureDevOpsService:
         self,
         proyecto: str,
         tipos: list[str],
-        area_path=None,
-        iteration_path=None,
-        estados=None,
+        area_path: str | None = None,
+        iteration_paths: list[str] | None = None,
+        estados: list[str] | None = None,
         limite: int = 2000,
     ) -> tuple[list[dict], bool]:
         """Consulta work items para el árbol de esquema, sin persistirlos."""
@@ -260,7 +266,7 @@ class AzureDevOpsService:
             proyecto,
             tipos,
             area_path=area_path,
-            iteration_path=iteration_path,
+            iteration_paths=iteration_paths,
             estados=estados,
         )
         async with httpx.AsyncClient(timeout=120) as cliente:
@@ -284,7 +290,61 @@ class AzureDevOpsService:
                     {"ids": ids[i : i + 200], "fields": CAMPOS_ESQUEMA},
                 )
                 crudos.extend(lote.get("value", []))
-        return [self._normalizar_esquema(wi, proyecto) for wi in crudos], truncado
+            items = [self._normalizar_esquema(wi, proyecto) for wi in crudos]
+            if iteration_paths:
+                await self._completar_ancestros_esquema(cliente, proyecto, items)
+        return items, truncado
+
+    async def _completar_ancestros_esquema(
+        self,
+        cliente: httpx.AsyncClient,
+        proyecto: str,
+        items: list[dict],
+        profundidad_maxima: int = 5,
+    ) -> None:
+        """Añade padres faltantes para preservar el árbol jerárquico del esquema.
+
+        Al filtrar por iteración, Azure DevOps puede devolver tareas o historias
+        cuyos padres están fuera de esa iteración. Sin traer esos ancestros,
+        ``_construir_arbol`` los mostraría como raíces sueltas y se perdería la
+        cadena Épica → Feature → Historia → Tarea.
+        """
+        ids_presentes = {item["azdo_id"] for item in items}
+        ids_sin_resultado: set[int] = set()
+        for _ in range(profundidad_maxima):
+            padres_faltantes = [
+                item["parent_id"]
+                for item in items
+                if isinstance(item.get("parent_id"), int)
+                and item["parent_id"] not in ids_presentes
+                and item["parent_id"] not in ids_sin_resultado
+            ]
+            ids_por_traer = list(dict.fromkeys(padres_faltantes))
+            if not ids_por_traer:
+                break
+
+            crudos: list[dict] = []
+            for i in range(0, len(ids_por_traer), 200):
+                lote_ids = ids_por_traer[i : i + 200]
+                lote = await self._fetch(
+                    cliente,
+                    self._url("/_apis/wit/workitemsbatch"),
+                    "POST",
+                    {"ids": lote_ids, "fields": CAMPOS_ESQUEMA},
+                )
+                crudos.extend(lote.get("value", []))
+
+            nuevos = [self._normalizar_esquema(wi, proyecto, contexto=True) for wi in crudos]
+            if not nuevos:
+                ids_sin_resultado.update(ids_por_traer)
+                continue
+
+            for nuevo in nuevos:
+                if nuevo["azdo_id"] not in ids_presentes:
+                    items.append(nuevo)
+                    ids_presentes.add(nuevo["azdo_id"])
+            ids_encontrados = {nuevo["azdo_id"] for nuevo in nuevos}
+            ids_sin_resultado.update(set(ids_por_traer) - ids_encontrados)
 
     def _normalizar(self, wi: dict) -> dict:
         f = wi.get("fields", {})
@@ -304,10 +364,11 @@ class AzureDevOpsService:
             "url": wi.get("url", ""),
         }
 
-    def _normalizar_esquema(self, wi: dict, proyecto: str) -> dict:
+    def _normalizar_esquema(self, wi: dict, proyecto: str, contexto: bool = False) -> dict:
         normalizado = self._normalizar(wi)
         parent_id = wi.get("fields", {}).get("System.Parent")
         normalizado["parent_id"] = int(parent_id) if parent_id else None
+        normalizado["contexto"] = contexto
         normalizado["url_api"] = normalizado.get("url", "")
         normalizado["url"] = (
             f"{self.org_url}/{quote(proyecto)}/_workitems/edit/{normalizado['azdo_id']}"

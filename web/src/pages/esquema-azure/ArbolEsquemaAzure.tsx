@@ -31,6 +31,7 @@ function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar
   const horasCompletadas = numeroHoras(nodo.completed_work)
   const horasOriginales = numeroHoras(nodo.original_estimate)
   const mostrarHoras = horasCompletadas !== 0 || horasOriginales !== 0
+  const esContexto = nodo.contexto
 
   return (
     <div className={cx(nivel > 0 && 'border-l border-slate-200 pl-3')}>
@@ -56,7 +57,10 @@ function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar
         )}
 
         <span
-          className="flex shrink-0 items-center gap-1 text-2xs font-semibold uppercase tracking-wide"
+          className={cx(
+            'flex shrink-0 items-center gap-1 text-2xs font-semibold uppercase tracking-wide',
+            esContexto && 'opacity-60',
+          )}
           style={{ color: color ?? '#64748b' }}
           title={nodo.tipo}
         >
@@ -68,16 +72,31 @@ function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar
           href={nodo.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 font-mono text-2xs text-marca-700 hover:underline"
+          className={cx(
+            'shrink-0 font-mono text-2xs hover:underline',
+            esContexto ? 'text-marca-500' : 'text-marca-700',
+          )}
         >
           #{nodo.azdo_id}
         </a>
 
-        <h3 className="min-w-0 flex-1 truncate text-sm text-slate-900" title={nodo.titulo}>
+        <h3
+          className={cx('min-w-0 flex-1 truncate text-sm', esContexto ? 'text-slate-500' : 'text-slate-900')}
+          title={nodo.titulo}
+        >
           {nodo.titulo}
         </h3>
 
-        <div className="flex shrink-0 items-center gap-3 text-2xs text-slate-400">
+        {esContexto && (
+          <span
+            className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-slate-400"
+            title="Ancestro incluido solo para dar contexto a resultados filtrados por iteración."
+          >
+            contexto
+          </span>
+        )}
+
+        <div className={cx('flex shrink-0 items-center gap-3 text-2xs', esContexto ? 'text-slate-300' : 'text-slate-400')}>
           {nodo.estado && <span>{nodo.estado}</span>}
           {nodo.asignado_a && <span className="hidden sm:inline">{nodo.asignado_a}</span>}
           {mostrarHoras && (

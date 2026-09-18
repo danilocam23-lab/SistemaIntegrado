@@ -413,6 +413,7 @@ export interface NodoEsquemaAzure {
   azdo_id: number
   tipo: string
   titulo: string
+  contexto: boolean
   estado: string | null
   asignado_a: string | null
   area_path: string | null
@@ -431,6 +432,8 @@ export interface RespuestaEsquemaAzure {
   total: number
   truncado: boolean
   tipos_consultados: string[]
+  iteraciones_aplicadas: string[]
+  filtrado_por_squad: boolean
   nodos: NodoEsquemaAzure[]
 }
 

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.config import get_settings
+from app.documents.aplicacion import Aplicacion
 from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
 from app.documents.azdo_config import AzdoConfig
 from app.documents.persona import Persona
@@ -306,6 +307,57 @@ def _construir_arbol(items: list[dict]) -> list[dict]:
 
     ordenar(raices)
     return raices
+
+
+def _normalizar_iteracion_para_comparar(iteracion: str) -> str:
+    return iteracion.strip(" \t\r\n\\").casefold()
+
+
+def _iteracion_habilitada(iteracion: str, permitida: str) -> bool:
+    """Indica si una iteración coincide con una permitida o cuelga de ella."""
+    pedida = _normalizar_iteracion_para_comparar(iteracion)
+    base = _normalizar_iteracion_para_comparar(permitida)
+    return bool(pedida and base and (pedida == base or pedida.startswith(f"{base}\\")))
+
+
+async def _iteraciones_permitidas_contexto(ctx: ContextoAplicacion) -> list[str]:
+    """Une las iteraciones habilitadas de las aplicaciones del contexto."""
+    aplicaciones = await Aplicacion.find({"codigo": {"$in": ctx.codigos}}).to_list()
+    por_codigo = {app.codigo: app for app in aplicaciones}
+    permitidas: list[str] = []
+    vistas: set[str] = set()
+    for codigo in ctx.codigos:
+        app = por_codigo.get(codigo)
+        if app is None:
+            continue
+        for iteracion in app.iteraciones_lista():
+            if iteracion not in vistas:
+                permitidas.append(iteracion)
+                vistas.add(iteracion)
+    return permitidas
+
+
+def _resolver_iteraciones_consulta(
+    iteraciones_permitidas: list[str],
+    iteration_path: str | None,
+) -> tuple[list[str] | None, bool]:
+    """Resuelve las rutas de iteración que se enviarán a WIQL."""
+    pedida = iteration_path.strip() if iteration_path else ""
+    if not iteraciones_permitidas:
+        return ([pedida] if pedida else None), False
+
+    if pedida:
+        habilitada = any(
+            _iteracion_habilitada(pedida, permitida) for permitida in iteraciones_permitidas
+        )
+        if not habilitada:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "La iteración solicitada no está habilitada para el squad.",
+            )
+        return [pedida], True
+
+    return iteraciones_permitidas, True
 
 
 # ── Endpoints de configuración ──
@@ -800,6 +852,11 @@ async def esquema_arbol(
     limite = min(limite, 5000)
     tipos_consultados = _separar_csv(tipos)
     estados_consultados = _separar_csv(estados)
+    iteraciones_permitidas = await _iteraciones_permitidas_contexto(ctx)
+    iteraciones_consulta, filtrado_por_squad = _resolver_iteraciones_consulta(
+        iteraciones_permitidas,
+        iteration_path,
+    )
 
     try:
         if not tipos_consultados:
@@ -816,7 +873,7 @@ async def esquema_arbol(
             proyecto_resuelto,
             tipos_consultados,
             area_path=area_path,
-            iteration_path=iteration_path,
+            iteration_paths=iteraciones_consulta,
             estados=estados_consultados or None,
             limite=limite,
         )
@@ -825,6 +882,8 @@ async def esquema_arbol(
             "total": len(items),
             "truncado": truncado,
             "tipos_consultados": tipos_consultados,
+            "iteraciones_aplicadas": iteraciones_consulta or [],
+            "filtrado_por_squad": filtrado_por_squad,
             "nodos": _construir_arbol(items),
         }
     except (RuntimeError, httpx.HTTPError) as exc:
