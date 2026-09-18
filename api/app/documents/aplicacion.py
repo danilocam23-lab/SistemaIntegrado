@@ -10,8 +10,21 @@ class Aplicacion(DocumentoBase):
     codigo: str
     nombre: str
     descripcion: str = ""
+    iteraciones: str = ""
     activa: bool = True
     creada_por: str | None = None
+
+    def iteraciones_lista(self) -> list[str]:
+        """Devuelve las rutas de iteración normalizadas, sin vacíos ni duplicados."""
+        rutas: list[str] = []
+        vistas: set[str] = set()
+        for linea in self.iteraciones.splitlines():
+            for parte in linea.split(";"):
+                ruta = parte.strip()
+                if ruta and ruta not in vistas:
+                    rutas.append(ruta)
+                    vistas.add(ruta)
+        return rutas
 
     class Settings:
         name = "aplicaciones"

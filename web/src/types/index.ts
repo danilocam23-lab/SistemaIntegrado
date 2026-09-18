@@ -27,6 +27,7 @@ export interface Aplicacion {
   codigo: string
   nombre: string
   descripcion: string
+  iteraciones: string
   activa: boolean
   creada_por: string | null
 }

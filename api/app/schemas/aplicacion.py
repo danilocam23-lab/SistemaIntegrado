@@ -8,13 +8,15 @@ class AplicacionIn(BaseModel):
     codigo: str
     nombre: str
     descripcion: str = ""
+    iteraciones: str = ""
 
 
 class AplicacionUpdate(BaseModel):
-    """Campos editables de una aplicación existente; ambos opcionales."""
+    """Campos editables de una aplicación existente; todos opcionales."""
 
     nombre: str | None = None
     descripcion: str | None = None
+    iteraciones: str | None = None
 
 
 class EstadoIn(BaseModel):
@@ -30,5 +32,6 @@ class AplicacionOut(BaseModel):
     codigo: str
     nombre: str
     descripcion: str
+    iteraciones: str
     activa: bool
     creada_por: str | None = None

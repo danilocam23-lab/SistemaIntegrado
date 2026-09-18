@@ -26,6 +26,7 @@ def _out(a: Aplicacion) -> AplicacionOut:
         codigo=a.codigo,
         nombre=a.nombre,
         descripcion=a.descripcion,
+        iteraciones=a.iteraciones,
         activa=a.activa,
         creada_por=a.creada_por,
     )
@@ -73,6 +74,7 @@ async def crear(
         codigo=codigo,
         nombre=datos.nombre.strip(),
         descripcion=datos.descripcion.strip(),
+        iteraciones=datos.iteraciones.strip(),
         creada_por=str(usuario.id),
     ).insert()
     await provisionar_aplicacion(app.codigo)
@@ -85,7 +87,7 @@ async def editar(
     datos: AplicacionUpdate,
     _: Usuario = permiso("aplicaciones.editar"),
 ) -> AplicacionOut:
-    """Edita el nombre o la descripción de un squad."""
+    """Edita el nombre, la descripción o las iteraciones de un squad."""
     app = await Aplicacion.find_one(Aplicacion.codigo == codigo)
     if app is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Squad no encontrado")
@@ -93,6 +95,8 @@ async def editar(
         app.nombre = datos.nombre.strip()
     if datos.descripcion is not None:
         app.descripcion = datos.descripcion.strip()
+    if datos.iteraciones is not None:
+        app.iteraciones = datos.iteraciones.strip()
     app.marcar_actualizado()
     await app.save()
     return _out(app)
