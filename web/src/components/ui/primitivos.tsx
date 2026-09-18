@@ -234,6 +234,18 @@ export function Chip({
   return <span title={title} className={cx('chip', TONOS_CHIP[tono], className)}>{children}</span>
 }
 
+/**
+ * Tamaño de fuente del valor de un KPI según su longitud renderizada, para
+ * que un número/string largo (p.ej. "106.607,52") achique su letra en vez
+ * de desbordarse fuera de la tarjeta (que recorta con overflow-hidden).
+ */
+function tamanioValorKpi(longitud: number): string {
+  if (longitud <= 6) return 'text-3xl'
+  if (longitud <= 9) return 'text-2xl'
+  if (longitud <= 12) return 'text-xl'
+  return 'text-lg'
+}
+
 export function Kpi({
   rotulo,
   valor,
@@ -247,6 +259,10 @@ export function Kpi({
   acento?: string
   className?: string
 }) {
+  const esTextoONumero = typeof valor === 'string' || typeof valor === 'number'
+  const claseValor = esTextoONumero
+    ? tamanioValorKpi(String(valor).length)
+    : 'text-3xl'
   return (
     <div className={cx('kpi relative overflow-hidden', className)}>
       {acento && (
@@ -254,7 +270,7 @@ export function Kpi({
       )}
       <div className={cx(acento && 'pl-2')}>
         <p className="kpi-rotulo">{rotulo}</p>
-        <p className="kpi-valor">{valor}</p>
+        <p className={cx('kpi-valor', claseValor)}>{valor}</p>
         {nota && <p className="kpi-nota">{nota}</p>}
       </div>
     </div>

@@ -481,7 +481,7 @@ export default function DashboardRequerimientos() {
             {/* KPIs Requerimientos */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Kpi rotulo="Requerimientos" valor={kpis.total} nota={`${kpis.activos} activos`} acento={COLOR_GRAFICA.serie} />
-              <Kpi rotulo="Horas estimadas" valor={kpis.totalHoras.toLocaleString()} nota="total acumulado" acento={COLOR_GRAFICA.serie} />
+              <Kpi rotulo="Horas estimadas" valor={Math.round(kpis.totalHoras).toLocaleString('es-CO')} nota="total acumulado" acento={COLOR_GRAFICA.serie} />
               <Kpi rotulo="Entregas" valor={kpis.totalEntregas} nota={`de ${kpis.total} requerimientos`} acento={COLOR_GRAFICA.serie} />
               <Kpi rotulo="ANS Estimación" valor={`${kpis.ansReqPct}%`} nota={`${kpis.ansReqCumple} / ${kpis.ansReqTotal}`} acento={COLOR_GRAFICA.ok} />
               <Kpi rotulo="ANS Estimación (Hitss)" valor={`${kpis.ansReqEpmPct}%`} nota={`${kpis.ansReqEpmCumple} / ${kpis.ansReqTotal}`} acento={COLOR_GRAFICA.ok} />

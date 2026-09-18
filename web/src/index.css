@@ -285,7 +285,7 @@
     @apply text-2xs font-bold uppercase tracking-wider text-slate-500;
   }
   .kpi-valor {
-    @apply mt-1 text-3xl font-bold tracking-tight text-slate-900;
+    @apply mt-1 font-bold tracking-tight text-slate-900;
     font-variant-numeric: tabular-nums;
   }
   .kpi-nota {
