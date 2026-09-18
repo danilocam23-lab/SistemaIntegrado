@@ -117,7 +117,7 @@ export default function SeccionSeguimientoHitss({
       </div>
       {puedeEditarTipificacion && (
         <Boton variante="primario" onClick={guardar} className="mt-3">
-          Guardar Seguimiento Hitss / Tipificación
+          Guardar cambios
         </Boton>
       )}
     </div>

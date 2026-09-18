@@ -118,7 +118,7 @@ function TarjetaEntrega({
       <div className="mb-3 flex items-center gap-2">
         <span className="tabular-nums text-sm text-slate-600">{porcentaje}{porcentaje !== '—' ? '%' : ''}</span>
         {porcentaje !== '—' && (
-          <span className="inline-block h-1.5 w-full shrink-0 overflow-hidden rounded-full bg-slate-100">
+          <span className="inline-block h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
             <span
               className="block h-full rounded-full bg-marca-600"
               style={{ width: `${Math.min(100, Math.max(0, Number(porcentaje)))}%` }}
