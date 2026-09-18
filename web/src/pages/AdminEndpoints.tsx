@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { FormularioDiagnostico } from './admin-endpoints/FormularioDiagnostico'
 import { FormularioReasignacion } from './admin-endpoints/FormularioReasignacion'
 import { PanelResultado } from './admin-endpoints/PanelResultado'

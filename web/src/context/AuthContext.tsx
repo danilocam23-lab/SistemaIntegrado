@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import client, { TOKEN_KEY, USUARIO_KEY, APP_KEY } from '../api/client'

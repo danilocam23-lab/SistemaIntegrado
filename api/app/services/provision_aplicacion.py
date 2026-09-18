@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Provisión de la estructura base de una aplicación nueva.
 
 Al crear una aplicación se clona la **estructura** (categorías, estados y

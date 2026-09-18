@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Configuración de la aplicación, leída de variables de entorno / archivo .env."""
 from functools import lru_cache
 from pathlib import Path

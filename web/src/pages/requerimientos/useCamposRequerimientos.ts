@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useMemo } from 'react'
 import { REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../../constantes'
 import type { Configuracion as ConfigItem } from '../../types'

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { NombreIcono } from '../../components/ui'
 
 export type Tab = 'tarifas' | 'categorias' | 'roles' | 'tipos_contratacion' | 'festivos' | 'parametros' | 'azure_devops' | 'estados' | 'entregas_actas' | 'requerimientos' | 'carga_excel'

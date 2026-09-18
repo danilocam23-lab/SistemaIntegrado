@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useMemo, useState } from 'react'
 import client, { APP_KEY } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'

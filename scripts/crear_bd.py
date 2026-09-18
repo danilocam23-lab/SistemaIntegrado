@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Crea la base de datos, colecciones e índices del Sistema Integrado HITSS.
 
 Ejecutado por crear-bd.bat usando el venv del backend (PyMongo).

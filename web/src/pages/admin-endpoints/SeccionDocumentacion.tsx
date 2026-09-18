@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useState } from 'react'
 import { Aviso, Campo, Chip, Selector, TablaScroll } from '../../components/ui'
 import { metodoClase } from './catalogoEndpoints'

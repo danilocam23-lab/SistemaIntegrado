@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { FormEvent } from 'react'
 import { AreaTexto, Campo, Selector } from '../../components/ui'
 import { TIPOS_COSTO } from '../../constantes'

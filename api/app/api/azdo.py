@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de integración con Azure DevOps."""
 import logging
 import re
@@ -963,12 +966,24 @@ async def guardar_esquema_tipos_config(
     proyecto: str | None = None,
     usuario_id: str | None = None,
     usuario: Usuario = Depends(usuario_actual),
-    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     _: object = permiso("azure_devops.editar"),
 ) -> dict:
+    """Guarda los tipos activos en la misma config que leerán los endpoints de esquema.
+
+    En modo consolidado ``_resolver_config_contexto`` devuelve la primera config
+    con org_url y PAT; guardar ahí es intencional porque ``GET /tipos-config`` y
+    ``GET /arbol`` resuelven con la misma función, así que leen lo mismo que se
+    acaba de escribir.
+    """
     target = _normalizar_target(target)
     usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
-    cfg, _ = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    cfg, _aplicacion_config_id = await _resolver_config_contexto(
+        ctx,
+        target,
+        None,
+        usuario_id_efectivo,
+    )
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)

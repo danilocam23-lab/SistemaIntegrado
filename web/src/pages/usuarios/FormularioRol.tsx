@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { FormEvent } from 'react'
 import { Aviso, Boton, Campo } from '../../components/ui'
 import { permisoInfo } from './utilidades'

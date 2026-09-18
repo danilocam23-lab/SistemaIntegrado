@@ -1,4 +1,7 @@
-﻿import { Chip, Tarjeta } from '../../components/ui'
+﻿// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
+import { Chip, Tarjeta } from '../../components/ui'
 import type { NivelJerarquiaAzure } from '../../types'
 
 interface Props {

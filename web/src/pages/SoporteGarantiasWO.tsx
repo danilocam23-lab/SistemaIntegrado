@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useCallback, useEffect, useState } from 'react'
 import client from '../api/client'
 import { AreaTexto, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'

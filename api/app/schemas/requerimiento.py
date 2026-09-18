@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Esquemas de entrada del módulo de requerimientos."""
 from datetime import date, datetime
 from decimal import Decimal

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de configuración (parámetros clave/valor globales del proyecto).
 
 Los parámetros de configuración son globales: no están segmentados por squad.

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { Asignacion, BacklogFuturo, Persona } from '../../types'
 
 export const ESTADO_ACTIVO = 'ESTIMACION APROBADA ENTREGA PENDIENTE'

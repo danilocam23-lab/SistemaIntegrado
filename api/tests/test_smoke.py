@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Humo: la app arranca contra Mongo de pruebas y responde (ADR-0008 F2.1)."""
 
 

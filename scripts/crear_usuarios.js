@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 // ================================================================
 // crear_usuarios.js
 // Crea el usuario superadmin inicial en la coleccion "usuarios".

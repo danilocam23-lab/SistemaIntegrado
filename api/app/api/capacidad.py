@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de capacidades mensuales (por persona o por squad)."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel

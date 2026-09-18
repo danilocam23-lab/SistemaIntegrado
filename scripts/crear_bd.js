@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 // ================================================================
 // crear_bd.js
 // Script de creacion de BD - Sistema Integrado HITSS

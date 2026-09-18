@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Test de `GET /api/dashboard/consolidado` (ADR-0008 F3.3, P8).
 
 Antes hacía 3 consultas por aplicación dentro de un bucle (N+1); se reescribe

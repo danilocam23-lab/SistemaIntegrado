@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests de `/api/cifras` (ADR-0008 F3.1).
 
 Los cuatro endpoints se reescribieron de "traer la colección completa y agregar

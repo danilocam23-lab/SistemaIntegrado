@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests de ``GET /api/admin/endpoints/catalogo`` (ADR-0008 F4.1/F4.2/F4.3).
 
 Cubre lo que pide el plan de la ronda F4:

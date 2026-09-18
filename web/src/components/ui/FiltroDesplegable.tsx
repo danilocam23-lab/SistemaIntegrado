@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useEffect, useRef } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { cx } from './primitivos'

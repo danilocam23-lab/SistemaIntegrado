@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Pruebas del campo de iteraciones permitido para aplicaciones."""
 from app.config import get_settings
 from app.db import obtener_cliente

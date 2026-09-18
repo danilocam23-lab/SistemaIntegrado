@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests unitarios de la máquina de estados (ADR-0008 F2.2).
 
 Lógica pura, sin base de datos: cubre las transiciones válidas e inválidas de

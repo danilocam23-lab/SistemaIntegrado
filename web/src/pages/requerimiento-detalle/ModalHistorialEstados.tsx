@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import Modal from '../../components/Modal'
 import { Chip, TablaScroll } from '../../components/ui/primitivos'
 import { fmtFechaCo, fmtDuracion } from '../../utilidades/fechas'

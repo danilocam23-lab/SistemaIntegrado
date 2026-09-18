@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests del filtrado de esquema de Azure por iteraciones de aplicación."""
 import httpx
 

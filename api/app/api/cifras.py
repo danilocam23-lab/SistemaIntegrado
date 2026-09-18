@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de cifras agregadas: tableros por estado, squad y cumplimiento de ANS.
 
 ADR-0008 F3.1 (P2): los cuatro endpoints traían la colección `requerimientos`

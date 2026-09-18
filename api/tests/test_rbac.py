@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests de RBAC (ADR-0008 F2.4).
 
 Por cada permiso de este subconjunto representativo del catálogo

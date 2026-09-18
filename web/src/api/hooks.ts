@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useCallback, useEffect, useState } from 'react'
 import client, { APP_KEY } from './client'
 import { ESTADOS_ENTREGA, ESTADOS_REQUERIMIENTO } from '../constantes'

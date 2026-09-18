@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Colección operativa: aplicativos (software objetivo de un requerimiento).
 
 Era la entidad ``Aplicacion`` del Sistema Liquidador; se renombró para no

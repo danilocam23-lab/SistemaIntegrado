@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Esquemas del módulo de administración de aplicaciones."""
 from pydantic import BaseModel
 

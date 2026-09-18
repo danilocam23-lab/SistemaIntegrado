@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de requerimientos — núcleo del dominio de liquidación."""
 from datetime import UTC, datetime
 from decimal import Decimal

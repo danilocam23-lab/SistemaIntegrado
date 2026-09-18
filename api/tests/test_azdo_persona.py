@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests de Azure DevOps ligados a la Persona del usuario autenticado.
 
 Cubren la resolución de config de scope ``user`` sin ``usuario_id`` explícito,

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { Dispatch, SetStateAction } from 'react'
 import { Link } from 'react-router-dom'
 import { Boton, Chip, Icono } from '../../components/ui'

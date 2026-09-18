@@ -1,4 +1,7 @@
-﻿import type { ChangeEvent } from 'react'
+﻿// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
+import type { ChangeEvent } from 'react'
 import { BarraFiltros, Boton, Campo, Icono, Selector } from '../../components/ui'
 import type { AzdoProyecto, TipoWorkItemAzure } from '../../types'
 

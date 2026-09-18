@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Infraestructura común de la suite de tests (ADR-0008 F2.1).
 
 Requiere un MongoDB local corriendo en ``MONGO_URL`` (por defecto

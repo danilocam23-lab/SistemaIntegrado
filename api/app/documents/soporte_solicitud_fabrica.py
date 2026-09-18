@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Colecciones operativas para Soporte / Solicitudes Fábrica."""
 from datetime import datetime
 

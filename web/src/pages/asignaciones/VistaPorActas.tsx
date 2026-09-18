@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { Categoria, Persona } from '../../types'
 import type { AsignacionItem, GrupoReq } from './tipos'

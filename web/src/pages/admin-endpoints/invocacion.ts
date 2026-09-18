@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { ParametroEndpoint } from '../../types'
 
 /** Resultado de una invocación real contra el backend (F4.7/F4.8, ADR-0008). */

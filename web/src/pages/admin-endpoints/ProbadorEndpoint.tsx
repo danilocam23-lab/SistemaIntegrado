@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import Modal from '../../components/Modal'
 import { Aviso, Boton, Campo, Chip } from '../../components/ui'
 import { metodoClase } from './catalogoEndpoints'

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Colección operativa: configuración de Azure DevOps.
 
 Almacena la conexión a Azure DevOps (org URL, PAT, proyecto por defecto)

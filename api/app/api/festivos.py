@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de festivos (insumo del cálculo de ANS).
 
 Los festivos son globales al proyecto: aplican para todos los squads.

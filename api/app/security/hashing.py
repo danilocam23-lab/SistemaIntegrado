@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Hashing y verificación de contraseñas con bcrypt.
 
 Se usa la librería ``bcrypt`` directamente; passlib quedó sin mantenimiento y es

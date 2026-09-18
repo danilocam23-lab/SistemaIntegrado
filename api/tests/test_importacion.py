@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Test de `GET /api/importacion/excel/plantilla` (ADR-0008 F3, P4).
 
 `exportar_plantilla` movió la construcción del libro de Excel (openpyxl,

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Excepciones de dominio y manejo centralizado de errores (ADR-0008 F2.6).
 
 Antes de esto, cada router repetía su propio ``try/except ValueError ->

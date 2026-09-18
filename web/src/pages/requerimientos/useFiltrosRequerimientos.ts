@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useMemo, useState } from 'react'
 import type { Persona, Requerimiento } from '../../types'
 import type { Filtros } from './tipos'

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Cálculo de ANS por días hábiles (portado del Sistema Liquidador)."""
 from datetime import date, datetime, time, timedelta
 

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { Chip, Interruptor, Selector, cx } from '../../components/ui'
 import type { Rol, Usuario } from '../../types'
 import { colorAvatar, inicialesDe, squadsChipsUsuario } from './utilidades'

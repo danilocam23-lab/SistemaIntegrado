@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 /* Utilidades compartidas por la pantalla de Usuarios (lista de usuarios y
    maestro-detalle de roles y permisos). No llaman a la API: son helpers
    puros de presentación/agrupación sobre datos que ya trae Usuarios.tsx. */

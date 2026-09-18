@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Importador del Excel 'BITÁCORA GENERAL' (portado del Sistema Liquidador a Beanie).
 
 Cada fila del Excel es un requerimiento + una entrega. Varias filas con el mismo

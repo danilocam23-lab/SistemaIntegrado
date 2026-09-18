@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { MutableRefObject } from 'react'
 import { Campo, TablaScroll } from '../../components/ui'
 import type { Capacidad } from '../../types'

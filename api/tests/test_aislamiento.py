@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests del invariante multi-tenant (ADR-0008 F2.3).
 
 Cubre, para un conjunto representativo de rutas operativas —``/api/squads``

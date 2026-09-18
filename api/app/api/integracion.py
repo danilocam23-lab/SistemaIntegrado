@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de integración externa (Power Automate, etc.).
 
 Expone datos aplanados con autenticación por API Key (header ``X-API-Key``).

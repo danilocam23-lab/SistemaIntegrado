@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { AreaTexto, Aviso, Campo, Selector } from '../../components/ui'
 import { opcionesEnum, tipoDeCampo } from './invocacion'
 import type { EstadoProbadorEndpoint } from './useProbadorEndpoint'

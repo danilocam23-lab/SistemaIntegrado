@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Cálculo del valor de una entrega (portado del Sistema Liquidador)."""
 from datetime import datetime
 from decimal import Decimal

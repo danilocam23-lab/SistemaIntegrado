@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests de ``LiquidacionService`` (ADR-0008 F2.2/F3.6), incluida la regresión C2.
 
 ``_tarifa_vigente`` filtra por ``aplicacion_id`` (más el catálogo "global"), así

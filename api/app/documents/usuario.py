@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Colección de plataforma: usuarios (cuentas de acceso)."""
 from pymongo import ASCENDING, IndexModel
 

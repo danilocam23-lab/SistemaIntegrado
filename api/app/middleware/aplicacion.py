@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Resolución de la aplicación activa (aislamiento multi-tenant).
 
 Cada petición a recursos operativos debe traer la cabecera ``X-Aplicacion``:

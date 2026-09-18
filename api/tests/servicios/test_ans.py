@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests de ``ANSService.calcular`` (ADR-0008 F2.2), incluida la regresión C1."""
 from datetime import date, datetime
 

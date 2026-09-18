@@ -1,4 +1,7 @@
-﻿import type { NodoEsquemaAzure } from '../../types'
+﻿// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
+import type { NodoEsquemaAzure } from '../../types'
 
 export function idsDelArbol(nodos: NodoEsquemaAzure[]): number[] {
   return nodos.flatMap((nodo) => [nodo.azdo_id, ...idsDelArbol(nodo.hijos)])

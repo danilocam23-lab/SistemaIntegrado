@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 /**
  * Tipos y utilidades compartidas por las listas de "Detalle ANS"
  * (`RequerimientosDetalleANS.tsx` + `ListaRequerimientosAns.tsx` /

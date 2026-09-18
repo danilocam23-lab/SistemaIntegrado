@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Test de `sincronizar_iteracion` (ADR-0008 F3.3, P5).
 
 Antes hacía un `find_one` (Persona) + `find_one` (AzdoWorkItem) + `save` por

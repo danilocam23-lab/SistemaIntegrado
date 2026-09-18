@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import type { EntregasActasCampo } from '../../constantes'
 
 /** Agrupa una lista de campos configurables por su `grupo`, en un orden fijo legible. */

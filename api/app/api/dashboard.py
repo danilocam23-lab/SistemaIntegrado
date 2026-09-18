@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router del dashboard consolidado (solo lectura, roles admin).
 
 Devuelve cifras agregadas con la aplicación como dimensión. No mezcla datos:

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de tarifas (valor hora para liquidación T&M).
 
 Las tarifas son globales al proyecto (no están segmentadas por squad),

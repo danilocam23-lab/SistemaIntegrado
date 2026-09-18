@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Script de diagnóstico para la colección Bitácora."""
 import asyncio
 from motor.motor_asyncio import AsyncClient

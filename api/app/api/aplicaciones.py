@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Router de administración de aplicaciones (tenants) y sus usuarios."""
 from beanie.operators import In
 from fastapi import APIRouter, Depends, HTTPException, status

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 export const ESTADOS_REQUERIMIENTO = [
   'ESTIMACION EN CURSO POR HITSS',
   'ESTIMACION EN ESPERA DE APROBACION POR EPM',

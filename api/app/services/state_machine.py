@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Máquina de estados de Requerimiento y Entrega (lógica pura, portada del Liquidador)."""
 from app.documents.enums import EstadoEntrega, EstadoRequerimiento
 

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Test de `/api/estimaciones/upload/{id}` (ADR-0008 F3, P4).
 
 `upload_estimacion` movió el parseo síncrono de `openpyxl` a un hilo

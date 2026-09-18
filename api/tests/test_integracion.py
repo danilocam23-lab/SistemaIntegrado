@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests de ``/api/integracion/*`` (ADR-0008 F2.5).
 
 Estos 4 endpoints los consume Power Automate en producción y usan

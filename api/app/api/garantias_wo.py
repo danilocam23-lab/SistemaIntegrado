@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Endpoints para gestión de garantías de Work Orders."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Script para normalizar el campo mes_aprobacion en todos los requerimientos existentes.
 
 Convierte cualquier formato de mes (ENERO, enero 2025, ENE-25, etc.) al formato

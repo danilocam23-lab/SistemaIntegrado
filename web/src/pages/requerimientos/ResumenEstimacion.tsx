@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { Kpi, Tarjeta } from '../../components/ui'
 import type { Estimacion } from '../../types'
 import { formatNumber } from './utilidades'

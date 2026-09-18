@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useCallback, useMemo } from 'react'
 import type { Capacidad, Categoria, Configuracion, Persona, Requerimiento } from '../../types'
 import { ESTADO_ACTIVO, ROLES_EXCLUIDOS } from './tipos'

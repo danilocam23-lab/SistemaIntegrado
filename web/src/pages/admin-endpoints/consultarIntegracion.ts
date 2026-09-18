@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 /** Llama a un endpoint de `/api/integracion/*` autenticado con `X-API-Key` (sin pasar por el cliente axios). */
 export async function consultarIntegracion(
   ruta: string,

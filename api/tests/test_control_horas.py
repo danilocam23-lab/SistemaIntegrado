@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Test de `PUT /api/control-horas/todos` (ADR-0008 F3.3, P6).
 
 Antes hacía un `find_one` + `save` por registro dentro del bucle; se reescribe

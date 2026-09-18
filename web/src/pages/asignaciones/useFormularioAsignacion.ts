@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Requerimiento } from '../../types'
 import type { AsignacionItem, OpcionReq } from './tipos'

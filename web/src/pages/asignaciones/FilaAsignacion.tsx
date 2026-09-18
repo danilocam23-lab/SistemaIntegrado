@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 import { Campo, Icono } from '../../components/ui'
 import type { Categoria, Persona } from '../../types'
 import type { AsignacionItem, ItemGrupo } from './tipos'

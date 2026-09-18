@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Tests de construcción de la WIQL de esquema de Azure DevOps."""
 from app.services.azure_devops import AzureDevOpsService
 

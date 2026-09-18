@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Scheduler de auto-sincronización con Azure DevOps (APScheduler).
 
 Cada 30 minutos revisa las aplicaciones con auto-sync activo (configuración

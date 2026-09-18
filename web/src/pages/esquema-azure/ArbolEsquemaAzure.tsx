@@ -1,4 +1,7 @@
-﻿import { Boton, Icono, Tarjeta, cx } from '../../components/ui'
+﻿// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
+import { Boton, Icono, Tarjeta, cx } from '../../components/ui'
 import type { NodoEsquemaAzure, TipoWorkItemAzure } from '../../types'
 import { colorAzure } from './utilidades'
 

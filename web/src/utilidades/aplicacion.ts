@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 /**
  * Cabecera `X-Aplicacion` para las escrituras de asignaciones cuando el cliente
  * está en modo consolidado (`__todas__`) y el endpoint necesita el código real

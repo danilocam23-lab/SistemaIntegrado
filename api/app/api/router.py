@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Agrega todos los routers bajo el prefijo /api."""
 from fastapi import APIRouter
 from fastapi.routing import APIRoute

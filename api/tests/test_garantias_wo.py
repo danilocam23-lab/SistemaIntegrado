@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+# SPDX-License-Identifier: MIT
+
 """Test de `GET /api/garantias-wo` (ADR-0008 F3.3/C4, P7).
 
 El backfill de `descripcion`/`estado_wo` en registros antiguos hacía un

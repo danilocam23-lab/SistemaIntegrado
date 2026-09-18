@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
+// SPDX-License-Identifier: MIT
+
 /** Da formato legible (ej. "2 días 3 horas 10 min") a una duración en segundos. */
 export function fmtDuracion(segundos: number | null): string {
   if (segundos == null) return '—'
