@@ -5,36 +5,60 @@ import { useEffect, useMemo, useState } from 'react'
 import client from '../../api/client'
 import { mensajeError } from '../../api/hooks'
 import { Aviso, Boton, Interruptor, Tarjeta } from '../../components/ui'
+import { SelectorPersonaAzure } from '../../components/azure/SelectorPersonaAzure'
+import { useConfigPersonaAzure } from '../../components/azure/useConfigPersonaAzure'
 import { useAuth } from '../../context/AuthContext'
 import type { RespuestaTiposConfigAzure } from '../../types'
 
 const TARGET_AZURE = 'hitss'
 
+const AVISO_CACHE_DEFECTO =
+  'Mostrando la última lista conocida de tipos: no se pudo consultar Azure DevOps, así que puede estar incompleta o desactualizada. Revísala antes de guardar.'
+
+function paramsTipos(usuarioId: string): URLSearchParams {
+  const params = new URLSearchParams()
+  params.set('target', TARGET_AZURE)
+  if (usuarioId) params.set('usuario_id', usuarioId)
+  return params
+}
+
 export function SeccionAzureDevOps() {
   const { tienePermiso } = useAuth()
   const puedeEditar = tienePermiso('azure_devops.editar')
+  const { usuarioId, puedeElegir, personasConConfig, personaSeleccionada, cambiarUsuario } =
+    useConfigPersonaAzure(TARGET_AZURE)
   const [disponibles, setDisponibles] = useState<RespuestaTiposConfigAzure['disponibles']>([])
   const [activos, setActivos] = useState<Set<string>>(new Set())
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
+  const [avisoCache, setAvisoCache] = useState('')
 
-  const activosOrdenados = useMemo(
-    () => disponibles.map((tipo) => tipo.nombre).filter((nombre) => activos.has(nombre)),
-    [activos, disponibles],
-  )
+  const activosOrdenados = useMemo(() => {
+    const nombresDisponibles = new Set(disponibles.map((tipo) => tipo.nombre))
+    const visibles = disponibles.map((tipo) => tipo.nombre).filter((nombre) => activos.has(nombre))
+    // Preservamos los activos que NO están en `disponibles`. Cuando la lista viene
+    // cacheada (Azure no respondió) puede estar incompleta, y enviar solo la
+    // intersección borraría tipos que la vista nunca pudo mostrar (p. ej.
+    // "Contextualización"). No es redundante: sin esto, "Guardar" destruiría
+    // configuración que el usuario no vio ni tocó.
+    const ocultosActivos = [...activos].filter((nombre) => !nombresDisponibles.has(nombre))
+    return [...visibles, ...ocultosActivos]
+  }, [activos, disponibles])
 
   useEffect(() => {
     let cancelado = false
     setCargando(true)
     setAviso('')
+    setAvisoCache('')
     client
-      .get<RespuestaTiposConfigAzure>(`/azdo/esquema/tipos-config?target=${TARGET_AZURE}`)
+      .get<RespuestaTiposConfigAzure>(`/azdo/esquema/tipos-config?${paramsTipos(usuarioId).toString()}`)
       .then(({ data }) => {
         if (cancelado) return
         setDisponibles(data.disponibles)
         setActivos(new Set(data.activos))
+        setAvisoCache(data.cacheado ? data.aviso || AVISO_CACHE_DEFECTO : '')
       })
       .catch((error) => {
         if (!cancelado) setAviso(mensajeError(error))
@@ -45,7 +69,7 @@ export function SeccionAzureDevOps() {
     return () => {
       cancelado = true
     }
-  }, [])
+  }, [usuarioId])
 
   function alternarTipo(nombre: string): void {
     setActivos((actual) => {
@@ -64,11 +88,12 @@ export function SeccionAzureDevOps() {
     setOk('')
     try {
       const { data } = await client.put<RespuestaTiposConfigAzure>(
-        `/azdo/esquema/tipos-config?target=${TARGET_AZURE}`,
+        `/azdo/esquema/tipos-config?${paramsTipos(usuarioId).toString()}`,
         { activos: activosOrdenados },
       )
       setDisponibles(data.disponibles)
       setActivos(new Set(data.activos))
+      setAvisoCache(data.cacheado ? data.aviso || AVISO_CACHE_DEFECTO : '')
       setOk('Configuración de tipos de work item guardada.')
     } catch (error) {
       setAviso(mensajeError(error))
@@ -83,6 +108,15 @@ export function SeccionAzureDevOps() {
         Activa los tipos de work item que se consultan en el Esquema de Azure para el proyecto HITSS.
       </p>
 
+      <SelectorPersonaAzure
+        puedeElegir={puedeElegir}
+        personasConConfig={personasConConfig}
+        usuarioId={usuarioId}
+        personaSeleccionada={personaSeleccionada}
+        onCambiar={cambiarUsuario}
+      />
+
+      {avisoCache && <Aviso tono="info">{avisoCache}</Aviso>}
       {aviso && <Aviso tono="error">{aviso}</Aviso>}
       {ok && <Aviso tono="exito">{ok}</Aviso>}
       {!puedeEditar && (

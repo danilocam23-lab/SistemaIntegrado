@@ -5,24 +5,26 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
-import { Aviso, Boton, EncabezadoPagina, Icono, Selector, Tarjeta } from '../components/ui'
+import { Aviso, Boton, EncabezadoPagina, Icono, Tarjeta } from '../components/ui'
 import type {
   AzdoProyecto,
   NivelJerarquiaAzure,
   RespuestaEsquemaAzure,
   RespuestaIteracionesPermitidasAzure,
-  RespuestaPersonasConfigAzure,
   RespuestaTiposAzure,
   TipoWorkItemAzure,
 } from '../types'
+import { useAuth } from '../context/AuthContext'
+import { SelectorPersonaAzure } from '../components/azure/SelectorPersonaAzure'
+import { useConfigPersonaAzure } from '../components/azure/useConfigPersonaAzure'
 import { ArbolEsquemaAzure } from './esquema-azure/ArbolEsquemaAzure'
 import { FiltrosEsquemaAzure } from './esquema-azure/FiltrosEsquemaAzure'
 import { PanelJerarquia } from './esquema-azure/PanelJerarquia'
+import { ZonaSincronizacion } from './esquema-azure/ZonaSincronizacion'
 import { contarPorTipo, filtrarArbol, idsDelArbol, resumenConteo } from './esquema-azure/utilidades'
 
 const TARGET_AZURE = 'hitss'
 const LIMITE_ARBOL = 2000
-const CLAVE_USUARIO_ESQUEMA = 'azdo-esquema-usuario-id'
 
 function estadoHttp(error: unknown): number | undefined {
   return (error as { response?: { status?: number } }).response?.status
@@ -55,9 +57,12 @@ function mensajeArbolVacio(sinNodos: boolean, filtradoPorSquad: boolean): string
 }
 
 export default function EsquemaAzure() {
+  const { tienePermiso } = useAuth()
+  const puedeSincronizar = tienePermiso('azure_devops.editar')
   const [proyectos, setProyectos] = useState<AzdoProyecto[]>([])
   const [iteraciones, setIteraciones] = useState<string[]>([])
   const [tipos, setTipos] = useState<TipoWorkItemAzure[]>([])
+  const [tiposActivos, setTiposActivos] = useState<string[] | null>(null)
   const [jerarquia, setJerarquia] = useState<NivelJerarquiaAzure[]>([])
   const [respuesta, setRespuesta] = useState<RespuestaEsquemaAzure | null>(null)
   const [proyecto, setProyecto] = useState('')
@@ -68,14 +73,8 @@ export default function EsquemaAzure() {
   const [sinConfigurar, setSinConfigurar] = useState(false)
   const [error, setError] = useState('')
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set())
-  const [configPersonas, setConfigPersonas] = useState<RespuestaPersonasConfigAzure | null>(null)
-  const [usuarioId, setUsuarioId] = useState<string>(
-    () => window.localStorage.getItem(CLAVE_USUARIO_ESQUEMA) ?? '',
-  )
-
-  const puedeElegir = configPersonas?.puede_elegir_cualquiera ?? false
-  const personasConConfig = configPersonas?.personas.filter((p) => p.tiene_config) ?? []
-  const personaSeleccionada = personasConConfig.find((p) => p.id === usuarioId) ?? null
+  const { usuarioId, puedeElegir, personasConConfig, personaSeleccionada, cambiarUsuario } =
+    useConfigPersonaAzure(TARGET_AZURE)
 
   const nodos = respuesta?.nodos ?? []
   const nodosFiltrados = useMemo(() => filtrarArbol(nodos, busqueda), [nodos, busqueda])
@@ -85,32 +84,25 @@ export default function EsquemaAzure() {
   const totalIteracionesAplicadas = respuesta?.iteraciones_aplicadas.length ?? 0
   const detalleIteracionesAplicadas = respuesta?.iteraciones_aplicadas.join('\n') || undefined
 
-  useEffect(() => {
-    let cancelado = false
-    client
-      .get<RespuestaPersonasConfigAzure>(`/azdo/personas-config?target=${TARGET_AZURE}`)
-      .then(({ data }) => {
-        if (cancelado) return
-        setConfigPersonas(data)
-        const guardado = window.localStorage.getItem(CLAVE_USUARIO_ESQUEMA)
-        if (guardado && !data.personas.some((p) => p.tiene_config && p.id === guardado)) {
-          window.localStorage.removeItem(CLAVE_USUARIO_ESQUEMA)
-          setUsuarioId('')
-        }
-      })
-      .catch(() => {
-        if (!cancelado) setConfigPersonas(null)
-      })
-    return () => {
-      cancelado = true
-    }
-  }, [])
+  // El desplegable solo ofrece los tipos activos configurados en el tab. Si el
+  // backend aún no envía `activos` (clave ausente → null) mostramos todos.
+  const tiposOfrecidos = useMemo<TipoWorkItemAzure[]>(() => {
+    if (tiposActivos === null) return tipos
+    const meta = new Map(tipos.map((t) => [t.nombre, t]))
+    return tiposActivos.map(
+      (nombre) =>
+        meta.get(nombre) ?? { nombre, referencia: nombre, descripcion: null, color: null, icono: null },
+    )
+  }, [tipos, tiposActivos])
 
-  function cambiarUsuario(valor: string) {
-    setUsuarioId(valor)
-    if (valor) window.localStorage.setItem(CLAVE_USUARIO_ESQUEMA, valor)
-    else window.localStorage.removeItem(CLAVE_USUARIO_ESQUEMA)
-  }
+  // Si un tipo seleccionado deja de estar activo, lo quitamos para no enviarlo al backend.
+  useEffect(() => {
+    if (tiposActivos === null) return
+    setTiposSeleccionados((actual) => {
+      const permitidos = actual.filter((nombre) => tiposActivos.includes(nombre))
+      return permitidos.length === actual.length ? actual : permitidos
+    })
+  }, [tiposActivos])
 
   const cargarDatos = useCallback(async () => {
     setCargando(true)
@@ -120,6 +112,7 @@ export default function EsquemaAzure() {
     const paramsTipos = parametrosBase(proyecto, usuarioId)
     const paramsArbol = parametrosBase(proyecto, usuarioId)
     paramsArbol.set('limite', String(LIMITE_ARBOL))
+    paramsArbol.set('origen', 'sincronizado')
     if (tiposSeleccionados.length > 0) paramsArbol.set('tipos', tiposSeleccionados.join(','))
     if (iteracionPath) paramsArbol.set('iteration_path', iteracionPath)
 
@@ -162,9 +155,11 @@ export default function EsquemaAzure() {
       if (respTipos.status === 'fulfilled') {
         setTipos(respTipos.value.data.tipos)
         setJerarquia(respTipos.value.data.jerarquia)
+        setTiposActivos(respTipos.value.data.activos ?? null)
       } else {
         setTipos([])
         setJerarquia([])
+        setTiposActivos(null)
       }
 
       // 3) Árbol: si falla, mostramos el mensaje del backend tal cual, dejando el
@@ -242,41 +237,19 @@ export default function EsquemaAzure() {
       />
 
       <div className="mx-auto max-w-[1600px] space-y-5 px-4 sm:px-6">
-        {puedeElegir && (
-          <div className="flex items-end gap-3">
-            <Selector
-              etiqueta="Configuración (PAT)"
-              value={usuarioId}
-              onChange={(evento) => cambiarUsuario(evento.target.value)}
-              disabled={personasConConfig.length === 0}
-              className="min-w-64"
-              compacto
-            >
-              {personasConConfig.length === 0 ? (
-                <option value="">Sin configuraciones personales</option>
-              ) : (
-                <>
-                  <option value="">Configuración global</option>
-                  {personasConConfig.map((persona) => (
-                    <option key={persona.id} value={persona.id}>
-                      {persona.nombre}{persona.email ? ` (${persona.email})` : ''}
-                    </option>
-                  ))}
-                </>
-              )}
-            </Selector>
-            {personaSeleccionada && (
-              <span className="pb-2 text-xs font-medium text-marca">
-                Usando la configuración de {personaSeleccionada.nombre}
-              </span>
-            )}
-          </div>
-        )}
+        <SelectorPersonaAzure
+          puedeElegir={puedeElegir}
+          personasConConfig={personasConConfig}
+          usuarioId={usuarioId}
+          personaSeleccionada={personaSeleccionada}
+          onCambiar={cambiarUsuario}
+        />
 
         <FiltrosEsquemaAzure
           proyectos={proyectos}
           proyecto={proyecto}
-          tipos={tipos}
+          tipos={tiposOfrecidos}
+          sinTiposActivos={tiposActivos !== null && tiposOfrecidos.length === 0}
           tiposSeleccionados={tiposSeleccionados}
           iteraciones={iteraciones}
           iteracionPath={iteracionPath}
@@ -287,6 +260,15 @@ export default function EsquemaAzure() {
           onIteracionPath={setIteracionPath}
           onBusqueda={setBusqueda}
           onRecargar={() => void cargarDatos()}
+        />
+
+        <ZonaSincronizacion
+          target={TARGET_AZURE}
+          proyecto={proyecto}
+          usuarioId={usuarioId}
+          puedeEditar={puedeSincronizar}
+          ultimaSync={respuesta?.ultima_sync ?? null}
+          onSincronizado={() => void cargarDatos()}
         />
 
         {sinConfigurar && (
@@ -318,7 +300,7 @@ export default function EsquemaAzure() {
 
         {!cargando && !sinConfigurar && !error && respuesta && (
           <>
-            <PanelJerarquia jerarquia={jerarquia} />
+            <PanelJerarquia jerarquia={jerarquia} tiposActivos={tiposActivos} />
 
             {respuesta.filtrado_por_squad && (
               <Aviso tono="info" className="text-sm">
@@ -332,7 +314,9 @@ export default function EsquemaAzure() {
             {nodosFiltrados.length === 0 ? (
               <Tarjeta>
                 <div className="py-10 text-center text-sm text-slate-500">
-                  {mensajeArbolVacio(nodos.length === 0, respuesta.filtrado_por_squad)}
+                  {respuesta.sin_sincronizar
+                    ? 'El espejo de Azure DevOps aún no se ha sincronizado. Pulsa «Sincronizar» para traer los work items del proyecto.'
+                    : mensajeArbolVacio(nodos.length === 0, respuesta.filtrado_por_squad)}
                 </div>
               </Tarjeta>
             ) : (

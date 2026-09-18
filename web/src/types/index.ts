@@ -419,6 +419,8 @@ export interface TipoWorkItemAzureConfig {
 export interface RespuestaTiposConfigAzure {
   disponibles: TipoWorkItemAzureConfig[]
   activos: string[]
+  cacheado?: boolean
+  aviso?: string | null
 }
 
 export interface NivelJerarquiaAzure {
@@ -445,6 +447,8 @@ export interface NodoEsquemaAzure {
   hijos: NodoEsquemaAzure[]
 }
 
+export type OrigenEsquemaAzure = 'sincronizado' | 'vivo'
+
 export interface RespuestaEsquemaAzure {
   proyecto: string
   total: number
@@ -453,12 +457,35 @@ export interface RespuestaEsquemaAzure {
   iteraciones_aplicadas: string[]
   filtrado_por_squad: boolean
   nodos: NodoEsquemaAzure[]
+  origen: OrigenEsquemaAzure
+  ultima_sync: string | null
+  sin_sincronizar: boolean
+}
+
+export interface RespuestaSyncEsquemaAzure {
+  estado: 'en_curso'
+  proyecto: string
+  iniciado_en: string
+}
+
+export type EstadoSyncEsquemaAzure = 'nunca' | 'en_curso' | 'success' | 'error'
+
+export interface RespuestaEstadoSyncEsquemaAzure {
+  estado: EstadoSyncEsquemaAzure
+  proyecto: string
+  work_items: number
+  particiones_completadas: number
+  particiones_totales: number
+  iniciado_en: string | null
+  finalizado_en: string | null
+  error: string | null
 }
 
 export interface RespuestaTiposAzure {
   proyecto: string
   tipos: TipoWorkItemAzure[]
   jerarquia: NivelJerarquiaAzure[]
+  activos?: string[]
 }
 
 export interface PersonaConfigAzure {

@@ -7,20 +7,29 @@ import re
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.config import get_settings
 from app.documents.aplicacion import Aplicacion
-from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
+from app.documents.azdo import (
+    AzdoEsquemaItem,
+    AzdoEsquemaSyncLog,
+    AzdoSyncLog,
+    AzdoWorkItem,
+)
 from app.documents.azdo_config import AzdoConfig
 from app.documents.persona import Persona
 from app.documents.usuario import Usuario
 from app.errors import ErrorDominio, ErrorIntegracion, NoEncontrado
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
 from app.security.deps import permiso, usuario_actual
+from app.services.azdo_esquema_sync import (
+    ejecutar_sincronizacion_esquema,
+    preparar_corrida,
+)
 from app.services.azdo_sync import sincronizar_iteracion
-from app.services.azure_devops import AzureDevOpsService
+from app.services.azure_devops import AzureDevOpsService, normalizar_org_key
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/azdo", tags=["azure-devops"])
@@ -1000,6 +1009,136 @@ async def guardar_esquema_tipos_config(
     return {"proyecto": proyecto_resuelto, "activos": cfg.tipos_esquema_activos}
 
 
+_ORIGENES_ESQUEMA = {"sincronizado", "vivo"}
+
+
+def _normalizar_origen(origen: str | None) -> str:
+    valor = (origen or "sincronizado").lower().strip()
+    if valor not in _ORIGENES_ESQUEMA:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "origen inválido. Valores permitidos: sincronizado, vivo.",
+        )
+    return valor
+
+
+def _regex_iteracion_esquema(iteracion: str) -> dict:
+    """Filtro Mongo que replica la semántica de ``_iteracion_habilitada``.
+
+    Una ruta coincide si es igual a la permitida o cuelga de ella con separador
+    ``\\``. Se escapa la expresión (``re.escape``) para que ``Proyecto\\CRM`` no
+    arrastre ``Proyecto\\CRM2``, y se exige backslash o fin de cadena.
+    """
+    patron = f"^{re.escape(iteracion)}(\\\\|$)"
+    return {"iteration_path": {"$regex": patron, "$options": "i"}}
+
+
+def _esquema_item_a_nodo(doc: AzdoEsquemaItem, contexto: bool = False) -> dict:
+    """Convierte un documento del espejo a la forma que produce
+    ``_normalizar_esquema``, para que ``_construir_arbol`` y el frontend no noten
+    diferencia con el modo vivo."""
+    return {
+        "azdo_id": doc.azdo_id,
+        "tipo": doc.tipo,
+        "titulo": doc.titulo,
+        "estado": doc.estado,
+        "asignado_a": doc.asignado_a,
+        "original_estimate": doc.original_estimate,
+        "completed_work": doc.completed_work,
+        "remaining_work": doc.remaining_work,
+        "fecha_inicio": None,
+        "iteration_path": doc.iteration_path,
+        "area_path": doc.area_path,
+        "tags": doc.tags,
+        "url": doc.url,
+        "url_api": doc.url,
+        "parent_id": doc.parent_id,
+        "contexto": contexto,
+    }
+
+
+async def _recuperar_ancestros_sincronizados(
+    org_key: str, proyecto: str, items: list[dict], profundidad_maxima: int = 5
+) -> None:
+    """Sube por ``parent_id`` trayendo del espejo los padres que falten.
+
+    Igual que ``_completar_ancestros_esquema`` en el modo vivo: sin esto el árbol
+    se aplana, porque ``_construir_arbol`` convierte en raíz todo nodo cuyo padre
+    no esté en el conjunto, y las épicas/features viven fuera del sprint. Los
+    ancestros se marcan con ``contexto=True`` y no cuentan contra ``limite``.
+    """
+    presentes = {item["azdo_id"] for item in items}
+    sin_resultado: set[int] = set()
+    for _ in range(profundidad_maxima):
+        faltantes = [
+            item["parent_id"]
+            for item in items
+            if isinstance(item.get("parent_id"), int)
+            and item["parent_id"] not in presentes
+            and item["parent_id"] not in sin_resultado
+        ]
+        faltantes = list(dict.fromkeys(faltantes))
+        if not faltantes:
+            break
+        docs = await AzdoEsquemaItem.find(
+            {"org_key": org_key, "proyecto": proyecto, "azdo_id": {"$in": faltantes}}
+        ).to_list()
+        if not docs:
+            sin_resultado.update(faltantes)
+            continue
+        for doc in docs:
+            if doc.azdo_id not in presentes:
+                items.append(_esquema_item_a_nodo(doc, contexto=True))
+                presentes.add(doc.azdo_id)
+        encontrados = {doc.azdo_id for doc in docs}
+        sin_resultado.update(set(faltantes) - encontrados)
+
+
+async def _esquema_arbol_sincronizado(
+    cfg: AzdoConfig,
+    proyecto: str,
+    tipos: list[str],
+    estados: list[str],
+    iteraciones_consulta: list[str] | None,
+    filtrado_por_squad: bool,
+    limite: int,
+) -> dict:
+    """Lee el árbol de esquema desde el espejo ``azdo_esquema_items``."""
+    org_key = normalizar_org_key(cfg.org_url)
+    filtro: dict = {"org_key": org_key, "proyecto": proyecto}
+    if tipos:
+        filtro["tipo"] = {"$in": tipos}
+    if estados:
+        filtro["estado"] = {"$in": estados}
+    if iteraciones_consulta:
+        filtro["$or"] = [_regex_iteracion_esquema(it) for it in iteraciones_consulta]
+
+    docs = await AzdoEsquemaItem.find(filtro).sort("+azdo_id").to_list()
+    truncado = len(docs) > limite
+    docs = docs[:limite]
+    items = [_esquema_item_a_nodo(doc) for doc in docs]
+    await _recuperar_ancestros_sincronizados(org_key, proyecto, items)
+
+    alguno = await AzdoEsquemaItem.find_one(
+        {"org_key": org_key, "proyecto": proyecto}
+    )
+    sin_sincronizar = alguno is None
+    ultima_sync = alguno.ultima_sync.isoformat() if alguno else None
+
+    return {
+        "proyecto": proyecto,
+        "total": len(items),
+        "truncado": truncado,
+        "tipos_consultados": tipos,
+        "iteraciones_aplicadas": iteraciones_consulta or [],
+        "filtrado_por_squad": filtrado_por_squad,
+        "origen": "sincronizado",
+        "ultima_sync": ultima_sync,
+        "sin_sincronizar": sin_sincronizar,
+        "nodos": _construir_arbol(items),
+    }
+
+
 @router.get("/esquema/arbol", dependencies=[permiso("azure_devops.ver")])
 async def esquema_arbol(
     target: str = "hitss",
@@ -1009,17 +1148,18 @@ async def esquema_arbol(
     iteration_path: str | None = None,
     estados: str | None = None,
     limite: int = 2000,
+    origen: str = "sincronizado",
     usuario_id: str | None = None,
     usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
     target = _normalizar_target(target)
+    origen = _normalizar_origen(origen)
     usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
     cfg, aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
-    svc = await _crear_servicio_desde_config(cfg)
     limite = min(limite, 5000)
     tipos_consultados = _separar_csv(tipos)
     estados_consultados = _separar_csv(estados)
@@ -1030,6 +1170,18 @@ async def esquema_arbol(
         proyecto_resuelto,
     )
 
+    if origen == "sincronizado":
+        return await _esquema_arbol_sincronizado(
+            cfg,
+            proyecto_resuelto,
+            tipos_consultados,
+            estados_consultados,
+            iteraciones_consulta,
+            filtrado_por_squad,
+            limite,
+        )
+
+    svc = await _crear_servicio_desde_config(cfg)
     try:
         if not tipos_consultados:
             tipos_consultados = await _tipos_esquema_activos(cfg, svc, proyecto_resuelto)
@@ -1056,10 +1208,111 @@ async def esquema_arbol(
             "tipos_consultados": tipos_consultados,
             "iteraciones_aplicadas": iteraciones_consulta or [],
             "filtrado_por_squad": filtrado_por_squad,
+            "origen": "vivo",
+            "ultima_sync": None,
+            "sin_sincronizar": False,
             "nodos": _construir_arbol(items),
         }
     except (RuntimeError, httpx.HTTPError) as exc:
         raise _mapear_error_esquema(exc, proyecto_resuelto) from exc
+
+
+@router.post("/esquema/sync", dependencies=[permiso("azure_devops.editar")])
+async def esquema_sync(
+    background_tasks: BackgroundTasks,
+    target: str = "hitss",
+    proyecto: str | None = None,
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    """Lanza en segundo plano la sincronización del espejo de esquema.
+
+    Usa ``contexto_aplicacion`` (no ``contexto_escritura``): el usuario opera en
+    modo consolidado y el espejo no es multi-tenant, así que no aplica el 409 de
+    solo lectura. El control de acceso se mantiene con ``azure_devops.editar``.
+    """
+    target = _normalizar_target(target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
+    svc = await _crear_servicio_desde_config(cfg)
+    org_key = normalizar_org_key(cfg.org_url)
+
+    try:
+        tipos = await _tipos_esquema_activos(cfg, svc, proyecto_resuelto)
+    except (RuntimeError, httpx.HTTPError) as exc:
+        raise _mapear_error_esquema(exc, proyecto_resuelto) from exc
+
+    log = await preparar_corrida(target, org_key, proyecto_resuelto, len(tipos))
+    if log is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Ya hay una sincronización de esquema en curso para este proyecto.",
+        )
+    assert log.id is not None
+
+    background_tasks.add_task(
+        ejecutar_sincronizacion_esquema,
+        log.id,
+        cfg.org_url,
+        cfg.pat,
+        target,
+        proyecto_resuelto,
+        tipos,
+    )
+    return {
+        "estado": "en_curso",
+        "proyecto": proyecto_resuelto,
+        "iniciado_en": log.iniciado_en.isoformat(),
+    }
+
+
+@router.get("/esquema/sync/estado", dependencies=[permiso("azure_devops.ver")])
+async def esquema_sync_estado(
+    target: str = "hitss",
+    proyecto: str | None = None,
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    """Estado de la última corrida de sincronización del espejo de esquema."""
+    target = _normalizar_target(target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
+    org_key = normalizar_org_key(cfg.org_url)
+
+    log = await AzdoEsquemaSyncLog.find(
+        AzdoEsquemaSyncLog.org_key == org_key,
+        AzdoEsquemaSyncLog.proyecto == proyecto_resuelto,
+    ).sort("-iniciado_en").first_or_none()
+
+    if log is None:
+        return {
+            "estado": "nunca",
+            "proyecto": proyecto_resuelto,
+            "work_items": 0,
+            "particiones_completadas": 0,
+            "particiones_totales": 0,
+            "iniciado_en": None,
+            "finalizado_en": None,
+            "error": None,
+        }
+    return {
+        "estado": log.estado,
+        "proyecto": proyecto_resuelto,
+        "work_items": log.work_items,
+        "particiones_completadas": log.particiones_completadas,
+        "particiones_totales": log.particiones_totales,
+        "iniciado_en": log.iniciado_en.isoformat() if log.iniciado_en else None,
+        "finalizado_en": log.finalizado_en.isoformat() if log.finalizado_en else None,
+        "error": log.error,
+    }
 
 
 # ── Work items y sync ──

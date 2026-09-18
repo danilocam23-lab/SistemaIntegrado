@@ -30,6 +30,17 @@ WORK_ITEM_FIELDS = [
 CAMPOS_ESQUEMA = [*WORK_ITEM_FIELDS, "System.Parent"]
 
 
+def normalizar_org_key(org_url: str) -> str:
+    """Normaliza una URL de organización a una clave estable del espejo.
+
+    ``https://dev.azure.com/HitssColombia`` y
+    ``https://dev.azure.com/hitsscolombia/`` deben apuntar al mismo espejo, así
+    que se pasa a minúsculas y se elimina la barra final. Es la ``org_key`` con
+    la que se particiona ``azdo_esquema_items``.
+    """
+    return (org_url or "").strip().rstrip("/").lower()
+
+
 def _parse_fecha(valor) -> datetime | None:
     if not valor:
         return None
@@ -200,8 +211,19 @@ class AzureDevOpsService:
         area_path: str | None = None,
         iteration_paths: list[str] | None = None,
         estados: list[str] | None = None,
+        id_min: int | None = None,
+        id_max: int | None = None,
+        descendente: bool = False,
     ) -> str:
-        """Arma una WIQL segura para consultar el esquema vivo de Azure DevOps."""
+        """Arma una WIQL segura para consultar el esquema vivo de Azure DevOps.
+
+        ``id_min`` / ``id_max`` añaden cotas ``[System.Id] >= n`` / ``<= n`` y son
+        la pieza que permite particionar por rango de id cuando una consulta
+        supera el tope de 20.000 work items (VS402337): se prefirió extender esta
+        firma existente antes que crear un segundo constructor porque el resto de
+        la consulta (tipos, escapado seguro) es idéntico. ``descendente`` invierte
+        el ``ORDER BY`` para poder descubrir el id máximo con ``$top=1``.
+        """
         condiciones = [
             f"[System.TeamProject] = '{self._escapar_wiql(proyecto)}'",
         ]
@@ -223,9 +245,14 @@ class AzureDevOpsService:
         if estados:
             estados_escapados = "', '".join(self._escapar_wiql(estado) for estado in estados)
             condiciones.append(f"[System.State] IN ('{estados_escapados}')")
+        if id_min is not None:
+            condiciones.append(f"[System.Id] >= {int(id_min)}")
+        if id_max is not None:
+            condiciones.append(f"[System.Id] <= {int(id_max)}")
+        orden = "DESC" if descendente else "ASC"
         return (
             "SELECT [System.Id] FROM workitems "
-            f"WHERE {' AND '.join(condiciones)} ORDER BY [System.Id]"
+            f"WHERE {' AND '.join(condiciones)} ORDER BY [System.Id] {orden}"
         )
 
     async def obtener_work_items_sprint(
@@ -297,6 +324,74 @@ class AzureDevOpsService:
             if iteration_paths:
                 await self._completar_ancestros_esquema(cliente, proyecto, items)
         return items, truncado
+
+    async def obtener_ids_esquema(
+        self,
+        cliente: httpx.AsyncClient,
+        proyecto: str,
+        tipos: list[str],
+        id_min: int | None = None,
+        id_max: int | None = None,
+    ) -> list[int]:
+        """Ejecuta una WIQL de esquema y devuelve solo los ids.
+
+        Reutiliza el ``httpx.AsyncClient`` de la corrida para no abrir una
+        conexión por partición. Lanza ``RuntimeError`` (vía ``_fetch``) cuando
+        Azure rechaza la consulta con VS402337 por superar el tope de 20.000.
+        """
+        wiql = self.construir_wiql_esquema(
+            proyecto, tipos, id_min=id_min, id_max=id_max
+        )
+        data = await self._fetch(
+            cliente,
+            self._url(f"/{quote(proyecto)}/_apis/wit/wiql"),
+            "POST",
+            {"query": wiql},
+        )
+        return [int(wi["id"]) for wi in data.get("workItems", [])]
+
+    async def obtener_id_maximo_esquema(
+        self,
+        cliente: httpx.AsyncClient,
+        proyecto: str,
+        tipos: list[str],
+    ) -> int:
+        """Devuelve el id más alto para los tipos dados, o ``0`` si no hay ninguno.
+
+        Ordena descendente y pide ``$top=1``: al limitar el número de resultados
+        devueltos, esta consulta nunca dispara VS402337, así que es una forma
+        segura de acotar el rango ``[1, max]`` sobre el que particionar.
+        """
+        wiql = self.construir_wiql_esquema(proyecto, tipos, descendente=True)
+        data = await self._fetch(
+            cliente,
+            self._url(f"/{quote(proyecto)}/_apis/wit/wiql", {"$top": "1"}),
+            "POST",
+            {"query": wiql},
+        )
+        items = data.get("workItems", [])
+        return int(items[0]["id"]) if items else 0
+
+    async def obtener_lote_esquema(
+        self,
+        cliente: httpx.AsyncClient,
+        proyecto: str,
+        ids: list[int],
+    ) -> list[dict]:
+        """Trae los work items indicados en lotes de 200 (tope de la API),
+        normalizados con ``_normalizar_esquema``."""
+        if not ids:
+            return []
+        crudos: list[dict] = []
+        for i in range(0, len(ids), 200):
+            lote = await self._fetch(
+                cliente,
+                self._url("/_apis/wit/workitemsbatch"),
+                "POST",
+                {"ids": ids[i : i + 200], "fields": CAMPOS_ESQUEMA},
+            )
+            crudos.extend(lote.get("value", []))
+        return [self._normalizar_esquema(wi, proyecto) for wi in crudos]
 
     async def _completar_ancestros_esquema(
         self,

@@ -242,14 +242,14 @@ async def test_esquema_arbol_con_usuario_id_ajeno_devuelve_403(
 
     # Con el usuario_id de OTRA persona: 403.
     resp_ajeno = await cliente.get(
-        f"/api/azdo/esquema/arbol?usuario_id={otra.id}",
+        f"/api/azdo/esquema/arbol?usuario_id={otra.id}&origen=vivo",
         headers=headers_con_token(token, app.codigo),
     )
     assert resp_ajeno.status_code == 403
 
     # Con su PROPIO usuario_id: no 403.
     resp_propio = await cliente.get(
-        f"/api/azdo/esquema/arbol?usuario_id={persona.id}&tipos=Task",
+        f"/api/azdo/esquema/arbol?usuario_id={persona.id}&tipos=Task&origen=vivo",
         headers=headers_con_token(token, app.codigo),
     )
     assert resp_propio.status_code != 403
@@ -276,7 +276,7 @@ async def test_esquema_arbol_404_de_azure_mensaje_menciona_el_proyecto(
     monkeypatch.setattr(AzureDevOpsService, "obtener_work_items_esquema", _arbol_404)
 
     resp = await cliente.get(
-        "/api/azdo/esquema/arbol?target=hitss&limite=2000&tipos=Task",
+        "/api/azdo/esquema/arbol?target=hitss&limite=2000&tipos=Task&origen=vivo",
         headers=headers_con_token(token, app.codigo),
     )
 

@@ -6,12 +6,24 @@ import type { NivelJerarquiaAzure } from '../../types'
 
 interface Props {
   jerarquia: NivelJerarquiaAzure[]
+  tiposActivos: string[] | null
 }
 
-export function PanelJerarquia({ jerarquia }: Props) {
+export function PanelJerarquia({ jerarquia, tiposActivos }: Props) {
   if (jerarquia.length === 0) return null
 
-  const niveles = [...jerarquia].sort((a, b) => b.rango - a.rango)
+  // Cuando hay config de tipos activos (tab Azure DevOps), el panel solo
+  // muestra los niveles/tipos que siguen habilitados. Si `tiposActivos` es
+  // null (backend viejo sin la clave `activos`) no se filtra nada.
+  const niveles = [...jerarquia]
+    .sort((a, b) => b.rango - a.rango)
+    .map((nivel) => ({
+      ...nivel,
+      tipos: tiposActivos === null ? nivel.tipos : nivel.tipos.filter((tipo) => tiposActivos.includes(tipo)),
+    }))
+    .filter((nivel) => nivel.tipos.length > 0)
+
+  if (niveles.length === 0) return null
 
   return (
     <Tarjeta className="space-y-3">

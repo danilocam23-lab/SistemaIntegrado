@@ -99,11 +99,11 @@ async def test_esquema_arbol_squad_con_iteraciones_filtra_y_rechaza_ajena(
     monkeypatch.setattr(AzureDevOpsService, "obtener_work_items_esquema", _arbol)
 
     resp = await cliente.get(
-        "/api/azdo/esquema/arbol?tipos=Task",
+        "/api/azdo/esquema/arbol?tipos=Task&origen=vivo",
         headers=headers_con_token(token, app.codigo),
     )
     resp_ajena = await cliente.get(
-        "/api/azdo/esquema/arbol?tipos=Task&iteration_path=Proyecto\\BI\\Sprint%201",
+        "/api/azdo/esquema/arbol?tipos=Task&iteration_path=Proyecto\\BI\\Sprint%201&origen=vivo",
         headers=headers_con_token(token, app.codigo),
     )
 
@@ -142,7 +142,7 @@ async def test_esquema_arbol_acepta_iteration_path_completa_con_configuracion_co
     monkeypatch.setattr(AzureDevOpsService, "obtener_work_items_esquema", _arbol)
 
     resp = await cliente.get(
-        "/api/azdo/esquema/arbol?tipos=Task&iteration_path=Proyecto\\CRM\\Sprint%201",
+        "/api/azdo/esquema/arbol?tipos=Task&iteration_path=Proyecto\\CRM\\Sprint%201&origen=vivo",
         headers=headers_con_token(token, app.codigo),
     )
 
@@ -187,7 +187,7 @@ async def test_esquema_arbol_squad_sin_iteraciones_no_filtra(
     monkeypatch.setattr(AzureDevOpsService, "obtener_work_items_esquema", _arbol)
 
     resp = await cliente.get(
-        "/api/azdo/esquema/arbol?tipos=Task",
+        "/api/azdo/esquema/arbol?tipos=Task&origen=vivo",
         headers=headers_con_token(token, app.codigo),
     )
 
@@ -291,7 +291,7 @@ async def test_esquema_tipos_config_guarda_recupera_y_usa_default(
 
     monkeypatch.setattr(AzureDevOpsService, "obtener_work_items_esquema", _arbol)
     resp_arbol = await cliente.get(
-        "/api/azdo/esquema/arbol",
+        "/api/azdo/esquema/arbol?origen=vivo",
         headers=headers_con_token(token, app.codigo),
     )
 

@@ -9,7 +9,12 @@ from app.documents.acta_trabajo import ActaTrabajo
 from app.documents.aplicacion import Aplicacion
 from app.documents.aplicativo import Aplicativo
 from app.documents.asignacion import Asignacion
-from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
+from app.documents.azdo import (
+    AzdoEsquemaItem,
+    AzdoEsquemaSyncLog,
+    AzdoSyncLog,
+    AzdoWorkItem,
+)
 from app.documents.azdo_config import AzdoConfig
 from app.documents.backlog_futuro import BacklogFuturo
 from app.documents.bitacora import Bitacora
@@ -60,6 +65,8 @@ ALL_DOCUMENTS = [
     Estimacion,
     AzdoWorkItem,
     AzdoSyncLog,
+    AzdoEsquemaItem,
+    AzdoEsquemaSyncLog,
     AzdoConfig,
     GarantiaWO,
     ControlHoras,
@@ -91,6 +98,8 @@ __all__ = [
     "Estimacion",
     "AzdoWorkItem",
     "AzdoSyncLog",
+    "AzdoEsquemaItem",
+    "AzdoEsquemaSyncLog",
     "AzdoConfig",
     "GarantiaWO",
     "ControlHoras",

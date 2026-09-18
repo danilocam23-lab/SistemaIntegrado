@@ -9,6 +9,7 @@ interface Props {
   proyectos: AzdoProyecto[]
   proyecto: string
   tipos: TipoWorkItemAzure[]
+  sinTiposActivos?: boolean
   tiposSeleccionados: string[]
   iteraciones: string[]
   iteracionPath: string
@@ -29,6 +30,7 @@ export function FiltrosEsquemaAzure({
   proyectos,
   proyecto,
   tipos,
+  sinTiposActivos = false,
   tiposSeleccionados,
   iteraciones,
   iteracionPath,
@@ -68,9 +70,15 @@ export function FiltrosEsquemaAzure({
         className="min-h-24 min-w-56"
         compacto
       >
-        {tipos.map((tipo) => (
-          <option key={tipo.referencia || tipo.nombre} value={tipo.nombre}>{tipo.nombre}</option>
-        ))}
+        {sinTiposActivos ? (
+          <option value="" disabled>
+            No hay tipos activos; actívalos en Configuración → Azure DevOps
+          </option>
+        ) : (
+          tipos.map((tipo) => (
+            <option key={tipo.referencia || tipo.nombre} value={tipo.nombre}>{tipo.nombre}</option>
+          ))
+        )}
       </Selector>
 
       <Selector
