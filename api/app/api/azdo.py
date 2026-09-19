@@ -919,6 +919,7 @@ async def esquema_tipos(
             "proyecto": proyecto_resuelto,
             "tipos": await svc.obtener_tipos_proceso(proyecto_resuelto),
             "jerarquia": await svc.obtener_jerarquia_backlog(proyecto_resuelto),
+            "activos": await _tipos_esquema_activos(cfg, svc, proyecto_resuelto),
         }
     except (RuntimeError, httpx.HTTPError) as exc:
         raise _mapear_error_esquema(exc, proyecto_resuelto) from exc

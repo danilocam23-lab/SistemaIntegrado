@@ -32,8 +32,15 @@ def _parchear_red(monkeypatch) -> None:
     async def _jerarquia(self, proyecto):
         return []
 
+    async def _tipos_work_item(self, proyecto):
+        return {}
+
     monkeypatch.setattr(AzureDevOpsService, "obtener_tipos_proceso", _tipos_proceso)
     monkeypatch.setattr(AzureDevOpsService, "obtener_jerarquia_backlog", _jerarquia)
+    # Con `jerarquia`/`tipos_proceso` vacíos, `esquema_tipos` cae en el cálculo
+    # por defecto de `activos` (_tipos_esquema_por_defecto), que también
+    # consulta los tipos de work item; se mockea para no golpear la red real.
+    monkeypatch.setattr(AzureDevOpsService, "obtener_tipos_work_item", _tipos_work_item)
 
 
 async def test_proyectos_resuelve_config_user_sin_usuario_id(
@@ -88,6 +95,32 @@ async def test_esquema_tipos_resuelve_config_user_sin_usuario_id(
 
     assert resp.status_code == 200
     assert resp.json()["proyecto"] == "Proyecto Usuario"
+
+
+async def test_esquema_tipos_incluye_activos_configurados(
+    cliente, fabrica_usuario, fabrica_aplicacion, monkeypatch
+):
+    app = await fabrica_aplicacion()
+    usuario, token = await fabrica_usuario([app.codigo], permisos=["azure_devops.ver"])
+    persona = await _persona_de(usuario, app)
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="user",
+        usuario_id=str(persona.id),
+        org_url="https://dev.azure.com/user-scope",
+        pat="pat-user",
+        default_project="Proyecto Usuario",
+        tipos_esquema_activos=["Contextualización", "Epic", "Feature"],
+    ).insert()
+    _parchear_red(monkeypatch)
+
+    resp = await cliente.get(
+        "/api/azdo/esquema/tipos",
+        headers=headers_con_token(token, app.codigo),
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["activos"] == ["Contextualización", "Epic", "Feature"]
 
 
 async def test_personas_config_usuario_normal_solo_se_ve_a_si_mismo(
