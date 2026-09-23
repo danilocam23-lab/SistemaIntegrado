@@ -42,6 +42,7 @@ interface FilaSquad {
   ansActaTotal: number
   ansEntregaCumple: number
   ansEntregaTotal: number
+  aplicacionesEpmCount: number
 }
 
 interface RegistroSoporteResumen {
@@ -157,6 +158,8 @@ export default function DashboardSquad() {
   const [busquedaDetalleWo, setBusquedaDetalleWo] = useState('')
   const [mostrarDetallePersonas, setMostrarDetallePersonas] = useState(false)
   const [busquedaDetallePersonas, setBusquedaDetallePersonas] = useState('')
+  const [squadDetalleAplicaciones, setSquadDetalleAplicaciones] = useState<string | null>(null)
+  const [busquedaDetalleAplicaciones, setBusquedaDetalleAplicaciones] = useState('')
 
   useEffect(() => {
     client.get<Squad[]>('/squads', { headers: { 'X-Aplicacion': '__todas__' } })
@@ -206,6 +209,7 @@ export default function DashboardSquad() {
 
   const filas = useMemo<FilaSquad[]>(() => {
     const mapa = new Map<string, FilaSquad>()
+    const aplicacionesEpmPorSquad = new Map<string, Set<string>>()
     for (const req of requerimientos) {
       // aplicacion_id es el campo autoritativo de pertenencia al squad (consistente con el
       // filtro de squad activo). solicitud.squad_id puede estar desactualizado en datos legados
@@ -223,6 +227,7 @@ export default function DashboardSquad() {
         ansActaTotal: 0,
         ansEntregaCumple: 0,
         ansEntregaTotal: 0,
+        aplicacionesEpmCount: 0,
       }
       actual.reqs += 1
       actual.horas += Number(req.total_horas_estimadas ?? 0)
@@ -237,6 +242,16 @@ export default function DashboardSquad() {
         if (entrega.ans_entrega === 'CUMPLE') actual.ansEntregaCumple += 1
       }
       mapa.set(key, actual)
+
+      const aplicacionEpm = req.nombre ? req.nombre.split('-')[0].trim() : ''
+      if (aplicacionEpm) {
+        const setAplicaciones = aplicacionesEpmPorSquad.get(key) ?? new Set<string>()
+        setAplicaciones.add(aplicacionEpm)
+        aplicacionesEpmPorSquad.set(key, setAplicaciones)
+      }
+    }
+    for (const [key, fila] of mapa) {
+      fila.aplicacionesEpmCount = aplicacionesEpmPorSquad.get(key)?.size ?? 0
     }
     return Array.from(mapa.values()).sort((a, b) => b.reqs - a.reqs || b.horas - a.horas)
   }, [requerimientos, resolverNombreSquad])
@@ -417,6 +432,28 @@ export default function DashboardSquad() {
       (fila) => fila.nombre.toLowerCase().includes(busqueda) || fila.squad.toLowerCase().includes(busqueda),
     )
   }, [busquedaDetallePersonas, detallePersonasCapacidad])
+
+  const detalleAplicacionesEpmPorSquad = useMemo(() => {
+    if (!squadDetalleAplicaciones) return []
+    const mapa = new Map<string, number>()
+    for (const req of requerimientos) {
+      const squadId = req.aplicacion_id || req.solicitud?.squad_id || null
+      const squad = resolverNombreSquad(squadId)
+      if (squad !== squadDetalleAplicaciones) continue
+      const aplicacionEpm = req.nombre ? req.nombre.split('-')[0].trim() : ''
+      if (!aplicacionEpm) continue
+      mapa.set(aplicacionEpm, (mapa.get(aplicacionEpm) ?? 0) + 1)
+    }
+    return Array.from(mapa.entries())
+      .map(([aplicacionEpm, cantidadRequerimientos]) => ({ aplicacionEpm, cantidadRequerimientos }))
+      .sort((a, b) => b.cantidadRequerimientos - a.cantidadRequerimientos || a.aplicacionEpm.localeCompare(b.aplicacionEpm))
+  }, [requerimientos, resolverNombreSquad, squadDetalleAplicaciones])
+
+  const detalleAplicacionesEpmFiltrado = useMemo(() => {
+    const busqueda = busquedaDetalleAplicaciones.trim().toLowerCase()
+    if (!busqueda) return detalleAplicacionesEpmPorSquad
+    return detalleAplicacionesEpmPorSquad.filter((fila) => fila.aplicacionEpm.toLowerCase().includes(busqueda))
+  }, [busquedaDetalleAplicaciones, detalleAplicacionesEpmPorSquad])
 
   const resumenCapacidad = useMemo(() => {
     const totalHoras = filasCapacidadSquad.reduce((sum, fila) => sum + fila.horas, 0)
@@ -815,6 +852,7 @@ export default function DashboardSquad() {
                       <th className="text-center">Entregas</th>
                       <th className="text-center">ANS Acta</th>
                       <th className="text-center">ANS Entrega</th>
+                      <th className="text-center">Aplicación EPM</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -836,6 +874,19 @@ export default function DashboardSquad() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <InsigniaAvance porcentaje={Math.round((fila.ansEntregaCumple / (fila.ansEntregaTotal || 1)) * 100)} />
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            type="button"
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setBusquedaDetalleAplicaciones('')
+                              setSquadDetalleAplicaciones(fila.squad)
+                            }}
+                            aria-label={`Ver aplicaciones EPM de ${fila.squad}`}
+                          >
+                            <Chip tono="marca">{fila.aplicacionesEpmCount}</Chip>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -988,6 +1039,76 @@ export default function DashboardSquad() {
                       {fmtNumero(detallePersonasCapacidadFiltrado.reduce((sum, fila) => sum + fila.horas, 0))}h
                     </td>
                     <td className="px-4 py-3" />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {squadDetalleAplicaciones !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+              <div>
+                <h2 className="titulo-seccion">Aplicaciones EPM — {squadDetalleAplicaciones}</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Aplicaciones EPM (prefijo del acta) y requerimientos asociados en este squad.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSquadDetalleAplicaciones(null)}
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Cerrar detalle de aplicaciones EPM"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="border-b border-slate-100 px-6 py-4">
+              <Campo
+                etiqueta="Buscar por aplicación EPM"
+                type="search"
+                value={busquedaDetalleAplicaciones}
+                onChange={(event) => setBusquedaDetalleAplicaciones(event.target.value)}
+                placeholder="Ej: EPM"
+                className="w-full"
+              />
+            </div>
+
+            <div className="max-h-[62vh] overflow-auto p-6">
+              <table className="tabla">
+                <thead>
+                  <tr>
+                    <th>Aplicación EPM</th>
+                    <th className="text-right">Requerimientos</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {detalleAplicacionesEpmFiltrado.map((fila) => (
+                    <tr key={fila.aplicacionEpm} className="hover:bg-blue-50/40">
+                      <td className="px-4 py-3 font-medium text-slate-800">{fila.aplicacionEpm}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-amber-700">
+                        {fmtNumero(fila.cantidadRequerimientos)}
+                      </td>
+                    </tr>
+                  ))}
+                  {detalleAplicacionesEpmFiltrado.length === 0 && (
+                    <tr>
+                      <td className="px-4 py-8 text-center text-sm text-slate-400" colSpan={2}>
+                        No se encontraron aplicaciones EPM con esa búsqueda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold text-slate-900">
+                    <td className="px-4 py-3">Total</td>
+                    <td className="px-4 py-3 text-right">
+                      {fmtNumero(detalleAplicacionesEpmFiltrado.reduce((sum, fila) => sum + fila.cantidadRequerimientos, 0))}
+                    </td>
                   </tr>
                 </tfoot>
               </table>
