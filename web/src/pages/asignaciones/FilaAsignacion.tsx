@@ -34,7 +34,7 @@ export function FilaAsignacion({
   escrituras,
   onEditar,
 }: Props) {
-  const { asig, horasCarga } = item
+  const { asig, horasCarga, horasAzure } = item
   const enEdicionInline = escrituras.edicionInlineId === asig.id
 
   return (
@@ -84,6 +84,13 @@ export function FilaAsignacion({
         )}
       </td>
       <td className="text-right text-slate-700">{horasCarga.toFixed(1)} h</td>
+      {horasAzure !== null && (
+        <>
+          <td className="text-right text-slate-700">{horasAzure.originalEstimate.toFixed(1)} h</td>
+          <td className="text-right text-slate-700">{horasAzure.completedWork.toFixed(1)} h</td>
+          <td className="text-right text-slate-700">{horasAzure.remainingWork.toFixed(1)} h</td>
+        </>
+      )}
       <td className="text-center whitespace-nowrap">
         {puedeEditarAsignaciones && (
           <div className="flex items-center justify-center gap-3">

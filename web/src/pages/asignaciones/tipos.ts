@@ -21,9 +21,18 @@ export interface OpcionReq {
   estado?: string
 }
 
+/** Horas de Azure DevOps ya agregadas para una persona (o para "sin persona"). */
+export interface HorasAzureGrupo {
+  originalEstimate: number
+  completedWork: number
+  remainingWork: number
+}
+
 export interface ItemGrupo {
   asig: AsignacionItem
   horasCarga: number
+  /** `null` cuando el requerimiento del grupo no tiene Feature de Azure vinculada. */
+  horasAzure: HorasAzureGrupo | null
 }
 
 export interface GrupoReq {
@@ -33,6 +42,12 @@ export interface GrupoReq {
   /** Horas estimadas del requerimiento (calculado en `gruposReq`, donde ya se
    *  hace el `find`, para que la cabecera de la vista no lo repita). */
   horasEstimadas: number | null
+  /** `id_azure_hitss` del requerimiento del grupo (`null` = sin Feature vinculada). */
+  idAzureHitss: number | null
+  /** Horas de Tasks de Azure sin persona reconocida en el sistema (incluye
+   *  `email: null` y correos que no coinciden con ningún `Persona.email`).
+   *  `null` si el grupo no tiene Feature vinculada. */
+  horasAzureSinPersona: HorasAzureGrupo | null
   items: ItemGrupo[]
 }
 

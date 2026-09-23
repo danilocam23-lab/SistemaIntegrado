@@ -16,6 +16,7 @@ import { useDerivadosAsignaciones } from './asignaciones/useDerivadosAsignacione
 import { useEscriturasAsignaciones } from './asignaciones/useEscriturasAsignaciones'
 import { useFormularioAsignacion } from './asignaciones/useFormularioAsignacion'
 import { useBacklogFuturoPorPersona } from './asignaciones/useBacklogFuturoPorPersona'
+import { useHorasAzurePorFeature } from './asignaciones/useHorasAzurePorFeature'
 import { useWorkOrdersPorPersona } from './asignaciones/useWorkOrdersPorPersona'
 
 export default function Asignaciones() {
@@ -25,6 +26,7 @@ export default function Asignaciones() {
   const { tienePermiso } = useAuth()
   const { wosPorPersonaMap } = useWorkOrdersPorPersona(personas)
   const { backlogPorPersonaMap } = useBacklogFuturoPorPersona(backlogFuturo)
+  const { horasAzurePorFeature } = useHorasAzurePorFeature(requerimientos)
 
   const puedeEditarAsignaciones = tienePermiso('asignaciones.editar')
 
@@ -58,6 +60,7 @@ export default function Asignaciones() {
     capacidades,
     wosPorPersonaMap,
     backlogPorPersonaMap,
+    horasAzurePorFeature,
     filtroEstado,
     filtroPersona,
     busquedaPersona,

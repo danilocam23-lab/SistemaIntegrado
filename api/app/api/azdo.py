@@ -1316,6 +1316,70 @@ async def esquema_sync_estado(
     }
 
 
+@router.get("/esquema/horas-por-feature", dependencies=[permiso("asignaciones.ver")])
+async def esquema_horas_por_feature(
+    ids: str,
+    target: str = "hitss",
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    """Horas de las Tasks descendientes de una o varias Features, por persona.
+
+    Lee del espejo sincronizado ``AzdoEsquemaItem`` (no consulta Azure DevOps en
+    vivo). Exige ``asignaciones.ver`` en vez de ``azure_devops.ver`` como el
+    resto de los endpoints de este archivo: el consumidor es la columna "Horas
+    de Azure" de la vista de Asignaciones, no la administración de Azure DevOps,
+    así que debe ser visible a quien ya puede ver Asignaciones.
+    """
+    target = _normalizar_target(target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    org_key = normalizar_org_key(cfg.org_url)
+
+    feature_ids: list[int] = []
+    for valor in _separar_csv(ids):
+        try:
+            feature_ids.append(int(valor))
+        except ValueError:
+            continue
+
+    profundidad_maxima = 6
+    resultado: dict[str, list[dict]] = {str(feature_id): [] for feature_id in feature_ids}
+
+    for feature_id in feature_ids:
+        nivel_ids = [feature_id]
+        descendientes: list[AzdoEsquemaItem] = []
+        for _nivel in range(profundidad_maxima):
+            docs = await AzdoEsquemaItem.find(
+                {"org_key": org_key, "parent_id": {"$in": nivel_ids}}
+            ).to_list()
+            if not docs:
+                break
+            descendientes.extend(docs)
+            nivel_ids = [doc.azdo_id for doc in docs]
+
+        agregados: dict[str | None, dict[str, float]] = {}
+        for doc in descendientes:
+            if doc.tipo != "Task":
+                continue
+            acumulado = agregados.setdefault(
+                doc.asignado_a,
+                {"original_estimate": 0.0, "completed_work": 0.0, "remaining_work": 0.0},
+            )
+            acumulado["original_estimate"] += doc.original_estimate
+            acumulado["completed_work"] += doc.completed_work
+            acumulado["remaining_work"] += doc.remaining_work
+
+        resultado[str(feature_id)] = [
+            {"email": email, **horas} for email, horas in agregados.items()
+        ]
+
+    return resultado
+
+
 # ── Work items y sync ──
 
 @router.get("/work-items", dependencies=[permiso("azure_devops.ver")])

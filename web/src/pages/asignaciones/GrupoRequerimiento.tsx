@@ -51,6 +51,10 @@ export function GrupoRequerimiento({
           {grupo.reqId && (() => {
             if (!grupo.horasEstimadas) return null
             const horasReales = grupo.horasEstimadas * 0.9
+            const sinPersona = grupo.idAzureHitss !== null ? grupo.horasAzureSinPersona : null
+            const mostrarSinPersona = sinPersona !== null && (
+              sinPersona.originalEstimate > 0 || sinPersona.completedWork > 0 || sinPersona.remainingWork > 0
+            )
             return (
               <div className="ml-4 flex shrink-0 items-center gap-4 border-l border-white/30 pl-4 text-xs font-medium">
                 <div>
@@ -61,6 +65,12 @@ export function GrupoRequerimiento({
                   <div className="text-white/70">Horas reales (90%)</div>
                   <div>{horasReales.toFixed(1)} h</div>
                 </div>
+                {mostrarSinPersona && (
+                  <div className="border-l border-white/30 pl-4">
+                    <div className="text-white/70">Sin persona (Azure)</div>
+                    <div>{`Est ${sinPersona.originalEstimate.toFixed(1)}h · Trab ${sinPersona.completedWork.toFixed(1)}h · Rest ${sinPersona.remainingWork.toFixed(1)}h`}</div>
+                  </div>
+                )}
               </div>
             )
           })()}
@@ -91,6 +101,13 @@ export function GrupoRequerimiento({
                 <th className="text-center">Prioridad</th>
                 <th className="text-right">% carga</th>
                 <th className="text-right">Horas según carga</th>
+                {grupo.idAzureHitss !== null && (
+                  <>
+                    <th className="text-center">Azure: Estimado</th>
+                    <th className="text-center">Azure: Trabajado</th>
+                    <th className="text-center">Azure: Restante</th>
+                  </>
+                )}
                 <th className="text-center">Acciones</th>
               </tr>
             </thead>
