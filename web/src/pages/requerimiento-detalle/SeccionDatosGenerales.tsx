@@ -170,6 +170,13 @@ export default function SeccionDatosGenerales({
             placeholder="Número o referencia del acta de trabajo"
             className="w-full" />
         </label>
+        <label className="text-sm">
+          <span className="mb-1 block text-slate-600">ID de Azure (Hitss)</span>
+          <Campo value={valores.idAzureHitss} onChange={(e) => actualizar('idAzureHitss', e.target.value)}
+            type="number" disabled={!puedeEditarReq}
+            placeholder="ID del work item en Azure DevOps"
+            className="w-full" />
+        </label>
         <label className="text-sm sm:col-span-2">
           <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
           <AreaTexto value={valores.seguimientoEpm} onChange={(e) => actualizar('seguimientoEpm', e.target.value)} rows={2}

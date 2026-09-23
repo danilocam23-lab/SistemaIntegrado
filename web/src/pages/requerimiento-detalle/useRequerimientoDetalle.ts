@@ -33,6 +33,7 @@ export interface ValoresRequerimiento {
   tipificacion: string
   motivoCierre: string
   actaTrabajo: string
+  idAzureHitss: string
 }
 
 const VALORES_VACIOS: ValoresRequerimiento = {
@@ -52,6 +53,7 @@ const VALORES_VACIOS: ValoresRequerimiento = {
   tipificacion: '',
   motivoCierre: '',
   actaTrabajo: '',
+  idAzureHitss: '',
 }
 
 export interface CamposRequerimiento {
@@ -121,6 +123,7 @@ export function useRequerimientoDetalle(
         tipificacion: data.tipificacion ?? '',
         motivoCierre: data.motivo_cierre ?? '',
         actaTrabajo: data.acta_trabajo ?? '',
+        idAzureHitss: data.id_azure_hitss != null ? String(data.id_azure_hitss) : '',
       })
       const [liq, bit] = await Promise.all([
         client.get<Liquidacion>(`/requerimientos/${reqId}/liquidacion`),
@@ -176,6 +179,7 @@ export function useRequerimientoDetalle(
         tipificacion: valores.tipificacion || null,
         motivo_cierre: valores.motivoCierre || null,
         acta_trabajo: valores.actaTrabajo || null,
+        id_azure_hitss: valores.idAzureHitss ? Number(valores.idAzureHitss) : null,
       }, writeConfig())
       setOk('Cambios guardados.')
       recargar()

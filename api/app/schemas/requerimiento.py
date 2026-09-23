@@ -51,6 +51,7 @@ class RequerimientoIn(BaseModel):
     tipificacion: Tipificacion | None = None
     monto_pactado: Decimal | None = None
     acta_trabajo: str | None = None
+    id_azure_hitss: int | None = None
     cantidad_entregas: int = 0
     categoria_id: str | None = None
     developers_asignados: list[str] = []
@@ -74,6 +75,7 @@ class RequerimientoUpdate(BaseModel):
     tipificacion: Tipificacion | None = None
     monto_pactado: Decimal | None = None
     acta_trabajo: str | None = None
+    id_azure_hitss: int | None = None
     cantidad_entregas: int | None = None
     categoria_id: str | None = None
     developers_asignados: list[str] | None = None

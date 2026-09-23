@@ -111,6 +111,7 @@ class Requerimiento(DocumentoOperativo):
     tipificacion: Tipificacion | None = None
     monto_pactado: MongoDecimal | None = None
     acta_trabajo: str | None = None
+    id_azure_hitss: int | None = None
     cantidad_entregas: int = 0
     # Campos provenientes del Workload Manager (project_catalog).
     categoria_id: str | None = None

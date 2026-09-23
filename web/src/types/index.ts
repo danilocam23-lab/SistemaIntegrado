@@ -115,6 +115,7 @@ export interface Requerimiento {
   seguimiento_epm: string | null
   tipificacion: 'HITSS' | 'EPM' | null
   acta_trabajo: string | null
+  id_azure_hitss: number | null
   monto_pactado: number | null
   cantidad_entregas: number
   categoria_id: string | null
