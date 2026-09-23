@@ -136,7 +136,7 @@ export default function Predictivos() {
         nombreActa: req.nombre ?? '',
         analista: analistaNombre,
         estado: match.label,
-        fechaSolicitud: req.solicitud?.fecha_solicitud ?? '',
+        fechaSolicitud: req.fecha_solicitud_acta ?? '',
       })
     }
     return resultado.sort((a, b) => a.estado.localeCompare(b.estado) || a.codigoReq.localeCompare(b.codigoReq))
