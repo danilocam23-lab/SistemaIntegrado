@@ -97,6 +97,7 @@ class AzdoEsquemaItem(DocumentoBase):
     original_estimate: float = 0
     completed_work: float = 0
     remaining_work: float = 0
+    fecha_inicio: datetime | None = None
     iteration_path: str = ""
     area_path: str = ""
     tags: str = ""

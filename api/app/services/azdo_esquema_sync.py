@@ -136,6 +136,7 @@ def _operacion_upsert(
         "original_estimate": item.get("original_estimate", 0) or 0,
         "completed_work": item.get("completed_work", 0) or 0,
         "remaining_work": item.get("remaining_work", 0) or 0,
+        "fecha_inicio": item.get("fecha_inicio"),
         "iteration_path": item.get("iteration_path") or "",
         "area_path": item.get("area_path") or "",
         "tags": item.get("tags") or "",

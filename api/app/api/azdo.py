@@ -1047,7 +1047,7 @@ def _esquema_item_a_nodo(doc: AzdoEsquemaItem, contexto: bool = False) -> dict:
         "original_estimate": doc.original_estimate,
         "completed_work": doc.completed_work,
         "remaining_work": doc.remaining_work,
-        "fecha_inicio": None,
+        "fecha_inicio": doc.fecha_inicio.isoformat() if doc.fecha_inicio else None,
         "iteration_path": doc.iteration_path,
         "area_path": doc.area_path,
         "tags": doc.tags,
@@ -1316,6 +1316,26 @@ async def esquema_sync_estado(
     }
 
 
+_TIPOS_CON_HORAS = ("Task", "Bug")
+
+
+async def _descendientes_de_feature(
+    org_key: str, feature_id: int, profundidad_maxima: int = 6
+) -> list[AzdoEsquemaItem]:
+    """BFS por ``parent_id`` desde una Feature hasta ``profundidad_maxima`` niveles."""
+    nivel_ids = [feature_id]
+    descendientes: list[AzdoEsquemaItem] = []
+    for _nivel in range(profundidad_maxima):
+        docs = await AzdoEsquemaItem.find(
+            {"org_key": org_key, "parent_id": {"$in": nivel_ids}}
+        ).to_list()
+        if not docs:
+            break
+        descendientes.extend(docs)
+        nivel_ids = [doc.azdo_id for doc in docs]
+    return descendientes
+
+
 @router.get("/esquema/horas-por-feature", dependencies=[permiso("asignaciones.ver")])
 async def esquema_horas_por_feature(
     ids: str,
@@ -1324,7 +1344,7 @@ async def esquema_horas_por_feature(
     usuario: Usuario = Depends(usuario_actual),
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
 ) -> dict:
-    """Horas de las Tasks descendientes de una o varias Features, por persona.
+    """Horas de las Tasks y Bugs descendientes de una o varias Features, por persona.
 
     Lee del espejo sincronizado ``AzdoEsquemaItem`` (no consulta Azure DevOps en
     vivo). Exige ``asignaciones.ver`` en vez de ``azure_devops.ver`` como el
@@ -1346,24 +1366,14 @@ async def esquema_horas_por_feature(
         except ValueError:
             continue
 
-    profundidad_maxima = 6
     resultado: dict[str, list[dict]] = {str(feature_id): [] for feature_id in feature_ids}
 
     for feature_id in feature_ids:
-        nivel_ids = [feature_id]
-        descendientes: list[AzdoEsquemaItem] = []
-        for _nivel in range(profundidad_maxima):
-            docs = await AzdoEsquemaItem.find(
-                {"org_key": org_key, "parent_id": {"$in": nivel_ids}}
-            ).to_list()
-            if not docs:
-                break
-            descendientes.extend(docs)
-            nivel_ids = [doc.azdo_id for doc in docs]
+        descendientes = await _descendientes_de_feature(org_key, feature_id)
 
         agregados: dict[str | None, dict[str, float]] = {}
         for doc in descendientes:
-            if doc.tipo != "Task":
+            if doc.tipo not in _TIPOS_CON_HORAS:
                 continue
             acumulado = agregados.setdefault(
                 doc.asignado_a,
@@ -1378,6 +1388,74 @@ async def esquema_horas_por_feature(
         ]
 
     return resultado
+
+
+@router.get("/esquema/detalle-feature", dependencies=[permiso("asignaciones.ver")])
+async def esquema_detalle_feature(
+    id: int,
+    target: str = "hitss",
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    """Desglose de horas trabajadas (``completed_work``) de una Feature, por
+    Sprint y por Mes, a partir de sus Tasks y Bugs descendientes.
+
+    Lee del espejo sincronizado ``AzdoEsquemaItem`` (no consulta Azure DevOps en
+    vivo). Exige ``asignaciones.ver`` en vez de ``azure_devops.ver`` como el
+    resto de los endpoints de este archivo: el consumidor es el modal "Detalle"
+    de la columna "Horas de Azure" en la vista de Asignaciones, no la
+    administración de Azure DevOps, así que debe ser visible a quien ya puede
+    ver Asignaciones.
+    """
+    target = _normalizar_target(target)
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    if not cfg:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    org_key = normalizar_org_key(cfg.org_url)
+
+    descendientes = await _descendientes_de_feature(org_key, id)
+
+    por_sprint: dict[str, dict[str | None, float]] = {}
+    por_mes: dict[str, dict[str | None, float]] = {}
+    for doc in descendientes:
+        if doc.tipo not in _TIPOS_CON_HORAS:
+            continue
+        sprint = doc.iteration_path or "Sin sprint"
+        por_sprint.setdefault(sprint, {})
+        por_sprint[sprint][doc.asignado_a] = (
+            por_sprint[sprint].get(doc.asignado_a, 0.0) + doc.completed_work
+        )
+        mes = doc.fecha_inicio.strftime("%Y-%m") if doc.fecha_inicio else "Sin fecha"
+        por_mes.setdefault(mes, {})
+        por_mes[mes][doc.asignado_a] = por_mes[mes].get(doc.asignado_a, 0.0) + doc.completed_work
+
+    def _serializar(grupos: dict[str, dict[str | None, float]], clave_final: str) -> list[dict]:
+        claves = sorted(clave for clave in grupos if clave != clave_final)
+        if clave_final in grupos:
+            claves.append(clave_final)
+        salida = []
+        for clave in claves:
+            personas_ordenadas = sorted(
+                grupos[clave].items(), key=lambda par: par[1], reverse=True
+            )
+            personas = [
+                {"email": email, "horas": horas} for email, horas in personas_ordenadas
+            ]
+            salida.append(
+                {
+                    "clave": clave,
+                    "total_horas": sum(grupos[clave].values()),
+                    "personas": personas,
+                }
+            )
+        return salida
+
+    return {
+        "por_sprint": _serializar(por_sprint, "Sin sprint"),
+        "por_mes": _serializar(por_mes, "Sin fecha"),
+    }
 
 
 # ── Work items y sync ──
