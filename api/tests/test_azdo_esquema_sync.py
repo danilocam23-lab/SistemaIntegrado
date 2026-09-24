@@ -13,6 +13,7 @@ from app.services.azdo_esquema_sync import (
     _ContadorParticiones,
     ejecutar_sincronizacion_esquema,
     preparar_corrida,
+    sincronizar_todas_las_configuraciones_con_pat,
 )
 from app.services.azure_devops import AzureDevOpsService, normalizar_org_key
 from tests.conftest import CONSOLIDADO, headers_con_token
@@ -26,9 +27,18 @@ RUTA_CRM = "Proyecto\\CRM"
 @pytest_asyncio.fixture(autouse=True)
 async def _limpiar_espejo():
     """El espejo y sus logs no llevan ``aplicacion_id``, así que comparten clave
-    entre tests; se limpian antes de cada uno para aislarlos."""
+    entre tests; se limpian antes de cada uno para aislarlos.
+
+    ``AzdoConfig`` sí lleva ``aplicacion_id`` pero muchos tests de este archivo
+    reutilizan el mismo ``ORG_URL``/``PROYECTO`` en configs de distintas
+    aplicaciones; los tests de ``sincronizar_todas_las_configuraciones_con_pat``
+    cuentan sobre TODA la colección (a propósito: no es multi-tenant), así que
+    también se limpia antes de cada test para que no arrastren configs de
+    corridas anteriores.
+    """
     await AzdoEsquemaItem.delete_all()
     await AzdoEsquemaSyncLog.delete_all()
+    await AzdoConfig.delete_all()
     yield
 
 
@@ -453,3 +463,95 @@ async def test_esquema_sync_estado_nunca_devuelve_200(
 
     assert resp.status_code == 200
     assert resp.json()["estado"] == "nunca"
+
+
+# ── sincronizar_todas_las_configuraciones_con_pat (auto-sync del scheduler) ──
+
+async def test_auto_sync_dedupe_mismo_org_key_proyecto(fabrica_aplicacion, monkeypatch):
+    """Dos ``AzdoConfig`` de aplicaciones distintas que apuntan al mismo
+    ``(target, org_key, proyecto)`` solo disparan una sincronización: el
+    espejo es compartido, sincronizarlo dos veces sería trabajo duplicado."""
+    app_a = await fabrica_aplicacion()
+    app_b = await fabrica_aplicacion()
+    for app in (app_a, app_b):
+        await AzdoConfig(
+            aplicacion_id=app.codigo,
+            scope="app",
+            org_url=ORG_URL,
+            pat="pat-test",
+            default_project=PROYECTO,
+            tipos_esquema_activos=["Task"],
+        ).insert()
+
+    llamadas: list[tuple] = []
+
+    async def _ejecutar(log_id, org_url, pat, target, proyecto, tipos):
+        llamadas.append((target, normalizar_org_key(org_url), proyecto))
+
+    monkeypatch.setattr(azdo_esquema_sync, "ejecutar_sincronizacion_esquema", _ejecutar)
+
+    await sincronizar_todas_las_configuraciones_con_pat()
+
+    assert llamadas == [("hitss", ORG_KEY, PROYECTO)]
+
+
+async def test_auto_sync_omite_config_sin_proyecto_por_defecto(fabrica_aplicacion, monkeypatch):
+    """Una config con PAT/org_url pero sin ``default_project`` se omite sin
+    lanzar excepción (no hay forma de saber qué proyecto sincronizar)."""
+    app = await fabrica_aplicacion()
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="app",
+        org_url=ORG_URL,
+        pat="pat-test",
+        default_project="",
+    ).insert()
+
+    llamadas: list[tuple] = []
+
+    async def _ejecutar(log_id, org_url, pat, target, proyecto, tipos):
+        llamadas.append((target, org_url, proyecto))
+
+    monkeypatch.setattr(azdo_esquema_sync, "ejecutar_sincronizacion_esquema", _ejecutar)
+
+    await sincronizar_todas_las_configuraciones_con_pat()  # no debe lanzar
+
+    assert llamadas == []
+
+
+async def test_auto_sync_sigue_con_las_demas_si_una_config_falla(
+    fabrica_aplicacion, monkeypatch
+):
+    """Un fallo al sincronizar una config (org/proyecto) no debe impedir que se
+    sincronicen las demás configs distintas."""
+    app_falla = await fabrica_aplicacion()
+    app_ok = await fabrica_aplicacion()
+    await AzdoConfig(
+        aplicacion_id=app_falla.codigo,
+        scope="app",
+        org_url="https://dev.azure.com/OrgQueFalla",
+        pat="pat-test",
+        default_project="ProyectoFalla",
+        tipos_esquema_activos=["Task"],
+    ).insert()
+    await AzdoConfig(
+        aplicacion_id=app_ok.codigo,
+        scope="app",
+        org_url=ORG_URL,
+        pat="pat-test",
+        default_project=PROYECTO,
+        tipos_esquema_activos=["Task"],
+    ).insert()
+
+    llamadas: list[str] = []
+
+    async def _ejecutar(log_id, org_url, pat, target, proyecto, tipos):
+        if proyecto == "ProyectoFalla":
+            raise RuntimeError("boom")
+        llamadas.append(proyecto)
+
+    monkeypatch.setattr(azdo_esquema_sync, "ejecutar_sincronizacion_esquema", _ejecutar)
+
+    await sincronizar_todas_las_configuraciones_con_pat()  # no debe propagar el RuntimeError
+
+    assert llamadas == [PROYECTO]

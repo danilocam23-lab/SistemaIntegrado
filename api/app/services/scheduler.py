@@ -16,6 +16,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.documents.aplicacion import Aplicacion
 from app.documents.asignacion import Asignacion
 from app.documents.azdo import AzdoSyncLog
+from app.services.azdo_esquema_sync import sincronizar_todas_las_configuraciones_con_pat
 from app.services.azdo_sync import leer_config_azdo, sincronizar_iteracion
 from app.services.soporte_solicitudes_fabrica_service import SoporteSolicitudesFabricaService
 
@@ -91,6 +92,17 @@ async def _tarea_carga_excel_solicitudes_fabrica() -> None:
         _log.warning("[scheduler] Carga automática Solicitudes Fábrica falló: %s", exc)
 
 
+async def _tarea_sync_esquema_azdo_automatico() -> None:
+    """Sincronización automática del espejo de esquema de Azure DevOps (del
+    que depende Horas de Azure en Asignaciones), 2 veces al día, para toda
+    AzdoConfig que ya tenga PAT configurado — independiente del campo
+    sync_interval, que gobierna el sync viejo por sprint (_tarea_sync_azdo)."""
+    try:
+        await sincronizar_todas_las_configuraciones_con_pat()
+    except Exception as exc:  # noqa: BLE001
+        _log.warning("[scheduler] Auto-sync de esquema AzDO falló: %s", exc)
+
+
 async def _verificar_y_recuperar_carga_excel() -> None:
     """Si el proceso backend se reinició (p. ej. por reciclaje del pool de IIS
     por inactividad) y con eso se perdió el horario programado más reciente
@@ -139,9 +151,16 @@ def iniciar_scheduler() -> None:
         hour="6,12,18",
         id="carga_excel_solicitudes_fabrica",
     )
+    _scheduler.add_job(
+        _tarea_sync_esquema_azdo_automatico,
+        "cron",
+        hour="11,17",
+        id="azdo_esquema_sync_automatico",
+    )
     _scheduler.start()
     _log.info("Scheduler de Azure DevOps iniciado (revisión cada 30 min)")
     _log.info("Scheduler de carga automática de Solicitudes Fábrica iniciado (6:00, 12:00 y 18:00)")
+    _log.info("Scheduler de auto-sync de esquema AzDO iniciado (6:00 y 12:00 hora Colombia)")
     asyncio.create_task(_verificar_y_recuperar_carga_excel())
 
 

@@ -21,8 +21,15 @@ from tests.conftest import headers_con_token
 async def _limpiar_espejo():
     """``AzdoEsquemaItem`` no lleva ``aplicacion_id`` (ver docstring de la clase);
     comparte clave (``org_key``+``proyecto``) entre tests, así que se limpia
-    antes de cada uno para aislarlos, igual que en ``test_azdo_esquema_sync.py``."""
+    antes de cada uno para aislarlos, igual que en ``test_azdo_esquema_sync.py``.
+
+    También se limpia ``AzdoConfig``: el test del fallback compartido
+    (``_resolver_org_key_compartido``) busca "cualquier" config con ``org_url``
+    en TODA la colección a propósito (no filtra por tenant), así que sin este
+    aseo arrastraría configs insertadas por otros archivos de test.
+    """
     await AzdoEsquemaItem.delete_all()
+    await AzdoConfig.delete_all()
     yield
 
 
@@ -216,6 +223,46 @@ async def test_horas_por_feature_sin_permiso_azure_devops_ver_pero_con_asignacio
     )
 
     assert resp.status_code == 403
+
+
+async def test_horas_por_feature_sin_config_propia_usa_org_key_compartido(
+    cliente, fabrica_usuario, fabrica_aplicacion
+):
+    """Un usuario sin ninguna ``AzdoConfig`` resoluble (ni user, ni squad, ni app
+    para su aplicación) igual puede leer el espejo si existe una ``AzdoConfig``
+    de OTRA aplicación con ``org_url`` configurado: el espejo es compartido y
+    ya sincronizado, así que no debería exigir PAT propio (ver
+    ``_resolver_org_key_compartido``)."""
+    app_sin_config = await fabrica_aplicacion()
+    app_con_config = await fabrica_aplicacion()
+    _, token = await fabrica_usuario([app_sin_config.codigo], permisos=["asignaciones.ver"])
+    await AzdoConfig(
+        aplicacion_id=app_con_config.codigo,
+        scope="app",
+        org_url="https://dev.azure.com/org-test",
+        pat="pat-de-otro-usuario",
+        default_project="Proyecto Test",
+    ).insert()
+
+    await _item(101, None, "Feature")
+    await _item(
+        201,
+        101,
+        "Task",
+        asignado_a="ana@hitss.com",
+        original_estimate=5,
+        completed_work=2,
+        remaining_work=3,
+    )
+
+    resp = await cliente.get(
+        "/api/azdo/esquema/horas-por-feature?ids=101",
+        headers=headers_con_token(token, app_sin_config.codigo),
+    )
+
+    assert resp.status_code == 200
+    filas = {fila["email"]: fila for fila in resp.json()["101"]}
+    assert filas["ana@hitss.com"]["completed_work"] == 2
 
 
 # ── GET /azdo/esquema/detalle-feature ──

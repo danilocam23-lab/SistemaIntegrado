@@ -21,6 +21,7 @@ from beanie import PydanticObjectId
 from pymongo import UpdateOne
 
 from app.documents.azdo import AzdoEsquemaItem, AzdoEsquemaSyncLog
+from app.documents.azdo_config import AzdoConfig
 from app.services.azure_devops import AzureDevOpsService, normalizar_org_key
 
 logger = logging.getLogger(__name__)
@@ -261,3 +262,78 @@ async def preparar_corrida(
         particiones_totales=particiones_totales,
         iniciado_en=ahora,
     ).insert()
+
+
+def _tipos_desde_jerarquia(jerarquia: list[dict]) -> list[str]:
+    tipos: list[str] = []
+    vistos: set[str] = set()
+    for nivel in jerarquia:
+        for tipo in nivel.get("tipos", []):
+            if tipo and tipo not in vistos:
+                tipos.append(tipo)
+                vistos.add(tipo)
+    return tipos
+
+
+async def _tipos_esquema_por_defecto(svc: AzureDevOpsService, proyecto: str) -> list[str]:
+    jerarquia = await svc.obtener_jerarquia_backlog(proyecto)
+    tipos = _tipos_desde_jerarquia(jerarquia)
+    if tipos:
+        return tipos
+
+    mapa_tipos = await svc.obtener_tipos_work_item(proyecto)
+    tipos = [
+        mapa_tipos[clave]
+        for clave in ("feature", "userStory", "task", "bug")
+        if mapa_tipos.get(clave)
+    ]
+    nombres_proceso = await svc.obtener_tipos_proceso(proyecto)
+    epic = next(
+        (tipo["nombre"] for tipo in nombres_proceso if tipo.get("nombre", "").lower() == "epic"),
+        None,
+    )
+    if epic and epic not in tipos:
+        tipos.insert(0, epic)
+    return tipos
+
+
+async def sincronizar_todas_las_configuraciones_con_pat() -> None:
+    """Sincroniza el espejo de esquema para cada organización + proyecto
+    distintos que tenga al menos una ``AzdoConfig`` con PAT configurado,
+    deduplicando por ``(target, org_key, proyecto)`` porque el espejo es
+    compartido, no multi-tenant. Pensada para el scheduler (cron 6:00 y 12:00
+    hora Colombia), no para servir peticiones HTTP.
+    """
+    configs = await AzdoConfig.find({"pat": {"$ne": ""}, "org_url": {"$ne": ""}}).to_list()
+    vistos: set[tuple[str, str, str]] = set()
+    for cfg in configs:
+        target = "epm" if cfg.scope.endswith("_epm") else "hitss"
+        proyecto = (cfg.default_project or "").strip()
+        if not proyecto:
+            logger.warning(
+                "Config AzDO sin proyecto por defecto (scope=%s), se omite del auto-sync.",
+                cfg.scope,
+            )
+            continue
+        org_key = normalizar_org_key(cfg.org_url)
+        clave = (target, org_key, proyecto)
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        try:
+            svc = AzureDevOpsService(cfg.org_url, cfg.pat)
+            tipos = cfg.tipos_esquema_activos or await _tipos_esquema_por_defecto(svc, proyecto)
+            log = await preparar_corrida(target, org_key, proyecto, len(tipos))
+            if log is None:
+                continue  # ya hay una corrida en curso para este org/proyecto
+            assert log.id is not None
+            await ejecutar_sincronizacion_esquema(
+                log.id, cfg.org_url, cfg.pat, target, proyecto, tipos
+            )
+        except Exception as exc:  # noqa: BLE001 — un fallo en una config no debe frenar las demás
+            logger.warning(
+                "Auto-sync de esquema AzDO falló (org=%s, proyecto=%s): %s",
+                org_key,
+                proyecto,
+                exc,
+            )

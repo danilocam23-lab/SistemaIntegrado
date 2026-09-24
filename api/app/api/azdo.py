@@ -25,6 +25,7 @@ from app.errors import ErrorDominio, ErrorIntegracion, NoEncontrado
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
 from app.security.deps import permiso, usuario_actual
 from app.services.azdo_esquema_sync import (
+    _tipos_esquema_por_defecto,
     ejecutar_sincronizacion_esquema,
     preparar_corrida,
 )
@@ -154,6 +155,26 @@ async def _resolver_config_contexto(
     return None, ctx.codigos[0] if ctx.codigos else ""
 
 
+async def _resolver_org_key_compartido(target: str) -> str | None:
+    """Último recurso para lecturas del espejo ``AzdoEsquemaItem`` (ya
+    sincronizado, no multi-tenant): si no hay config resuelta por
+    usuario/squad/app para quien pregunta, toma el ``org_url`` de CUALQUIER
+    ``AzdoConfig`` del target que lo tenga definido, sin exigir PAT ni que
+    pertenezca a la aplicación activa. El PAT solo hace falta para
+    *sincronizar*; leer el espejo ya sincronizado solo necesita saber su
+    ``org_key``, que es un dato compartido por toda la organización, no un
+    secreto por tenant.
+    """
+    sufijo = "" if target == "hitss" else "_epm"
+    cfg = await AzdoConfig.find_one(
+        {
+            "scope": {"$in": [f"app{sufijo}", f"squad{sufijo}", f"user{sufijo}"]},
+            "org_url": {"$ne": ""},
+        }
+    )
+    return normalizar_org_key(cfg.org_url) if cfg else None
+
+
 async def _crear_servicio_desde_config(cfg: AzdoConfig) -> AzureDevOpsService:
     if not cfg.org_url or not cfg.pat:
         raise HTTPException(
@@ -223,9 +244,17 @@ async def _validar_propiedad_usuario(usuario: Usuario, usuario_id: str | None) -
 
 async def _resolver_proyecto_esquema(
     proyecto: str | None,
-    cfg: AzdoConfig,
+    cfg: AzdoConfig | None,
 ) -> str:
-    proyecto_resuelto = (proyecto or "").strip() or (cfg.default_project or "").strip()
+    """Resuelve el proyecto explícito o, si hay ``cfg``, su ``default_project``.
+
+    ``cfg`` puede ser ``None`` cuando el árbol sincronizado se lee sin
+    configuración propia (ver ``_resolver_org_key_compartido``): en ese caso
+    el proyecto debe venir explícito en la petición, no hay dónde más buscarlo.
+    """
+    proyecto_resuelto = (proyecto or "").strip() or (
+        (cfg.default_project or "").strip() if cfg else ""
+    )
     if not proyecto_resuelto:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -279,39 +308,6 @@ def _mapear_error_esquema(exc: Exception, proyecto: str) -> ErrorDominio:
     return ErrorIntegracion(
         f"No se pudo obtener el esquema de Azure DevOps. Detalle de Azure: {mensaje_azure}"
     )
-
-
-def _tipos_desde_jerarquia(jerarquia: list[dict]) -> list[str]:
-    tipos: list[str] = []
-    vistos: set[str] = set()
-    for nivel in jerarquia:
-        for tipo in nivel.get("tipos", []):
-            if tipo and tipo not in vistos:
-                tipos.append(tipo)
-                vistos.add(tipo)
-    return tipos
-
-
-async def _tipos_esquema_por_defecto(svc: AzureDevOpsService, proyecto: str) -> list[str]:
-    jerarquia = await svc.obtener_jerarquia_backlog(proyecto)
-    tipos = _tipos_desde_jerarquia(jerarquia)
-    if tipos:
-        return tipos
-
-    mapa_tipos = await svc.obtener_tipos_work_item(proyecto)
-    tipos = [
-        mapa_tipos[clave]
-        for clave in ("feature", "userStory", "task", "bug")
-        if mapa_tipos.get(clave)
-    ]
-    nombres_proceso = await svc.obtener_tipos_proceso(proyecto)
-    epic = next(
-        (tipo["nombre"] for tipo in nombres_proceso if tipo.get("nombre", "").lower() == "epic"),
-        None,
-    )
-    if epic and epic not in tipos:
-        tipos.insert(0, epic)
-    return tipos
 
 
 async def _tipos_esquema_activos(
@@ -1096,7 +1092,7 @@ async def _recuperar_ancestros_sincronizados(
 
 
 async def _esquema_arbol_sincronizado(
-    cfg: AzdoConfig,
+    org_key: str,
     proyecto: str,
     tipos: list[str],
     estados: list[str],
@@ -1105,7 +1101,6 @@ async def _esquema_arbol_sincronizado(
     limite: int,
 ) -> dict:
     """Lee el árbol de esquema desde el espejo ``azdo_esquema_items``."""
-    org_key = normalizar_org_key(cfg.org_url)
     filtro: dict = {"org_key": org_key, "proyecto": proyecto}
     if tipos:
         filtro["tipo"] = {"$in": tipos}
@@ -1158,6 +1153,39 @@ async def esquema_arbol(
     origen = _normalizar_origen(origen)
     usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
     cfg, aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+
+    if origen == "sincronizado":
+        # El espejo ya sincronizado es compartido, no multi-tenant (ver
+        # ``_resolver_org_key_compartido``): leerlo no exige PAT propio, solo
+        # saber el org_key. Sin ``cfg`` propia, el proyecto debe venir
+        # explícito porque no hay ``default_project`` de dónde tomarlo.
+        org_key = (
+            normalizar_org_key(cfg.org_url)
+            if cfg
+            else await _resolver_org_key_compartido(target)
+        )
+        if not org_key:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+        proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
+        limite = min(limite, 5000)
+        tipos_consultados = _separar_csv(tipos)
+        estados_consultados = _separar_csv(estados)
+        iteraciones_permitidas = await _iteraciones_permitidas_contexto(ctx)
+        iteraciones_consulta, filtrado_por_squad = _resolver_iteraciones_consulta(
+            iteraciones_permitidas,
+            iteration_path,
+            proyecto_resuelto,
+        )
+        return await _esquema_arbol_sincronizado(
+            org_key,
+            proyecto_resuelto,
+            tipos_consultados,
+            estados_consultados,
+            iteraciones_consulta,
+            filtrado_por_squad,
+            limite,
+        )
+
     if not cfg:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
     proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
@@ -1170,17 +1198,6 @@ async def esquema_arbol(
         iteration_path,
         proyecto_resuelto,
     )
-
-    if origen == "sincronizado":
-        return await _esquema_arbol_sincronizado(
-            cfg,
-            proyecto_resuelto,
-            tipos_consultados,
-            estados_consultados,
-            iteraciones_consulta,
-            filtrado_por_squad,
-            limite,
-        )
 
     svc = await _crear_servicio_desde_config(cfg)
     try:
@@ -1355,9 +1372,11 @@ async def esquema_horas_por_feature(
     target = _normalizar_target(target)
     usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
     cfg, _aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
-    if not cfg:
+    org_key = (
+        normalizar_org_key(cfg.org_url) if cfg else await _resolver_org_key_compartido(target)
+    )
+    if not org_key:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
-    org_key = normalizar_org_key(cfg.org_url)
 
     feature_ids: list[int] = []
     for valor in _separar_csv(ids):
@@ -1411,9 +1430,11 @@ async def esquema_detalle_feature(
     target = _normalizar_target(target)
     usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
     cfg, _aplicacion_id = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
-    if not cfg:
+    org_key = (
+        normalizar_org_key(cfg.org_url) if cfg else await _resolver_org_key_compartido(target)
+    )
+    if not org_key:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
-    org_key = normalizar_org_key(cfg.org_url)
 
     descendientes = await _descendientes_de_feature(org_key, id)
 
