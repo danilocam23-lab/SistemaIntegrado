@@ -366,6 +366,47 @@ async def actualizar(
     return req
 
 
+class IdAzureHitssIn(BaseModel):
+    """Cuerpo del PATCH que actualiza solo el ID de Azure (Hitss)."""
+
+    id_azure_hitss: int | None = None
+
+
+@router.patch("/{codigo_req}/id-azure-hitss")
+async def actualizar_id_azure_hitss(
+    codigo_req: str,
+    datos: IdAzureHitssIn,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    usuario: Usuario = Depends(usuario_actual),
+):
+    """Actualiza solo el ID de Azure (Hitss), para quien tenga el permiso granular
+    'requerimientos.id_azure_hitss.editar' sin necesitar 'requerimientos.editar'
+    completo (mismo patrón que PATCH /detalle-ans para Detalle ANS/Tipificación)."""
+    puede = (
+        await tiene_permiso(usuario, "requerimientos.id_azure_hitss.editar")
+        or await tiene_permiso(usuario, "requerimientos.editar")
+    )
+    if not puede:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
+
+    req = await _buscar(ctx, codigo_req)
+    viejo = req.id_azure_hitss
+    if viejo == datos.id_azure_hitss:
+        return req  # sin cambios, no genera bitácora vacía
+
+    req.id_azure_hitss = datos.id_azure_hitss
+    req.marcar_actualizado()
+    await req.save()
+    await _registrar_bitacora(
+        ctx.codigo,
+        str(req.id),
+        "actualizar",
+        f"ID de Azure (Hitss): '{viejo or ''}' → '{datos.id_azure_hitss or ''}'",
+        usuario,
+    )
+    return req
+
+
 @router.post(
     "/{codigo_req}/transicion",
     dependencies=[permiso("requerimientos.editar")],

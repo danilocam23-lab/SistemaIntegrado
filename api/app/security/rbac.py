@@ -16,6 +16,7 @@ PERMISOS_CATALOGO: list[str] = [
     "requerimientos.editar",
     "requerimientos.eliminar",
     "requerimientos.tipificacion.editar",
+    "requerimientos.id_azure_hitss.editar",
     "entregas_actas.ver",
     "entregas_actas.exportar",
     "requerimientos.exportar",
