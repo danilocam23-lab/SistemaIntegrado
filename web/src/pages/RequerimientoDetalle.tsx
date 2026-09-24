@@ -29,6 +29,7 @@ export default function RequerimientoDetalle() {
   const { modoConsolidado } = useAplicacion()
   const puedeEditarReq = tienePermiso('requerimientos.editar')
   const puedeEditarTipificacion = puedeEditarReq || tienePermiso('requerimientos.tipificacion.editar')
+  const puedeEditarIdAzure = puedeEditarReq || tienePermiso('requerimientos.id_azure_hitss.editar')
   const puedeEliminarBitacora = tienePermiso('admin.roles.editar')
   const { datos: personas } = useLista<Persona>('/personas')
   const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
@@ -153,6 +154,8 @@ export default function RequerimientoDetalle() {
             campos={campos}
             req={req}
             puedeEditarReq={puedeEditarReq}
+            puedeEditarIdAzure={puedeEditarIdAzure}
+            onGuardadoIdAzure={detalle.recargar}
             squads={squads}
             resolverNombreSquad={resolverNombreSquad}
             ltHitss={ltHitss}

@@ -1,8 +1,11 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
+import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { AreaTexto, Campo, Selector } from '../../components/ui'
+import client from '../../api/client'
+import { mensajeError } from '../../api/hooks'
+import { AreaTexto, Aviso, Boton, Campo, Selector } from '../../components/ui'
 import { TIPOS_COSTO } from '../../constantes'
 import type { Aplicacion, Persona, Requerimiento } from '../../types'
 import type { CamposRequerimiento } from './useRequerimientoDetalle'
@@ -11,10 +14,86 @@ import type { CamposRequerimiento } from './useRequerimientoDetalle'
  * con el atributo HTML `form` para poder vivir fuera del propio formulario. */
 export const ID_FORMULARIO_DATOS_GENERALES = 'formulario-datos-generales'
 
+/**
+ * Campo "ID de Azure (Hitss)" con guardado propio (PATCH independiente del
+ * `guardar()` general del formulario), para que quien solo tenga
+ * `requerimientos.id_azure_hitss.editar` (sin `requerimientos.editar`) pueda
+ * editarlo sin pasar por el botón "Guardar cambios" (gateado por el permiso
+ * general, que le devolvería 403).
+ */
+function CampoIdAzureHitss({
+  reqId,
+  valorInicial,
+  puedeEditar,
+  onGuardado,
+}: {
+  reqId: string
+  valorInicial: number | null
+  puedeEditar: boolean
+  onGuardado: () => void
+}) {
+  const [valor, setValor] = useState(valorInicial != null ? String(valorInicial) : '')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  if (!puedeEditar) {
+    return (
+      <label className="text-sm">
+        <span className="mb-1 block text-slate-600">ID de Azure (Hitss)</span>
+        <Campo
+          value={valorInicial != null ? String(valorInicial) : ''}
+          type="number" disabled
+          placeholder="ID del work item en Azure DevOps"
+          className="w-full" />
+      </label>
+    )
+  }
+
+  const valorGuardado = valorInicial != null ? String(valorInicial) : ''
+  const modificado = valor !== valorGuardado
+
+  async function guardar(): Promise<void> {
+    setGuardando(true)
+    setError('')
+    try {
+      const nuevoValor = valor.trim() ? Number(valor) : null
+      await client.patch(`/requerimientos/${reqId}/id-azure-hitss`, { id_azure_hitss: nuevoValor })
+      setValor(nuevoValor != null ? String(nuevoValor) : '')
+      onGuardado()
+    } catch (err) {
+      setError(mensajeError(err))
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <label className="text-sm">
+      <span className="mb-1 block text-slate-600">ID de Azure (Hitss)</span>
+      <div className="flex items-center gap-2">
+        <Campo
+          value={valor}
+          onChange={(e) => setValor(e.target.value)}
+          type="number"
+          placeholder="ID del work item en Azure DevOps"
+          className="w-full" />
+        {modificado && (
+          <Boton variante="secundario" tamano="sm" onClick={guardar} disabled={guardando}>
+            {guardando ? 'Guardando…' : 'Guardar'}
+          </Boton>
+        )}
+      </div>
+      {error && <Aviso tono="error" className="mt-1">{error}</Aviso>}
+    </label>
+  )
+}
+
 interface Props {
   campos: CamposRequerimiento
   req: Requerimiento
   puedeEditarReq: boolean
+  puedeEditarIdAzure: boolean
+  onGuardadoIdAzure: () => void
   squads: Aplicacion[]
   resolverNombreSquad: (id: string) => string
   ltHitss: Persona[]
@@ -33,6 +112,8 @@ export default function SeccionDatosGenerales({
   campos,
   req,
   puedeEditarReq,
+  puedeEditarIdAzure,
+  onGuardadoIdAzure,
   squads,
   resolverNombreSquad,
   ltHitss,
@@ -50,11 +131,16 @@ export default function SeccionDatosGenerales({
 
   return (
     <form id={ID_FORMULARIO_DATOS_GENERALES} onSubmit={onSubmit} className="tarjeta tarjeta-pad">
-      <fieldset disabled={!puedeEditarReq}>
       <h2 className="etiqueta-sup mb-3">
         Datos generales
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
+      {/* `display: contents` saca al fieldset del flujo del grid (sus hijos
+          participan directamente en las columnas, como si no existiera
+          visualmente) sin anular el `disabled` HTML, que sigue aplicando a
+          todos sus descendientes. Así el campo de ID de Azure, que vive
+          fuera de este fieldset, puede tener su propio permiso/guardado. */}
+      <fieldset disabled={!puedeEditarReq} style={{ display: 'contents' }}>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Código SC</span>
           <Campo value={valores.codigoSc} onChange={(e) => actualizar('codigoSc', e.target.value)} required
@@ -170,13 +256,14 @@ export default function SeccionDatosGenerales({
             placeholder="Número o referencia del acta de trabajo"
             className="w-full" />
         </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">ID de Azure (Hitss)</span>
-          <Campo value={valores.idAzureHitss} onChange={(e) => actualizar('idAzureHitss', e.target.value)}
-            type="number" disabled={!puedeEditarReq}
-            placeholder="ID del work item en Azure DevOps"
-            className="w-full" />
-        </label>
+      </fieldset>
+      <CampoIdAzureHitss
+        reqId={req.id}
+        valorInicial={req.id_azure_hitss}
+        puedeEditar={puedeEditarIdAzure}
+        onGuardado={onGuardadoIdAzure}
+      />
+      <fieldset disabled={!puedeEditarReq} style={{ display: 'contents' }}>
         <label className="text-sm sm:col-span-2">
           <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
           <AreaTexto value={valores.seguimientoEpm} onChange={(e) => actualizar('seguimientoEpm', e.target.value)} rows={2}
@@ -188,8 +275,8 @@ export default function SeccionDatosGenerales({
           <Campo value={valores.motivoCierre} onChange={(e) => actualizar('motivoCierre', e.target.value)}
             className="w-full" />
         </label>
-      </div>
       </fieldset>
+      </div>
     </form>
   )
 }
