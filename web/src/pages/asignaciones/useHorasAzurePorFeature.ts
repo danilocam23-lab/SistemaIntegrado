@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import client from '../../api/client'
+import { CLAVE_USUARIO_ESQUEMA } from '../../components/azure/useConfigPersonaAzure'
 import type { Requerimiento } from '../../types'
 
 export interface HorasAzureFeatureEntry {
@@ -36,9 +37,11 @@ export function useHorasAzurePorFeature(requerimientos: Requerimiento[]) {
       setHorasAzurePorFeature(new Map())
       return
     }
+    const usuarioId = window.localStorage.getItem(CLAVE_USUARIO_ESQUEMA)
+    const parametroUsuario = usuarioId ? `&usuario_id=${usuarioId}` : ''
     client
       .get<Record<string, HorasAzureFeatureEntry[]>>(
-        `/azdo/esquema/horas-por-feature?ids=${clave}&target=hitss`,
+        `/azdo/esquema/horas-por-feature?ids=${clave}&target=hitss${parametroUsuario}`,
       )
       .then((r) => {
         const map = new Map<number, HorasAzureFeatureEntry[]>()
