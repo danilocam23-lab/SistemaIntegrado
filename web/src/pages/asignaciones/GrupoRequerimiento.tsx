@@ -140,6 +140,31 @@ export function GrupoRequerimiento({
                 />
               ))}
             </tbody>
+            <tfoot className="bg-slate-50 font-semibold">
+              <tr>
+                <td colSpan={3} className="text-left">Total</td>
+                <td className="text-right">
+                  {grupo.items.reduce((sum, item) => sum + item.asig.total_porcentaje, 0).toFixed(1)}%
+                </td>
+                <td className="text-right">
+                  {grupo.items.reduce((sum, item) => sum + item.horasCarga, 0).toFixed(1)} h
+                </td>
+                {grupo.idAzureHitss !== null && (
+                  <>
+                    <td className="text-right">
+                      {grupo.items.reduce((sum, item) => sum + (item.horasAzure?.originalEstimate ?? 0), 0).toFixed(1)} h
+                    </td>
+                    <td className="text-right">
+                      {grupo.items.reduce((sum, item) => sum + (item.horasAzure?.completedWork ?? 0), 0).toFixed(1)} h
+                    </td>
+                    <td className="text-right">
+                      {grupo.items.reduce((sum, item) => sum + (item.horasAzure?.remainingWork ?? 0), 0).toFixed(1)} h
+                    </td>
+                  </>
+                )}
+                <td></td>
+              </tr>
+            </tfoot>
           </table>
         </TablaScroll>
       )}
