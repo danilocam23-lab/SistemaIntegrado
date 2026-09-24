@@ -77,6 +77,17 @@ export function useDerivadosAsignaciones({
     return set
   }, [personas])
 
+  // Análogo a `emailsPersonasConocidas` pero guardando la Persona completa:
+  // se usa para resolver nombres (modal de detalle) y para detectar personas
+  // conocidas con horas de Azure pero sin Asignación creada en el grupo.
+  const personaPorEmail = useMemo(() => {
+    const map = new Map<string, Persona>()
+    for (const persona of personas) {
+      if (persona.email) map.set(persona.email.trim().toLowerCase(), persona)
+    }
+    return map
+  }, [personas])
+
   const categoriaPorId = useMemo(() => {
     const map = new Map<string, Categoria>()
     for (const categoria of categorias) map.set(categoria.id, categoria)
@@ -217,6 +228,38 @@ export function useDerivadosAsignaciones({
         }),
         horasAzureVacio(),
       )
+
+      // Personas conocidas por el sistema con horas reales de Azure bajo esta
+      // Feature pero sin Asignación creada en este requerimiento: se agregan
+      // como filas sintéticas de solo lectura (ver FilaAsignacion).
+      const personaIdsCubiertos = new Set(grupo.items.map((item) => item.asig.persona_id))
+      for (const entrada of entradas) {
+        const email = entrada.email?.trim().toLowerCase()
+        if (!email) continue
+        const persona = personaPorEmail.get(email)
+        if (!persona) continue
+        if (personaIdsCubiertos.has(persona.id)) continue
+        personaIdsCubiertos.add(persona.id)
+        const item: (typeof grupo.items)[number] = {
+          asig: {
+            id: `azure-sin-asignar-${grupo.reqId}-${persona.id}`,
+            persona_id: persona.id,
+            categoria_id: '',
+            total_porcentaje: 0,
+            estado: '',
+            prioridad: false,
+            proyectos: [{ id: '', nombre: '', estado: '', requerimiento_id: grupo.reqId }],
+          },
+          horasCarga: 0,
+          horasAzure: {
+            originalEstimate: entrada.original_estimate,
+            completedWork: entrada.completed_work,
+            remainingWork: entrada.remaining_work,
+          },
+          sinAsignacionFormal: true,
+        }
+        grupo.items.push(item)
+      }
     }
 
     return Array.from(map.values())
@@ -242,6 +285,7 @@ export function useDerivadosAsignaciones({
     personaPorId,
     horasAzurePorFeature,
     emailsPersonasConocidas,
+    personaPorEmail,
   ])
 
   const estadosUnicos = useMemo(() => {
@@ -334,6 +378,7 @@ export function useDerivadosAsignaciones({
   return {
     personasDisponibles,
     personaPorId,
+    personaPorEmail,
     categoriaPorId,
     reqPorId,
     reqIdsActivos,

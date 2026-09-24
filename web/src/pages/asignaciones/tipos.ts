@@ -33,6 +33,9 @@ export interface ItemGrupo {
   horasCarga: number
   /** `null` cuando el requerimiento del grupo no tiene Feature de Azure vinculada. */
   horasAzure: HorasAzureGrupo | null
+  /** `true` cuando la fila es sintética: persona con horas reales de Azure bajo
+   *  la Feature del requerimiento pero sin Asignación creada. Fila de solo lectura. */
+  sinAsignacionFormal?: boolean
 }
 
 export interface GrupoReq {
@@ -73,3 +76,20 @@ export interface WoPersona {
 }
 
 export type BacklogPorPersonaMap = Map<string, BacklogFuturo[]>
+
+/** Respuesta de `GET /azdo/esquema/detalle-feature`: desglose de horas por Sprint y por Mes. */
+export interface EntradaDetalleAzure {
+  email: string | null
+  horas: number
+}
+
+export interface GrupoDetalleAzure {
+  clave: string
+  total_horas: number
+  personas: EntradaDetalleAzure[]
+}
+
+export interface RespuestaDetalleAzure {
+  por_sprint: GrupoDetalleAzure[]
+  por_mes: GrupoDetalleAzure[]
+}

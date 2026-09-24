@@ -14,6 +14,7 @@ interface Props {
   mensajeVacio: string
   puedeEditarAsignaciones: boolean
   personaPorId: Map<string, Persona>
+  personaPorEmail: Map<string, Persona>
   categoriaPorId: Map<string, Categoria>
   editandoAsigId: string | undefined
   escrituras: ReturnType<typeof useEscriturasAsignaciones>
@@ -28,6 +29,7 @@ export function VistaPorActas({
   mensajeVacio,
   puedeEditarAsignaciones,
   personaPorId,
+  personaPorEmail,
   categoriaPorId,
   editandoAsigId,
   escrituras,
@@ -43,6 +45,7 @@ export function VistaPorActas({
           onToggle={onAlternarGrupo}
           puedeEditarAsignaciones={puedeEditarAsignaciones}
           personaPorId={personaPorId}
+          personaPorEmail={personaPorEmail}
           categoriaPorId={categoriaPorId}
           editandoAsigId={editandoAsigId}
           escrituras={escrituras}

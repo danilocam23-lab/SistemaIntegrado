@@ -41,6 +41,7 @@ export default function Asignaciones() {
   const {
     personasDisponibles,
     personaPorId,
+    personaPorEmail,
     categoriaPorId,
     reqIdsActivos,
     opcionesReq,
@@ -193,6 +194,7 @@ export default function Asignaciones() {
           mensajeVacio={mensajeVacioActas}
           puedeEditarAsignaciones={puedeEditarAsignaciones}
           personaPorId={personaPorId}
+          personaPorEmail={personaPorEmail}
           categoriaPorId={categoriaPorId}
           editandoAsigId={formulario.editandoAsig?.id}
           escrituras={escrituras}

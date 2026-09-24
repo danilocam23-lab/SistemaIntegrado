@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
+import { useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Chip, Icono, TablaScroll } from '../../components/ui'
@@ -9,6 +10,7 @@ import { tonoEstadoChip } from './estados'
 import type { AsignacionItem, GrupoReq } from './tipos'
 import type { useEscriturasAsignaciones } from './useEscriturasAsignaciones'
 import { FilaAsignacion } from './FilaAsignacion'
+import { ModalDetalleHorasAzure } from './ModalDetalleHorasAzure'
 
 interface Props {
   grupo: GrupoReq
@@ -16,6 +18,7 @@ interface Props {
   onToggle: (event: ReactMouseEvent<HTMLButtonElement>, reqId: string | null) => void
   puedeEditarAsignaciones: boolean
   personaPorId: Map<string, Persona>
+  personaPorEmail: Map<string, Persona>
   categoriaPorId: Map<string, Categoria>
   editandoAsigId: string | undefined
   escrituras: ReturnType<typeof useEscriturasAsignaciones>
@@ -33,11 +36,14 @@ export function GrupoRequerimiento({
   onToggle,
   puedeEditarAsignaciones,
   personaPorId,
+  personaPorEmail,
   categoriaPorId,
   editandoAsigId,
   escrituras,
   onEditar,
 }: Props) {
+  const [mostrarDetalle, setMostrarDetalle] = useState(false)
+
   return (
     <section className="tarjeta overflow-hidden">
       <div className="flex items-center justify-between gap-3 bg-marca-osc px-4 py-3 text-white">
@@ -84,6 +90,15 @@ export function GrupoRequerimiento({
               Ver req
             </Link>
           )}
+          {grupo.idAzureHitss !== null && (
+            <button
+              type="button"
+              onClick={() => setMostrarDetalle(true)}
+              className="rounded-full bg-white/10 px-2 py-1 text-xs font-medium text-white hover:bg-white/20"
+            >
+              Detalle
+            </button>
+          )}
           <Chip tono={tonoEstadoChip(grupo.reqEstado)}>{grupo.reqEstado ?? 'Sin estado'}</Chip>
           <span className="rounded-full bg-white/10 px-2 py-1 text-xs font-medium text-white">
             {grupo.items.length} asignación{grupo.items.length === 1 ? '' : 'es'}
@@ -127,6 +142,15 @@ export function GrupoRequerimiento({
             </tbody>
           </table>
         </TablaScroll>
+      )}
+
+      {mostrarDetalle && grupo.idAzureHitss !== null && (
+        <ModalDetalleHorasAzure
+          idAzureHitss={grupo.idAzureHitss}
+          reqLabel={grupo.reqLabel}
+          personaPorEmail={personaPorEmail}
+          onCerrar={() => setMostrarDetalle(false)}
+        />
       )}
     </section>
   )

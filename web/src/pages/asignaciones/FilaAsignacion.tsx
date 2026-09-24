@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { Campo, Icono } from '../../components/ui'
+import { Campo, Chip, Icono } from '../../components/ui'
 import type { Categoria, Persona } from '../../types'
 import type { AsignacionItem, ItemGrupo } from './tipos'
 import type { useEscriturasAsignaciones } from './useEscriturasAsignaciones'
@@ -34,25 +34,32 @@ export function FilaAsignacion({
   escrituras,
   onEditar,
 }: Props) {
-  const { asig, horasCarga, horasAzure } = item
+  const { asig, horasCarga, horasAzure, sinAsignacionFormal } = item
   const enEdicionInline = escrituras.edicionInlineId === asig.id
 
   return (
     <tr className={resaltada ? 'bg-amber-50' : ''}>
-      <td>{personaPorId.get(asig.persona_id)?.nombre ?? asig.persona_id}</td>
-      <td>{categoriaPorId.get(asig.categoria_id)?.nombre ?? asig.categoria_id}</td>
+      <td>
+        <span className="inline-flex items-center gap-2">
+          {personaPorId.get(asig.persona_id)?.nombre ?? asig.persona_id}
+          {sinAsignacionFormal && <Chip tono="neutro">Sin asignación formal</Chip>}
+        </span>
+      </td>
+      <td>{sinAsignacionFormal ? '—' : (categoriaPorId.get(asig.categoria_id)?.nombre ?? asig.categoria_id)}</td>
       <td className="text-center">
         <input
           type="checkbox"
-          checked={asig.prioridad === true}
-          onChange={() => void escrituras.cambiarPrioridad(asig)}
+          checked={sinAsignacionFormal ? false : asig.prioridad === true}
+          onChange={sinAsignacionFormal ? undefined : () => void escrituras.cambiarPrioridad(asig)}
           title="Marcar como prioridad"
-          className={`h-4 w-4 accent-marca ${puedeEditarAsignaciones ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
-          disabled={!puedeEditarAsignaciones}
+          className={`h-4 w-4 accent-marca ${puedeEditarAsignaciones && !sinAsignacionFormal ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+          disabled={sinAsignacionFormal || !puedeEditarAsignaciones}
         />
       </td>
       <td className="text-right font-medium">
-        {enEdicionInline ? (
+        {sinAsignacionFormal ? (
+          <span className="text-slate-400">—</span>
+        ) : enEdicionInline ? (
           <Campo
             autoFocus
             type="number"
@@ -83,7 +90,7 @@ export function FilaAsignacion({
           </span>
         )}
       </td>
-      <td className="text-right text-slate-700">{horasCarga.toFixed(1)} h</td>
+      <td className="text-right text-slate-700">{sinAsignacionFormal ? '—' : `${horasCarga.toFixed(1)} h`}</td>
       {horasAzure !== null && (
         <>
           <td className="text-right text-slate-700">{horasAzure.originalEstimate.toFixed(1)} h</td>
@@ -92,7 +99,9 @@ export function FilaAsignacion({
         </>
       )}
       <td className="text-center whitespace-nowrap">
-        {puedeEditarAsignaciones && (
+        {sinAsignacionFormal ? (
+          <span className="text-slate-300">—</span>
+        ) : puedeEditarAsignaciones && (
           <div className="flex items-center justify-center gap-3">
             <button type="button" onClick={() => onEditar(asig)} className="enlace-accion">
               Editar
