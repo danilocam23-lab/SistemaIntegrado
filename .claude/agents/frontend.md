@@ -114,8 +114,13 @@ trocear un archivo sin cambiar su aspecto.
 `DISEÑO APROBADO por el usuario: <referencia al mockup/artifact y a los cambios aceptados>`,
 **no toques `web/`**. Tu entrega en ese caso es la fase 1 (propuesta) y te detienes:
 
-1. **Mockup navegable** como archivo HTML autónomo (en el directorio de scratchpad o el que te
-   indiquen), con datos de ejemplo realistas (usa los campos y órdenes de magnitud reales de la
+1. **Mockup navegable, como panel nuevo del mockup canónico** (artifact
+   `https://claude.ai/code/artifact/c13425f1-ce3e-44a6-9031-7e9a88bcae20`, "Pantallas
+   consolidadas HITSS"): **nunca** crees un mockup aparte. Reutiliza sus clases, tokens
+   (`--marca-*`, `--ok/--warn/--bad`), fuentes (Inter + JetBrains Mono), radios y sombras, y su
+   patrón de panel (`.page[data-panel]` + botón en `.seg` + marco `.stage`/`.chrome` + bloques
+   `.notes`). Entrega el panel como archivo HTML (scratchpad o el que te indiquen) para que el hilo
+   principal lo publique en ese mismo artifact. Datos de ejemplo realistas (usa los campos y órdenes de magnitud reales de la
    pantalla, no lorem ipsum), la paleta `marca` y el look de las pantallas vigentes. Debe mostrar:
    escritorio y ancho de móvil (~400 px), y los estados **cargando, vacío/sin datos, error y con
    alertas/riesgo**. Si hay más de una dirección razonable, presenta 2 opciones y recomienda una.
