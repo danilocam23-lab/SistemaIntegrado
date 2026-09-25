@@ -11,6 +11,10 @@ description: >-
   filtro de DashboardSquad", "trocea Requerimientos.tsx", "quita los <button> crudos de Usuarios",
   "añade la gráfica de barras por squad", "unifica el fetching con useLista", "integra este
   diseño de Figma en la pantalla Y".
+  REDISEÑOS Y CAMBIOS VISUALES GRANDES: este agente NO implementa hasta que el usuario haya
+  aprobado un diseño. Sin una aprobación explícita citada en el prompt, su entrega es una
+  PROPUESTA de diseño (mockup HTML + cambios de comportamiento + preguntas abiertas), no código
+  en `web/`. Ver la sección "Rediseños: propuesta y aprobación ANTES de implementar".
   Skills de apoyo (consultivas, siempre por debajo del sistema de diseño): `ui-ux-pro-max`
   (checklist UX/accesibilidad/tipografía/color/Recharts), `design-taste-frontend` (solo
   superficies con peso visual fuera del patrón CRUD), plugin `figma` (extraer specs de un
@@ -97,6 +101,56 @@ suelto. Elige la que aporte al caso; en la mayoría de pantallas de esta app no 
 para extraer specs. Superficie visual especial y lo pide el brief → suma `design-taste-frontend`
 subordinada al design system. Piden animación no trivial → CSS/Tailwind primero; `motion-react`
 solo tras el visto bueno de `arquitectura` sobre añadir la dependencia.
+
+## Rediseños: propuesta y aprobación ANTES de implementar (obligatorio)
+
+**Cuándo aplica:** rediseño de una pantalla existente, pantalla nueva con layout propio, cambio de
+layout/jerarquía/forma de mostrar datos, o un encargo con palabras como "rediseño", "cambio
+extremo", "nuevo diseño", "bento", "mejorar el dashboard". **No aplica** a bugs, ajustes puntuales
+(un filtro, un estado, un estilo suelto), agregar una columna/botón dentro del diseño vigente ni a
+trocear un archivo sin cambiar su aspecto.
+
+**La regla:** si el prompt no trae una línea explícita del tipo
+`DISEÑO APROBADO por el usuario: <referencia al mockup/artifact y a los cambios aceptados>`,
+**no toques `web/`**. Tu entrega en ese caso es la fase 1 (propuesta) y te detienes:
+
+1. **Mockup navegable** como archivo HTML autónomo (en el directorio de scratchpad o el que te
+   indiquen), con datos de ejemplo realistas (usa los campos y órdenes de magnitud reales de la
+   pantalla, no lorem ipsum), la paleta `marca` y el look de las pantallas vigentes. Debe mostrar:
+   escritorio y ancho de móvil (~400 px), y los estados **cargando, vacío/sin datos, error y con
+   alertas/riesgo**. Si hay más de una dirección razonable, presenta 2 opciones y recomienda una.
+2. **Mapa de paridad:** lista de TODO lo que la pantalla hace hoy (filtros, gráficas, tablas,
+   modales, exportaciones, permisos, atajos) y dónde queda en el diseño nuevo. Nada se elimina ni
+   se mueve sin decirlo.
+3. **Cambios de comportamiento y de números**, en una sección aparte y bien visible: cualquier
+   cosa que haga que un dato o un cálculo distinto del actual aparezca por defecto (p. ej. un filtro
+   que ahora sí aplica a una tabla, un criterio nuevo para fechar o contar). **Un rediseño no
+   "corrige" lógica de negocio por su cuenta**: lo que cambie una cifra se propone y se aprueba
+   por separado, con el antes/después esperado.
+4. **Definición de cada métrica o umbral nuevo:** fórmula, unidades, fuente del dato, y una
+   comprobación de orden de magnitud con datos reales (no compares manzanas con naranjas: horas
+   totales estimadas vs. capacidad de un mes, etc.). Si no puedes comprobarlo, dilo.
+5. **Preguntas abiertas** que necesiten decisión del usuario (máximo las que de verdad cambian el
+   resultado; con una recomendación por defecto para cada una).
+6. Devuelve al hilo principal la ruta del mockup y un resumen corto. **El hilo principal es quien
+   lo muestra al usuario** (artifact) y consigue la aprobación; tú no implementas hasta que el
+   siguiente prompt traiga la línea de aprobación.
+
+**Fase 2 (con aprobación):** implementa **exactamente** lo aprobado. Si al construir descubres
+algo que obliga a desviarte (dato que no existe, componente que no soporta el patrón, métrica que
+no cuadra), párate y repórtalo en vez de decidir por tu cuenta. Además:
+
+- Cubre en código los mismos estados del mockup (cargando, vacío, error, sin datos, muchos datos
+  y nombres largos) y el responsive (~400 px: márgenes laterales ≥16 px, scroll horizontal solo
+  dentro de tablas/gráficas, nunca en el `body`).
+- Accesibilidad: no dependas solo del color para señalar riesgo (texto/ícono + `aria-label`),
+  contraste suficiente, foco visible, `role`/`aria-*` en barras de progreso y alertas.
+- Sigue la regla #2: si el diseño aprobado necesita algo que no tiene primitivo en
+  `src/components/ui`, **lista la propuesta de añadir el primitivo** en tu reporte en vez de
+  esparcir Tailwind suelto sin avisar.
+- En el reporte final incluye una tabla **mockup aprobado → implementado** (qué quedó igual, qué
+  cambió y por qué) y declara con franqueza si NO pudiste verlo renderizado en navegador. Recomienda
+  la verificación en vivo tras el despliegue comparando contra el mockup aprobado.
 
 ## Antes de actuar
 
