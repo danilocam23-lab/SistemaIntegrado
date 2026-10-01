@@ -75,6 +75,16 @@ export interface FilaDetalleAplicacionEpm {
   cantidadRequerimientos: number
 }
 
+export interface FilaDetalleEntrega {
+  reqId: string
+  codigoReq: string
+  nombreActa: string
+  entregaNum: number
+  fechaComprometida: string | null
+  estado: string
+  horas: number
+}
+
 /** Fila de squad enriquecida con porcentajes de ANS, carga y estado de riesgo. */
 export interface FilaSquadAnalisis extends FilaSquad {
   porcentajeActa: number | null
@@ -85,6 +95,8 @@ export interface FilaSquadAnalisis extends FilaSquad {
   nivelGlobal: NivelAvance | null
   /** Horas disponibles del squad en el periodo (null si no hay capacidad configurada). */
   capacidadHoras: number | null
+  /** Personas distintas que aportan capacidad al squad en los periodos seleccionados. */
+  personasCapacidad: number
   /** Horas de entregas del periodo / capacidad del periodo, en % (null si no hay capacidad). */
   utilizacion: number | null
   sobrecarga: boolean

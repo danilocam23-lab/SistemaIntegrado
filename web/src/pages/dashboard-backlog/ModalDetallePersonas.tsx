@@ -11,15 +11,19 @@ interface Props {
   busqueda: string
   onBusqueda: (valor: string) => void
   onCerrar: () => void
+  /** Si se indica, el detalle queda acotado a ese squad. */
+  squad?: string
 }
 
-export default function ModalDetallePersonas({ filas, totalPeriodos, busqueda, onBusqueda, onCerrar }: Props) {
+export default function ModalDetallePersonas({ filas, totalPeriodos, busqueda, onBusqueda, onCerrar, squad }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
           <div>
-            <h2 className="titulo-seccion">Detalle capacidad por persona</h2>
+            <h2 className="titulo-seccion">
+              {squad ? `Detalle capacidad por persona — ${squad}` : 'Detalle capacidad por persona'}
+            </h2>
             <p className="mt-1 text-sm text-slate-500">
               Horas configuradas por persona y squad · {totalPeriodos} periodo(s) seleccionados.
             </p>

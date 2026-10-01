@@ -7,6 +7,7 @@ import type { Capacidad, Configuracion, Festivo, Persona, Requerimiento } from '
 import type {
   FilaCapacidadSquad,
   FilaDetalleAplicacionEpm,
+  FilaDetalleEntrega,
   FilaDetallePersona,
   FilaDetalleWo,
   FilaEntregasMes,
@@ -41,9 +42,12 @@ interface ParametrosDerivados {
   squadCodigoPorNombre: Map<string, string>
   periodosSeleccionados: string[]
   squadDetalleAplicaciones: string | null
+  squadDetallePersonas: string | null
   busquedaDetalleWo: string
   busquedaDetallePersonas: string
   busquedaDetalleAplicaciones: string
+  squadDetalleEntregas: string | null
+  busquedaDetalleEntregas: string
 }
 
 /** Entregas del requerimiento cuyo mes cae dentro de los periodos seleccionados. */
@@ -89,9 +93,12 @@ export function useDerivadosBacklog({
   squadCodigoPorNombre,
   periodosSeleccionados,
   squadDetalleAplicaciones,
+  squadDetallePersonas,
   busquedaDetalleWo,
   busquedaDetallePersonas,
   busquedaDetalleAplicaciones,
+  squadDetalleEntregas,
+  busquedaDetalleEntregas,
 }: ParametrosDerivados) {
   const periodos = useMemo(() => new Set(periodosSeleccionados), [periodosSeleccionados])
 
@@ -277,6 +284,17 @@ export function useDerivadosBacklog({
     )
   }, [busquedaDetallePersonas, detallePersonasCapacidad])
 
+  const detallePersonasCapacidadPorSquad = useMemo<FilaDetallePersona[]>(() => {
+    if (!squadDetallePersonas) return []
+    return detallePersonasCapacidad.filter((fila) => fila.squad === squadDetallePersonas)
+  }, [detallePersonasCapacidad, squadDetallePersonas])
+
+  const detallePersonasCapacidadPorSquadFiltrado = useMemo(() => {
+    const busqueda = busquedaDetallePersonas.trim().toLowerCase()
+    if (!busqueda) return detallePersonasCapacidadPorSquad
+    return detallePersonasCapacidadPorSquad.filter((fila) => fila.nombre.toLowerCase().includes(busqueda))
+  }, [busquedaDetallePersonas, detallePersonasCapacidadPorSquad])
+
   const detalleAplicacionesEpmPorSquad = useMemo<FilaDetalleAplicacionEpm[]>(() => {
     if (!squadDetalleAplicaciones) return []
     const mapa = new Map<string, number>()
@@ -299,6 +317,44 @@ export function useDerivadosBacklog({
     if (!busqueda) return detalleAplicacionesEpmPorSquad
     return detalleAplicacionesEpmPorSquad.filter((fila) => fila.aplicacionEpm.toLowerCase().includes(busqueda))
   }, [busquedaDetalleAplicaciones, detalleAplicacionesEpmPorSquad])
+
+  const detalleEntregasPorSquad = useMemo<FilaDetalleEntrega[]>(() => {
+    if (squadDetalleEntregas === null) return []
+    const resultado: FilaDetalleEntrega[] = []
+    // Mismo conjunto de requerimientos y entregas que el conteo de la tabla.
+    for (const req of requerimientosPeriodo) {
+      const squadId = req.aplicacion_id || req.solicitud?.squad_id || null
+      const squad = resolverNombreSquad(squadId)
+      if (squad !== squadDetalleEntregas) continue
+      for (const entrega of entregasDelPeriodo(req, periodos)) {
+        resultado.push({
+          reqId: req.id,
+          codigoReq: req.codigo_req,
+          nombreActa: req.nombre ?? '',
+          entregaNum: entrega.numero,
+          fechaComprometida: entrega.fecha_comprometida,
+          estado: entrega.estado ?? '',
+          horas: Number(entrega.horas ?? 0),
+        })
+      }
+    }
+    return resultado.sort((a, b) => {
+      if (a.fechaComprometida === b.fechaComprometida) {
+        return a.codigoReq.localeCompare(b.codigoReq) || a.entregaNum - b.entregaNum
+      }
+      if (a.fechaComprometida === null) return 1
+      if (b.fechaComprometida === null) return -1
+      return a.fechaComprometida.localeCompare(b.fechaComprometida)
+    })
+  }, [requerimientosPeriodo, periodos, resolverNombreSquad, squadDetalleEntregas])
+
+  const detalleEntregasPorSquadFiltrado = useMemo(() => {
+    const busqueda = busquedaDetalleEntregas.trim().toLowerCase()
+    if (!busqueda) return detalleEntregasPorSquad
+    return detalleEntregasPorSquad.filter(
+      (fila) => fila.codigoReq.toLowerCase().includes(busqueda) || fila.nombreActa.toLowerCase().includes(busqueda),
+    )
+  }, [busquedaDetalleEntregas, detalleEntregasPorSquad])
 
   const resumenCapacidad = useMemo(() => {
     const totalHoras = filasCapacidadSquad.reduce((sum, fila) => sum + fila.horas, 0)
@@ -417,6 +473,12 @@ export function useDerivadosBacklog({
       capacidadPorNombre.set(fila.squad, (capacidadPorNombre.get(fila.squad) ?? 0) + fila.horas)
     }
 
+    // Personas distintas por squad (las mismas filas que muestra el modal de detalle).
+    const personasPorNombre = new Map<string, number>()
+    for (const fila of detallePersonasCapacidad) {
+      personasPorNombre.set(fila.squad, (personasPorNombre.get(fila.squad) ?? 0) + 1)
+    }
+
     return filas.map((fila) => {
       const porcentajeActa = porcentajeCumplimiento(fila.ansActaCumple, fila.ansActaTotal)
       const porcentajeEntrega = porcentajeCumplimiento(fila.ansEntregaCumple, fila.ansEntregaTotal)
@@ -432,11 +494,12 @@ export function useDerivadosBacklog({
         nivelEntrega,
         nivelGlobal: peorNivel(nivelActa, nivelEntrega),
         capacidadHoras,
+        personasCapacidad: personasPorNombre.get(fila.squad) ?? 0,
         utilizacion: capacidadHoras === null ? null : Math.round((fila.horasEntregas / capacidadHoras) * 100),
         sobrecarga: capacidadHoras !== null && fila.horasEntregas > capacidadHoras,
       }
     })
-  }, [filas, filasCapacidadSquad])
+  }, [filas, filasCapacidadSquad, detallePersonasCapacidad])
 
   const resumenRiesgo = useMemo<ResumenRiesgo>(() => {
     let criticos = 0
@@ -459,7 +522,9 @@ export function useDerivadosBacklog({
     filasCapacidadSquad,
     detallePersonasCapacidad,
     detallePersonasCapacidadFiltrado,
+    detallePersonasCapacidadPorSquadFiltrado,
     detalleAplicacionesEpmFiltrado,
+    detalleEntregasPorSquadFiltrado,
     resumenCapacidad,
     entregasPorMes,
     woSoportePorMes,

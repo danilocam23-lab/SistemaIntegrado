@@ -11,6 +11,7 @@ import GraficaComparativaSquads from './dashboard-backlog/GraficaComparativaSqua
 import GraficaEntregasPorMes from './dashboard-backlog/GraficaEntregasPorMes'
 import GraficaWoPorMes from './dashboard-backlog/GraficaWoPorMes'
 import ModalDetalleAplicaciones from './dashboard-backlog/ModalDetalleAplicaciones'
+import ModalDetalleEntregas from './dashboard-backlog/ModalDetalleEntregas'
 import ModalDetallePersonas from './dashboard-backlog/ModalDetallePersonas'
 import ModalDetalleWo from './dashboard-backlog/ModalDetalleWo'
 import SeccionKpis from './dashboard-backlog/SeccionKpis'
@@ -31,7 +32,10 @@ export default function DashboardSquad() {
   const [mostrarDetallePersonas, setMostrarDetallePersonas] = useState(false)
   const [busquedaDetallePersonas, setBusquedaDetallePersonas] = useState('')
   const [squadDetalleAplicaciones, setSquadDetalleAplicaciones] = useState<string | null>(null)
+  const [squadDetallePersonas, setSquadDetallePersonas] = useState<string | null>(null)
   const [busquedaDetalleAplicaciones, setBusquedaDetalleAplicaciones] = useState('')
+  const [squadDetalleEntregas, setSquadDetalleEntregas] = useState<string | null>(null)
+  const [busquedaDetalleEntregas, setBusquedaDetalleEntregas] = useState('')
 
   const derivados = useDerivadosBacklog({
     activa: datos.activa,
@@ -45,9 +49,12 @@ export default function DashboardSquad() {
     squadCodigoPorNombre: datos.squadCodigoPorNombre,
     periodosSeleccionados: filtro.periodosSeleccionados,
     squadDetalleAplicaciones,
+    squadDetallePersonas,
     busquedaDetalleWo,
     busquedaDetallePersonas,
     busquedaDetalleAplicaciones,
+    squadDetalleEntregas,
+    busquedaDetalleEntregas,
   })
 
   const { exportarExcel } = useExportarExcelBacklog(derivados.filasAnalisis)
@@ -163,6 +170,14 @@ export default function DashboardSquad() {
                 setBusquedaDetalleAplicaciones('')
                 setSquadDetalleAplicaciones(squad)
               }}
+              onVerPersonas={(squad) => {
+                setBusquedaDetallePersonas('')
+                setSquadDetallePersonas(squad)
+              }}
+              onVerEntregas={(squad) => {
+                setBusquedaDetalleEntregas('')
+                setSquadDetalleEntregas(squad)
+              }}
             />
           </div>
         </div>
@@ -187,6 +202,17 @@ export default function DashboardSquad() {
         />
       )}
 
+      {squadDetallePersonas !== null && (
+        <ModalDetallePersonas
+          squad={squadDetallePersonas}
+          filas={derivados.detallePersonasCapacidadPorSquadFiltrado}
+          totalPeriodos={filtro.periodosSeleccionados.length}
+          busqueda={busquedaDetallePersonas}
+          onBusqueda={setBusquedaDetallePersonas}
+          onCerrar={() => setSquadDetallePersonas(null)}
+        />
+      )}
+
       {squadDetalleAplicaciones !== null && (
         <ModalDetalleAplicaciones
           squad={squadDetalleAplicaciones}
@@ -194,6 +220,16 @@ export default function DashboardSquad() {
           busqueda={busquedaDetalleAplicaciones}
           onBusqueda={setBusquedaDetalleAplicaciones}
           onCerrar={() => setSquadDetalleAplicaciones(null)}
+        />
+      )}
+
+      {squadDetalleEntregas !== null && (
+        <ModalDetalleEntregas
+          squad={squadDetalleEntregas}
+          filas={derivados.detalleEntregasPorSquadFiltrado}
+          busqueda={busquedaDetalleEntregas}
+          onBusqueda={setBusquedaDetalleEntregas}
+          onCerrar={() => setSquadDetalleEntregas(null)}
         />
       )}
     </div>

@@ -9,6 +9,8 @@ import { fmtNumero } from './utilidades'
 interface Props {
   filas: FilaSquadAnalisis[]
   onVerAplicaciones: (squad: string) => void
+  onVerPersonas: (squad: string) => void
+  onVerEntregas: (squad: string) => void
 }
 
 /** Resalte sutil de la fila según el peor indicador (fondo + borde izquierdo). */
@@ -72,7 +74,7 @@ function CargaSquad({ fila }: { fila: FilaSquadAnalisis }) {
   )
 }
 
-export default function TablaDetalleSquad({ filas, onVerAplicaciones }: Props) {
+export default function TablaDetalleSquad({ filas, onVerAplicaciones, onVerPersonas, onVerEntregas }: Props) {
   return (
     <Tarjeta padding={false} className="min-w-0">
       <div className="tarjeta-encabezado">
@@ -94,6 +96,7 @@ export default function TablaDetalleSquad({ filas, onVerAplicaciones }: Props) {
                   <th>Squad</th>
                   <th className="text-center">Reqs</th>
                   <th className="text-center">Horas</th>
+                  <th className="text-center" title="Personas que suman a la capacidad del squad">Personas</th>
                   <th className="text-center" title="Horas de entregas del periodo frente a la capacidad del periodo">
                     Carga del periodo
                   </th>
@@ -127,10 +130,37 @@ export default function TablaDetalleSquad({ filas, onVerAplicaciones }: Props) {
                     <td className="px-6 py-4 text-center">
                       <Chip tono="alerta" title="Horas estimadas de los requerimientos">{`${fmtNumero(fila.horas)}h`}</Chip>
                     </td>
+                    <td className="px-6 py-4 text-center">
+                      {fila.personasCapacidad > 0 ? (
+                        <button
+                          type="button"
+                          className="cursor-pointer"
+                          onClick={() => onVerPersonas(fila.squad)}
+                          aria-label={`Ver personas que suman a la capacidad de ${fila.squad}`}
+                        >
+                          <Chip tono="marca">{fila.personasCapacidad}</Chip>
+                        </button>
+                      ) : (
+                        <span className="text-slate-400">0</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <CargaSquad fila={fila} />
                     </td>
-                    <td className="px-6 py-4 text-center text-slate-700 font-medium">{fmtNumero(fila.entregas)}</td>
+                    <td className="px-6 py-4 text-center">
+                      {fila.entregas > 0 ? (
+                        <button
+                          type="button"
+                          className="cursor-pointer"
+                          onClick={() => onVerEntregas(fila.squad)}
+                          aria-label={`Ver entregas de ${fila.squad}`}
+                        >
+                          <Chip tono="marca">{fmtNumero(fila.entregas)}</Chip>
+                        </button>
+                      ) : (
+                        <span className="text-slate-400">0</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-center">
                       <InsigniaAvance porcentaje={fila.porcentajeActa} />
                     </td>
