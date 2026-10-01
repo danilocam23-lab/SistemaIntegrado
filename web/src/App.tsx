@@ -30,6 +30,7 @@ import BacklogFuturo from './pages/BacklogFuturo'
 import RequerimientosDetalleANS from './pages/RequerimientosDetalleANS'
 import DashboardEstados from './pages/DashboardEstados'
 import DashboardSquad from './pages/DashboardSquad'
+import DashboardBacklogAlternativo from './pages/DashboardBacklogAlternativo'
 import AdminEndpoints from './pages/AdminEndpoints'
 import Importacion from './pages/Importacion'
 import FacturacionGeneral from './pages/FacturacionGeneral'
@@ -58,6 +59,7 @@ export default function App() {
               <Route path="dashboard" element={<RoleRoute permiso="dashboard.ver"><DashboardRequerimientos /></RoleRoute>} />
               <Route path="dashboard-estados" element={<RoleRoute permiso="dashboard.estados.ver"><DashboardEstados /></RoleRoute>} />
               <Route path="dashboard-backlog" element={<RoleRoute permiso="dashboard.squad.ver"><DashboardSquad /></RoleRoute>} />
+              <Route path="dashboard-backlog-alternativo" element={<RoleRoute permiso="dashboard.squad.ver"><DashboardBacklogAlternativo /></RoleRoute>} />
               <Route path="dashboard-squad" element={<Navigate to="/dashboard-backlog" replace />} />
               <Route path="requerimientos" element={<RoleRoute permiso="requerimientos.ver"><Requerimientos /></RoleRoute>} />
               <Route path="requerimientos/detalle-ans" element={<RoleRoute permiso="requerimientos.ver"><RequerimientosDetalleANS /></RoleRoute>} />
