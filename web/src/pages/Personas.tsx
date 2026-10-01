@@ -52,6 +52,7 @@ export default function Personas() {
   const [tipoContratacion, setTipoContratacion] = useState('')
   const [squadsSelec, setSquadsSelec] = useState<string[]>([])
   const [activo, setActivo] = useState(true)
+  const [fechaDesactivacion, setFechaDesactivacion] = useState('')
   const [valorPersona, setValorPersona] = useState(0)
   const [valorPerifericos, setValorPerifericos] = useState(0)
   const [aviso, setAviso] = useState('')
@@ -109,6 +110,13 @@ export default function Personas() {
     )
   }, [datos, busqueda])
 
+  // Solo datos legados: ya estaba inactiva y sin fecha. Si el usuario acaba de
+  // desmarcar "Activo", el backend asigna la fecha automáticamente.
+  const permiteAsignarFechaDesactivacion =
+    !activo && !!editando && !editando.activo && !editando.fecha_desactivacion
+  const fechaDesactivacionExistente =
+    !activo && !!editando && !editando.activo ? editando.fecha_desactivacion : null
+
   function abrirNuevo(): void {
     setEditando(null)
     setNombre('')
@@ -117,6 +125,7 @@ export default function Personas() {
     setRol(roles[0] ?? 'DEV')
     setTipoContratacion('')
     setActivo(true)
+    setFechaDesactivacion('')
     setValorPersona(0)
     setValorPerifericos(0)
     setAviso('')
@@ -132,6 +141,7 @@ export default function Personas() {
     setTipoContratacion(persona.tipo_contratacion ?? '')
     setSquadsSelec(persona.squads ?? [])
     setActivo(persona.activo)
+    setFechaDesactivacion(persona.fecha_desactivacion ? persona.fecha_desactivacion.slice(0, 10) : '')
     setValorPersona(persona.valor_persona ?? 0)
     setValorPerifericos(persona.valor_perifericos ?? 0)
     setAviso('')
@@ -194,6 +204,9 @@ export default function Personas() {
       activo,
       valor_persona: valorPersona,
       valor_perifericos: valorPerifericos,
+    }
+    if (permiteAsignarFechaDesactivacion && fechaDesactivacion) {
+      payload.fecha_desactivacion = fechaDesactivacion
     }
     if (!editando) {
       if (!aplicacionIdEfectivo) {
@@ -517,6 +530,15 @@ export default function Personas() {
             <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
             <span className="text-slate-600">Activo</span>
           </label>
+          {permiteAsignarFechaDesactivacion && (
+            <Campo etiqueta="F. desactivación" type="date" value={fechaDesactivacion}
+              onChange={(e) => setFechaDesactivacion(e.target.value)} className="w-full" />
+          )}
+          {fechaDesactivacionExistente && (
+            <p className="text-xs text-slate-500">
+              F. desactivación: {fechaDesactivacionExistente.slice(0, 10)}
+            </p>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Boton variante="secundario" type="button" onClick={cerrar}>
               Cancelar

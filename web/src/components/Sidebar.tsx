@@ -30,7 +30,6 @@ const GRUPOS: Grupo[] = [
       { to: '/dashboard', label: 'Dashboard', icono: 'panel', permiso: 'dashboard.ver' },
       { to: '/dashboard-estados', label: 'Estados', icono: 'marcador', permiso: 'dashboard.estados.ver' },
       { to: '/dashboard-backlog', label: 'Backlog', icono: 'portafolio', permiso: 'dashboard.squad.ver' },
-      { to: '/dashboard-backlog-alternativo', label: 'Backlog alternativo', icono: 'portafolio', permiso: 'dashboard.squad.ver' },
     ],
   },
   {

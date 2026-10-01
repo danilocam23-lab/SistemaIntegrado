@@ -9,7 +9,6 @@ import type { Aplicacion, Requerimiento } from '../types'
 import { BarraFiltros, Boton, EncabezadoPagina, Icono, Kpi } from '../components/ui'
 import { COLOR_GRAFICA } from '../components/ui/graficas'
 import CicloVida from './dashboard-estados/CicloVida'
-import GraficaBarrasEstado from './dashboard-estados/GraficaBarrasEstado'
 import GraficaEvolucion from './dashboard-estados/GraficaEvolucion'
 import ModalGarantias from './dashboard-estados/ModalGarantias'
 import RepartoFases from './dashboard-estados/RepartoFases'
@@ -157,23 +156,6 @@ export default function DashboardEstados() {
             metrica={metrica}
             onVerGarantias={(titulo, filas) => setDetalleGarantias({ titulo, filas })}
             detalleGarantiasTotal={derivados.detalleGarantiasTotal}
-          />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2 mt-6">
-          <GraficaBarrasEstado
-            titulo="Requerimientos por Estado"
-            descripcion="Requerimientos agrupados por estado"
-            nombreSerie="Requerimientos"
-            filas={derivados.porEstado}
-            metrica={metrica}
-          />
-          <GraficaBarrasEstado
-            titulo="Entregas por Estado"
-            descripcion="Entregas agrupadas por estado"
-            nombreSerie="Entregas"
-            filas={derivados.porEstadoEntregas}
-            metrica={metrica}
           />
         </div>
 

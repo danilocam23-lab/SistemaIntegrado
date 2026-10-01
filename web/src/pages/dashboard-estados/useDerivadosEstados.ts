@@ -159,8 +159,6 @@ export function useDerivadosEstados(requerimientos: Requerimiento[], fase: strin
 
   return {
     kpis,
-    porEstado,
-    porEstadoEntregas,
     cicloRequerimientos,
     cicloEntregas,
     repartoFases,
