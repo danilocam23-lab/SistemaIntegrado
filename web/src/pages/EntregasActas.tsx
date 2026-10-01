@@ -610,7 +610,7 @@ export default function EntregasActas() {
         )}
         {filtrosActivos.has('mes') && (
           <Selector
-            etiqueta="Mes de aprobación"
+            etiqueta="Mes de Facturación"
             value={filtroMes}
             onChange={(e) => setFiltroMes(e.target.value)}
             className="w-52"

@@ -82,7 +82,7 @@ export const ENTREGAS_ACTAS_COLUMNAS: EntregasActasCampo[] = [
   { key: 'fechaReal', label: 'F. Real', grupo: 'Entrega', porDefecto: true },
   { key: 'diasTranscurridos', label: 'Días transcurridos', grupo: 'Entrega', porDefecto: true },
   { key: 'estado', label: 'Estado', grupo: 'Entrega', porDefecto: true },
-  { key: 'mesAprobacion', label: 'Mes de aprobación', grupo: 'Entrega', porDefecto: true },
+  { key: 'mesAprobacion', label: 'Mes de Facturación', grupo: 'Entrega', porDefecto: true },
 
   // ── Campos adicionales de Entrega (desactivados por defecto) ──
   { key: 'ansEntrega', label: 'ANS entrega', grupo: 'Entrega' },
@@ -135,7 +135,7 @@ export const ENTREGAS_ACTAS_COLUMNAS: EntregasActasCampo[] = [
 /** Filtros de búsqueda disponibles en la vista de Entregas de Actas. */
 export const ENTREGAS_ACTAS_FILTROS: EntregasActasCampo[] = [
   { key: 'texto', label: 'Buscar (texto libre)', grupo: 'Entrega', porDefecto: true },
-  { key: 'mes', label: 'Mes de aprobación', grupo: 'Entrega', porDefecto: true },
+  { key: 'mes', label: 'Mes de Facturación', grupo: 'Entrega', porDefecto: true },
   { key: 'estado', label: 'Estado', grupo: 'Entrega', porDefecto: true },
   { key: 'ans', label: 'ANS', grupo: 'Entrega', porDefecto: true },
   { key: 'fechas', label: 'F. Comprometida (rango)', grupo: 'Entrega', porDefecto: true },
