@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
+import * as XLSX from 'xlsx'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import Modal from '../components/Modal'
@@ -299,9 +300,47 @@ export default function Personas() {
     setResultadoDedup(null)
   }
 
+  /** Exporta a Excel el listado de personas actualmente filtrado (respeta la búsqueda). */
+  function exportarExcel(): void {
+    const filas = filtradas.map((p) => {
+      const fila: Record<string, string | number> = {
+        Nombre: p.nombre,
+        Correo: p.email ?? '',
+        Squads: (p.squads ?? []).join(', '),
+        Rol: p.rol_operativo,
+        'Tipo de contratación': p.tipo_contratacion ?? '',
+        Activo: p.activo ? 'Sí' : 'No',
+        'F. desactivación': p.fecha_desactivacion ? p.fecha_desactivacion.slice(0, 10) : '',
+      }
+      if (esGerente) {
+        fila['Valor persona'] = p.valor_persona ?? 0
+        fila['Valor periféricos'] = p.valor_perifericos ?? 0
+      }
+      return fila
+    })
+    const hoja = XLSX.utils.json_to_sheet(filas)
+    const libro = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(libro, hoja, 'Personas')
+    const fecha = new Date().toISOString().slice(0, 10)
+    XLSX.writeFile(libro, `personas_${fecha}.xlsx`)
+  }
+
   return (
     <div>
-      <EncabezadoPagina icono={<Icono nombre="personas" />} titulo="Personas" />
+      <EncabezadoPagina
+        icono={<Icono nombre="personas" />}
+        titulo="Personas"
+        acciones={
+          <Boton
+            variante="exito"
+            onClick={exportarExcel}
+            disabled={filtradas.length === 0}
+            title="Exporta a Excel el listado de personas actualmente filtrado"
+          >
+            Exportar a Excel
+          </Boton>
+        }
+      />
 
       {/* Banner de duplicados */}
       {duplicados.length > 0 && (

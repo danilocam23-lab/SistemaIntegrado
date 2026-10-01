@@ -4,6 +4,7 @@
 """Router de personas (directorio operativo del dominio)."""
 import unicodedata
 from collections import defaultdict
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -44,6 +45,10 @@ class PersonaIn(BaseModel):
     es_lider_tecnico: bool = False
     permite_sobrecarga: bool = False
     usuario_id: str | None = None
+    valor_persona: float | None = None
+    valor_perifericos: float | None = None
+    # Solo se acepta para completar una persona ya inactiva que no tiene fecha (dato legado)
+    fecha_desactivacion: datetime | None = None
     aplicacion_id: str | None = None  # requerido en modo consolidado; derivado del squad si no se indica
 
 
@@ -353,7 +358,11 @@ async def crear(
     _: Usuario = permiso("personas.crear"),
 ):
     app_id = await _resolver_app_id(datos, ctx, usuario)
-    data = datos.model_dump(exclude={"aplicacion_id"})
+    data = datos.model_dump(exclude={"aplicacion_id", "fecha_desactivacion"})
+    # `None` = no enviado: se conserva el valor por defecto (0) del documento
+    for campo_valor in ("valor_persona", "valor_perifericos"):
+        if data.get(campo_valor) is None:
+            data.pop(campo_valor, None)
     persona = Persona(aplicacion_id=app_id, **data)
     if not persona.activo:
         persona.fecha_desactivacion = ahora()
@@ -373,15 +382,23 @@ async def actualizar(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
     activo_previo = persona.activo
     # Actualiza campos operativos
-    for campo, valor in datos.model_dump(exclude={"aplicacion_id"}).items():
+    fecha_previa = persona.fecha_desactivacion
+    for campo, valor in datos.model_dump(exclude={"aplicacion_id", "fecha_desactivacion"}).items():
+        # `None` en los valores = no enviado: no sobreescribe el valor existente
+        if campo in ("valor_persona", "valor_perifericos") and valor is None:
+            continue
         setattr(persona, campo, valor)
-    # `fecha_desactivacion` se calcula automáticamente al cambiar el estado `activo`
-    # (no es editable directamente desde el body): se marca al desactivar y se limpia
-    # al reactivar.
+    # `fecha_desactivacion` se calcula automáticamente al cambiar el estado `activo`:
+    # se marca al desactivar y se limpia al reactivar. Sin transición, solo se acepta
+    # la del body si la persona sigue inactiva y no tenía fecha (dato legado).
     if activo_previo and not persona.activo:
         persona.fecha_desactivacion = ahora()
     elif not activo_previo and persona.activo:
         persona.fecha_desactivacion = None
+    elif not persona.activo and fecha_previa is None and datos.fecha_desactivacion is not None:
+        persona.fecha_desactivacion = datos.fecha_desactivacion
+    else:
+        persona.fecha_desactivacion = fecha_previa
     # Si cambió el squad, actualizar aplicacion_id al código de la primera app que coincida
     if datos.squads:
         app_doc = await Aplicacion.find_one({"nombre": datos.squads[0]})
