@@ -32,7 +32,7 @@ interface FilaEstadoReq {
   fechaSolicitud: string
 }
 
-const ESTADOS_INCLUIDOS = ['PENDIENTE', 'RECHAZADA']
+const ESTADOS_INCLUIDOS = ['PENDIENTE', 'RECHAZADA', 'ENTREGA NO CARGADA']
 
 /** Normaliza (mayúsculas, sin tildes) para comparar estados de forma flexible. */
 function normalizarEstado(valor: string): string {
@@ -155,7 +155,7 @@ export default function Predictivos() {
 
   const tonoEstado = (estado: string): TonoChip => {
     const s = estado.toUpperCase()
-    if (s === 'RECHAZADA') return 'error'
+    if (s === 'RECHAZADA' || s === 'ENTREGA NO CARGADA') return 'error'
     if (s === 'PENDIENTE') return 'alerta'
     return 'neutro'
   }
@@ -169,8 +169,9 @@ export default function Predictivos() {
           Entregas próximas a vencer (≤ 5 días)
         </h2>
         <p className="text-xs text-slate-500">
-          Entregas en estado <strong>Pendiente</strong> o <strong>Rechazada</strong> cuya fecha
-          comprometida vence en 5 días o menos (incluye vencidas).
+          Entregas en estado <strong>Pendiente</strong>, <strong>Rechazada</strong> o{' '}
+          <strong>Entrega no cargada</strong> cuya fecha comprometida vence en 5 días o menos
+          (incluye vencidas).
         </p>
       </div>
 
