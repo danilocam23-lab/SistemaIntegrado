@@ -95,7 +95,6 @@ export default function TablaDetalleSquad({ filas, onVerAplicaciones, onVerPerso
                 <tr>
                   <th>Squad</th>
                   <th className="text-center">Reqs</th>
-                  <th className="text-center">Horas</th>
                   <th className="text-center" title="Personas que suman a la capacidad del squad">Personas</th>
                   <th className="text-center" title="Horas de entregas del periodo frente a la capacidad del periodo">
                     Carga del periodo
@@ -126,9 +125,6 @@ export default function TablaDetalleSquad({ filas, onVerAplicaciones, onVerPerso
                     </td>
                     <td className="px-6 py-4 text-center">
                       <Chip tono="marca">{fila.reqs}</Chip>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Chip tono="alerta" title="Horas estimadas de los requerimientos">{`${fmtNumero(fila.horas)}h`}</Chip>
                     </td>
                     <td className="px-6 py-4 text-center">
                       {fila.personasCapacidad > 0 ? (
