@@ -52,16 +52,19 @@ export function mesDesdeFecha(valor: string | null | undefined): string | null {
   return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`
 }
 
-export function mesDesdeEntrega(req: Requerimiento, entrega: Requerimiento['entregas'][number]): string | null {
+/**
+ * Mes propio de la entrega. Solo usa las fechas de la entrega: sin ninguna
+ * devuelve null (no se hereda el mes del requerimiento padre).
+ * `_req` se conserva por compatibilidad con los llamadores posicionales.
+ */
+export function mesDesdeEntrega(_req: Requerimiento, entrega: Requerimiento['entregas'][number]): string | null {
   return (
     mesDesdeFecha(entrega.fecha_recepcion) ??
     mesDesdeFecha(entrega.fecha_comprometida) ??
     mesDesdeFecha(entrega.fecha_aprobacion) ??
     mesDesdeFecha(entrega.fecha_cargue) ??
     mesDesdeFecha(entrega.fecha_ejecucion) ??
-    mesDesdeFecha(req.fecha_inicio) ??
-    mesDesdeFecha(req.fecha_solicitud_acta) ??
-    mesDesdeFecha(req.solicitud?.fecha_solicitud)
+    null
   )
 }
 
