@@ -15,6 +15,12 @@ from app.services.provision_aplicacion import provisionar_aplicacion
 
 _log = logging.getLogger("bootstrap")
 ROLES_OBSOLETOS = ("editor", "soporte_ans_editor")
+# Permisos nuevos a conceder a roles de sistema que ya existen en la BD. Se limita a lo
+# listado (no se sincroniza todo rbac.py para no pisar ajustes hechos por el admin).
+MIGRACION_PERMISOS: dict[str, tuple[str, ...]] = {
+    "admin_app": ("personas.ver_valores",),
+    "viewer": ("personas.ver_valores",),
+}
 
 
 async def _asegurar_roles_base() -> dict[str, Rol]:
@@ -34,6 +40,33 @@ async def _asegurar_roles_base() -> dict[str, Rol]:
             _log.info("Rol base ya existe (sin modificar): %s", rol.clave)
         roles[rol.clave] = rol
     return roles
+
+
+async def migrar_permisos_roles_base() -> int:
+    """Concede a roles de sistema ya existentes los permisos nuevos de ``MIGRACION_PERMISOS``.
+
+    Solo añade al final de la lista (nunca quita ni reordena), solo toca roles con
+    ``es_sistema`` y clave listada (nunca superadmin ni roles personalizados) y es
+    idempotente. Nunca interrumpe el arranque. Devuelve cuántos roles actualizó.
+    """
+    actualizados = 0
+    try:
+        for clave, nuevos in MIGRACION_PERMISOS.items():
+            rol = await Rol.find_one(Rol.clave == clave)
+            if rol is None or not rol.es_sistema:
+                continue
+            faltan = [p for p in nuevos if p not in rol.permisos]
+            if not faltan:
+                continue
+            rol.permisos = [*rol.permisos, *faltan]
+            rol.marcar_actualizado()
+            await rol.save()
+            actualizados += 1
+            _log.info("Rol %s: permisos añadidos por migración: %s", clave, faltan)
+    except Exception:
+        _log.exception("Falló la migración de permisos de roles base (se ignora)")
+    _log.info("Migración de permisos de roles base: %d rol(es) actualizado(s)", actualizados)
+    return actualizados
 
 
 async def _eliminar_roles_obsoletos(roles: dict[str, Rol]) -> None:
@@ -82,6 +115,9 @@ async def bootstrap() -> None:
     await provisionar_aplicacion(app_inicial.codigo)
 
     roles = await _asegurar_roles_base()
+    if await migrar_permisos_roles_base():
+        # Refresca los roles en memoria con los permisos migrados.
+        roles = await _asegurar_roles_base()
     await _eliminar_roles_obsoletos(roles)
 
     superadmin = await Usuario.find_one(Usuario.rol == RolUsuario.SUPERADMIN)
