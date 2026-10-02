@@ -6,7 +6,8 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Tarifa } from '../types'
-import { Boton, Campo, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import Modal from '../components/Modal'
+import { Aviso, Boton, Campo, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 
 const RAMIFICACIONES = ['Fábrica', 'Soporte']
 
@@ -97,27 +98,18 @@ export default function Tarifas() {
       <EncabezadoPagina icono={<Icono nombre="facturacion" />} titulo="Tarifas" />
 
       <form onSubmit={crear} className="barra-filtros mb-4">
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Año</span>
-          <Campo value={anio} onChange={(e) => setAnio(e.target.value)} type="number" required
-            className="w-24" />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Valor hora</span>
-          <Campo value={valorHora} onChange={(e) => setValorHora(e.target.value)} type="number" required
-            className="w-32" />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Ramificación</span>
-          <Selector value={ramificacion} onChange={(e) => setRamificacion(e.target.value)}>
-            {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
-          </Selector>
-        </label>
+        <Campo etiqueta="Año" value={anio} onChange={(e) => setAnio(e.target.value)} type="number" required
+          className="w-24" />
+        <Campo etiqueta="Valor hora" value={valorHora} onChange={(e) => setValorHora(e.target.value)} type="number" required
+          className="w-32" />
+        <Selector etiqueta="Ramificación" value={ramificacion} onChange={(e) => setRamificacion(e.target.value)}>
+          {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
+        </Selector>
         <Boton variante="primario" type="submit">Crear</Boton>
       </form>
 
       {(aviso || error) && (
-        <div className="aviso aviso-error mb-3">{aviso || error}</div>
+        <Aviso tono="error" className="mb-3">{aviso || error}</Aviso>
       )}
 
       <TablaScroll>
@@ -226,10 +218,10 @@ export default function Tarifas() {
               </td>
               <td className="text-center">
                 <div className="flex justify-center gap-2">
-                  <button onClick={() => abrirEdicion(t)} className="enlace-accion enlace-accion-alerta">
+                  <button type="button" onClick={() => abrirEdicion(t)} className="enlace-accion enlace-accion-alerta">
                     Editar
                   </button>
-                  <button onClick={() => eliminar(t)} className="enlace-accion enlace-accion-peligro">
+                  <button type="button" onClick={() => eliminar(t)} className="enlace-accion enlace-accion-peligro">
                     Eliminar
                   </button>
                 </div>
@@ -244,40 +236,26 @@ export default function Tarifas() {
       </TablaScroll>
 
       {/* ═══ Modal edición ═══ */}
-      {editItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setEditItem(null)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}>
-            <h2 className="titulo-seccion mb-4">Editar tarifa</h2>
-            <div className="mb-3">
-              <label className="mb-1 block text-sm text-slate-600">Año</label>
-              <Campo value={editAnio} onChange={(e) => setEditAnio(e.target.value)}
-                type="number" className="w-full" />
-            </div>
-            <div className="mb-3">
-              <label className="mb-1 block text-sm text-slate-600">Valor hora</label>
-              <Campo value={editValorHora} onChange={(e) => setEditValorHora(e.target.value)}
-                type="number" className="w-full" />
-            </div>
-            <div className="mb-4">
-              <label className="mb-1 block text-sm text-slate-600">Ramificación</label>
-              <Selector value={editRamificacion} onChange={(e) => setEditRamificacion(e.target.value)}
-                className="w-full">
-                {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
-              </Selector>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Boton variante="secundario" onClick={() => setEditItem(null)}>
-                Cancelar
-              </Boton>
-              <Boton variante="primario" onClick={guardarPopup}>
-                Guardar
-              </Boton>
-            </div>
+      <Modal titulo="Editar tarifa" abierto={editItem !== null} onCerrar={() => setEditItem(null)}>
+        <div className="space-y-3">
+          <Campo etiqueta="Año" value={editAnio} onChange={(e) => setEditAnio(e.target.value)}
+            type="number" className="w-full" />
+          <Campo etiqueta="Valor hora" value={editValorHora} onChange={(e) => setEditValorHora(e.target.value)}
+            type="number" className="w-full" />
+          <Selector etiqueta="Ramificación" value={editRamificacion} onChange={(e) => setEditRamificacion(e.target.value)}
+            className="w-full">
+            {RAMIFICACIONES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </Selector>
+          <div className="flex justify-end gap-2 pt-1">
+            <Boton variante="secundario" onClick={() => setEditItem(null)}>
+              Cancelar
+            </Boton>
+            <Boton variante="primario" onClick={guardarPopup}>
+              Guardar
+            </Boton>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

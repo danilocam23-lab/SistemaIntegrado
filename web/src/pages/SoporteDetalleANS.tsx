@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { AreaTexto, Boton, Campo, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Selector, TablaScroll } from '../components/ui'
+import { AreaTexto, Aviso, Boton, Campo, Chip, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Selector, Tarjeta, TablaScroll } from '../components/ui'
 import { COLOR_GRAFICA } from '../components/ui/graficas'
 
 interface RegistroSoporte {
@@ -200,7 +200,20 @@ export default function SoporteDetalleANS() {
     setRegistros((actuales) => actuales.map((r) => (r.id === actualizado.id ? actualizado : r)))
   }
 
-  if (cargando) return <div className="p-6 text-slate-500">Cargando detalle ANS…</div>
+  if (cargando) {
+    return (
+      <div className="space-y-4">
+        <EncabezadoPagina
+          icono={<Icono nombre="soporte" />}
+          titulo="Detalle ANS"
+          descripcion="Vista de seguimiento ANS para solicitudes de soporte."
+        />
+        <Tarjeta>
+          <p role="status" className="py-8 text-center text-sm text-slate-500">Cargando detalle ANS…</p>
+        </Tarjeta>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -210,10 +223,10 @@ export default function SoporteDetalleANS() {
         descripcion="Vista de seguimiento ANS para solicitudes de soporte."
       />
 
-      {aviso && <div className="aviso aviso-error">{aviso}</div>}
+      {aviso && <Aviso tono="error">{aviso}</Aviso>}
 
       {/* ─── Filtros ─── */}
-      <div className="tarjeta tarjeta-pad space-y-3">
+      <Tarjeta className="space-y-3">
         {/* Work Order ID + Assigned To */}
         <div className="grid gap-4 md:grid-cols-2">
           <Campo
@@ -282,7 +295,7 @@ export default function SoporteDetalleANS() {
             )}
           </div>
         </div>
-      </div>
+      </Tarjeta>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Kpi
@@ -462,7 +475,7 @@ function DetalleTablaANS({
   const totalLevantados = registros.filter((registro) => seLevantoAns(registro, tipo)).length
 
   return (
-    <div className="tarjeta">
+    <Tarjeta padding={false}>
       <button
         type="button"
         onClick={onToggle}
@@ -477,12 +490,12 @@ function DetalleTablaANS({
           <span className="truncate text-sm font-semibold text-slate-800">{titulo}</span>
         </div>
         <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-          <span className="chip chip-exito" title="Registros con ANS levantado">
+          <Chip tono="exito" title="Registros con ANS levantado">
             {totalLevantados} levantados
-          </span>
-          <span className="chip chip-neutro" title="Total de registros en esta sección">
+          </Chip>
+          <Chip tono="neutro" title="Total de registros en esta sección">
             {registros.length} registros
-          </span>
+          </Chip>
         </span>
       </button>
       {abierta && (
@@ -503,7 +516,7 @@ function DetalleTablaANS({
             <tbody>
               {registros.length === 0 ? (
                 <tr>
-                  <td className="p-4 text-center text-slate-400" colSpan={8}>Sin registros</td>
+                  <td className="p-4 text-center text-slate-500" colSpan={8}>Sin registros</td>
                 </tr>
               ) : (
                 registros.slice(0, visibles).map((r) => {
@@ -572,6 +585,6 @@ function DetalleTablaANS({
           )}
         </TablaScroll>
       )}
-    </div>
+    </Tarjeta>
   )
 }

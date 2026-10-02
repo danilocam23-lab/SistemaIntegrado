@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
-import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { Aviso, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 import type { RespuestaPersonasConfigAzure } from '../types'
 
 interface TestResp {
@@ -77,6 +77,7 @@ function PanelAzdo({ titulo, target }: {
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
   const [conexion, setConexion] = useState('')
+  const [conexionOk, setConexionOk] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [probando, setProbando] = useState(false)
 
@@ -145,11 +146,13 @@ function PanelAzdo({ titulo, target }: {
     setProbando(true)
     try {
       const { data } = await client.get<TestResp>(`/azdo/test?${buildParams()}`)
+      setConexionOk(data.ok)
       setConexion(
-        data.ok ? `✓ Conectado — ${data.proyectos} proyecto(s)` : `✗ Sin conexión: ${data.error}`,
+        data.ok ? `Conectado — ${data.proyectos} proyecto(s)` : `Sin conexión: ${data.error}`,
       )
     } catch (err) {
-      setConexion(`✗ ${mensajeError(err)}`)
+      setConexionOk(false)
+      setConexion(mensajeError(err))
     } finally {
       setProbando(false)
     }
@@ -214,13 +217,13 @@ function PanelAzdo({ titulo, target }: {
           Conecta con Azure DevOps para crear Work Items y sincronizar sprints.
         </p>
 
-        {aviso && <div className="mb-3 rounded bg-red-50 p-2.5 text-xs text-red-700">{aviso}</div>}
-        {ok && <div className="mb-3 rounded bg-emerald-50 p-2.5 text-xs text-emerald-700">{ok}</div>}
+        {aviso && <Aviso tono="error" className="mb-3">{aviso}</Aviso>}
+        {ok && <Aviso tono="exito" className="mb-3">{ok}</Aviso>}
         {sinPersonaVinculada && (
-          <div className="mb-3 rounded bg-amber-50 p-2.5 text-xs text-amber-700">
+          <Aviso tono="alerta" className="mb-3">
             Tu usuario no está vinculado a una persona; pide a un administrador que te vincule para
             poder configurar Azure DevOps.
-          </div>
+          </Aviso>
         )}
 
         {/* Persona */}
@@ -255,7 +258,7 @@ function PanelAzdo({ titulo, target }: {
 
         {/* PAT */}
         <div className="mb-4">
-          <label className="mb-1 block text-xs font-medium text-slate-700">Personal Access Token (PAT)</label>
+          <span className="etiqueta mb-1 block">Personal Access Token (PAT)</span>
           <div className="flex gap-2">
             <Campo
               type={mostrarPat ? 'text' : 'password'}
@@ -269,6 +272,7 @@ function PanelAzdo({ titulo, target }: {
               variante="secundario"
               tamano="sm"
               onClick={() => setMostrarPat(!mostrarPat)}
+              aria-pressed={mostrarPat}
             >
               {mostrarPat ? 'Ocultar' : 'Mostrar'}
             </Boton>
@@ -290,9 +294,9 @@ function PanelAzdo({ titulo, target }: {
             {probando ? 'Probando…' : 'Probar conexión'}
           </Boton>
           {conexion && (
-            <span className={`ml-2 text-xs ${conexion.startsWith('✓') ? 'text-emerald-600' : 'text-red-600'}`}>
-              {conexion}
-            </span>
+            <Chip tono={conexionOk ? 'exito' : 'error'} className="ml-2">
+              <Icono nombre={conexionOk ? 'check-circulo' : 'alerta'} /> {conexion}
+            </Chip>
           )}
         </div>
 
@@ -340,7 +344,7 @@ function PanelAzdo({ titulo, target }: {
       <div className="tarjeta tarjeta-pad">
         <div className="mb-1 flex items-center gap-2">
           <Icono nombre="portafolio" className="text-xl text-marca" />
-          <h3 className="text-base font-bold text-slate-800">Campos Requeridos</h3>
+          <h3 className="titulo-seccion">Campos Requeridos</h3>
         </div>
         <p className="mb-3 text-xs text-slate-500">
           Campos obligatorios del proyecto con sus tipos y valores por defecto.
@@ -360,7 +364,9 @@ function PanelAzdo({ titulo, target }: {
         )}
 
         {!proyecto && (
-          <p className="text-xs text-amber-600">⚠ Configura un proyecto primero.</p>
+          <Aviso tono="alerta" className="flex items-center gap-1.5">
+            <Icono nombre="alerta" /> Configura un proyecto primero.
+          </Aviso>
         )}
 
         {campos && Object.entries(campos).map(([witKey, fieldsList]) => (

@@ -126,6 +126,7 @@ export default function Asignaciones() {
     horasAzurePorFeature,
     filtroEstado: filtros.estado,
     filtroPersona: filtros.persona,
+    busquedaReq: filtros.requerimiento,
     mostrar: filtros.mostrar,
     orden: filtros.orden,
   })
@@ -206,7 +207,7 @@ export default function Asignaciones() {
 
   const irAPersona = useCallback((personaId: string) => {
     // Se quitan los filtros que podrían ocultar la tarjeta y se salta a ella.
-    actualizar({ vista: 'personas', persona: '__todos__', estado: '__todos__', mostrar: 'todo' })
+    actualizar({ vista: 'personas', persona: '__todos__', requerimiento: '', estado: '__todos__', mostrar: 'todo' })
     setPersonasExpandidas((previo) => new Set(previo).add(personaId))
     window.setTimeout(() => {
       document.getElementById(`persona-${personaId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -214,7 +215,7 @@ export default function Asignaciones() {
   }, [actualizar])
 
   const verAsignacionesDe = useCallback((personaId: string) => {
-    actualizar({ vista: 'personas', persona: personaId, estado: '__todos__', mostrar: 'todo' })
+    actualizar({ vista: 'personas', persona: personaId, requerimiento: '', estado: '__todos__', mostrar: 'todo' })
     setPersonasExpandidas((previo) => new Set(previo).add(personaId))
   }, [actualizar])
 
@@ -245,7 +246,7 @@ export default function Asignaciones() {
   const vacioActas = errorPrincipal ? 'No hay datos para mostrar.' : hayFiltros ? (
     <div className="grid justify-items-center gap-3">
       <span>
-        {filtros.estado !== '__todos__' && filtros.persona === '__todos__' && filtros.mostrar === 'todo'
+        {filtros.estado !== '__todos__' && filtros.persona === '__todos__' && filtros.mostrar === 'todo' && !filtros.requerimiento.trim()
           ? 'No hay asignaciones con ese estado de requerimiento.'
           : 'No hay asignaciones que coincidan con los filtros.'}
       </span>

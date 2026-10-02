@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import Modal from '../components/Modal'
-import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { Aviso, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona } from '../types'
@@ -344,7 +344,7 @@ export default function Personas() {
 
       {/* Banner de duplicados */}
       {duplicados.length > 0 && (
-        <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+        <Aviso tono="alerta" className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <span>
             <Icono nombre="alerta" className="mr-1 inline align-text-bottom" /> Se encontraron <strong>{duplicados.length}</strong> grupo(s) con personas duplicadas.
           </span>
@@ -367,14 +367,14 @@ export default function Personas() {
               </Boton>
             )}
           </div>
-        </div>
+        </Aviso>
       )}
 
       {resultadoDedup && (
-        <div className="mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+        <Aviso tono="exito" className="mb-4">
           <Icono nombre="check-circulo" className="mr-1 inline align-text-bottom" /> Deduplicación completada: <strong>{resultadoDedup.fusionados}</strong> persona(s) fusionadas,{' '}
           <strong>{resultadoDedup.referencias_actualizadas}</strong> referencia(s) actualizadas.
-        </div>
+        </Aviso>
       )}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -391,7 +391,7 @@ export default function Personas() {
         )}
       </div>
 
-      {error && <div className="aviso aviso-error mb-3">{error}</div>}
+      {error && <Aviso tono="error" className="mb-3">{error}</Aviso>}
 
       {filtradas.length === 0 && (
         <div className="tarjeta tarjeta-pad text-center text-slate-400">
@@ -406,6 +406,8 @@ export default function Personas() {
           return (
             <section key={rol} className="overflow-hidden rounded-xl border bg-white shadow-sm">
               <button
+                type="button"
+                aria-expanded={!collapsed}
                 onClick={() => toggleRol(rol)}
                 className="flex w-full items-center justify-between bg-marca-osc px-4 py-2.5 text-left text-white hover:bg-marca-osc/90 transition-colors"
               >
@@ -423,6 +425,7 @@ export default function Personas() {
                 </div>
               </button>
               {!collapsed && (
+                <TablaScroll plano>
                 <table className="tabla table-fixed">
                   <thead>
                     <tr>
@@ -456,12 +459,13 @@ export default function Personas() {
                         </td>
                         <td className="text-center whitespace-nowrap">
                           {puedeEditarPersonas && (
-                            <button onClick={() => abrirEditar(p)} className="enlace-accion text-xs mr-2">
+                            <button type="button" onClick={() => abrirEditar(p)} className="enlace-accion text-xs mr-2">
                               Editar
                             </button>
                           )}
                           {puedeEliminarPersonas && (
                             <button
+                              type="button"
                               onClick={() => eliminar(p)}
                               className="enlace-accion enlace-accion-peligro text-xs mr-2"
                             >
@@ -470,6 +474,7 @@ export default function Personas() {
                           )}
                           {puedeEditarPersonas && (
                             <button
+                              type="button"
                               onClick={async () => {
                                 await client.put(`/personas/${p.id}`, {
                                   nombre: p.nombre,
@@ -494,6 +499,7 @@ export default function Personas() {
                     ))}
                   </tbody>
                 </table>
+                </TablaScroll>
               )}
             </section>
           )
@@ -506,7 +512,7 @@ export default function Personas() {
         onCerrar={cerrar}
       >
         <form onSubmit={guardar} className="space-y-3">
-          {aviso && <div className="aviso aviso-error">{aviso}</div>}
+          {aviso && <Aviso tono="error">{aviso}</Aviso>}
           <div className="block text-sm">
             <span className="mb-1 block text-slate-600">
               Squads

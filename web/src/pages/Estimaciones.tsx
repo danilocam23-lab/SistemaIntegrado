@@ -7,7 +7,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Estimacion } from '../types'
-import { Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Aviso, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Estimaciones() {
   const { tienePermiso } = useAuth()
@@ -93,24 +93,15 @@ export default function Estimaciones() {
 
       {puedeGestionarEstimaciones && (
         <form onSubmit={crear} className="barra-filtros">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Título</span>
-            <Campo value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Cliente</span>
-            <Campo value={cliente} onChange={(e) => setCliente(e.target.value)} />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Iniciativa</span>
-            <Campo value={iniciativa} onChange={(e) => setIniciativa(e.target.value)} />
-          </label>
+          <Campo etiqueta="Título" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
+          <Campo etiqueta="Cliente" value={cliente} onChange={(e) => setCliente(e.target.value)} />
+          <Campo etiqueta="Iniciativa" value={iniciativa} onChange={(e) => setIniciativa(e.target.value)} />
           <Boton variante="primario" type="submit">Crear</Boton>
         </form>
       )}
 
       {(aviso || error) && (
-        <div className="aviso aviso-error">{aviso || error}</div>
+        <Aviso tono="error">{aviso || error}</Aviso>
       )}
 
       <TablaScroll>
@@ -219,7 +210,7 @@ export default function Estimaciones() {
               <td className="text-right">{es.total_horas}</td>
               <td className="text-center">
                 {puedeGestionarEstimaciones && (
-                  <button onClick={() => eliminar(es)} className="enlace-accion enlace-accion-peligro">
+                  <button type="button" onClick={() => eliminar(es)} className="enlace-accion enlace-accion-peligro">
                     Eliminar
                   </button>
                 )}

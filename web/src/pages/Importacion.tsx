@@ -6,7 +6,7 @@ import type { ChangeEvent } from 'react'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
-import { Boton, EncabezadoPagina, Icono, Kpi } from '../components/ui'
+import { Aviso, Boton, Campo, EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
 import { COLOR_GRAFICA } from '../components/ui/graficas'
 
 interface Resultado {
@@ -44,6 +44,34 @@ interface Previsualizacion {
   detalle_entregas_actualizadas?: string[]
   diff_requerimientos_actualizados?: DiffReg[]
   diff_entregas_actualizadas?: DiffReg[]
+}
+
+/** Tabla antes/después por campo de un registro que se actualizaría. */
+function TablaCambios({ cambios }: { cambios: CampoCambio[] }) {
+  return (
+    <div className="mt-1">
+      <TablaScroll>
+        <table className="tabla">
+          <thead>
+            <tr>
+              <th>Campo</th>
+              <th>Antes</th>
+              <th>Después</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cambios.map((c, i) => (
+              <tr key={i}>
+                <td className="font-medium">{c.campo}</td>
+                <td className="text-red-600">{c.antes ?? <em className="text-slate-400">vacío</em>}</td>
+                <td className="text-green-700">{c.despues ?? <em className="text-slate-400">vacío</em>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TablaScroll>
+    </div>
+  )
 }
 
 export default function Importacion() {
@@ -166,11 +194,7 @@ export default function Importacion() {
         >
           {descargando ? 'Exportando…' : 'Exportar plantilla'}
         </Boton>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Archivo .xlsx</span>
-          <input type="file" accept=".xlsx,.xlsm" onChange={elegir}
-            className="text-sm" />
-        </label>
+        <Campo etiqueta="Archivo .xlsx" type="file" accept=".xlsx,.xlsm" onChange={elegir} />
         <Boton
           variante="primario"
           onClick={previsualizarImportacion}
@@ -180,7 +204,7 @@ export default function Importacion() {
         </Boton>
       </div>
 
-      {aviso && <div className="aviso aviso-error mb-3">{aviso}</div>}
+      {aviso && <Aviso tono="error" className="mb-3">{aviso}</Aviso>}
 
       {resultado && (
         <div className="tarjeta tarjeta-pad">
@@ -200,14 +224,14 @@ export default function Importacion() {
             ))}
           </div>
           {resultado.errores.length > 0 && (
-            <div className="mt-4">
-              <div className="mb-1 text-sm font-semibold text-amber-700">
+            <Aviso tono="alerta" className="mt-4">
+              <div className="mb-1 font-semibold">
                 {resultado.errores.length} fila(s) con error
               </div>
-              <ul className="max-h-48 overflow-auto text-xs text-amber-700">
+              <ul className="max-h-48 overflow-auto text-xs">
                 {resultado.errores.map((err, i) => <li key={i}>• {err}</li>)}
               </ul>
-            </div>
+            </Aviso>
           )}
         </div>
       )}
@@ -252,24 +276,7 @@ export default function Importacion() {
                       <summary className="cursor-pointer text-blue-600 hover:underline">
                         {d.nombre || d.clave}
                       </summary>
-                      <table className="mt-1 w-full border-collapse text-xs">
-                        <thead>
-                          <tr className="bg-slate-200">
-                            <th className="border px-1 py-0.5 text-left">Campo</th>
-                            <th className="border px-1 py-0.5 text-left">Antes</th>
-                            <th className="border px-1 py-0.5 text-left">Después</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {d.cambios.map((c, i) => (
-                            <tr key={i} className="odd:bg-white even:bg-slate-50">
-                              <td className="border px-1 py-0.5 font-medium">{c.campo}</td>
-                              <td className="border px-1 py-0.5 text-red-600">{c.antes ?? <em className="text-slate-400">vacío</em>}</td>
-                              <td className="border px-1 py-0.5 text-green-700">{c.despues ?? <em className="text-slate-400">vacío</em>}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <TablaCambios cambios={d.cambios} />
                     </details>
                   ))}
                 </div>
@@ -294,24 +301,7 @@ export default function Importacion() {
                       <summary className="cursor-pointer text-blue-600 hover:underline">
                         {d.clave}
                       </summary>
-                      <table className="mt-1 w-full border-collapse text-xs">
-                        <thead>
-                          <tr className="bg-slate-200">
-                            <th className="border px-1 py-0.5 text-left">Campo</th>
-                            <th className="border px-1 py-0.5 text-left">Antes</th>
-                            <th className="border px-1 py-0.5 text-left">Después</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {d.cambios.map((c, i) => (
-                            <tr key={i} className="odd:bg-white even:bg-slate-50">
-                              <td className="border px-1 py-0.5 font-medium">{c.campo}</td>
-                              <td className="border px-1 py-0.5 text-red-600">{c.antes ?? <em className="text-slate-400">vacío</em>}</td>
-                              <td className="border px-1 py-0.5 text-green-700">{c.despues ?? <em className="text-slate-400">vacío</em>}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <TablaCambios cambios={d.cambios} />
                     </details>
                   ))}
                 </div>

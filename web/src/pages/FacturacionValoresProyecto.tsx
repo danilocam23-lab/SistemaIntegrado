@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Requerimiento, Tarifa } from '../types'
-import { EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
+import { Aviso, EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
 
 interface RegistroSoporte {
   Work_Order_ID: string
@@ -193,7 +193,7 @@ export default function FacturacionValoresProyecto() {
         titulo="Facturación — Valores de proyecto"
         descripcion="Valores de proyecto."
       />
-      {errorVisible && <div className="aviso aviso-error">{errorVisible}</div>}
+      {errorVisible && <Aviso tono="error">{errorVisible}</Aviso>}
       <div className="grid gap-4 md:grid-cols-3">
         <Kpi rotulo="Dinero de soporte" valor={formatoMoneda(totales.valorTotal)} acento="#059669" />
         <Kpi

@@ -81,6 +81,8 @@ export interface FiltrosAsignaciones {
   vista: VistaAsignaciones
   estado: string
   persona: string
+  /** Búsqueda de texto por requerimiento (SC, REQ, nombre). */
+  requerimiento: string
   mostrar: FiltroMostrar
   orden: OrdenPersonas
 }
@@ -89,6 +91,7 @@ export const FILTROS_INICIALES: FiltrosAsignaciones = {
   vista: 'actas',
   estado: '__todos__',
   persona: '__todos__',
+  requerimiento: '',
   mostrar: 'todo',
   orden: 'carga',
 }

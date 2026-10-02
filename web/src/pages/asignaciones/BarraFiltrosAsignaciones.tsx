@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useMemo, useState } from 'react'
-import { BarraFiltros, Boton, Icono, Selector } from '../../components/ui'
+import { useEffect, useMemo, useState } from 'react'
+import { BarraFiltros, Boton, Campo, Icono, Selector } from '../../components/ui'
 import type { Persona } from '../../types'
 import { Combobox } from './Combobox'
 import type { FiltroMostrar, FiltrosAsignaciones } from './tipos'
@@ -39,6 +39,16 @@ export function BarraFiltrosAsignaciones({
   personasDisponibles,
 }: Props) {
   const [abiertoMovil, setAbiertoMovil] = useState(false)
+
+  // El texto se escribe en local y se aplica con un debounce corto; si el filtro cambia
+  // desde fuera (Limpiar, saltos desde otras secciones) el campo se resincroniza.
+  const [textoReq, setTextoReq] = useState(filtros.requerimiento)
+  useEffect(() => { setTextoReq(filtros.requerimiento) }, [filtros.requerimiento])
+  useEffect(() => {
+    if (textoReq === filtros.requerimiento) return
+    const temporizador = window.setTimeout(() => onCambio({ requerimiento: textoReq }), 250)
+    return () => window.clearTimeout(temporizador)
+  }, [textoReq, filtros.requerimiento, onCambio])
 
   const opcionesPersona = useMemo(
     () => personasDisponibles.map((p) => ({ id: p.id, etiqueta: p.nombre, detalle: p.rol_operativo })),
@@ -77,6 +87,17 @@ export function BarraFiltrosAsignaciones({
             ))}
             <option value="__sin_estado__">Sin estado</option>
           </Selector>
+
+          <Campo
+            etiqueta="Requerimiento"
+            compacto
+            type="search"
+            value={textoReq}
+            onChange={(e) => setTextoReq(e.target.value)}
+            placeholder="SC, REQ o nombre…"
+            aria-label="Buscar por requerimiento"
+            className="w-56"
+          />
 
           <Combobox
             etiqueta="Persona"

@@ -6,7 +6,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Acta } from '../types'
-import { Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Aviso, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Actas() {
   const { datos, error, recargar } = useLista<Acta>('/actas')
@@ -68,23 +68,14 @@ export default function Actas() {
       <EncabezadoPagina titulo="Actas de trabajo" icono={<Icono nombre="portafolio" />} />
 
       <form onSubmit={crear} className="barra-filtros">
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Código</span>
-          <Campo value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Fecha</span>
-          <Campo value={fecha} onChange={(e) => setFecha(e.target.value)} type="date" />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Dirección</span>
-          <Campo value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-        </label>
+        <Campo etiqueta="Código" value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
+        <Campo etiqueta="Fecha" value={fecha} onChange={(e) => setFecha(e.target.value)} type="date" />
+        <Campo etiqueta="Dirección" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
         <Boton type="submit" variante="primario">Crear</Boton>
       </form>
 
       {(aviso || error) && (
-        <div className="aviso aviso-error">{aviso || error}</div>
+        <Aviso tono="error">{aviso || error}</Aviso>
       )}
 
       <TablaScroll>
@@ -193,7 +184,7 @@ export default function Actas() {
               <td className="text-right">{a.total_horas ?? '—'}</td>
               <td className="text-right">{a.total_valor ?? '—'}</td>
               <td className="text-center">
-                <button onClick={() => eliminar(a)} className="enlace-accion enlace-accion-peligro">
+                <button type="button" onClick={() => eliminar(a)} className="enlace-accion enlace-accion-peligro">
                   Eliminar
                 </button>
               </td>

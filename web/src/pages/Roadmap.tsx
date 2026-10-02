@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useLista } from '../api/hooks'
-import { Boton, Icono, Selector, TablaScroll } from '../components/ui'
+import { BarraFiltros, Boton, Chip, cx, EncabezadoPagina, FiltroDesplegable, Icono, Selector, TablaScroll } from '../components/ui'
 import type { Asignacion, Categoria, Persona, Requerimiento } from '../types'
 
 /* ─── helpers de fecha ─── */
@@ -358,128 +358,62 @@ export default function Roadmap() {
   let globalColorIdx = 0
 
   return (
-    <div className="flex flex-col gap-0">
-      {/* Header */}
-      <div className="flex items-center justify-between rounded-t-xl bg-white p-4 border border-b-0">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-marca/10 p-2">
-            <Icono nombre="calendario" className="h-6 w-6 text-marca" />
-          </div>
-          <div>
-            <h1 className="titulo-pagina">Roadmap del Equipo</h1>
-            <p className="text-xs text-zinc-500">Línea de tiempo de proyectos y entregas</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <Selector
-            value={modoAgrupacion}
-            onChange={(e) => setModoAgrupacion(e.target.value as 'usuario' | 'plano')}
-            compacto
-          >
-            <option value="usuario">Por usuario asignado</option>
-            <option value="plano">Sin agrupar por usuario</option>
-          </Selector>
-
-          {modoAgrupacion === 'usuario' && (
+    <div className="flex flex-col">
+      <EncabezadoPagina
+        icono={<Icono nombre="calendario" />}
+        titulo="Roadmap del Equipo"
+        descripcion="Línea de tiempo de proyectos y entregas"
+        acciones={(
+          <>
             <Selector
-              value={filtroPersona}
-              onChange={(e) => setFiltroPersona(e.target.value)}
+              value={modoAgrupacion}
+              onChange={(e) => setModoAgrupacion(e.target.value as 'usuario' | 'plano')}
               compacto
+              aria-label="Modo de agrupación"
             >
-              <option value="__todos__">Todos los desarrolladores</option>
-              <option value={SIN_ASIGNAR_ID}>Sin asignar</option>
-              {personas.filter((p) => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre)).map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
+              <option value="usuario">Por usuario asignado</option>
+              <option value="plano">Sin agrupar por usuario</option>
             </Selector>
-          )}
-        </div>
-      </div>
 
-      <div className="border-l border-r border-b border-zinc-200 bg-white px-4 py-3">
-        <details className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-900 shadow-sm hover:bg-zinc-50">
-            <div className="flex items-center gap-2">
-              <span>Estados del requerimiento</span>
-              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700">
-                {estadosActivos.size === 0 ? 'sin filtro' : `${estadosActivos.size} seleccionados`}
-              </span>
-            </div>
-            <svg className="h-4 w-4 text-zinc-500 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clipRule="evenodd" />
-            </svg>
-          </summary>
+            {modoAgrupacion === 'usuario' && (
+              <Selector
+                value={filtroPersona}
+                onChange={(e) => setFiltroPersona(e.target.value)}
+                compacto
+                aria-label="Desarrollador"
+              >
+                <option value="__todos__">Todos los desarrolladores</option>
+                <option value={SIN_ASIGNAR_ID}>Sin asignar</option>
+                {personas.filter((p) => p.activo).sort((a, b) => a.nombre.localeCompare(b.nombre)).map((p) => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </Selector>
+            )}
+          </>
+        )}
+      />
 
-          <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-medium text-zinc-600">Selecciona uno o varios estados</span>
-              <div className="flex items-center gap-2">
-                <Boton
-                  variante="secundario"
-                  tamano="sm"
-                  type="button"
-                  onClick={() => setEstadosActivos(new Set(estadosRequerimiento))}
-                >
-                  Todos
-                </Boton>
-                <Boton
-                  variante="secundario"
-                  tamano="sm"
-                  type="button"
-                  onClick={() => setEstadosActivos(new Set())}
-                >
-                  Limpiar
-                </Boton>
-              </div>
-            </div>
+      <BarraFiltros className="my-3">
+        <FiltroDesplegable
+          label="Estados del requerimiento"
+          opciones={estadosRequerimiento}
+          activos={estadosActivos}
+          setActivos={setEstadosActivos}
+          anchoPanel="320px"
+        />
+        <Chip>{estadosActivos.size === 0 ? 'sin filtro' : `${estadosActivos.size} seleccionados`}</Chip>
+      </BarraFiltros>
 
-            <div className="max-h-56 overflow-auto rounded-md border border-zinc-200 bg-white p-2">
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {estadosRequerimiento.map((estado) => {
-                  const checked = estadosActivos.has(estado)
-                  return (
-                    <label
-                      key={estado}
-                      className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs transition-colors ${
-                        checked ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          setEstadosActivos((prev) => {
-                            const next = new Set(prev)
-                            if (next.has(estado)) next.delete(estado)
-                            else next.add(estado)
-                            return next
-                          })
-                        }}
-                      />
-                      <span className="truncate">{estado}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </details>
-      </div>
-
-      <div className="flex flex-wrap gap-2 border-l border-r border-b border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-700">
-        <div className="flex w-full items-center justify-between gap-3">
+      <div className="tarjeta tarjeta-pad mb-3 text-xs text-slate-700">
+        <div className="mb-2 flex w-full flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-2 font-semibold text-zinc-900">Meses:</span>
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-700">
-              {mesesActivos.size === 0 ? 'sin filtro' : `${mesesActivos.size} seleccionados`}
-            </span>
+            <span className="etiqueta-sup">Meses</span>
+            <Chip>{mesesActivos.size === 0 ? 'sin filtro' : `${mesesActivos.size} seleccionados`}</Chip>
           </div>
           <div className="flex items-center gap-2">
             <Boton
               variante="secundario"
               tamano="sm"
-              type="button"
-              className="rounded-full"
               onClick={() => setMesesActivos(new Set(meses.map((m) => m.key)))}
             >
               Todos
@@ -487,38 +421,39 @@ export default function Roadmap() {
             <Boton
               variante="secundario"
               tamano="sm"
-              type="button"
-              className="rounded-full"
               onClick={() => setMesesActivos(new Set())}
             >
               Limpiar
             </Boton>
           </div>
         </div>
-        {meses.map((m) => {
-          const checked = mesesActivos.has(m.key)
-          return (
-            <label key={m.key} className="flex cursor-pointer items-center gap-1 rounded border border-zinc-300 px-2 py-1 bg-white">
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => {
-                  setMesesActivos((prev) => {
-                    const next = new Set(prev)
-                    if (next.has(m.key)) next.delete(m.key)
-                    else next.add(m.key)
-                    return next
-                  })
-                }}
-              />
-              <span>{m.label}</span>
-            </label>
-          )
-        })}
+        <div className="flex flex-wrap gap-1.5">
+          {meses.map((m) => {
+            const checked = mesesActivos.has(m.key)
+            return (
+              <label key={m.key} className={cx('opcion-filtro', checked ? 'opcion-filtro-on' : 'opcion-filtro-off')}>
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5"
+                  checked={checked}
+                  onChange={() => {
+                    setMesesActivos((prev) => {
+                      const next = new Set(prev)
+                      if (next.has(m.key)) next.delete(m.key)
+                      else next.add(m.key)
+                      return next
+                    })
+                  }}
+                />
+                {m.label}
+              </label>
+            )
+          })}
+        </div>
       </div>
 
       {/* Timeline */}
-      <TablaScroll plano className="border rounded-b-xl border-zinc-200 bg-white">
+      <TablaScroll plano className="rounded-xl border border-slate-200 bg-white">
         <div className="min-w-[1200px]">
           {/* Encabezado de meses */}
           <div className="flex border-b border-zinc-200 bg-zinc-50 text-[11px] font-medium text-zinc-700 sticky top-0 z-10">

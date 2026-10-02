@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
-import { AreaTexto, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { AreaTexto, Aviso, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import type { Festivo, Persona } from '../types'
 
@@ -335,64 +335,54 @@ export default function ControlHorasFacturable() {
       />
 
       <div className="barra-filtros">
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Año</span>
-          <Selector value={anio} onChange={(e) => setAnio(Number(e.target.value))}>
-            {Array.from({ length: 5 }, (_, i) => hoy.getFullYear() - 2 + i).map((a) => (
-              <option key={a} value={a}>{a}</option>
-            ))}
-          </Selector>
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Mes</span>
-          <Selector value={mes} onChange={(e) => setMes(Number(e.target.value))}>
-            {_MESES.map((n, i) => (
-              <option key={i + 1} value={i + 1}>{n}</option>
-            ))}
-          </Selector>
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Buscar persona o squad</span>
-          <Campo
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar…"
-            className="w-64"
-          />
-        </label>
+        <Selector etiqueta="Año" value={anio} onChange={(e) => setAnio(Number(e.target.value))}>
+          {Array.from({ length: 5 }, (_, i) => hoy.getFullYear() - 2 + i).map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </Selector>
+        <Selector etiqueta="Mes" value={mes} onChange={(e) => setMes(Number(e.target.value))}>
+          {_MESES.map((n, i) => (
+            <option key={i + 1} value={i + 1}>{n}</option>
+          ))}
+        </Selector>
+        <Campo
+          etiqueta="Buscar persona o squad"
+          type="text"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar…"
+          className="w-64"
+        />
         {busqueda && (
-          <button onClick={() => setBusqueda('')} className="enlace-accion enlace-accion-peligro text-xs self-end pb-2">
+          <button type="button" onClick={() => setBusqueda('')} className="enlace-accion enlace-accion-peligro text-xs self-end pb-2">
             Limpiar
           </button>
         )}
 
         {/* Aplicar LT_HITSS a todos */}
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Aplicar LT HITSS a todos</span>
-          <Selector
-            onChange={(e) => { if (e.target.value) aplicarATodos(e.target.value); e.target.value = '' }}
-            defaultValue=""
-          >
-            <option value="" disabled>Seleccionar…</option>
-            {todosLtNombres.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </Selector>
-        </label>
+        <Selector
+          etiqueta="Aplicar LT HITSS a todos"
+          onChange={(e) => { if (e.target.value) aplicarATodos(e.target.value); e.target.value = '' }}
+          defaultValue=""
+        >
+          <option value="" disabled>Seleccionar…</option>
+          {todosLtNombres.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </Selector>
 
         <span className="ml-auto text-xs text-slate-400 self-end pb-2">
           {filas.length} registros
           {eliminadas.size > 0 && (
-            <button onClick={restaurarTodo} className="enlace-accion text-xs ml-2">
+            <button type="button" onClick={restaurarTodo} className="enlace-accion text-xs ml-2">
               Restaurar {eliminadas.size} eliminados
             </button>
           )}
         </span>
       </div>
 
-      {aviso && <div className="aviso aviso-error">{aviso}</div>}
-      {avisoOk && <div className="aviso aviso-exito">{avisoOk}</div>}
+      {aviso && <Aviso tono="error">{aviso}</Aviso>}
+      {avisoOk && <Aviso tono="exito">{avisoOk}</Aviso>}
 
       {puedeEditarHoras && (
         <div className="flex justify-end">
@@ -645,7 +635,8 @@ export default function ControlHorasFacturable() {
                   </td>
                   <td className="text-center">
                     <Boton
-                      variante="peligro"
+                      variante="peligro-suave"
+                      tamano="sm"
                       type="button"
                       onClick={() => eliminarFila(f.key)}
                       title="Quitar este registro"

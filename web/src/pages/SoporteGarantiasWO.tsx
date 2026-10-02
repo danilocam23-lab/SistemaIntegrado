@@ -3,7 +3,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import client from '../api/client'
-import { AreaTexto, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import Modal from '../components/Modal'
+import { AreaTexto, Aviso, Boton, Campo, EncabezadoPagina, Icono, Tarjeta, TablaScroll } from '../components/ui'
 
 function getId(item: any): string {
   if (!item._id) return ''
@@ -131,7 +132,20 @@ export default function SoporteGarantiasWO() {
     }))
   }
 
-  if (cargando) return <div className="p-8 text-center text-slate-500">Cargando…</div>
+  if (cargando) {
+    return (
+      <div className="space-y-6">
+        <EncabezadoPagina
+          icono={<Icono nombre="soporte" />}
+          titulo="Garantías de Work Orders"
+          descripcion="Gestión de WO marcadas como garantía con observaciones"
+        />
+        <Tarjeta>
+          <p role="status" className="py-8 text-center text-sm text-slate-500">Cargando…</p>
+        </Tarjeta>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -142,7 +156,7 @@ export default function SoporteGarantiasWO() {
       />
 
       {/* Buscador */}
-      <div className="tarjeta tarjeta-pad">
+      <Tarjeta>
         <h2 className="titulo-seccion text-sm mb-3">Agregar WO de garantía</h2>
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1">
@@ -190,8 +204,8 @@ export default function SoporteGarantiasWO() {
                     <td className="max-w-xs truncate">{r.descripcion}</td>
                     <td>{r.estado}</td>
                     <td>
-                      <Boton variante="exito" tamano="sm" onClick={() => agregarWO(r.work_order_id)}>
-                        + Agregar
+                      <Boton variante="exito" tamano="sm" icono={<Icono nombre="check" />} onClick={() => agregarWO(r.work_order_id)}>
+                        Agregar
                       </Boton>
                     </td>
                   </tr>
@@ -200,15 +214,15 @@ export default function SoporteGarantiasWO() {
             </table>
           </TablaScroll>
         )}
-      </div>
+      </Tarjeta>
 
       {/* Tabla de garantías */}
-      <div className="tarjeta tarjeta-pad">
+      <Tarjeta>
         <h2 className="titulo-seccion text-sm mb-3">
           Garantías registradas ({(garantias ?? []).length})
         </h2>
         {(garantias ?? []).length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400">No hay garantías registradas</p>
+          <p className="py-8 text-center text-sm text-slate-500">No hay garantías registradas</p>
         ) : (
           <TablaScroll>
             <table className="tabla">
@@ -288,12 +302,16 @@ export default function SoporteGarantiasWO() {
                             </>
                           ) : (
                             <>
-                              <Boton variante="primario" tamano="sm" onClick={() => iniciarEdicion(g)}>
+                              <button type="button" className="enlace-accion" onClick={() => iniciarEdicion(g)}>
                                 Editar
-                              </Boton>
-                              <Boton variante="peligro" tamano="sm" onClick={() => eliminar(getId(g))}>
+                              </button>
+                              <button
+                                type="button"
+                                className="enlace-accion enlace-accion-peligro"
+                                onClick={() => eliminar(getId(g))}
+                              >
                                 Eliminar
-                              </Boton>
+                              </button>
                             </>
                           )}
                         </div>
@@ -305,61 +323,44 @@ export default function SoporteGarantiasWO() {
             </table>
           </TablaScroll>
         )}
-      </div>
+      </Tarjeta>
 
-      {mostrarDetalleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
-              <div>
-                <h2 className="titulo-seccion">Detalle Work Order</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {detalleWo?.work_order_id ?? 'Información completa de la WO en soporte.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMostrarDetalleModal(false)}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Cerrar detalle de WO"
-              >
-                <Icono nombre="x" />
-              </button>
-            </div>
-
-            <div className="max-h-[70vh] overflow-auto p-6">
-              {cargandoDetalle && (
-                <p className="py-8 text-center text-sm text-slate-400">Cargando detalle…</p>
-              )}
-              {!cargandoDetalle && errorDetalle && (
-                <p className="py-8 text-center text-sm text-red-500">{errorDetalle}</p>
-              )}
-              {!cargandoDetalle && !errorDetalle && detalleWo && (
-                <table className="tabla">
-                  <tbody className="divide-y divide-slate-100">
-                    <tr>
-                      <td className="w-56 px-3 py-2 font-semibold text-slate-600">Squad</td>
-                      <td className="px-3 py-2">{detalleWo.squad ?? '—'}</td>
-                    </tr>
-                    <tr>
-                      <td className="w-56 px-3 py-2 font-semibold text-slate-600">Líder</td>
-                      <td className="px-3 py-2">{detalleWo.lider ?? '—'}</td>
-                    </tr>
-                    {Object.entries(detalleWo.datos ?? {}).map(([clave, valor]) => (
-                      <tr key={clave}>
-                        <td className="w-56 px-3 py-2 font-semibold text-slate-600 align-top">{clave}</td>
-                        <td className="px-3 py-2 whitespace-pre-wrap break-words">
-                          {valor === null || valor === undefined || valor === '' ? '—' : String(valor)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        titulo="Detalle Work Order"
+        subtitulo={detalleWo?.work_order_id ?? 'Información completa de la WO en soporte.'}
+        abierto={mostrarDetalleModal}
+        onCerrar={() => setMostrarDetalleModal(false)}
+        ancho="xl"
+      >
+        {cargandoDetalle && (
+          <p role="status" className="py-8 text-center text-sm text-slate-500">Cargando detalle…</p>
+        )}
+        {!cargandoDetalle && errorDetalle && <Aviso tono="error">{errorDetalle}</Aviso>}
+        {!cargandoDetalle && !errorDetalle && detalleWo && (
+          <TablaScroll>
+            <table className="tabla">
+              <tbody>
+                <tr>
+                  <td className="w-56 font-semibold text-slate-600">Squad</td>
+                  <td>{detalleWo.squad ?? '—'}</td>
+                </tr>
+                <tr>
+                  <td className="w-56 font-semibold text-slate-600">Líder</td>
+                  <td>{detalleWo.lider ?? '—'}</td>
+                </tr>
+                {Object.entries(detalleWo.datos ?? {}).map(([clave, valor]) => (
+                  <tr key={clave}>
+                    <td className="w-56 align-top font-semibold text-slate-600">{clave}</td>
+                    <td className="whitespace-pre-wrap break-words">
+                      {valor === null || valor === undefined || valor === '' ? '—' : String(valor)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TablaScroll>
+        )}
+      </Modal>
     </div>
   )
 }

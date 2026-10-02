@@ -139,6 +139,7 @@ export const ENTREGAS_ACTAS_FILTROS: EntregasActasCampo[] = [
   { key: 'estado', label: 'Estado', grupo: 'Entrega', porDefecto: true },
   { key: 'ans', label: 'ANS', grupo: 'Entrega', porDefecto: true },
   { key: 'fechas', label: 'F. Comprometida (rango)', grupo: 'Entrega', porDefecto: true },
+  { key: 'fechaReal', label: 'F. Real (rango)', grupo: 'Entrega', porDefecto: true },
   { key: 'reqEstado', label: 'Estado del requerimiento', grupo: 'Requerimiento' },
   { key: 'squad', label: 'Squad', grupo: 'Solicitud' },
   { key: 'tipificacion', label: 'Tipificación', grupo: 'Entrega' },

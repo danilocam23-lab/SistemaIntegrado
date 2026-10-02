@@ -6,7 +6,7 @@ import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Categoria } from '../types'
-import { Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Aviso, Boton, Campo, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 export default function Categorias() {
   const { datos, error, recargar } = useLista<Categoria>('/categorias')
@@ -69,20 +69,19 @@ export default function Categorias() {
       <EncabezadoPagina icono={<Icono nombre="administracion" />} titulo="Categorías" />
 
       <form onSubmit={crear} className="barra-filtros mb-4">
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Nombre</span>
-          <Campo value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Color</span>
-          <input value={color} onChange={(e) => setColor(e.target.value)} type="color"
-            className="h-10 w-16 rounded border" />
-        </label>
+        <Campo etiqueta="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+        <Campo
+          etiqueta="Color"
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          className="h-10 w-16 cursor-pointer p-1"
+        />
         <Boton variante="primario" type="submit">Crear</Boton>
       </form>
 
       {(aviso || error) && (
-        <div className="aviso aviso-error mb-3">{aviso || error}</div>
+        <Aviso tono="error" className="mb-3">{aviso || error}</Aviso>
       )}
 
       <TablaScroll>
@@ -169,7 +168,7 @@ export default function Categorias() {
                 onDoubleClick={() => iniciarEdicion(c.id, 'color', c.color)}
               >
                 {editCell?.id === c.id && editCell.campo === 'color' ? (
-                  <input
+                  <Campo
                     autoFocus
                     type="color"
                     value={editValue}
@@ -191,7 +190,7 @@ export default function Categorias() {
                         cancelarEdicion()
                       }
                     }}
-                    className="h-10 w-16 rounded border"
+                    className="h-10 w-16 cursor-pointer p-1"
                   />
                 ) : (
                   <span className="inline-flex items-center gap-2">
@@ -201,7 +200,7 @@ export default function Categorias() {
                 )}
               </td>
               <td className="text-center">
-                <button onClick={() => eliminar(c)} className="enlace-accion enlace-accion-peligro">
+                <button type="button" onClick={() => eliminar(c)} className="enlace-accion enlace-accion-peligro">
                   Eliminar
                 </button>
               </td>

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
 import { useLista } from '../api/hooks'
-import { Chip, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { Aviso, Chip, EncabezadoPagina, Icono, Tarjeta, TablaScroll } from '../components/ui'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
 
 type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
@@ -164,7 +164,7 @@ export default function Predictivos() {
     <div>
       <EncabezadoPagina icono={<Icono nombre="tendencia" />} titulo="Predictivos" />
 
-      <div className="mb-4 mt-4 rounded-xl border border-slate-200 bg-white p-4">
+      <Tarjeta className="mb-4 mt-4">
         <h2 className="titulo-seccion text-sm mb-1">
           Entregas próximas a vencer (≤ 5 días)
         </h2>
@@ -173,10 +173,10 @@ export default function Predictivos() {
           <strong>Entrega no cargada</strong> cuya fecha comprometida vence en 5 días o menos
           (incluye vencidas).
         </p>
-      </div>
+      </Tarjeta>
 
-      {cargando && <p className="text-sm text-slate-500">Cargando...</p>}
-      {error && <p className="text-sm text-red-600">Error al cargar los datos.</p>}
+      {cargando && <Aviso tono="info"><span role="status">Cargando…</span></Aviso>}
+      {error && <Aviso tono="error">Error al cargar los datos.</Aviso>}
 
       {!cargando && !error && (
         filas.length === 0 ? (
@@ -228,14 +228,14 @@ export default function Predictivos() {
         )
       )}
 
-      <div className="mb-4 mt-8 rounded-xl border border-slate-200 bg-white p-4">
+      <Tarjeta className="mb-4 mt-8">
         <h2 className="titulo-seccion text-sm mb-1">
           Requerimientos en riesgo
         </h2>
         <p className="text-xs text-slate-500">
           Requerimientos cuyo estado general es <strong>En curso por Hitss</strong> o <strong>Estimación rechazada</strong>.
         </p>
-      </div>
+      </Tarjeta>
 
       {!cargando && !error && (
         filasEstadoReq.length === 0 ? (

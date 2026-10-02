@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { ENTREGAS_ACTAS_CONFIG_CLAVES, ENTREGAS_ACTAS_COLUMNAS, ENTREGAS_ACTAS_FILTROS, REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS } from '../constantes'
-import { Icono } from '../components/ui'
+import { EncabezadoPagina, Icono } from '../components/ui'
 import { SeccionAzureDevOps } from './configuracion/SeccionAzureDevOps'
 import { SeccionCargaExcel } from './configuracion/SeccionCargaExcel'
 import { SeccionCamposConfigurables } from './configuracion/SeccionCamposConfigurables'
@@ -77,13 +77,16 @@ export default function Configuracion() {
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-4">Configuración</h1>
+      <EncabezadoPagina titulo="Configuración" />
 
       {/* ═══ Tabs ═══ */}
-      <div className="pestanas mb-6">
+      <div className="pestanas mb-6" role="tablist">
         {PESTANAS.map(({ id, label, icono }) => (
           <button
             key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
             onClick={() => setTab(id)}
             className={`pestana ${tab === id ? 'pestana-activa' : ''}`}
           >

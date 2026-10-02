@@ -35,11 +35,13 @@ export function SeccionCategorias({
           onChange={(e) => setCNombre(e.target.value)}
           required
         />
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Color</span>
-          <input value={cColor} onChange={(e) => setCColor(e.target.value)} type="color"
-            className="h-10 w-16 rounded border" />
-        </label>
+        <Campo
+          etiqueta="Color"
+          type="color"
+          value={cColor}
+          onChange={(e) => setCColor(e.target.value)}
+          className="h-10 w-16 cursor-pointer p-1"
+        />
         <Boton type="submit" variante="primario">Crear</Boton>
       </form>
 
@@ -84,11 +86,11 @@ export function SeccionCategorias({
               <td className="cursor-pointer" title="Doble clic para editar"
                 onDoubleClick={() => cIniciarEdicion(c.id, 'color', c.color)}>
                 {cEditCell?.id === c.id && cEditCell.campo === 'color' ? (
-                  <input autoFocus type="color" value={cEditValue}
+                  <Campo autoFocus type="color" value={cEditValue}
                     onChange={(e) => setCEditValue(e.target.value)}
                     onBlur={() => { if (cCancelarBlur.current) { cCancelarBlur.current = false; return } void cGuardarEdicion(c) }}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } if (e.key === 'Escape') { e.preventDefault(); cCancelarEdicion() } }}
-                    className="h-10 w-16 rounded border" />
+                    className="h-10 w-16 cursor-pointer p-1" />
                 ) : (
                   <span className="inline-flex items-center gap-2">
                     <span className="inline-block h-4 w-4 rounded" style={{ background: c.color }} />

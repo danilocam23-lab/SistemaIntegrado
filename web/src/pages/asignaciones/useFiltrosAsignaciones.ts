@@ -16,6 +16,7 @@ function leer(): FiltrosAsignaciones {
       vista: dato.vista === 'personas' ? 'personas' : 'actas',
       estado: typeof dato.estado === 'string' ? dato.estado : FILTROS_INICIALES.estado,
       persona: typeof dato.persona === 'string' ? dato.persona : FILTROS_INICIALES.persona,
+      requerimiento: typeof dato.requerimiento === 'string' ? dato.requerimiento : '',
       mostrar: dato.mostrar === 'alerta' || dato.mostrar === 'prioridad' ? dato.mostrar : 'todo',
       orden: dato.orden === 'nombre' ? 'nombre' : 'carga',
     }
@@ -49,6 +50,7 @@ export function useFiltrosAsignaciones() {
       ...previo,
       estado: FILTROS_INICIALES.estado,
       persona: FILTROS_INICIALES.persona,
+      requerimiento: FILTROS_INICIALES.requerimiento,
       mostrar: FILTROS_INICIALES.mostrar,
     }))
   }, [])
@@ -56,11 +58,13 @@ export function useFiltrosAsignaciones() {
   const hayFiltros =
     filtros.estado !== FILTROS_INICIALES.estado ||
     filtros.persona !== FILTROS_INICIALES.persona ||
+    filtros.requerimiento.trim() !== '' ||
     filtros.mostrar !== FILTROS_INICIALES.mostrar
 
   const nFiltros =
     (filtros.estado !== FILTROS_INICIALES.estado ? 1 : 0) +
     (filtros.persona !== FILTROS_INICIALES.persona ? 1 : 0) +
+    (filtros.requerimiento.trim() !== '' ? 1 : 0) +
     (filtros.mostrar !== FILTROS_INICIALES.mostrar ? 1 : 0)
 
   return { filtros, actualizar, limpiar, hayFiltros, nFiltros }

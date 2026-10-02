@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import type { ComponentProps, FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
+import { EncabezadoPagina } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Rol, Usuario } from '../types'
 import FormularioRol from './usuarios/FormularioRol'
@@ -416,10 +417,13 @@ export default function Usuarios() {
 
   return (
     <div>
-      <h1 className="titulo-pagina mb-4">Usuarios</h1>
+      <EncabezadoPagina titulo="Usuarios" />
 
-      <div className="pestanas mb-4">
+      <div className="pestanas mb-4" role="tablist">
         <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'usuarios'}
           onClick={() => setTab('usuarios')}
           className={`pestana ${tab === 'usuarios' ? 'pestana-activa' : ''}`}
         >
@@ -427,6 +431,9 @@ export default function Usuarios() {
         </button>
         {puedeVerRoles && (
           <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'roles'}
             onClick={() => setTab('roles')}
             className={`pestana ${tab === 'roles' ? 'pestana-activa' : ''}`}
           >

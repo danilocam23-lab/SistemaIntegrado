@@ -6,7 +6,7 @@ import client from '../api/client'
 import { useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Configuracion, Tarifa } from '../types'
-import { AreaTexto, Boton, Campo, cx, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
+import { AreaTexto, Aviso, Boton, Campo, cx, EncabezadoPagina, Icono, TablaScroll } from '../components/ui'
 
 interface FilaGeneral {
   id: string
@@ -247,9 +247,9 @@ export default function FacturacionGeneral() {
         }
       />
 
-      {error && <div className="aviso aviso-error">{error}</div>}
-      {mensaje === 'ok' && <div className="aviso aviso-exito">Cambios guardados.</div>}
-      {mensaje === 'error' && <div className="aviso aviso-error">Error al guardar.</div>}
+      {error && <Aviso tono="error">{error}</Aviso>}
+      {mensaje === 'ok' && <Aviso tono="exito">Cambios guardados.</Aviso>}
+      {mensaje === 'error' && <Aviso tono="error">Error al guardar.</Aviso>}
 
       <TablaScroll>
         <table className="tabla min-w-[1200px]">
@@ -356,9 +356,13 @@ export default function FacturacionGeneral() {
                 </td>
                 <td className="text-center">
                   {puedeEditarFacturacion && (
-                    <Boton variante="peligro" tamano="sm" onClick={() => eliminarFila(f.id)}>
+                    <button
+                      type="button"
+                      onClick={() => eliminarFila(f.id)}
+                      className="enlace-accion enlace-accion-peligro"
+                    >
                       Quitar
-                    </Boton>
+                    </button>
                   )}
                 </td>
                     </>

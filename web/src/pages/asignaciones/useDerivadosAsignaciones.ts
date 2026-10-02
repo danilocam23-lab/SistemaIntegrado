@@ -34,6 +34,8 @@ interface ParametrosDerivados {
   horasAzurePorFeature: Map<number, HorasAzureFeatureEntry[]>
   filtroEstado: string
   filtroPersona: string
+  /** Texto de búsqueda por requerimiento (SC, código REQ o nombre). */
+  busquedaReq: string
   mostrar: FiltroMostrar
   orden: OrdenPersonas
 }
@@ -45,6 +47,9 @@ export interface FilaReparto {
   pctActual: number
   pctNuevo: number
 }
+
+const sinTildes = (texto: string): string =>
+  texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 const horasAzureVacio = (): HorasAzureGrupo => ({ originalEstimate: 0, completedWork: 0, remainingWork: 0 })
 
@@ -76,6 +81,7 @@ export function useDerivadosAsignaciones({
   horasAzurePorFeature,
   filtroEstado,
   filtroPersona,
+  busquedaReq,
   mostrar,
   orden,
 }: ParametrosDerivados) {
@@ -405,9 +411,17 @@ export function useDerivadosAsignaciones({
     ? filtroPersona
     : '__todos__'
 
-  // Estado + persona: base común de las dos pestañas.
+  const terminoReq = sinTildes(busquedaReq.trim())
+
+  // Estado + persona + requerimiento: base común de las dos pestañas.
   const gruposBase = useMemo(() => {
     let resultado = gruposReq
+
+    // Búsqueda por requerimiento: sin tildes ni mayúsculas, parcial, sobre SC - REQ - nombre.
+    // El grupo "Sin requerimiento" solo aparece con la búsqueda vacía.
+    if (terminoReq) {
+      resultado = resultado.filter((g) => g.reqId !== null && sinTildes(g.reqLabel).includes(terminoReq))
+    }
 
     if (filtroEstado === '__sin_estado__') {
       resultado = resultado.filter((g) => !g.reqEstado)
@@ -422,7 +436,7 @@ export function useDerivadosAsignaciones({
     }
 
     return resultado
-  }, [gruposReq, filtroEstado, personaFiltrada])
+  }, [gruposReq, filtroEstado, personaFiltrada, terminoReq])
 
   // Pestaña "Por Actas": además aplica "Mostrar" (con alerta / prioridad) a las filas.
   const gruposFiltrados = useMemo(() => {
@@ -463,7 +477,7 @@ export function useDerivadosAsignaciones({
       }
     }
 
-    const sinFiltroEstado = filtroEstado === '__todos__'
+    const sinFiltroEstado = filtroEstado === '__todos__' && !terminoReq
     if (sinFiltroEstado) {
       const incorporar = (pid: string) => {
         if (map.has(pid)) return
@@ -498,6 +512,7 @@ export function useDerivadosAsignaciones({
     personaPorId,
     personaFiltrada,
     filtroEstado,
+    terminoReq,
     mostrar,
     orden,
     wosPorPersonaMap,

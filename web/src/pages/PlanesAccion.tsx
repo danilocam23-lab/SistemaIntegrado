@@ -7,7 +7,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Persona, PlanAccion } from '../types'
-import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { Aviso, BarraFiltros, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 
 const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADO', 'CANCELADO']
 
@@ -125,27 +125,23 @@ export default function PlanesAccion() {
       <EncabezadoPagina icono={<Icono nombre="portafolio" />} titulo="Planes de acción" />
 
       {puedeEditar && (
-        <form onSubmit={guardar} className="barra-filtros mb-4">
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Título</span>
+        <form onSubmit={guardar}>
+          <BarraFiltros className="mb-4">
             <Campo
+              etiqueta="Título"
               value={form.titulo}
               onChange={(e) => setForm({ ...form, titulo: e.target.value })}
               required
               className="w-56"
             />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Descripción</span>
             <Campo
+              etiqueta="Descripción"
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
               className="w-64"
             />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Responsable</span>
             <Selector
+              etiqueta="Responsable"
               value={form.responsableId}
               onChange={(e) => setForm({ ...form, responsableId: e.target.value })}
             >
@@ -154,18 +150,14 @@ export default function PlanesAccion() {
                 <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
             </Selector>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Fecha límite</span>
             <Campo
+              etiqueta="Fecha límite"
               type="date"
               value={form.fechaLimite}
               onChange={(e) => setForm({ ...form, fechaLimite: e.target.value })}
             />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-slate-600">Estado</span>
             <Selector
+              etiqueta="Estado"
               value={form.estado}
               onChange={(e) => setForm({ ...form, estado: e.target.value })}
             >
@@ -173,21 +165,21 @@ export default function PlanesAccion() {
                 <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
               ))}
             </Selector>
-          </label>
-          <Boton variante="primario" type="submit">
-            {form.id ? 'Guardar' : 'Crear'}
-          </Boton>
-          {form.id && (
-            <Boton variante="secundario" type="button" onClick={cancelarEdicion}>
-              Cancelar
+            <Boton variante="primario" type="submit" icono={<Icono nombre={form.id ? 'guardar' : 'check'} />}>
+              {form.id ? 'Guardar' : 'Crear'}
             </Boton>
-          )}
+            {form.id && (
+              <Boton variante="secundario" type="button" onClick={cancelarEdicion}>
+                Cancelar
+              </Boton>
+            )}
+          </BarraFiltros>
         </form>
       )}
 
-      <div className="mb-3 flex items-center gap-2">
-        <span className="text-sm text-slate-600">Filtrar por estado:</span>
+      <BarraFiltros className="mb-3">
         <Selector
+          etiqueta="Filtrar por estado"
           value={filtroEstado}
           onChange={(e) => setFiltroEstado(e.target.value)}
         >
@@ -196,11 +188,9 @@ export default function PlanesAccion() {
             <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
           ))}
         </Selector>
-      </div>
+      </BarraFiltros>
 
-      {(aviso || error) && (
-        <div className="aviso aviso-error mb-3">{aviso || error}</div>
-      )}
+      {(aviso || error) && <Aviso tono="error" className="mb-3">{aviso || error}</Aviso>}
 
       <TablaScroll>
       <table className="tabla">
@@ -229,10 +219,10 @@ export default function PlanesAccion() {
               <td className="text-center whitespace-nowrap">
                 {puedeEditar && (
                   <>
-                    <button onClick={() => editar(p)} className="enlace-accion mr-3">
+                    <button type="button" onClick={() => editar(p)} className="enlace-accion mr-3">
                       Editar
                     </button>
-                    <button onClick={() => eliminar(p)} className="enlace-accion enlace-accion-peligro">
+                    <button type="button" onClick={() => eliminar(p)} className="enlace-accion enlace-accion-peligro">
                       Eliminar
                     </button>
                   </>
@@ -241,7 +231,7 @@ export default function PlanesAccion() {
             </tr>
           ))}
           {planesFiltrados.length === 0 && (
-            <tr><td colSpan={6} className="p-4 text-center text-slate-400">Sin planes de acción.</td></tr>
+            <tr><td colSpan={6} className="p-4 text-center text-slate-500">Sin planes de acción.</td></tr>
           )}
         </tbody>
       </table>

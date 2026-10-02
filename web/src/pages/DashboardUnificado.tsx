@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import client from '../api/client'
 import { useAplicacion } from '../context/AplicacionContext'
-import { Chip, EncabezadoPagina, Icono } from '../components/ui'
+import { Aviso, Chip, EncabezadoPagina, Icono, Kpi, Tarjeta } from '../components/ui'
 
 const COLORES_SQUAD = ['#2563eb', '#7c3aed', '#16a34a', '#f59e0b', '#dc2626', '#0891b2', '#06b6d4', '#8b5cf6']
 
@@ -38,7 +38,7 @@ export default function DashboardUnificado() {
   }, [activa])
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div>
       <EncabezadoPagina
         icono={<Icono nombre="globo" />}
         titulo="Dashboard Unificado"
@@ -52,9 +52,9 @@ export default function DashboardUnificado() {
       {/* Main Content */}
       <div className="pagina">
         {error && (
-          <div className="aviso aviso-alerta mb-6 flex items-center gap-2">
+          <Aviso tono="alerta" className="mb-6 flex items-center gap-2">
             <Icono nombre="alerta" /> {error}
-          </div>
+          </Aviso>
         )}
 
         {data && (
@@ -67,83 +67,53 @@ export default function DashboardUnificado() {
               </Chip>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {data.aplicaciones.map((a, idx) => {
                 const color = COLORES_SQUAD[idx % COLORES_SQUAD.length]
-                const isInactive = !a.activa
-                
+
                 return (
-                  <div
-                    key={a.aplicacion}
-                    className={`group relative overflow-hidden rounded-2xl border ${
-                      isInactive ? 'border-slate-200 opacity-60' : 'border-slate-200 hover:border-slate-300'
-                    } bg-white p-6 shadow-sm hover:shadow-lg transition-all duration-300`}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300" style={{ backgroundImage: `linear-gradient(to bottom right, ${color}, transparent)` }} />
-
-                    <div className="relative">
-                      {/* Header con icono y badge */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="h-12 w-12 rounded-xl p-3 flex items-center justify-center text-lg" style={{ backgroundColor: `${color}15`, color }}>
-                          <Icono nombre="edificio" />
-                        </div>
-                        {isInactive && (
-                          <Chip tono="neutro">Inactivo</Chip>
-                        )}
+                  <Tarjeta key={a.aplicacion} className={a.activa ? undefined : 'opacity-60'}>
+                    <div className="mb-3 flex items-start justify-between">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-xl text-lg"
+                        style={{ backgroundColor: `${color}15`, color }}
+                      >
+                        <Icono nombre="edificio" />
                       </div>
-
-                      {/* Nombre */}
-                      <div className="mb-1">
-                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                          {a.nombre}
-                        </h3>
-                        <p className="text-xs text-slate-500 font-mono">{a.aplicacion}</p>
-                      </div>
-
-                      {/* Divider */}
-                      <hr className="my-4 border-slate-200" />
-
-                      {/* Métricas */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-slate-500 uppercase tracking-wider font-semibold mb-1">Personas</div>
-                          <div className="text-3xl font-bold text-slate-900">{a.personas}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-slate-500 uppercase tracking-wider font-semibold mb-1">Categorías</div>
-                          <div className="text-3xl font-bold text-slate-900">{a.categorias}</div>
-                        </div>
-                      </div>
-
-                      {/* Footer info */}
-                      <div className="mt-4 pt-4 border-t border-slate-100">
-                        <p className="flex items-center gap-1 text-xs text-slate-400">
-                          {a.activa ? (
-                            <>
-                              <Icono nombre="check" /> Squad activo en el sistema
-                            </>
-                          ) : (
-                            'Squad inactivo'
-                          )}
-                        </p>
-                      </div>
+                      {!a.activa && <Chip tono="neutro">Inactivo</Chip>}
                     </div>
-                  </div>
+
+                    <h3 className="titulo-seccion">{a.nombre}</h3>
+                    <p className="font-mono text-xs text-slate-500">{a.aplicacion}</p>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <Kpi rotulo="Personas" valor={a.personas} />
+                      <Kpi rotulo="Categorías" valor={a.categorias} />
+                    </div>
+
+                    <p className="mt-4 flex items-center gap-1 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                      {a.activa ? (
+                        <>
+                          <Icono nombre="check" /> Squad activo en el sistema
+                        </>
+                      ) : (
+                        'Squad inactivo'
+                      )}
+                    </p>
+                  </Tarjeta>
                 )
               })}
             </div>
 
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="text-sm text-slate-600">
-                <p className="mb-2 flex items-center gap-1.5 font-semibold text-slate-900">
-                  <Icono nombre="info" /> Próximas mejoras
-                </p>
-                <p className="text-slate-500">
-                  Al portar el dominio (fases 3–5), este tablero incorporará gráficas de requerimientos por estado, ANS, horas, 
-                  facturación y carga del equipo, por squad.
-                </p>
-              </div>
-            </div>
+            <Aviso tono="info" className="mt-6">
+              <p className="mb-1 flex items-center gap-1.5 font-semibold">
+                <Icono nombre="info" /> Próximas mejoras
+              </p>
+              <p>
+                Al portar el dominio (fases 3–5), este tablero incorporará gráficas de requerimientos por estado, ANS, horas,
+                facturación y carga del equipo, por squad.
+              </p>
+            </Aviso>
           </>
         )}
       </div>

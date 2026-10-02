@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Chip } from '../../components/ui'
 import FilaAns from './FilaAns'
 import Paginacion from './Paginacion'
 import type { FilaEntrega } from './utilidadesAns'
@@ -63,7 +64,7 @@ export default function ListaEntregasAns({
                 <Link to={`/requerimientos/${e.reqId}`} className="font-medium text-marca hover:underline">
                   {e.codigoReq}
                 </Link>
-                <span className="chip chip-neutro text-2xs">N.° {e.numero}</span>
+                <Chip tono="neutro" className="text-2xs">N.° {e.numero}</Chip>
               </span>
             }
             nombre={e.nombreReq}

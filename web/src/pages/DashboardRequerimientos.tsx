@@ -2,26 +2,21 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useMemo, useState } from 'react'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  Legend, LabelList,
-  LineChart, Line,
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts'
 import { useLista } from '../api/hooks'
 import client from '../api/client'
 import type { Persona, Requerimiento } from '../types'
-import { Boton, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Tarjeta } from '../components/ui'
+import { Aviso, BarraFiltros, Boton, Chip, EncabezadoPagina, FiltroDesplegable, Icono, Kpi, Tarjeta } from '../components/ui'
 import {
   COLOR_GRAFICA,
   ContenedorGrafica,
   TooltipGrafica,
   ejeCategoria,
-  ejePorcentaje,
   ejeValor,
   etiquetaBarra,
-  leyenda,
   rejilla,
 } from '../components/ui/graficas'
+import { GraficaTendenciaAns } from './dashboard-requerimientos/GraficaTendenciaAns'
 
 
 function normalizarTexto(v: string): string {
@@ -402,7 +397,11 @@ export default function DashboardRequerimientos() {
   }
 
   if (cargando) {
-   return <div className="p-8 text-center text-slate-500">Cargando dashboard…</div>
+    return (
+      <div className="pagina">
+        <Aviso tono="info" className="text-center" >Cargando dashboard…</Aviso>
+      </div>
+    )
   }
 
   // ─── Datos filtrados por fuente ────────────────────────
@@ -426,7 +425,7 @@ export default function DashboardRequerimientos() {
   const ansInicioShow = hayFiltroSop ? ansInicioFilt : ansInicioTrabajoData
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div>
       {/* ═══ Header ejecutivo ═══ */}
       <EncabezadoPagina
         icono={<Icono nombre="grafico-linea" />}
@@ -454,11 +453,7 @@ export default function DashboardRequerimientos() {
             </div>
 
             {/* Filtro */}
-            <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-blue-600">
-                Filtro por fecha inicio / recepción
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
+            <BarraFiltros titulo="Filtro por fecha inicio / recepción">
                 <FiltroDesplegable
                   label="Año" icono={<Icono nombre="calendario" />}
                   opciones={anosDisponiblesReq}
@@ -478,8 +473,7 @@ export default function DashboardRequerimientos() {
                     Limpiar
                   </Boton>
                 )}
-              </div>
-            </div>
+            </BarraFiltros>
 
             {/* KPIs Requerimientos */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -515,7 +509,7 @@ export default function DashboardRequerimientos() {
                   {equipo.length === 0 ? (
                     <p className="py-10 text-center text-sm text-slate-400">Sin datos para el filtro actual</p>
                   ) : equipo.map((m) => (
-                    <div key={m.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white/80 px-4 py-2.5 shadow-sm transition-all hover:shadow-md hover:border-blue-200">
+                    <div key={m.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-2.5">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-marca-50 text-sm font-bold text-marca-700 shadow-sm">
                         {m.nombre.charAt(0).toUpperCase()}
                       </div>
@@ -524,12 +518,8 @@ export default function DashboardRequerimientos() {
                         <div className="truncate text-xs text-slate-400">{m.email || '—'}</div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
-                          {m.reqs} Req
-                        </span>
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                          {woPorLt[m.nombreKey] ?? 0} WO
-                        </span>
+                        <Chip tono="marca">{m.reqs} Req</Chip>
+                        <Chip tono="neutro">{woPorLt[m.nombreKey] ?? 0} WO</Chip>
                       </div>
                     </div>
                   ))}
@@ -538,56 +528,16 @@ export default function DashboardRequerimientos() {
             </Tarjeta>
 
             {/* Gráfica: Tendencia de entregas */}
-            <ContenedorGrafica titulo="ANS de entregas" icono={<Icono nombre="grafico-linea" />} alto={240} vacio={tendenciaFiltrada.length === 0}>
-              <LineChart data={tendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                <CartesianGrid {...rejilla()} />
-                <XAxis dataKey="mes" {...ejeCategoria(10)} />
-                <YAxis {...ejePorcentaje(11)} />
-                <Tooltip content={<TrendPctTooltip />} />
-                <Line type="monotone" dataKey="cumplePct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="noCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                <Legend {...leyenda()} />
-              </LineChart>
-            </ContenedorGrafica>
+            <GraficaTendenciaAns titulo="ANS de entregas" icono={<Icono nombre="grafico-linea" />} datos={tendenciaFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
 
             {/* Gráfica: Tendencia de entregas (Tipificación EPM cuenta como cumple) */}
-            <ContenedorGrafica titulo="ANS de entregas (Hitss)" icono={<Icono nombre="grafico-linea" />} alto={240} vacio={tendenciaEpmFiltrada.length === 0}>
-              <LineChart data={tendenciaEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                <CartesianGrid {...rejilla()} />
-                <XAxis dataKey="mes" {...ejeCategoria(10)} />
-                <YAxis {...ejePorcentaje(11)} />
-                <Tooltip content={<TrendPctTooltip />} />
-                <Line type="monotone" dataKey="cumplePct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="noCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                <Legend {...leyenda()} />
-              </LineChart>
-            </ContenedorGrafica>
+            <GraficaTendenciaAns titulo="ANS de entregas (Hitss)" icono={<Icono nombre="grafico-linea" />} datos={tendenciaEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
 
             {/* Gráfica: Tendencia de estimación */}
-            <ContenedorGrafica titulo="ANS de estimación" icono={<Icono nombre="portafolio" />} alto={240} vacio={tendenciaReqsFiltrada.length === 0}>
-              <LineChart data={tendenciaReqsFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                <CartesianGrid {...rejilla()} />
-                <XAxis dataKey="mes" {...ejeCategoria(10)} />
-                <YAxis {...ejePorcentaje(11)} />
-                <Tooltip content={<TrendPctTooltip />} />
-                <Line type="monotone" dataKey="cumplePct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="noCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                <Legend {...leyenda()} />
-              </LineChart>
-            </ContenedorGrafica>
+            <GraficaTendenciaAns titulo="ANS de estimación" icono={<Icono nombre="portafolio" />} datos={tendenciaReqsFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
 
             {/* Gráfica: Tendencia de estimación (Hitss) */}
-            <ContenedorGrafica titulo="ANS de estimación (Hitss)" icono={<Icono nombre="portafolio" />} alto={240} vacio={tendenciaReqsEpmFiltrada.length === 0}>
-              <LineChart data={tendenciaReqsEpmFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                <CartesianGrid {...rejilla()} />
-                <XAxis dataKey="mes" {...ejeCategoria(10)} />
-                <YAxis {...ejePorcentaje(11)} />
-                <Tooltip content={<TrendPctTooltip />} />
-                <Line type="monotone" dataKey="cumplePct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="noCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                <Legend {...leyenda()} />
-              </LineChart>
-            </ContenedorGrafica>
+            <GraficaTendenciaAns titulo="ANS de estimación (Hitss)" icono={<Icono nombre="portafolio" />} datos={tendenciaReqsEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
           </section>
 
           {/* ════════════════════════════════════════════════════════════════════
@@ -606,11 +556,7 @@ export default function DashboardRequerimientos() {
             </div>
 
             {/* Filtro */}
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600">
-                Filtro por Fecha Fin Real
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
+            <BarraFiltros titulo="Filtro por Fecha Fin Real">
                 <FiltroDesplegable
                   label="Año" icono={<Icono nombre="calendario" />}
                   opciones={anosDisponiblesSop}
@@ -626,12 +572,11 @@ export default function DashboardRequerimientos() {
                 />
                 {hayFiltroSop && (
                   <Boton onClick={() => { setAnosSop(new Set()); setMesesSop(new Set()) }}
-                    variante="exito" tamano="sm" icono={<Icono nombre="x" />}>
+                    variante="secundario" tamano="sm" icono={<Icono nombre="x" />}>
                     Limpiar
                   </Boton>
                 )}
-              </div>
-            </div>
+            </BarraFiltros>
 
             {/* KPIs Soporte */}
             <div className="grid gap-3 sm:grid-cols-2">
@@ -661,43 +606,13 @@ export default function DashboardRequerimientos() {
             </ContenedorGrafica>
 
             {/* Gráfica: ANS Oportunidad */}
-            <ContenedorGrafica titulo="ANS Oportunidad" icono={<Icono nombre="objetivo" />} alto={240} vacio={ansTendenciaFiltrada.length === 0}>
-              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                <CartesianGrid {...rejilla()} />
-                <XAxis dataKey="mes" {...ejeCategoria(10)} />
-                <YAxis {...ejePorcentaje(11)} />
-                <Tooltip content={<TrendPctTooltip />} />
-                <Line type="monotone" dataKey="oportunidadPct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="oportunidadNoCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                <Legend {...leyenda()} />
-              </LineChart>
-            </ContenedorGrafica>
+            <GraficaTendenciaAns titulo="ANS Oportunidad" icono={<Icono nombre="objetivo" />} datos={ansTendenciaFiltrada} claveCumple="oportunidadPct" claveNoCumple="oportunidadNoCumplePct" />
 
             {/* Gráfica: ANS Cumplimiento */}
-            <ContenedorGrafica titulo="ANS Cumplimiento" icono={<Icono nombre="check-circulo" />} alto={240} vacio={ansTendenciaFiltrada.length === 0}>
-              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                <CartesianGrid {...rejilla()} />
-                <XAxis dataKey="mes" {...ejeCategoria(10)} />
-                <YAxis {...ejePorcentaje(11)} />
-                <Tooltip content={<TrendPctTooltip />} />
-                <Line type="monotone" dataKey="cumplimientoPct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="cumplimientoNoCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                <Legend {...leyenda()} />
-              </LineChart>
-            </ContenedorGrafica>
+            <GraficaTendenciaAns titulo="ANS Cumplimiento" icono={<Icono nombre="check-circulo" />} datos={ansTendenciaFiltrada} claveCumple="cumplimientoPct" claveNoCumple="cumplimientoNoCumplePct" />
 
             {/* Gráfica: ANS Inicio Trabajo */}
-            <ContenedorGrafica titulo="ANS Inicio Trabajo" icono={<Icono nombre="cohete" />} alto={240} vacio={ansTendenciaFiltrada.length === 0}>
-              <LineChart data={ansTendenciaFiltrada} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
-                <CartesianGrid {...rejilla()} />
-                <XAxis dataKey="mes" {...ejeCategoria(10)} />
-                <YAxis {...ejePorcentaje(11)} />
-                <Tooltip content={<TrendPctTooltip />} />
-                <Line type="monotone" dataKey="inicioPct" stroke={COLOR_GRAFICA.ok} strokeWidth={2.5} name="Cumple" dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="inicioNoCumplePct" stroke={COLOR_GRAFICA.malo} strokeWidth={2.5} name="No cumple" dot={{ r: 3 }} />
-                <Legend {...leyenda()} />
-              </LineChart>
-            </ContenedorGrafica>
+            <GraficaTendenciaAns titulo="ANS Inicio Trabajo" icono={<Icono nombre="cohete" />} datos={ansTendenciaFiltrada} claveCumple="inicioPct" claveNoCumple="inicioNoCumplePct" />
           </section>
 
         </div>
@@ -705,40 +620,3 @@ export default function DashboardRequerimientos() {
     </div>
   )
 }
-
-/* ─── Componentes auxiliares premium ─── */
-
-function TrendPctTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null
-  const fila = payload[0]?.payload ?? {}
-  // Mapea cada dataKey de %, a su campo de cantidad absoluta y su campo de total del mes.
-  const RAW_KEY: Record<string, string> = {
-    cumplePct: 'cumple', noCumplePct: 'noCumple',
-    oportunidadPct: 'oportunidadCumple', oportunidadNoCumplePct: 'oportunidadNoCumple',
-    cumplimientoPct: 'cumplimientoCumple', cumplimientoNoCumplePct: 'cumplimientoNoCumple',
-    inicioPct: 'inicioCumple', inicioNoCumplePct: 'inicioNoCumple',
-  }
-  const TOTAL_KEY: Record<string, string> = {
-    cumplePct: 'total', noCumplePct: 'total',
-    oportunidadPct: 'oportunidadTotal', oportunidadNoCumplePct: 'oportunidadTotal',
-    cumplimientoPct: 'cumplimientoTotal', cumplimientoNoCumplePct: 'cumplimientoTotal',
-    inicioPct: 'inicioTotal', inicioNoCumplePct: 'inicioTotal',
-  }
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
-      <p className="mb-1 text-xs font-bold text-slate-700">{label}</p>
-      {payload.map((entry: any) => {
-        const cantidad = fila[RAW_KEY[entry.dataKey]]
-        const total = fila[TOTAL_KEY[entry.dataKey]]
-        const detalle = cantidad !== undefined && total !== undefined ? ` (${cantidad}/${total})` : ''
-        return (
-          <p key={entry.dataKey} className="text-xs" style={{ color: entry.stroke }}>
-            {entry.name}: <span className="font-bold">{entry.value}%{detalle}</span>
-          </p>
-        )
-      })}
-    </div>
-  )
-}
-
-

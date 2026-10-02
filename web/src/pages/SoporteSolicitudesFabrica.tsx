@@ -1,202 +1,28 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
-import { Boton, Campo, EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
+import { Aviso, BarraFiltros, Boton, Campo, EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
 import { COLOR_GRAFICA } from '../components/ui/graficas'
 import { useAuth } from '../context/AuthContext'
-
-interface RegistroSoporte {
-  id: string
-  aplicacion_id: string
-  fila_origen: number
-  lider: string
-  squad: string
-  datos: Record<string, string>
-  sincronizado_en: string | null
-}
-
-interface ListadoPaginadoResponse {
-  total: number
-  pagina: number
-  tamanio: number
-  total_paginas: number
-  ultima_actualizacion: string | null
-  headers: string[]
-  registros: RegistroSoporte[]
-}
-
-interface ErrorValidacion {
-  fila: number
-  lider: string | null
-  squad: string | null
-  motivo: string
-}
-
-interface UltimaSincronizacion {
-  sync_id: string
-  estado: string
-  archivo: string | null
-  total_encontrados: number
-  validos: number
-  con_error: number
-  cargados: number
-  omitidos: number
-  iniciado_en: string
-  finalizado_en: string | null
-  error_general: string | null
-  errores: ErrorValidacion[]
-}
-
-interface PreviewResponse {
-  fuente_url: string
-  archivo: string
-  total_encontrados: number
-  registros_validos: number
-  registros_con_error: number
-  registros_que_seran_cargados: number
-  registros_que_no_seran_cargados: number
-  errores: ErrorValidacion[]
-}
-
-interface SyncResponse {
-  sync_id: string
-  total_procesados: number
-  registros_creados: number
-  registros_omitidos: number
-  tiempo_ejecucion_ms: number
-}
-
-function fmtFecha(fecha: string | null): string {
-  if (!fecha) return '—'
-  // El backend guarda las fechas en UTC pero las serializa sin sufijo de zona
-  // horaria (p. ej. "2026-09-08T21:10:17"), así que si no trae 'Z' ni offset
-  // se le agrega para que no se interprete por error como hora local del
-  // navegador. Luego se formatea explícitamente en hora de Colombia.
-  const iso = /[zZ]|[+-]\d{2}:\d{2}$/.test(fecha) ? fecha : `${fecha}Z`
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return fecha
-  return d.toLocaleString('es-CO', { timeZone: 'America/Bogota' })
-}
-
-interface FilaProps {
-  registro: RegistroSoporte
-  headers: string[]
-  onVerDescripcion: (desc: string) => void
-  onVerTask: (datos: Record<string, string>, campos: string[], titulo: string) => void
-}
-
-const CAMPOS_TASK10 = [
-  'Task ID 10',
-  'Task Name 10',
-  'Status Task 10',
-  'Assignee Group 10',
-  'Assignee 10',
-  'Start Assignment Task 10',
-  'End Assignment Task 10',
-  'Total Hours Assigned Task 10',
-  'Total Minutes Assigned Task 10',
-]
-
-const CAMPOS_TASK20 = [
-  'Task ID 20',
-  'Task Name 20',
-  'Status Task 20',
-  'Assignee Group 20',
-  'Assignee 20',
-  'Start Assignment Task 20',
-  'End Assignment Task 20',
-  'Total Hours Assigned Task 20',
-  'Total Minutes Assigned Task 20',
-]
-
-const CAMPOS_TASK30 = [
-  'Task ID 30',
-  'Task Name 30',
-  'Status Task 30',
-  'Assignee Group 30',
-  'Assignee 30',
-  'Start Assignment Task 30',
-  'End Assignment Task 30',
-  'Total Hours Assigned Task 30',
-  'Total Minutes Assigned Task 30',
-]
-
-const FilaRegistro = memo(function FilaRegistro({ registro: r, headers, onVerDescripcion, onVerTask }: FilaProps) {
-  const tieneTask10 = CAMPOS_TASK10.some((c) => r.datos?.[c])
-  const tieneTask20 = CAMPOS_TASK20.some((c) => r.datos?.[c])
-  const tieneTask30 = CAMPOS_TASK30.some((c) => r.datos?.[c])
-  return (
-    <tr>
-      <td>{r.fila_origen}</td>
-      <td>{r.lider}</td>
-      <td>{r.squad}</td>
-      <td>
-        {r.datos?.['Detailed Description'] ? (
-          <Boton
-            variante="primario"
-            tamano="sm"
-            onClick={() => onVerDescripcion(r.datos['Detailed Description'])}
-            title="Ver descripción completa"
-          >
-            Ver detalle
-          </Boton>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
-      <td>
-        {/* Excepcion ADR-0007 (compuerta 1): el matiz indigo/violeta/teal anterior
-            era decoracion — la cabecera ya identifica cada Task y esto es una accion,
-            no una insignia. No se le devuelve color. */}
-        {tieneTask10 ? (
-          <Boton
-            variante="suave"
-            tamano="sm"
-            onClick={() => onVerTask(r.datos, CAMPOS_TASK10, 'Detalle Task 10')}
-          >
-            Ver detalle
-          </Boton>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
-      <td>
-        {tieneTask20 ? (
-          <Boton
-            variante="suave"
-            tamano="sm"
-            onClick={() => onVerTask(r.datos, CAMPOS_TASK20, 'Detalle Task 20')}
-          >
-            Ver detalle
-          </Boton>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
-      <td>
-        {tieneTask30 ? (
-          <Boton
-            variante="suave"
-            tamano="sm"
-            onClick={() => onVerTask(r.datos, CAMPOS_TASK30, 'Detalle Task 30')}
-          >
-            Ver detalle
-          </Boton>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
-      {headers.map((h) => (
-        <td key={`${r.id}-${h}`}>{r.datos?.[h] ?? ''}</td>
-      ))}
-    </tr>
-  )
-})
+import { FilaRegistro } from './solicitudes-fabrica/FilaRegistro'
+import { TablaErroresValidacion } from './solicitudes-fabrica/TablaErroresValidacion'
+import {
+  CAMPOS_TASK10,
+  CAMPOS_TASK20,
+  CAMPOS_TASK30,
+  fmtFecha,
+} from './solicitudes-fabrica/tiposSolicitudes'
+import type {
+  ListadoPaginadoResponse,
+  PreviewResponse,
+  SyncResponse,
+  UltimaSincronizacion,
+} from './solicitudes-fabrica/tiposSolicitudes'
 
 export default function SoporteSolicitudesFabrica() {
   const [searchParams] = useSearchParams()
@@ -443,7 +269,7 @@ export default function SoporteSolicitudesFabrica() {
       />
 
       {puedeActualizar && ultimaSync && ultimaSync.con_error > 0 && (
-        <div className="aviso aviso-alerta space-y-2">
+        <Aviso tono="alerta" className="space-y-2">
           <div>
             La última carga ({ultimaSync.finalizado_en ? fmtFecha(ultimaSync.finalizado_en) : '—'})
             {ultimaSync.archivo ? ` del archivo "${ultimaSync.archivo}"` : ''} encontró{' '}
@@ -451,37 +277,18 @@ export default function SoporteSolicitudesFabrica() {
             Revíselos y cargue el archivo manualmente si hace falta corregirlos.
           </div>
           <button
+            type="button"
             onClick={() => setMostrarErroresUltimaSync((v) => !v)}
             className="enlace-accion"
+            aria-expanded={mostrarErroresUltimaSync}
           >
             {mostrarErroresUltimaSync ? 'Ocultar detalle' : 'Ver detalle de errores'}
           </button>
-          {mostrarErroresUltimaSync && (
-            <TablaScroll className="max-h-56 overflow-y-auto">
-              <table className="tabla">
-                <thead>
-                  <tr>
-                    <th>Fila</th>
-                    <th>Líder</th>
-                    <th>Motivo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ultimaSync.errores.map((e, i) => (
-                    <tr key={`${e.fila}-${i}`}>
-                      <td>{e.fila}</td>
-                      <td>{e.lider ?? '—'}</td>
-                      <td className="text-red-700">{e.motivo}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TablaScroll>
-          )}
-        </div>
+          {mostrarErroresUltimaSync && <TablaErroresValidacion errores={ultimaSync.errores} />}
+        </Aviso>
       )}
 
-      {aviso && <div className="aviso aviso-error">{aviso}</div>}
+      {aviso && <Aviso tono="error">{aviso}</Aviso>}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Kpi rotulo="Registros" valor={data?.total ?? 0} />
@@ -515,7 +322,7 @@ export default function SoporteSolicitudesFabrica() {
         </div>
       )}
 
-      <div className="barra-filtros">
+      <BarraFiltros>
         <Campo
           etiqueta="Filtrar por Work Order ID"
           type="text"
@@ -525,17 +332,19 @@ export default function SoporteSolicitudesFabrica() {
           className="w-64"
         />
         {filtroWorkOrderID && (
-          <button
+          <Boton
+            variante="fantasma"
+            tamano="sm"
+            icono={<Icono nombre="x" />}
             onClick={() => { setFiltroWorkOrderID(''); setPagina(1); void cargar(1, '') }}
-            className="enlace-accion enlace-accion-peligro text-xs self-end pb-2"
           >
             Limpiar filtro
-          </button>
+          </Boton>
         )}
-        <span className="ml-auto text-xs text-slate-400 self-end pb-2">
+        <span className="ml-auto self-end pb-2 text-xs text-slate-500">
           Página {data?.pagina ?? 1} de {data?.total_paginas ?? 1} — {data?.total ?? 0} registros totales
         </span>
-      </div>
+      </BarraFiltros>
 
       {/* Controles de paginación */}
       {data && data.total_paginas > 1 && (
@@ -630,34 +439,13 @@ export default function SoporteSolicitudesFabrica() {
         {!preview ? null : (
           <div className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded border p-2">Total encontrados: <b>{preview.total_encontrados}</b></div>
-              <div className="rounded border p-2 text-green-700">Registros válidos: <b>{preview.registros_validos}</b></div>
-              <div className="rounded border p-2 text-blue-700">Serán cargados: <b>{preview.registros_que_seran_cargados}</b></div>
-              <div className="rounded border p-2 text-amber-700">No serán cargados: <b>{preview.registros_que_no_seran_cargados}</b></div>
+              <Kpi rotulo="Total encontrados" valor={preview.total_encontrados} />
+              <Kpi rotulo="Registros válidos" valor={preview.registros_validos} acento={COLOR_GRAFICA.ok} />
+              <Kpi rotulo="Serán cargados" valor={preview.registros_que_seran_cargados} acento={COLOR_GRAFICA.serie} />
+              <Kpi rotulo="No serán cargados" valor={preview.registros_que_no_seran_cargados} acento={COLOR_GRAFICA.alerta} />
             </div>
 
-            {(preview.errores?.length ?? 0) > 0 && (
-              <TablaScroll className="max-h-56 overflow-y-auto">
-                <table className="tabla">
-                  <thead>
-                    <tr>
-                      <th>Fila</th>
-                      <th>Líder</th>
-                      <th>Motivo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.errores.map((e, i) => (
-                      <tr key={`${e.fila}-${i}`}>
-                        <td>{e.fila}</td>
-                        <td>{e.lider ?? '—'}</td>
-                        <td className="text-red-700">{e.motivo}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TablaScroll>
-            )}
+            {(preview.errores?.length ?? 0) > 0 && <TablaErroresValidacion errores={preview.errores} />}
 
             <div className="flex justify-end gap-2">
               <Boton

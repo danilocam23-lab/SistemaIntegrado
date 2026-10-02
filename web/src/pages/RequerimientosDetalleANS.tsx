@@ -6,7 +6,8 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
-import { Boton, Campo, EncabezadoPagina, Icono, Selector } from '../components/ui'
+import { Aviso, BarraFiltros, Boton, Campo, Chip, EncabezadoPagina, Icono, Kpi, Selector, Tarjeta } from '../components/ui'
+import { COLOR_GRAFICA } from '../components/ui/graficas'
 import ListaEntregasAns from './detalle-ans/ListaEntregasAns'
 import ListaRequerimientosAns from './detalle-ans/ListaRequerimientosAns'
 import type { FilaEntrega, FilaRequerimiento } from './detalle-ans/utilidadesAns'
@@ -188,7 +189,20 @@ export default function RequerimientosDetalleANS() {
     return { total }
   }, [entregasRows])
 
-  if (cargando) return <div className="p-6 text-slate-500">Cargando detalle ANS…</div>
+  if (cargando) {
+    return (
+      <div className="space-y-4">
+        <EncabezadoPagina
+          icono={<Icono nombre="check-circulo" />}
+          titulo="Detalle ANS"
+          descripcion="Vista consolidada de requerimientos y entregas con sus estados ANS."
+        />
+        <Tarjeta>
+          <p role="status" className="py-8 text-center text-sm text-slate-500">Cargando detalle ANS…</p>
+        </Tarjeta>
+      </div>
+    )
+  }
 
   async function guardarCheck(tipo: 'requerimiento' | 'entrega', reqId: string, checked: boolean, entregaNumero?: number) {
     const key = tipo === 'entrega' ? `${reqId}-${entregaNumero}` : reqId
@@ -230,22 +244,22 @@ export default function RequerimientosDetalleANS() {
         descripcion="Vista consolidada de requerimientos y entregas con sus estados ANS."
       />
 
-      {error && <div className="aviso aviso-error">{error}</div>}
-      {aviso && <div className="aviso aviso-alerta">{aviso}</div>}
+      {error && <Aviso tono="error">{error}</Aviso>}
+      {aviso && <Aviso tono="alerta">{aviso}</Aviso>}
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
-        <label className="w-full text-sm sm:w-auto">
-          <span className="mb-1 block text-slate-600">Buscar</span>
-          <Campo
-            value={filtroTexto}
-            onChange={(e) => setFiltroTexto(e.target.value)}
-            placeholder="REQ, SC, squad, ANS…"
-            className="w-full sm:w-72"
-          />
-        </label>
+      <BarraFiltros>
+        <Campo
+          etiqueta="Buscar"
+          value={filtroTexto}
+          onChange={(e) => setFiltroTexto(e.target.value)}
+          placeholder="REQ, SC, squad, ANS…"
+          className="w-full sm:w-72"
+        />
         {(filtroTexto || anoLimite || mesLimite.length > 0 || anoComprometida || mesComprometida.length > 0) && (
-          <button
-            type="button"
+          <Boton
+            variante="fantasma"
+            tamano="sm"
+            icono={<Icono nombre="x" />}
             onClick={() => {
               setFiltroTexto('')
               setAnoLimite('')
@@ -253,44 +267,37 @@ export default function RequerimientosDetalleANS() {
               setAnoComprometida('')
               setMesComprometida([])
             }}
-            className="enlace-accion enlace-accion-peligro text-xs"
           >
             Limpiar
-          </button>
+          </Boton>
         )}
-        <span className="text-xs text-slate-400 sm:ml-auto">
+        <span className="text-xs text-slate-500 sm:ml-auto">
           {requerimientosFiltrados.length} requerimientos · {entregasFiltradas.length} entregas
         </span>
-      </div>
+      </BarraFiltros>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="tarjeta tarjeta-pad flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-lg text-indigo-600"><Icono nombre="portafolio" /></span>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Requerimientos con ANS incumplido</p>
-            <p className="text-2xl font-bold text-slate-900">{resumenReq.total}</p>
-            <p className="text-xs text-slate-400">Cumplimiento ANS (Acta) = No cumple</p>
-          </div>
-        </div>
-        <div className="tarjeta tarjeta-pad flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-lg text-amber-600"><Icono nombre="caja" /></span>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Entregas con ANS incumplido</p>
-            <p className="text-2xl font-bold text-slate-900">{resumenEnt.total}</p>
-            <p className="text-xs text-slate-400">Cumplimiento ANS (Entrega) = No cumple</p>
-          </div>
-        </div>
-        <div className="tarjeta tarjeta-pad flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-lg text-emerald-600"><Icono nombre="lupa" /></span>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Filtros aplicados</p>
-            <p className="text-2xl font-bold text-slate-900">{filtroTexto ? 'Activo' : 'Ninguno'}</p>
-            <p className="text-xs text-slate-400">Se aplican a ambas tablas</p>
-          </div>
-        </div>
+        <Kpi
+          rotulo="Requerimientos con ANS incumplido"
+          valor={resumenReq.total}
+          nota="Cumplimiento ANS (Acta) = No cumple"
+          acento={COLOR_GRAFICA.malo}
+        />
+        <Kpi
+          rotulo="Entregas con ANS incumplido"
+          valor={resumenEnt.total}
+          nota="Cumplimiento ANS (Entrega) = No cumple"
+          acento={COLOR_GRAFICA.malo}
+        />
+        <Kpi
+          rotulo="Filtros aplicados"
+          valor={filtroTexto ? 'Activo' : 'Ninguno'}
+          nota="Se aplican a ambas tablas"
+          acento={COLOR_GRAFICA.serie}
+        />
       </div>
 
-      <section className="w-full rounded-xl border border-slate-200 bg-white shadow-sm">
+      <Tarjeta padding={false} className="w-full">
         <button
           type="button"
           onClick={() => setMostrarRequerimientos((v) => !v)}
@@ -308,12 +315,12 @@ export default function RequerimientosDetalleANS() {
             </div>
           </div>
           <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-            <span className="chip chip-neutro" title="Requerimientos visibles con los filtros actuales">
+            <Chip tono="neutro" title="Requerimientos visibles con los filtros actuales">
               {requerimientosFiltrados.length} visibles
-            </span>
-            <span className="chip chip-error" title="Total con ANS incumplido, sin filtros">
+            </Chip>
+            <Chip tono="error" title="Total con ANS incumplido, sin filtros">
               {requerimientosRows.filter((r) => (r.ansActa ?? '').toUpperCase() === 'NO_CUMPLE').length} incumplen ANS
-            </span>
+            </Chip>
           </span>
         </button>
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
@@ -332,9 +339,9 @@ export default function RequerimientosDetalleANS() {
             onGuardarObs={(reqId) => void guardarObservacion('requerimiento', reqId)}
           />
         )}
-      </section>
+      </Tarjeta>
 
-      <section className="w-full rounded-xl border border-slate-200 bg-white shadow-sm">
+      <Tarjeta padding={false} className="w-full">
         <button
           type="button"
           onClick={() => setMostrarEntregas((v) => !v)}
@@ -352,12 +359,12 @@ export default function RequerimientosDetalleANS() {
             </div>
           </div>
           <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-            <span className="chip chip-neutro" title="Entregas visibles con los filtros actuales">
+            <Chip tono="neutro" title="Entregas visibles con los filtros actuales">
               {entregasFiltradas.length} visibles
-            </span>
-            <span className="chip chip-error" title="Total con ANS incumplido, sin filtros">
+            </Chip>
+            <Chip tono="error" title="Total con ANS incumplido, sin filtros">
               {entregasRows.filter((e) => (e.ansEntrega ?? '').toUpperCase() === 'NO_CUMPLE').length} incumplen ANS
-            </span>
+            </Chip>
           </span>
         </button>
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
@@ -376,7 +383,7 @@ export default function RequerimientosDetalleANS() {
             onGuardarObs={(reqId, entregaNumero) => void guardarObservacion('entrega', reqId, entregaNumero)}
           />
         )}
-      </section>
+      </Tarjeta>
     </div>
   )
 }
@@ -420,18 +427,16 @@ function DateFilter({
 
   return (
     <div className="flex flex-wrap items-end gap-2">
-      <label className="text-sm">
-        <span className="mb-1 block text-slate-600">{label} - año</span>
-        <Selector value={year} onChange={(e) => onYearChange(e.target.value)}>
-          <option value="">Todos los años</option>
-          {years.map((value) => <option key={value} value={value}>{value}</option>)}
-        </Selector>
-      </label>
-      <div className="relative text-sm" ref={ref}>
-        <span className="mb-1 block text-slate-600">{label} - mes</span>
+      <Selector etiqueta={`${label} - año`} value={year} onChange={(e) => onYearChange(e.target.value)}>
+        <option value="">Todos los años</option>
+        {years.map((value) => <option key={value} value={value}>{value}</option>)}
+      </Selector>
+      <div className="grupo-filtro relative" ref={ref}>
+        <span className="etiqueta">{label} - mes</span>
         <Boton
           variante="secundario"
           onClick={() => setAbierto((v) => !v)}
+          aria-expanded={abierto}
           className="min-w-[160px] text-left"
         >
           {resumenMeses}

@@ -15,7 +15,7 @@ import {
   leerCamposActivos,
 } from '../constantes'
 import type { Aplicacion, Categoria, Configuracion as ConfigItem, Persona, Requerimiento, Squad } from '../types'
-import { Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { Aviso, BarraFiltros, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 
 type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 
@@ -135,6 +135,8 @@ export default function EntregasActas() {
   const [filtroAns, setFiltroAns] = useState('')
   const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
   const [filtroFechaHasta, setFiltroFechaHasta] = useState('')
+  const [filtroRealDesde, setFiltroRealDesde] = useState('')
+  const [filtroRealHasta, setFiltroRealHasta] = useState('')
   const [filtroMes, setFiltroMes] = useState('')
   const [filtroReqEstado, setFiltroReqEstado] = useState('')
   const [filtroSquad, setFiltroSquad] = useState('')
@@ -318,10 +320,16 @@ export default function EntregasActas() {
           if (filtroFechaDesde && fc < filtroFechaDesde) return false
           if (filtroFechaHasta && fc > filtroFechaHasta) return false
         }
+        if (filtroRealDesde || filtroRealHasta) {
+          const fr = f.fechaReal ? f.fechaReal.slice(0, 10) : null
+          if (!fr) return false
+          if (filtroRealDesde && fr < filtroRealDesde) return false
+          if (filtroRealHasta && fr > filtroRealHasta) return false
+        }
         return true
       })
       .sort((a, b) => a.sc.localeCompare(b.sc, 'es', { numeric: true }))
-  }, [filas, filtroTexto, filtroEstado, filtroAns, filtroMes, filtroFechaDesde, filtroFechaHasta, filtroReqEstado, filtroSquad, filtroTipificacion, filtroGarantia])
+  }, [filas, filtroTexto, filtroEstado, filtroAns, filtroMes, filtroFechaDesde, filtroFechaHasta, filtroRealDesde, filtroRealHasta, filtroReqEstado, filtroSquad, filtroTipificacion, filtroGarantia])
 
   /** Meses de aprobación únicos presentes en los datos */
   const mesesEnBD = useMemo(() => {
@@ -598,7 +606,7 @@ export default function EntregasActas() {
       />
 
       {/* Filtros */}
-      <div className="barra-filtros">
+      <BarraFiltros>
         {filtrosActivos.has('texto') && (
           <Campo
             etiqueta="Buscar"
@@ -662,6 +670,26 @@ export default function EntregasActas() {
             </div>
           </label>
         )}
+        {filtrosActivos.has('fechaReal') && (
+          <label className="grupo-filtro">
+            <span className="etiqueta">F. Real</span>
+            <div className="flex items-center gap-1">
+              <Campo
+                type="date"
+                value={filtroRealDesde}
+                onChange={(e) => setFiltroRealDesde(e.target.value)}
+                compacto
+              />
+              <span className="text-xs text-slate-400">–</span>
+              <Campo
+                type="date"
+                value={filtroRealHasta}
+                onChange={(e) => setFiltroRealHasta(e.target.value)}
+                compacto
+              />
+            </div>
+          </label>
+        )}
         {filtrosActivos.has('reqEstado') && (
           <Selector
             etiqueta="Estado del requerimiento"
@@ -707,23 +735,26 @@ export default function EntregasActas() {
             <option value="NO">No</option>
           </Selector>
         )}
-        {(filtroTexto || filtroEstado || filtroAns || filtroMes || filtroFechaDesde || filtroFechaHasta || filtroReqEstado || filtroSquad || filtroTipificacion || filtroGarantia) && (
-          <button
+        {(filtroTexto || filtroEstado || filtroAns || filtroMes || filtroFechaDesde || filtroFechaHasta || filtroRealDesde || filtroRealHasta || filtroReqEstado || filtroSquad || filtroTipificacion || filtroGarantia) && (
+          <Boton
+            variante="fantasma"
+            tamano="sm"
             onClick={() => {
               setFiltroTexto(''); setFiltroEstado(''); setFiltroAns(''); setFiltroMes(''); setFiltroFechaDesde(''); setFiltroFechaHasta('')
+              setFiltroRealDesde(''); setFiltroRealHasta('')
               setFiltroReqEstado(''); setFiltroSquad(''); setFiltroTipificacion(''); setFiltroGarantia('')
             }}
-            className="enlace-accion enlace-accion-peligro text-xs self-end pb-2"
+            className="self-end"
           >
             Limpiar
-          </button>
+          </Boton>
         )}
         <span className="ml-auto text-xs text-slate-400 self-end pb-2">
           {filasFiltradas.length} entregas
         </span>
-      </div>
+      </BarraFiltros>
 
-      {error && <div className="aviso aviso-error">{error}</div>}
+      {error && <Aviso tono="error">{error}</Aviso>}
 
       <TablaScroll>
         <table className="tabla">
