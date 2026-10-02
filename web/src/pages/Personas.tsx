@@ -1,674 +1,325 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
-import * as XLSX from 'xlsx'
+import { useState } from 'react'
 import client from '../api/client'
-import { mensajeError, useLista } from '../api/hooks'
-import Modal from '../components/Modal'
-import { Aviso, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { mensajeError } from '../api/hooks'
+import { Aviso, Boton, EncabezadoPagina, Icono } from '../components/ui'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
-import type { Aplicacion, Persona } from '../types'
+import type { Persona } from '../types'
+import { BarraFiltrosPersonas } from './personas/BarraFiltrosPersonas'
+import { EsqueletoPersonas } from './personas/EsqueletoPersonas'
+import { ListaPersonas } from './personas/ListaPersonas'
+import { BannerDuplicados, ModalDuplicados } from './personas/ModalDuplicados'
+import { ModalEliminar } from './personas/ModalEliminar'
+import { PanelPersona } from './personas/PanelPersona'
+import { TarjetasRol } from './personas/TarjetasRol'
+import { exportarPersonasExcel } from './personas/exportarExcel'
+import { useDatosPersonas } from './personas/useDatosPersonas'
+import { useFiltrosPersonas } from './personas/useFiltrosPersonas'
 
-const ROLES_DEFAULT = ['DEV', 'LT_HITSS', 'LT_EPM', 'SCRUM', 'EPM', 'COORD', 'LECTOR']
-
-interface PersonaResumen {
-  id: string
-  nombre: string
-  email: string | null
-  squads: string[]
-  activo: boolean
-  aplicacion_id: string
-  score: number
-}
-
-interface GrupoDuplicados {
-  nombre: string
-  rol: string
-  total: number
-  ganador: PersonaResumen
-  duplicados: PersonaResumen[]
+/** Panel abierto: `persona` null = alta nueva. */
+interface PanelAbierto {
+  persona: Persona | null
 }
 
 export default function Personas() {
-  const { datos, error, recargar } = useLista<Persona>('/personas')
-  const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
-  const { modoConsolidado, activa } = useAplicacion()
   const { tienePermiso } = useAuth()
-  const puedeCrearPersonas = tienePermiso('personas.crear')
-  const puedeEditarPersonas = tienePermiso('personas.editar')
-  const puedeEliminarPersonas = tienePermiso('personas.eliminar')
+  if (!tienePermiso('personas.ver')) {
+    return (
+      <div>
+        <EncabezadoPagina icono={<Icono nombre="personas" />} titulo="Personas" />
+        <Aviso tono="alerta"><span role="alert">No tienes acceso a esta sección.</span></Aviso>
+      </div>
+    )
+  }
+  return <ContenidoPersonas />
+}
+
+function ContenidoPersonas() {
+  const { tienePermiso } = useAuth()
+  const { modoConsolidado, activa } = useAplicacion()
+  const puedeCrear = tienePermiso('personas.crear')
+  const puedeEditar = tienePermiso('personas.editar')
+  const puedeEliminar = tienePermiso('personas.eliminar')
   const puedeDeduplicar = tienePermiso('admin.acceso')
   const esGerente = tienePermiso('personas.ver_valores')
-  const [roles, setRoles] = useState<string[]>(ROLES_DEFAULT)
-  const [tiposContratacion, setTiposContratacion] = useState<string[]>([])
-  const [busqueda, setBusqueda] = useState('')
-  const [modalAbierto, setModalAbierto] = useState(false)
-  const [editando, setEditando] = useState<Persona | null>(null)
-  const [nombre, setNombre] = useState('')
-  const [email, setEmail] = useState('')
-  const [rol, setRol] = useState('DEV')
-  const [tipoContratacion, setTipoContratacion] = useState('')
-  const [squadsSelec, setSquadsSelec] = useState<string[]>([])
-  const [activo, setActivo] = useState(true)
-  const [fechaDesactivacion, setFechaDesactivacion] = useState('')
-  const [valorPersona, setValorPersona] = useState(0)
-  const [valorPerifericos, setValorPerifericos] = useState(0)
-  const [aviso, setAviso] = useState('')
-  const [aplicacionId, setAplicacionId] = useState('')
 
-  // Estados para deduplicación
-  const [duplicados, setDuplicados] = useState<GrupoDuplicados[]>([])
-  const [modalDupAbierto, setModalDupAbierto] = useState(false)
-  const [deduplicando, setDeduplicando] = useState(false)
-  const [resultadoDedup, setResultadoDedup] = useState<{ fusionados: number; referencias_actualizadas: number } | null>(null)
+  const datos = useDatosPersonas(puedeDeduplicar)
+  const { personas } = datos
+  const filtros = useFiltrosPersonas(personas, datos.roles)
 
-  async function cargarDuplicados(): Promise<void> {
-    try {
-      const { data } = await client.get<GrupoDuplicados[]>('/personas/duplicados')
-      setDuplicados(data)
-    } catch {
-      // silencioso
-    }
+  const [verValores, setVerValores] = useState(true)
+  const [panel, setPanel] = useState<PanelAbierto | null>(null)
+  const [porEliminar, setPorEliminar] = useState<Persona | null>(null)
+  const [eliminando, setEliminando] = useState(false)
+  const [errorEliminar, setErrorEliminar] = useState('')
+  const [idOcupada, setIdOcupada] = useState('')
+  const [mensaje, setMensaje] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null)
+
+  const [modalDuplicados, setModalDuplicados] = useState(false)
+  const [fusionando, setFusionando] = useState(false)
+  const [errorFusion, setErrorFusion] = useState('')
+
+  function cerrarPanel(): void {
+    setPanel(null)
+    setErrorEliminar('')
   }
 
-  // Recargar la lista cuando cambia la aplicación activa
-  useEffect(() => {
-    recargar()
-    if (puedeDeduplicar) cargarDuplicados()
-  }, [activa]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    client
-      .get<string[]>('/personas/roles')
-      .then((r) => {
-        if (r.data.length > 0) {
-          setRoles(r.data)
-          setRol(r.data[0])
-        }
-      })
-      .catch(() => {})
-    client
-      .get<string[]>('/personas/tipos-contratacion')
-      .then((r) => {
-        if (r.data.length > 0) setTiposContratacion(r.data)
-      })
-      .catch(() => {})
-    if (puedeDeduplicar) cargarDuplicados()
-  }, [])
-
-  const filtradas = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return datos
-    return datos.filter(
-      (p) =>
-        p.nombre.toLowerCase().includes(q) ||
-        (p.email ?? '').toLowerCase().includes(q) ||
-        (p.squads ?? []).join(' ').toLowerCase().includes(q) ||
-        p.rol_operativo.toLowerCase().includes(q),
+  function alGuardar(movidaA?: string): void {
+    cerrarPanel()
+    datos.recargarTodo()
+    setMensaje(
+      movidaA
+        ? { tono: 'exito', texto: `Cambios guardados. La persona pasó a la aplicación ${movidaA}.` }
+        : { tono: 'exito', texto: 'Cambios guardados.' },
     )
-  }, [datos, busqueda])
-
-  // Solo datos legados: ya estaba inactiva y sin fecha. Si el usuario acaba de
-  // desmarcar "Activo", el backend asigna la fecha automáticamente.
-  const permiteAsignarFechaDesactivacion =
-    !activo && !!editando && !editando.activo && !editando.fecha_desactivacion
-  const fechaDesactivacionExistente =
-    !activo && !!editando && !editando.activo ? editando.fecha_desactivacion : null
-
-  function abrirNuevo(): void {
-    setEditando(null)
-    setNombre('')
-    setEmail('')
-    setSquadsSelec([])
-    setRol(roles[0] ?? 'DEV')
-    setTipoContratacion('')
-    setActivo(true)
-    setFechaDesactivacion('')
-    setValorPersona(0)
-    setValorPerifericos(0)
-    setAviso('')
-    setAplicacionId('')  // se deriva automáticamente del squad seleccionado
-    setModalAbierto(true)
   }
 
-  function abrirEditar(persona: Persona): void {
-    setEditando(persona)
-    setNombre(persona.nombre)
-    setEmail(persona.email ?? '')
-    setRol(persona.rol_operativo)
-    setTipoContratacion(persona.tipo_contratacion ?? '')
-    setSquadsSelec(persona.squads ?? [])
-    setActivo(persona.activo)
-    setFechaDesactivacion(persona.fecha_desactivacion ? persona.fecha_desactivacion.slice(0, 10) : '')
-    setValorPersona(persona.valor_persona ?? 0)
-    setValorPerifericos(persona.valor_perifericos ?? 0)
-    setAviso('')
-    setModalAbierto(true)
-  }
-
-  function cerrar(): void {
-    setModalAbierto(false)
-    setEditando(null)
-    setAviso('')
-  }
-
-  async function eliminar(persona: Persona): Promise<void> {
-    if (!puedeEliminarPersonas) return
-    if (!window.confirm(`¿Eliminar a "${persona.nombre}"? Esta acción no se puede deshacer.`)) return
+  async function alternarActivo(p: Persona): Promise<void> {
+    if (!puedeEditar) return
+    setIdOcupada(p.id)
+    setMensaje(null)
     try {
-      await client.delete(`/personas/${persona.id}`)
-      recargar()
+      // Mismo PUT de siempre: reenvía los campos sin UI para no perderlos.
+      await client.put(`/personas/${p.id}`, {
+        nombre: p.nombre,
+        email: p.email,
+        rol_operativo: p.rol_operativo,
+        tipo_contratacion: p.tipo_contratacion ?? null,
+        squads: p.squads ?? [],
+        activo: !p.activo,
+        es_lider_tecnico: p.es_lider_tecnico ?? false,
+        permite_sobrecarga: p.permite_sobrecarga ?? false,
+        usuario_id: p.usuario_id ?? null,
+      })
+      datos.recargar()
     } catch (err) {
-      alert(mensajeError(err))
+      setMensaje({ tono: 'error', texto: `No se pudo cambiar el estado de ${p.nombre}: ${mensajeError(err)}` })
+    } finally {
+      setIdOcupada('')
     }
   }
 
-  async function guardar(e: FormEvent): Promise<void> {
-    e.preventDefault()
-    setAviso('')
-    if (editando && !puedeEditarPersonas) return
-    if (!editando && !puedeCrearPersonas) return
+  function pedirEliminar(p: Persona): void {
+    if (!puedeEliminar) return
+    setErrorEliminar('')
+    setPorEliminar(p)
+  }
 
-    // Validar unicidad correo+squad
-    if (email) {
-      const emailNorm = email.trim().toLowerCase()
-      // Squads que se están asignando y que son nuevos respecto al registro original
-      const squadsNuevos = editando
-        ? squadsSelec.filter((s) => !(editando.squads ?? []).includes(s))
-        : squadsSelec
-
-      for (const squad of squadsNuevos) {
-        const duplicado = datos.find(
-          (p) =>
-            p.id !== editando?.id &&
-            (p.email ?? '').trim().toLowerCase() === emailNorm &&
-            (p.squads ?? []).includes(squad),
-        )
-        if (duplicado) {
-          setAviso(
-            `El correo "${email}" ya está registrado en el squad "${squad}" (persona: ${duplicado.nombre}).`,
-          )
-          return
-        }
-      }
-    }
-
-    const payload: Record<string, unknown> = {
-      nombre,
-      email: email || null,
-      rol_operativo: rol,
-      tipo_contratacion: tipoContratacion || null,
-      squads: squadsSelec,
-      activo,
-      valor_persona: valorPersona,
-      valor_perifericos: valorPerifericos,
-    }
-    if (permiteAsignarFechaDesactivacion && fechaDesactivacion) {
-      payload.fecha_desactivacion = fechaDesactivacion
-    }
-    if (!editando) {
-      if (!aplicacionIdEfectivo) {
-        setAviso('Selecciona al menos un squad o una aplicación.')
-        return
-      }
-      payload.aplicacion_id = aplicacionIdEfectivo
-    }
+  async function confirmarEliminar(): Promise<void> {
+    if (!porEliminar) return
+    setEliminando(true)
+    setErrorEliminar('')
     try {
-      if (editando) {
-        await client.put(`/personas/${editando.id}`, {
-          ...payload,
-          es_lider_tecnico: editando.es_lider_tecnico ?? false,
-          permite_sobrecarga: editando.permite_sobrecarga ?? false,
-          usuario_id: editando.usuario_id ?? null,
-        })
-      } else {
-        await client.post('/personas', payload)
-      }
-      cerrar()
-      recargar()
+      await client.delete(`/personas/${porEliminar.id}`)
+      const nombre = porEliminar.nombre
+      setPorEliminar(null)
+      cerrarPanel()
+      datos.recargarTodo()
+      setMensaje({ tono: 'exito', texto: `Se eliminó a ${nombre}.` })
     } catch (err) {
-      setAviso(mensajeError(err))
+      // 409 (referenciada), 404, etc.: se muestra el detalle sin perder el contexto.
+      setErrorEliminar(mensajeError(err))
+      setPorEliminar(null)
+    } finally {
+      setEliminando(false)
     }
   }
 
-  // mapa nombre → codigo usando la misma lista del multi-select
-  const squadsMap = useMemo(() => {
-    const m = new Map<string, string>()
-    for (const s of squads) m.set(s.nombre, s.codigo)
-    return m
-  }, [squads])
-
-  // aplicacionId activo: primer squad seleccionado → su codigo; si no, app activa actual
-  const aplicacionIdEfectivo = useMemo(() => {
-    if (aplicacionId) return aplicacionId
-    for (const nombre of squadsSelec) {
-      const cod = squadsMap.get(nombre)
-      if (cod) return cod
-    }
-    return modoConsolidado ? '' : activa
-  }, [aplicacionId, squadsSelec, squadsMap, modoConsolidado, activa])
-
-  const [collapsedRoles, setCollapsedRoles] = useState<Set<string>>(new Set())
-
-  const personasPorRol = useMemo(() => {
-    const mapa = new Map<string, Persona[]>()
-    for (const p of filtradas) {
-      const rol = p.rol_operativo || 'Sin rol'
-      if (!mapa.has(rol)) mapa.set(rol, [])
-      mapa.get(rol)!.push(p)
-    }
-    return Array.from(mapa.entries()).sort(([a], [b]) => a.localeCompare(b, 'es'))
-  }, [filtradas])
-
-  function toggleRol(rol: string): void {
-    setCollapsedRoles((prev) => {
-      const next = new Set(prev)
-      if (next.has(rol)) next.delete(rol)
-      else next.add(rol)
-      return next
-    })
-  }
-
-  async function deduplicar(): Promise<void> {
-    if (!window.confirm(`¿Fusionar ${duplicados.length} grupo(s) de duplicados? Se conservará la persona con más información completa y se redirigirán todas las referencias.`)) return
-    // El body debe llevar la lista explícita de fusiones a aplicar (contrato ADR-0008 F1.6):
-    // el plan ya calculado y mostrado al usuario en `duplicados` (ganador a conservar +
-    // perdedores a eliminar por cada grupo), tal como lo entrega GET /personas/duplicados.
-    const fusiones = duplicados.map((g) => ({
+  async function fusionar(): Promise<void> {
+    // Lista explícita de fusiones (contrato ADR-0008 F1.6): el plan mostrado en el modal.
+    const fusiones = datos.duplicados.map((g) => ({
       ganador_id: g.ganador.id,
       perdedor_ids: g.duplicados.map((d) => d.id),
     }))
-    setDeduplicando(true)
-    setResultadoDedup(null)
+    setFusionando(true)
+    setErrorFusion('')
     try {
-      const { data } = await client.post<{ fusionados: number; referencias_actualizadas: number }>('/personas/deduplicar', { fusiones })
-      setResultadoDedup(data)
-      setDuplicados([])
-      recargar()
+      const { data } = await client.post<{ fusionados: number; referencias_actualizadas: number }>(
+        '/personas/deduplicar',
+        { fusiones },
+      )
+      datos.setDuplicados([])
+      setModalDuplicados(false)
+      datos.recargar()
+      setMensaje({
+        tono: 'exito',
+        texto: `Deduplicación completada: ${data.fusionados} persona(s) fusionadas, ${data.referencias_actualizadas} referencia(s) actualizadas.`,
+      })
     } catch (err) {
-      alert(mensajeError(err))
+      setErrorFusion(mensajeError(err))
     } finally {
-      setDeduplicando(false)
+      setFusionando(false)
     }
   }
 
-  function cerrarModalDup(): void {
-    setModalDupAbierto(false)
-    setResultadoDedup(null)
-  }
-
-  /** Exporta a Excel el listado de personas actualmente filtrado (respeta la búsqueda). */
-  function exportarExcel(): void {
-    const filas = filtradas.map((p) => {
-      const fila: Record<string, string | number> = {
-        Nombre: p.nombre,
-        Correo: p.email ?? '',
-        Squads: (p.squads ?? []).join(', '),
-        Rol: p.rol_operativo,
-        'Tipo de contratación': p.tipo_contratacion ?? '',
-        Activo: p.activo ? 'Sí' : 'No',
-        'F. desactivación': p.fecha_desactivacion ? p.fecha_desactivacion.slice(0, 10) : '',
-      }
-      if (esGerente) {
-        fila['Valor persona'] = p.valor_persona ?? 0
-        fila['Valor periféricos'] = p.valor_perifericos ?? 0
-      }
-      return fila
-    })
-    const hoja = XLSX.utils.json_to_sheet(filas)
-    const libro = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(libro, hoja, 'Personas')
-    const fecha = new Date().toISOString().slice(0, 10)
-    XLSX.writeFile(libro, `personas_${fecha}.xlsx`)
-  }
+  const hayDatos = personas.length > 0
+  const cargandoInicial = datos.cargando && !hayDatos && !datos.error
+  const mostrarValores = esGerente && verValores
 
   return (
     <div>
       <EncabezadoPagina
         icono={<Icono nombre="personas" />}
         titulo="Personas"
+        descripcion={`Directorio operativo · ${modoConsolidado ? 'Todos los squads' : activa}`}
         acciones={
-          <Boton
-            variante="exito"
-            onClick={exportarExcel}
-            disabled={filtradas.length === 0}
-            title="Exporta a Excel el listado de personas actualmente filtrado"
-          >
-            Exportar a Excel
-          </Boton>
+          <>
+            <Boton
+              variante="exito"
+              onClick={() => exportarPersonasExcel(filtros.filtradas, esGerente)}
+              disabled={filtros.filtradas.length === 0}
+              title="Exporta a Excel el listado de personas actualmente filtrado"
+            >
+              Exportar a Excel
+            </Boton>
+            {puedeCrear && (
+              <Boton variante="primario" onClick={() => setPanel({ persona: null })}>
+                + Nueva persona
+              </Boton>
+            )}
+          </>
         }
       />
 
-      {/* Banner de duplicados */}
-      {duplicados.length > 0 && (
-        <Aviso tono="alerta" className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <span>
-            <Icono nombre="alerta" className="mr-1 inline align-text-bottom" /> Se encontraron <strong>{duplicados.length}</strong> grupo(s) con personas duplicadas.
-          </span>
-          <div className="flex gap-2">
-            <Boton
-              variante="secundario"
-              tamano="sm"
-              onClick={() => setModalDupAbierto(true)}
-            >
-              Ver detalle
-            </Boton>
-            {puedeDeduplicar && (
-              <Boton
-                variante="alerta"
-                tamano="sm"
-                onClick={deduplicar}
-                disabled={deduplicando}
-              >
-                {deduplicando ? 'Fusionando…' : 'Fusionar duplicados'}
-              </Boton>
-            )}
-          </div>
-        </Aviso>
-      )}
-
-      {resultadoDedup && (
-        <Aviso tono="exito" className="mb-4">
-          <Icono nombre="check-circulo" className="mr-1 inline align-text-bottom" /> Deduplicación completada: <strong>{resultadoDedup.fusionados}</strong> persona(s) fusionadas,{' '}
-          <strong>{resultadoDedup.referencias_actualizadas}</strong> referencia(s) actualizadas.
-        </Aviso>
-      )}
-
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Campo
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar por nombre, correo, squad o rol…"
-          className="w-72"
+      {puedeDeduplicar && datos.duplicados.length > 0 && (
+        <BannerDuplicados
+          total={datos.duplicados.length}
+          puedeFusionar={puedeDeduplicar}
+          modoConsolidado={modoConsolidado}
+          onVer={() => {
+            setErrorFusion('')
+            setModalDuplicados(true)
+          }}
         />
-        {puedeCrearPersonas && (
-          <Boton variante="primario" onClick={abrirNuevo}>
-            + Nueva persona
-          </Boton>
-        )}
-      </div>
+      )}
 
-      {error && <Aviso tono="error" className="mb-3">{error}</Aviso>}
+      {mensaje && (
+        <Aviso tono={mensaje.tono} className="mb-4">
+          <span role={mensaje.tono === 'error' ? 'alert' : 'status'} className="flex items-center justify-between gap-2">
+            {mensaje.texto}
+            <Boton tamano="sm" variante="fantasma" onClick={() => setMensaje(null)}>Cerrar</Boton>
+          </span>
+        </Aviso>
+      )}
 
-      {filtradas.length === 0 && (
-        <div className="tarjeta tarjeta-pad text-center text-slate-400">
-          {busqueda ? 'Sin resultados para la búsqueda.' : 'Sin personas.'}
+      {errorEliminar && !panel && (
+        <Aviso tono="error" className="mb-4">
+          <span role="alert">{errorEliminar}</span>
+        </Aviso>
+      )}
+
+      {cargandoInicial && <EsqueletoPersonas />}
+
+      {datos.error && (
+        <Aviso tono="error" className="mb-4">
+          <span role="alert" className="flex flex-wrap items-center justify-between gap-2">
+            No se pudo cargar el directorio. {datos.error}
+            <Boton tamano="sm" onClick={datos.recargar}>Reintentar</Boton>
+          </span>
+        </Aviso>
+      )}
+
+      {!cargandoInicial && !datos.error && !hayDatos && (
+        <div className="tarjeta tarjeta-pad text-center text-slate-500">
+          <p className="mb-3">Sin personas.</p>
+          {puedeCrear && (
+            <Boton variante="primario" onClick={() => setPanel({ persona: null })}>
+              + Nueva persona
+            </Boton>
+          )}
         </div>
       )}
 
-      <div className="space-y-4">
-        {personasPorRol.map(([rol, personas]) => {
-          const collapsed = collapsedRoles.has(rol)
-          const activos = personas.filter((p) => p.activo).length
-          return (
-            <section key={rol} className="overflow-hidden rounded-xl border bg-white shadow-sm">
-              <button
-                type="button"
-                aria-expanded={!collapsed}
-                onClick={() => toggleRol(rol)}
-                className="flex w-full items-center justify-between bg-marca-osc px-4 py-2.5 text-left text-white hover:bg-marca-osc/90 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <svg xmlns="http://www.w3.org/2000/svg"
-                    className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-90'}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span className="font-semibold">{rol}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="rounded-full bg-white/20 px-2 py-0.5">{personas.length} persona{personas.length !== 1 ? 's' : ''}</span>
-                  <span className="rounded-full bg-emerald-400/30 px-2 py-0.5">{activos} activo{activos !== 1 ? 's' : ''}</span>
-                </div>
-              </button>
-              {!collapsed && (
-                <TablaScroll plano>
-                <table className="tabla table-fixed">
-                  <thead>
-                    <tr>
-                     <th>Nombre</th>
-                     <th>Correo</th>
-                     <th>Squad</th>
-                    {rol !== 'LT_EPM' && <th>Tipo de contratación</th>}
-                    {esGerente && rol !== 'LT_EPM' && <th className="text-right whitespace-nowrap">Valor persona</th>}
-                    {esGerente && rol !== 'LT_EPM' && <th className="text-right whitespace-nowrap">Valor periféricos</th>}
-                    <th className="text-center">Activo</th>
-                    <th className="text-center whitespace-nowrap">F. desactivación</th>
-                    <th className="text-center">Acciones</th>
-                   </tr>
-                  </thead>
-                  <tbody>
-                    {personas.map((p) => (
-                     <tr key={p.id}>
-                       <td className="truncate">{p.nombre}</td>
-                       <td className="truncate">{p.email ?? '—'}</td>
-                       <td className="truncate">{(p.squads ?? []).join(', ') || '—'}</td>
-                       {rol !== 'LT_EPM' && <td className="truncate">{p.tipo_contratacion ?? '—'}</td>}
-                       {esGerente && rol !== 'LT_EPM' && <td className="text-right font-mono text-xs">${(p.valor_persona ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
-                       {esGerente && rol !== 'LT_EPM' && <td className="text-right font-mono text-xs">${(p.valor_perifericos ?? 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })}</td>}
-                        <td className="text-center">
-                          {p.activo
-                            ? <Chip tono="exito">Sí</Chip>
-                            : <Chip tono="error">No</Chip>}
-                        </td>
-                        <td className="text-center whitespace-nowrap text-xs text-slate-600">
-                          {p.fecha_desactivacion ? p.fecha_desactivacion.slice(0, 10) : '—'}
-                        </td>
-                        <td className="text-center whitespace-nowrap">
-                          {puedeEditarPersonas && (
-                            <button type="button" onClick={() => abrirEditar(p)} className="enlace-accion text-xs mr-2">
-                              Editar
-                            </button>
-                          )}
-                          {puedeEliminarPersonas && (
-                            <button
-                              type="button"
-                              onClick={() => eliminar(p)}
-                              className="enlace-accion enlace-accion-peligro text-xs mr-2"
-                            >
-                              Eliminar
-                            </button>
-                          )}
-                          {puedeEditarPersonas && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                await client.put(`/personas/${p.id}`, {
-                                  nombre: p.nombre,
-                                  email: p.email,
-                                  rol_operativo: p.rol_operativo,
-                                  tipo_contratacion: p.tipo_contratacion ?? null,
-                                  squads: p.squads ?? [],
-                                  activo: !p.activo,
-                                  es_lider_tecnico: p.es_lider_tecnico ?? false,
-                                  permite_sobrecarga: p.permite_sobrecarga ?? false,
-                                  usuario_id: p.usuario_id ?? null,
-                                })
-                                recargar()
-                              }}
-                              className={`enlace-accion text-xs ${p.activo ? 'enlace-accion-alerta' : 'enlace-accion-exito'}`}
-                            >
-                              {p.activo ? 'Desactivar' : 'Activar'}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                </TablaScroll>
-              )}
-            </section>
-          )
-        })}
-      </div>
-
-      <Modal
-        titulo={editando ? `Editar: ${editando.nombre}` : 'Nueva persona'}
-        abierto={modalAbierto}
-        onCerrar={cerrar}
-      >
-        <form onSubmit={guardar} className="space-y-3">
-          {aviso && <Aviso tono="error">{aviso}</Aviso>}
-          <div className="block text-sm">
-            <span className="mb-1 block text-slate-600">
-              Squads
-              {!editando && aplicacionIdEfectivo && (
-                <span className="ml-2 text-xs font-semibold text-cyan-700">
-                  → se guardará en: {squads.find((s) => s.codigo === aplicacionIdEfectivo)?.nombre ?? aplicacionIdEfectivo}
-                </span>
-              )}
-            </span>
-            <Selector
-              multiple
-              value={squadsSelec}
-              onChange={(e) => {
-                setSquadsSelec(Array.from(e.target.selectedOptions, (o) => o.value))
-                setAplicacionId('') // recalcular desde squad
-              }}
-              className="w-full h-32"
-            >
-              {squads.filter((s) => s.activa).map((s) => (
-                <option key={s.codigo} value={s.nombre}>{s.nombre}</option>
-              ))}
-            </Selector>
-            <p className="mt-0.5 text-xs text-slate-400">Ctrl+clic para seleccionar varios</p>
-          </div>
-          {!editando && (
-            <label className="block text-sm">
-              <span className="mb-1 block text-slate-600">Aplicación <span className="text-slate-400">(se auto-detecta del squad; cambia solo si es necesario)</span></span>
-              <Selector value={aplicacionIdEfectivo} onChange={(e) => setAplicacionId(e.target.value)}
-                className="w-full">
-                {squads.filter((s) => s.activa).map((s) => (
-                  <option key={s.codigo} value={s.codigo}>{s.nombre}</option>
-                ))}
-              </Selector>
-            </label>
-          )}
-          <Campo etiqueta="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required
-            className="w-full" />
-          <Campo etiqueta="Correo" value={email} onChange={(e) => setEmail(e.target.value)} type="email"
-            className="w-full" />
-          <Selector etiqueta="Rol" value={rol} onChange={(e) => setRol(e.target.value)}
-            className="w-full">
-            {roles.map((r) => <option key={r} value={r}>{r}</option>)}
-          </Selector>
-          <Selector etiqueta="Tipo de contratación" value={tipoContratacion} onChange={(e) => setTipoContratacion(e.target.value)}
-            className="w-full">
-            <option value="">— Sin especificar —</option>
-            {tiposContratacion.map((t) => <option key={t} value={t}>{t}</option>)}
-          </Selector>
-          {esGerente && (
-            <div className="grid grid-cols-2 gap-3">
-              <Campo etiqueta="Valor de la persona ($)" type="number" min={0} step={0.01} value={valorPersona}
-                onChange={(e) => setValorPersona(Number(e.target.value))}
-                className="w-full" placeholder="0.00" />
-              <Campo etiqueta="Valor de periféricos ($)" type="number" min={0} step={0.01} value={valorPerifericos}
-                onChange={(e) => setValorPerifericos(Number(e.target.value))}
-                className="w-full" placeholder="0.00" />
+      {hayDatos && (
+        <>
+          <TarjetasRol
+            resumen={filtros.resumenRoles}
+            rolActivo={filtros.filtros.rol}
+            onElegir={(rol) => filtros.cambiarFiltros({ rol })}
+          />
+          <BarraFiltrosPersonas
+            filtros={filtros.filtros}
+            onCambiar={filtros.cambiarFiltros}
+            onLimpiar={filtros.limpiarFiltros}
+            hayFiltros={filtros.hayFiltros}
+            roles={filtros.rolesVisibles}
+            squads={filtros.opcionesSquad}
+            contrataciones={filtros.opcionesContratacion}
+            vista={filtros.vista}
+            onVista={filtros.setVista}
+            mostrarControlValores={esGerente}
+            verValores={verValores}
+            onVerValores={setVerValores}
+          />
+          {filtros.filtradas.length === 0 ? (
+            <div className="tarjeta tarjeta-pad text-center text-slate-500">
+              <p className="mb-3">Sin resultados para los filtros aplicados.</p>
+              <Boton onClick={filtros.limpiarFiltros}>Quitar filtros</Boton>
             </div>
+          ) : (
+            <ListaPersonas
+              vista={filtros.vista}
+              filtradas={filtros.filtradas}
+              paginaActual={filtros.paginaActual}
+              pagina={filtros.pagina}
+              totalPaginas={filtros.totalPaginas}
+              onPagina={filtros.setPagina}
+              grupos={filtros.grupos}
+              colapsados={filtros.colapsados}
+              onAlternarGrupo={filtros.alternarGrupo}
+              verValores={mostrarValores}
+              puedeEditar={puedeEditar}
+              puedeEliminar={puedeEliminar}
+              idOcupada={idOcupada}
+              onAbrir={(persona) => setPanel({ persona })}
+              onEliminar={pedirEliminar}
+              onAlternarActivo={(p) => void alternarActivo(p)}
+            />
           )}
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
-            <span className="text-slate-600">Activo</span>
-          </label>
-          {permiteAsignarFechaDesactivacion && (
-            <Campo etiqueta="F. desactivación" type="date" value={fechaDesactivacion}
-              onChange={(e) => setFechaDesactivacion(e.target.value)} className="w-full" />
-          )}
-          {fechaDesactivacionExistente && (
-            <p className="text-xs text-slate-500">
-              F. desactivación: {fechaDesactivacionExistente.slice(0, 10)}
-            </p>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Boton variante="secundario" type="button" onClick={cerrar}>
-              Cancelar
-            </Boton>
-            {((editando && puedeEditarPersonas) || (!editando && puedeCrearPersonas)) && (
-              <Boton variante="primario" type="submit">
-                {editando ? 'Guardar cambios' : 'Crear'}
-              </Boton>
-            )}
-          </div>
-        </form>
-      </Modal>
+        </>
+      )}
 
-      {/* Modal detalle de duplicados */}
-      <Modal
-        titulo={`Personas duplicadas (${duplicados.length} grupo${duplicados.length !== 1 ? 's' : ''})`}
-        abierto={modalDupAbierto}
-        onCerrar={cerrarModalDup}
-      >
-        <div className="space-y-4 text-sm">
-          <p className="text-slate-500">
-            Se conservará la persona con mayor información (email, squads, usuario vinculado).
-            Las demás se eliminarán y sus referencias serán redirigidas automáticamente.
-          </p>
-          <div className="max-h-96 overflow-auto space-y-3">
-            {duplicados.map((g) => (
-              <div key={`${g.nombre}-${g.rol}`} className="rounded border bg-slate-50 p-3">
-                <div className="mb-2 font-semibold text-slate-700">
-                  {g.nombre} <span className="ml-2 text-xs font-normal text-slate-500">[{g.rol}]</span>
-                  <span className="ml-2 text-xs text-amber-600">{g.total} registros</span>
-                </div>
-                <TablaScroll>
-                <table className="tabla">
-                  <thead>
-                    <tr>
-                      <th>Nombre</th>
-                      <th>Email</th>
-                      <th>Squads</th>
-                      <th>App</th>
-                      <th className="text-center">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="bg-emerald-50">
-                      <td className="font-medium text-emerald-700">
-                        <span className="inline-flex items-center gap-1"><Icono nombre="check-circulo" /> {g.ganador.nombre}</span>
-                      </td>
-                      <td>{g.ganador.email ?? '—'}</td>
-                      <td>{g.ganador.squads.join(', ') || '—'}</td>
-                      <td>{g.ganador.aplicacion_id}</td>
-                      <td className="text-center text-emerald-700">Conservar</td>
-                    </tr>
-                    {g.duplicados.map((d) => (
-                      <tr key={d.id} className="bg-red-50">
-                        <td className="text-red-700">
-                          <span className="inline-flex items-center gap-1"><Icono nombre="papelera" /> {d.nombre}</span>
-                        </td>
-                        <td>{d.email ?? '—'}</td>
-                        <td>{d.squads.join(', ') || '—'}</td>
-                        <td>{d.aplicacion_id}</td>
-                        <td className="text-center text-red-600">Eliminar</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                </TablaScroll>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Boton variante="secundario" onClick={cerrarModalDup}>
-              Cancelar
-            </Boton>
-            {puedeDeduplicar && (
-              <Boton
-                variante="alerta"
-                onClick={() => { cerrarModalDup(); deduplicar() }}
-                disabled={deduplicando}
-              >
-                {deduplicando ? 'Fusionando…' : 'Confirmar fusión'}
-              </Boton>
-            )}
-          </div>
-        </div>
-      </Modal>
+      {panel && (
+        <PanelPersona
+          key={panel.persona?.id ?? 'nueva'}
+          persona={panel.persona}
+          todas={personas}
+          aplicaciones={datos.aplicaciones}
+          roles={datos.roles}
+          tiposContratacion={datos.tiposContratacion}
+          esGerente={esGerente}
+          puedeEditar={puedeEditar}
+          puedeCrear={puedeCrear}
+          puedeEliminar={puedeEliminar}
+          modoConsolidado={modoConsolidado}
+          aplicacionActiva={activa}
+          errorExterno={errorEliminar}
+          onGuardado={alGuardar}
+          onEliminar={pedirEliminar}
+          onCerrar={cerrarPanel}
+        />
+      )}
+
+      <ModalEliminar
+        persona={porEliminar}
+        eliminando={eliminando}
+        error={errorEliminar}
+        onConfirmar={() => void confirmarEliminar()}
+        onCerrar={() => setPorEliminar(null)}
+      />
+
+      <ModalDuplicados
+        abierto={modalDuplicados}
+        duplicados={datos.duplicados}
+        puedeFusionar={puedeDeduplicar}
+        fusionando={fusionando}
+        error={errorFusion}
+        onConfirmar={() => void fusionar()}
+        onCerrar={() => setModalDuplicados(false)}
+      />
     </div>
   )
 }

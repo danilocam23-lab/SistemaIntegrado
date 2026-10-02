@@ -2,11 +2,13 @@
 # SPDX-License-Identifier: MIT
 
 """Router de personas (directorio operativo del dominio)."""
+import re
 import unicodedata
 from collections import defaultdict
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from beanie import PydanticObjectId
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from pymongo.asynchronous.client_session import AsyncClientSession
 from pymongo.errors import OperationFailure
@@ -21,13 +23,19 @@ from app.documents.capacidad import Capacidad
 from app.documents.persona import Persona
 from app.documents.squad import Squad
 from app.documents.usuario import Usuario
-from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.middleware.aplicacion import (
+    ContextoAplicacion,
+    _codigos_autorizados,
+    contexto_aplicacion,
+    contexto_escritura,
+)
 from app.security.deps import (
     es_superadmin,
     permiso,
+    tiene_permiso,
     usuario_actual,
 )
-from app.security.rbac import PERM_ADMIN_ACCESO
+from app.security.rbac import PERM_ADMIN_ACCESO, PERM_PERSONAS_VER_VALORES
 
 router = APIRouter(prefix="/personas", tags=["personas"])
 
@@ -91,6 +99,40 @@ def _agrupar_duplicados(todas: list[Persona]) -> dict[tuple, list[Persona]]:
     return grupos
 
 
+CAMPOS_VALOR = ("valor_persona", "valor_perifericos")
+
+
+def _salida(persona: Persona, ver_valores: bool) -> dict:
+    """DTO de salida: misma forma que la serialización del documento, pero sin los
+    valores económicos cuando el usuario no tiene ``personas.ver_valores``."""
+    datos = persona.model_dump(mode="json", by_alias=True)
+    if not ver_valores:
+        for campo in CAMPOS_VALOR:
+            datos.pop(campo, None)
+    return datos
+
+
+async def _validar_correo_unico(
+    aplicacion_id: str, email: str | None, excluir_id: str | None = None
+) -> None:
+    """409 si ya existe otra persona de la aplicación con el mismo correo (sin
+    distinguir mayúsculas). Un correo vacío no se valida."""
+    correo = (email or "").strip()
+    if not correo:
+        return
+    filtro: dict = {
+        "aplicacion_id": aplicacion_id,
+        "email": {"$regex": f"^{re.escape(correo)}$", "$options": "i"},
+    }
+    if excluir_id:
+        filtro["_id"] = {"$ne": PydanticObjectId(excluir_id)}
+    if await Persona.get_pymongo_collection().count_documents(filtro, limit=1):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Ya existe una persona con ese correo en la aplicación.",
+        )
+
+
 @router.get("/roles")
 async def obtener_roles():
     """Devuelve la lista de roles configurados para personas (global)."""
@@ -117,10 +159,17 @@ async def obtener_tipos_contratacion():
 
 # ── GET /duplicados ────────────────────────────────────────────────────────────
 @router.get("/duplicados", dependencies=[permiso(PERM_ADMIN_ACCESO)])
-async def listar_duplicados(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> list[dict]:
-    """Devuelve grupos de personas duplicadas (mismo nombre + rol_operativo) en todas las apps accesibles."""
-    # Siempre busca en TODAS las apps del tenant para no perderse duplicados cross-app
-    todas = await Persona.find({}).to_list()
+async def listar_duplicados(
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    limite: int = Query(100, ge=1, le=500),
+    omitir: int = Query(0, ge=0),
+) -> list[dict]:
+    """Devuelve grupos de personas duplicadas (mismo nombre + rol_operativo).
+
+    Solo considera las aplicaciones del contexto (``ctx.codigos``: la activa, o todas
+    las accesibles en modo consolidado). Los grupos se paginan con ``limite``/``omitir``.
+    """
+    todas = await Persona.find(ctx.filtro()).to_list()
     grupos = _agrupar_duplicados(todas)
 
     resultado = []
@@ -137,7 +186,8 @@ async def listar_duplicados(ctx: ContextoAplicacion = Depends(contexto_aplicacio
             "duplicados": [_persona_resumen(p) for p in ordenada[1:]],
         })
 
-    return sorted(resultado, key=lambda x: (x["nombre"], x["rol"]))
+    resultado.sort(key=lambda x: (x["nombre"], x["rol"]))
+    return resultado[omitir : omitir + limite]
 
 
 # ── POST /deduplicar ───────────────────────────────────────────────────────────
@@ -156,8 +206,14 @@ async def _fusionar_personas(
     fusiones: list[FusionPersonas],
     autor: str,
     session: AsyncClientSession | None = None,
+    codigos_permitidos: list[str] | None = None,
 ) -> dict:
-    """Aplica la lista explícita de fusiones dentro de la sesión dada (o sin sesión)."""
+    """Aplica la lista explícita de fusiones dentro de la sesión dada (o sin sesión).
+
+    Si se indica ``codigos_permitidos``, el ganador y cada perdedor deben pertenecer a
+    esas aplicaciones; si no, la persona se trata como inexistente (404, sin filtrar
+    la existencia de datos de otras aplicaciones).
+    """
     from app.documents.requerimiento import Requerimiento
 
     fusionados = 0
@@ -169,6 +225,10 @@ async def _fusionar_personas(
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, f"Persona ganadora {fusion.ganador_id} no encontrada"
             )
+        if codigos_permitidos is not None and ganador.aplicacion_id not in codigos_permitidos:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, f"Persona ganadora {fusion.ganador_id} no encontrada"
+            )
 
         for perdedor_id in fusion.perdedor_ids:
             if perdedor_id == fusion.ganador_id:
@@ -176,6 +236,10 @@ async def _fusionar_personas(
             perdedor = await Persona.get(perdedor_id, session=session)
             if perdedor is None:
                 continue
+            if codigos_permitidos is not None and perdedor.aplicacion_id not in codigos_permitidos:
+                raise HTTPException(
+                    status.HTTP_404_NOT_FOUND, f"Persona perdedora {perdedor_id} no encontrada"
+                )
             gid = str(ganador.id)
             pid = str(perdedor.id)
 
@@ -281,28 +345,41 @@ async def deduplicar_personas(
     ejecuta igual pero sin esa garantía transaccional -mismo comportamiento
     que tenía antes este endpoint, ahora explícito en vez de silencioso-.
     """
-    # ``ctx`` solo se exige para bloquear el modo consolidado (contexto_escritura);
-    # el código de aplicación no se usa: las fusiones ya vienen con ids explícitos.
+    # ``contexto_escritura`` bloquea el modo consolidado. Las fusiones traen ids
+    # explícitos: todas las personas deben pertenecer a aplicaciones accesibles del
+    # usuario (la activa más las demás autorizadas, para fusionar duplicados cross-app).
     if not body.fusiones:
         return {"fusionados": 0, "referencias_actualizadas": 0}
+    permitidos = sorted(set(await _codigos_autorizados(usuario)) | set(ctx.codigos))
 
     cliente = obtener_cliente()
     try:
         async with cliente.start_session() as session:
             async with await session.start_transaction():
-                return await _fusionar_personas(body.fusiones, usuario.email, session=session)
+                return await _fusionar_personas(
+                    body.fusiones, usuario.email, session=session, codigos_permitidos=permitidos
+                )
     except OperationFailure as exc:
         if exc.code != 20:  # 20 = IllegalOperation: no es un replica set/mongos
             raise
-        return await _fusionar_personas(body.fusiones, usuario.email, session=None)
+        return await _fusionar_personas(
+            body.fusiones, usuario.email, session=None, codigos_permitidos=permitidos
+        )
 
 
 @router.get("", dependencies=[permiso("personas.ver")])
-async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
+async def listar(
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
+) -> list[dict]:
+    """Lista las personas del contexto. Sin ``personas.ver_valores`` se omiten
+    ``valor_persona`` y ``valor_perifericos`` de cada elemento."""
+    ver_valores = await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES)
     if ctx.modo_consolidado:
-        return await Persona.find({"aplicacion_id": {"$in": ctx.codigos}}).sort("nombre").to_list()
+        personas = await Persona.find(ctx.filtro()).sort("nombre").to_list()
+        return [_salida(p, ver_valores) for p in personas]
     # Query por aplicacion_id + query por squad (nombre del app), unión sin duplicados
-    por_id = await Persona.find({"aplicacion_id": ctx.codigo}).to_list()
+    por_id = await Persona.find(ctx.filtro()).to_list()
     if ctx.nombre_app:
         por_squad = await Persona.find({"squads": ctx.nombre_app}).to_list()
         vistos = {str(p.id) for p in por_id}
@@ -310,7 +387,7 @@ async def listar(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
             if str(p.id) not in vistos:
                 por_id.append(p)
     por_id.sort(key=lambda p: p.nombre)
-    return por_id
+    return [_salida(p, ver_valores) for p in por_id]
 
 
 def _persona_visible(persona: Persona, ctx: ContextoAplicacion) -> bool:
@@ -326,12 +403,38 @@ def _persona_visible(persona: Persona, ctx: ContextoAplicacion) -> bool:
     return False
 
 
-@router.get("/{persona_id}", dependencies=[permiso("personas.ver")])
-async def obtener(persona_id: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
-    persona = await Persona.get(persona_id)
+async def _cargar_para_escritura(
+    persona_id: str, ctx: ContextoAplicacion, usuario: Usuario
+) -> tuple[Persona, list[str]]:
+    """Carga la persona para modificarla/eliminarla. Además de ser visible en el
+    contexto, su ``aplicacion_id`` debe estar entre las aplicaciones autorizadas del
+    usuario (una persona visible solo por squad de otra app ajena no se toca).
+    Devuelve la persona y los códigos autorizados."""
+    try:
+        persona = await Persona.get(persona_id)
+    except Exception:  # id mal formado
+        persona = None
     if persona is None or not _persona_visible(persona, ctx):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
-    return persona
+    autorizadas = await _codigos_autorizados(usuario)
+    if persona.aplicacion_id not in autorizadas:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
+    return persona, autorizadas
+
+
+@router.get("/{persona_id}", dependencies=[permiso("personas.ver")])
+async def obtener(
+    persona_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    try:
+        persona = await Persona.get(persona_id)
+    except Exception:  # id mal formado
+        persona = None
+    if persona is None or not _persona_visible(persona, ctx):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
+    return _salida(persona, await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES))
 
 
 async def _resolver_app_id(datos: PersonaIn, ctx: ContextoAplicacion, usuario: Usuario) -> str:
@@ -356,18 +459,24 @@ async def crear(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     usuario: Usuario = Depends(usuario_actual),
     _: Usuario = permiso("personas.crear"),
-):
+) -> dict:
+    """Crea una persona. En modo consolidado exige ``aplicacion_id`` en el cuerpo.
+    Sin ``personas.ver_valores`` los valores del cuerpo se ignoran (quedan en 0) y la
+    respuesta no los incluye. 409 si el correo ya existe en la aplicación."""
     app_id = await _resolver_app_id(datos, ctx, usuario)
+    ver_valores = await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES)
     data = datos.model_dump(exclude={"aplicacion_id", "fecha_desactivacion"})
-    # `None` = no enviado: se conserva el valor por defecto (0) del documento
-    for campo_valor in ("valor_persona", "valor_perifericos"):
-        if data.get(campo_valor) is None:
+    # `None` = no enviado: se conserva el valor por defecto (0) del documento.
+    # Sin permiso para ver/editar valores se descartan siempre.
+    for campo_valor in CAMPOS_VALOR:
+        if not ver_valores or data.get(campo_valor) is None:
             data.pop(campo_valor, None)
+    await _validar_correo_unico(app_id, data.get("email"))
     persona = Persona(aplicacion_id=app_id, **data)
     if not persona.activo:
         persona.fecha_desactivacion = ahora()
     await persona.insert()
-    return persona
+    return _salida(persona, ver_valores)
 
 
 @router.put("/{persona_id}")
@@ -375,19 +484,35 @@ async def actualizar(
     persona_id: str,
     datos: PersonaIn,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
     _: Usuario = permiso("personas.editar"),
-):
-    persona = await Persona.get(persona_id)
-    if persona is None or not _persona_visible(persona, ctx):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
+) -> dict:
+    """Actualización parcial: solo cambian los campos presentes en el cuerpo
+    (``model_fields_set``); el resto (líder técnico, sobrecarga, usuario, squads,
+    valores...) se conserva.
+
+    * Los valores económicos exigen ``personas.ver_valores``; sin él se ignoran.
+    * ``aplicacion_id`` solo se reasigna si cambia el primer squad y éste corresponde a
+      otra aplicación autorizada para el usuario (403 si no); la respuesta incluye
+      ``aplicacion_movida`` cuando ocurre.
+    * 409 si el correo ya pertenece a otra persona de la aplicación.
+    """
+    persona, autorizadas = await _cargar_para_escritura(persona_id, ctx, usuario)
+    ver_valores = await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES)
+    enviados = datos.model_fields_set
     activo_previo = persona.activo
-    # Actualiza campos operativos
     fecha_previa = persona.fecha_desactivacion
-    for campo, valor in datos.model_dump(exclude={"aplicacion_id", "fecha_desactivacion"}).items():
-        # `None` en los valores = no enviado: no sobreescribe el valor existente
-        if campo in ("valor_persona", "valor_perifericos") and valor is None:
+    squad_principal_previo = persona.squads[0] if persona.squads else None
+    email_previo = (persona.email or "").strip().lower()
+
+    for campo in enviados - {"aplicacion_id", "fecha_desactivacion"}:
+        valor = getattr(datos, campo)
+        if campo in CAMPOS_VALOR and (valor is None or not ver_valores):
+            continue
+        if campo in ("nombre", "rol_operativo", "activo", "squads") and valor is None:
             continue
         setattr(persona, campo, valor)
+
     # `fecha_desactivacion` se calcula automáticamente al cambiar el estado `activo`:
     # se marca al desactivar y se limpia al reactivar. Sin transición, solo se acepta
     # la del body si la persona sigue inactiva y no tenía fecha (dato legado).
@@ -399,29 +524,37 @@ async def actualizar(
         persona.fecha_desactivacion = datos.fecha_desactivacion
     else:
         persona.fecha_desactivacion = fecha_previa
-    # Si cambió el squad, actualizar aplicacion_id al código de la primera app que coincida
-    if datos.squads:
-        app_doc = await Aplicacion.find_one({"nombre": datos.squads[0]})
-        if app_doc:
+
+    # Si cambió el squad principal (el primero), la persona pasa a la aplicación de ese
+    # squad, siempre que el usuario tenga acceso a ella.
+    movida: dict | None = None
+    if "squads" in enviados and persona.squads and persona.squads[0] != squad_principal_previo:
+        app_doc = await Aplicacion.find_one({"nombre": persona.squads[0]})
+        if app_doc and app_doc.codigo != persona.aplicacion_id:
+            if app_doc.codigo not in autorizadas:
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    "Sin acceso a la aplicación del squad principal elegido.",
+                )
+            movida = {"desde": persona.aplicacion_id, "hacia": app_doc.codigo}
             persona.aplicacion_id = app_doc.codigo
+
+    correo_cambia = (persona.email or "").strip().lower() != email_previo
+    if correo_cambia or movida:
+        await _validar_correo_unico(persona.aplicacion_id, persona.email, str(persona.id))
     persona.marcar_actualizado()
     await persona.save()
-    return persona
+    salida = _salida(persona, ver_valores)
+    if movida:
+        salida["aplicacion_movida"] = movida
+    return salida
 
 
-@router.delete("/{persona_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def eliminar(
-    persona_id: str,
-    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
-    _: Usuario = permiso("personas.eliminar"),
-) -> None:
+async def _contar_referencias(persona_id: str) -> tuple[int, int]:
+    """Cuenta requerimientos y squads que referencian a la persona (bloquean el borrado)."""
     from app.documents.requerimiento import Requerimiento
 
-    persona = await Persona.get(persona_id)
-    if persona is None or not _persona_visible(persona, ctx):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
-
-    referencias_requerimientos = await Requerimiento.get_pymongo_collection().count_documents({
+    requerimientos = await Requerimiento.get_pymongo_collection().count_documents({
         "$or": [
             {"solicitud.lt_hitss_id": persona_id},
             {"solicitud.lt_epm_id": persona_id},
@@ -429,7 +562,55 @@ async def eliminar(
             {"developers_asignados": persona_id},
         ],
     })
-    referencias_squads = await Squad.get_pymongo_collection().count_documents({"lt_hitss_id": persona_id})
+    squads = await Squad.get_pymongo_collection().count_documents({"lt_hitss_id": persona_id})
+    return requerimientos, squads
+
+
+@router.get("/{persona_id}/impacto", dependencies=[permiso("personas.eliminar")])
+async def impacto_eliminacion(
+    persona_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    """Qué ocurriría al eliminar la persona (para el modal de confirmación).
+
+    Devuelve los conteos de lo que la cascada borraría (asignaciones, capacidades de
+    persona y work items de Azure) y las referencias que bloquean el borrado
+    (requerimientos y squads; si hay alguna, ``eliminable`` es ``False`` y el DELETE
+    responde 409).
+    """
+    persona, _autorizadas = await _cargar_para_escritura(persona_id, ctx, usuario)
+    pid = str(persona.id)
+    asignaciones = await Asignacion.find(Asignacion.persona_id == pid).count()
+    capacidades = await Capacidad.find(
+        Capacidad.scope == "persona", Capacidad.persona_id == pid
+    ).count()
+    work_items = await AzdoWorkItem.find(AzdoWorkItem.persona_id == pid).count()
+    requerimientos, squads = await _contar_referencias(pid)
+    return {
+        "persona_id": pid,
+        "nombre": persona.nombre,
+        "cascada": {
+            "asignaciones": asignaciones,
+            "capacidades": capacidades,
+            "work_items": work_items,
+        },
+        "referencias": {"requerimientos": requerimientos, "squads": squads},
+        "eliminable": requerimientos == 0 and squads == 0,
+    }
+
+
+@router.delete("/{persona_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar(
+    persona_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
+    _: Usuario = permiso("personas.eliminar"),
+) -> None:
+    persona, _autorizadas = await _cargar_para_escritura(persona_id, ctx, usuario)
+    persona_id = str(persona.id)
+
+    referencias_requerimientos, referencias_squads = await _contar_referencias(persona_id)
     if referencias_requerimientos or referencias_squads:
         raise HTTPException(
             status.HTTP_409_CONFLICT,

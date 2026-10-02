@@ -5,6 +5,7 @@
 
 PERM_ADMIN_ACCESO = "admin.acceso"
 PERM_CONSOLIDADO_VER = "consolidado.ver"
+PERM_PERSONAS_VER_VALORES = "personas.ver_valores"
 
 PERMISOS_CATALOGO: list[str] = [
     "dashboard.ver",
@@ -27,6 +28,7 @@ PERMISOS_CATALOGO: list[str] = [
     "personas.crear",
     "personas.editar",
     "personas.eliminar",
+    "personas.ver_valores",
     "asignaciones.ver",
     "asignaciones.editar",
     "squads.editar",
@@ -96,6 +98,7 @@ ROLES_BASE: list[dict] = [
             "personas.crear",
             "personas.editar",
             "personas.eliminar",
+            "personas.ver_valores",
             "asignaciones.ver",
             "asignaciones.editar",
             "squads.editar",
@@ -144,6 +147,7 @@ ROLES_BASE: list[dict] = [
             "predictivos.ver",
             "backlog_futuro.ver",
             "personas.ver",
+            "personas.ver_valores",
             "asignaciones.ver",
             "capacidades.ver",
             "control_horas_facturable.ver",

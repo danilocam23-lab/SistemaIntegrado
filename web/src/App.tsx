@@ -67,13 +67,13 @@ export default function App() {
               <Route path="predictivos" element={<RoleRoute permiso="predictivos.ver"><Predictivos /></RoleRoute>} />
               <Route path="backlog-futuro" element={<RoleRoute permiso="backlog_futuro.ver"><BacklogFuturo /></RoleRoute>} />
               <Route path="tarifas" element={<Navigate to="/configuracion" replace />} />
-              <Route path="personas" element={<Personas />} />
+              <Route path="personas" element={<RoleRoute permiso="personas.ver"><Personas /></RoleRoute>} />
               <Route path="categorias" element={<Navigate to="/configuracion" replace />} />
               <Route path="asignaciones" element={<RoleRoute permiso="asignaciones.ver"><Asignaciones /></RoleRoute>} />
               <Route path="capacidades" element={<RoleRoute permiso="capacidades.ver"><Capacidades /></RoleRoute>} />
               <Route path="planes-accion" element={<RoleRoute permiso="planes_accion.ver"><PlanesAccion /></RoleRoute>} />
               <Route path="control-horas-facturable" element={<RoleRoute permiso="control_horas_facturable.ver"><ControlHorasFacturable /></RoleRoute>} />
-              <Route path="roadmap" element={<Roadmap />} />
+              <Route path="roadmap" element={<RoleRoute permiso="roadmap.ver"><Roadmap /></RoleRoute>} />
               <Route path="estimaciones" element={<RoleRoute permiso="estimaciones.ver"><Estimaciones /></RoleRoute>} />
               <Route path="azure-devops" element={<RoleRoute permiso="azure_devops.ver"><AzureDevOps /></RoleRoute>} />
               <Route path="configuracion" element={<RoleRoute permiso="admin.configuracion.ver"><Configuracion /></RoleRoute>} />
