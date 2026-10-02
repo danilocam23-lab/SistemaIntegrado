@@ -265,6 +265,8 @@ export interface PlanAccion {
   responsable_id: string | null
   fecha_limite: string | null
   estado: string
+  creado_en?: string
+  actualizado_en?: string
 }
 
 export interface BacklogFuturo {

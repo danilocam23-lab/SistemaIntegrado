@@ -1,77 +1,55 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
-import client from '../api/client'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { mensajeError, useLista } from '../api/hooks'
+import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import type { Persona, PlanAccion } from '../types'
-import { Aviso, BarraFiltros, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
-
-const ESTADOS = ['PENDIENTE', 'EN_PROGRESO', 'COMPLETADO', 'CANCELADO']
-
-const ESTADO_LABEL: Record<string, string> = {
-  PENDIENTE: 'Pendiente',
-  EN_PROGRESO: 'En progreso',
-  COMPLETADO: 'Completado',
-  CANCELADO: 'Cancelado',
-}
-
-const ESTADO_TONO: Record<string, 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'> = {
-  PENDIENTE: 'alerta',
-  EN_PROGRESO: 'marca',
-  COMPLETADO: 'exito',
-  CANCELADO: 'neutro',
-}
-
-const ROLES_RESPONSABLE = ['LT_HITSS', 'SCRUM']
-
-interface FormState {
-  id: string | null
-  titulo: string
-  descripcion: string
-  responsableId: string
-  fechaLimite: string
-  estado: string
-}
-
-const FORM_VACIO: FormState = {
-  id: null,
-  titulo: '',
-  descripcion: '',
-  responsableId: '',
-  fechaLimite: '',
-  estado: 'PENDIENTE',
-}
+import { Aviso, Boton, EncabezadoPagina, Icono } from '../components/ui'
+import { BarraFiltrosPlanes } from './planes-accion/BarraFiltrosPlanes'
+import { EsqueletoPlanes } from './planes-accion/EsqueletoPlanes'
+import { KpisPlanes } from './planes-accion/KpisPlanes'
+import { ListaPlanes } from './planes-accion/ListaPlanes'
+import { PanelPlan } from './planes-accion/PanelPlan'
+import { TableroPlanes } from './planes-accion/TableroPlanes'
+import { ToastPlanes } from './planes-accion/ToastPlanes'
+import { hoyLocal } from './planes-accion/fechas'
+import { FILTROS_INICIALES, FORM_VACIO } from './planes-accion/tipos'
+import type { FormPlan, FiltrosPlanes, VistaPlanes } from './planes-accion/tipos'
+import { useDerivadosPlanes } from './planes-accion/useDerivadosPlanes'
+import { useEscriturasPlanes } from './planes-accion/useEscriturasPlanes'
 
 export default function PlanesAccion() {
-  const { datos, error, recargar } = useLista<PlanAccion>('/planes-accion')
-  const { datos: personas } = useLista<Persona>('/personas')
+  const { datos, error, cargando, recargar } = useLista<PlanAccion>('/planes-accion')
+  const { datos: personas, error: errorPersonas } = useLista<Persona>('/personas')
   const { tienePermiso } = useAuth()
-  const puedeEditar = tienePermiso('planes_accion.editar')
-  const [form, setForm] = useState<FormState>(FORM_VACIO)
-  const [filtroEstado, setFiltroEstado] = useState('')
-  const [aviso, setAviso] = useState('')
+  const { modoConsolidado } = useAplicacion()
+  const puedeEditar = tienePermiso('planes_accion.editar') && !modoConsolidado
 
-  const personasPorId = useMemo(() => {
-    const m = new Map<string, Persona>()
-    personas.forEach((p) => m.set(p.id, p))
-    return m
-  }, [personas])
+  const [vista, setVista] = useState<VistaPlanes>('lista')
+  const [filtros, setFiltros] = useState<FiltrosPlanes>(FILTROS_INICIALES)
+  const [form, setForm] = useState<FormPlan | null>(null)
+  const [errorAccion, setErrorAccion] = useState('')
+  const [hoy] = useState(hoyLocal)
 
-  const personasOrdenadas = useMemo(
-    () => personas
-      .filter((p) => ROLES_RESPONSABLE.includes(p.rol_operativo))
-      .slice()
-      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
-    [personas],
+  const alFallar = useCallback((mensaje: string) => setErrorAccion(mensaje), [])
+  const escrituras = useEscriturasPlanes({ puedeEditar, recargar, alFallar })
+
+  const visibles = useMemo(
+    () => datos.filter((p) => !escrituras.ocultos.has(p.id)),
+    [datos, escrituras.ocultos],
+  )
+  const d = useDerivadosPlanes(visibles, personas, filtros, hoy)
+
+  const planEditando = useMemo(
+    () => (form?.id ? datos.find((p) => p.id === form.id) ?? null : null),
+    [datos, form?.id],
   )
 
-  const planesFiltrados = useMemo(
-    () => (filtroEstado ? datos.filter((p) => p.estado === filtroEstado) : datos),
-    [datos, filtroEstado],
-  )
+  function nuevo() {
+    if (puedeEditar) setForm({ ...FORM_VACIO })
+  }
 
   function editar(plan: PlanAccion) {
     if (!puedeEditar) return
@@ -85,157 +63,152 @@ export default function PlanesAccion() {
     })
   }
 
-  function cancelarEdicion() {
-    setForm(FORM_VACIO)
+  function cambiarFiltros(cambios: Partial<FiltrosPlanes>) {
+    setFiltros((f) => ({ ...f, ...cambios }))
   }
 
-  async function guardar(e: FormEvent): Promise<void> {
-    e.preventDefault()
-    if (!puedeEditar) return
-    setAviso('')
-    const payload = {
-      titulo: form.titulo,
-      descripcion: form.descripcion || null,
-      responsable_id: form.responsableId || null,
-      fecha_limite: form.fechaLimite || null,
-      estado: form.estado,
-    }
-    try {
-      if (form.id) {
-        await client.put(`/planes-accion/${form.id}`, payload)
-      } else {
-        await client.post('/planes-accion', payload)
-      }
-      setForm(FORM_VACIO)
-      recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }
+  const hayFiltros = filtros.estado !== '' || filtros.vencimiento !== '' || filtros.responsable !== '' || filtros.busqueda !== ''
 
-  async function eliminar(plan: PlanAccion): Promise<void> {
-    if (!puedeEditar) return
-    if (!window.confirm(`¿Eliminar el plan de acción "${plan.titulo}"?`)) return
-    await client.delete(`/planes-accion/${plan.id}`)
-    recargar()
-  }
+  // Atajo "N": nuevo plan (si no se está escribiendo ni hay panel abierto).
+  useEffect(() => {
+    function alPulsar(e: KeyboardEvent) {
+      if (e.key.toLowerCase() !== 'n' || e.ctrlKey || e.metaKey || e.altKey) return
+      const destino = e.target as HTMLElement | null
+      if (destino && (['INPUT', 'TEXTAREA', 'SELECT'].includes(destino.tagName) || destino.isContentEditable)) return
+      if (form || !puedeEditar) return
+      e.preventDefault()
+      setForm({ ...FORM_VACIO })
+    }
+    document.addEventListener('keydown', alPulsar)
+    return () => document.removeEventListener('keydown', alPulsar)
+  }, [form, puedeEditar])
+
+  const sinDatos = !cargando && !error && visibles.length === 0
+  const cargaInicial = cargando && datos.length === 0 && !error
 
   return (
     <div>
-      <EncabezadoPagina icono={<Icono nombre="portafolio" />} titulo="Planes de acción" />
+      <EncabezadoPagina
+        icono={<Icono nombre="portafolio" />}
+        titulo="Planes de acción"
+        descripcion="Seguimiento de compromisos del equipo"
+        acciones={puedeEditar && (
+          <Boton variante="primario" onClick={nuevo} title="Atajo: N">
+            + Nuevo plan
+          </Boton>
+        )}
+      />
 
-      {puedeEditar && (
-        <form onSubmit={guardar}>
-          <BarraFiltros className="mb-4">
-            <Campo
-              etiqueta="Título"
-              value={form.titulo}
-              onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-              required
-              className="w-56"
-            />
-            <Campo
-              etiqueta="Descripción"
-              value={form.descripcion}
-              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="w-64"
-            />
-            <Selector
-              etiqueta="Responsable"
-              value={form.responsableId}
-              onChange={(e) => setForm({ ...form, responsableId: e.target.value })}
-            >
-              <option value="">— Ninguno —</option>
-              {personasOrdenadas.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </Selector>
-            <Campo
-              etiqueta="Fecha límite"
-              type="date"
-              value={form.fechaLimite}
-              onChange={(e) => setForm({ ...form, fechaLimite: e.target.value })}
-            />
-            <Selector
-              etiqueta="Estado"
-              value={form.estado}
-              onChange={(e) => setForm({ ...form, estado: e.target.value })}
-            >
-              {ESTADOS.map((s) => (
-                <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
-              ))}
-            </Selector>
-            <Boton variante="primario" type="submit" icono={<Icono nombre={form.id ? 'guardar' : 'check'} />}>
-              {form.id ? 'Guardar' : 'Crear'}
-            </Boton>
-            {form.id && (
-              <Boton variante="secundario" type="button" onClick={cancelarEdicion}>
-                Cancelar
-              </Boton>
+      <div className="mt-4">
+        {modoConsolidado && (
+          <Aviso tono="info" className="mb-4">
+            <span role="status">
+              Modo consolidado: solo lectura. Elige una aplicación para crear o editar planes.
+            </span>
+          </Aviso>
+        )}
+
+        {error && (
+          <Aviso tono="error" className="mb-4">
+            <span role="alert" className="flex flex-wrap items-center justify-between gap-2">
+              <span>No fue posible cargar los planes.</span>
+              <Boton tamano="sm" onClick={recargar}>Reintentar</Boton>
+            </span>
+          </Aviso>
+        )}
+
+        {errorPersonas && !error && (
+          <Aviso tono="alerta" className="mb-4">
+            <span role="alert">
+              No fue posible cargar las personas: los responsables pueden verse sin nombre.
+            </span>
+          </Aviso>
+        )}
+
+        {errorAccion && (
+          <Aviso tono="error" className="mb-4">
+            <span role="alert" className="flex flex-wrap items-center justify-between gap-2">
+              <span className="min-w-0 break-words">{errorAccion}</span>
+              <Boton tamano="sm" onClick={() => setErrorAccion('')}>Cerrar</Boton>
+            </span>
+          </Aviso>
+        )}
+
+        {cargaInicial ? (
+          <EsqueletoPlanes />
+        ) : (
+          <>
+            {!error && (
+              <>
+                <KpisPlanes
+                  kpis={d.kpis}
+                  onVerVencidos={() => cambiarFiltros({ vencimiento: 'vencidos' })}
+                />
+                <BarraFiltrosPlanes
+                  filtros={filtros}
+                  alCambiar={cambiarFiltros}
+                  vista={vista}
+                  alCambiarVista={setVista}
+                  contadoresEstado={d.contadoresEstado}
+                  total={d.kpis.total}
+                  responsables={d.responsablesEnPlanes}
+                />
+              </>
             )}
-          </BarraFiltros>
-        </form>
-      )}
 
-      <BarraFiltros className="mb-3">
-        <Selector
-          etiqueta="Filtrar por estado"
-          value={filtroEstado}
-          onChange={(e) => setFiltroEstado(e.target.value)}
-        >
-          <option value="">Todos</option>
-          {ESTADOS.map((s) => (
-            <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
-          ))}
-        </Selector>
-      </BarraFiltros>
+            {sinDatos && (
+              <div className="tarjeta tarjeta-pad py-10 text-center">
+                <p className="mb-3 text-sm text-slate-600">Aún no hay planes de acción en esta aplicación.</p>
+                {puedeEditar && <Boton variante="primario" onClick={nuevo}>Crear el primer plan</Boton>}
+              </div>
+            )}
 
-      {(aviso || error) && <Aviso tono="error" className="mb-3">{aviso || error}</Aviso>}
-
-      <TablaScroll>
-      <table className="tabla">
-        <thead>
-          <tr>
-            <th>Título</th>
-            <th>Descripción</th>
-            <th>Responsable</th>
-            <th className="text-center">Fecha límite</th>
-            <th className="text-center">Estado</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {planesFiltrados.map((p) => (
-            <tr key={p.id}>
-              <td>{p.titulo}</td>
-              <td>{p.descripcion || '—'}</td>
-              <td>{(p.responsable_id && personasPorId.get(p.responsable_id)?.nombre) || '—'}</td>
-              <td className="text-center">{p.fecha_limite || '—'}</td>
-              <td className="text-center">
-                <Chip tono={ESTADO_TONO[p.estado] ?? 'neutro'}>
-                  {ESTADO_LABEL[p.estado] ?? p.estado}
-                </Chip>
-              </td>
-              <td className="text-center whitespace-nowrap">
-                {puedeEditar && (
-                  <>
-                    <button type="button" onClick={() => editar(p)} className="enlace-accion mr-3">
-                      Editar
-                    </button>
-                    <button type="button" onClick={() => eliminar(p)} className="enlace-accion enlace-accion-peligro">
-                      Eliminar
-                    </button>
-                  </>
+            {!error && visibles.length > 0 && d.filtrados.length === 0 && (
+              <div className="tarjeta tarjeta-pad py-10 text-center">
+                <p className="mb-3 text-sm text-slate-600">Ningún plan con estos filtros.</p>
+                {hayFiltros && (
+                  <Boton onClick={() => setFiltros((f) => ({ ...FILTROS_INICIALES, orden: f.orden }))}>
+                    Quitar filtros
+                  </Boton>
                 )}
-              </td>
-            </tr>
-          ))}
-          {planesFiltrados.length === 0 && (
-            <tr><td colSpan={6} className="p-4 text-center text-slate-500">Sin planes de acción.</td></tr>
-          )}
-        </tbody>
-      </table>
-      </TablaScroll>
+              </div>
+            )}
+
+            {d.filtrados.length > 0 && (vista === 'lista' ? (
+              <ListaPlanes
+                filas={d.filtrados}
+                personas={d.personasPorId}
+                puedeEditar={puedeEditar}
+                guardando={escrituras.guardando}
+                onEditar={editar}
+                onEliminar={escrituras.eliminar}
+                onCambiarEstado={(p) => void escrituras.cambiarEstado(p)}
+              />
+            ) : (
+              <TableroPlanes
+                filas={d.filtrados}
+                personas={d.personasPorId}
+                puedeEditar={puedeEditar}
+                guardando={escrituras.guardando}
+                onEditar={editar}
+                onCambiarEstado={(p) => void escrituras.cambiarEstado(p)}
+              />
+            ))}
+          </>
+        )}
+      </div>
+
+      <PanelPlan
+        form={puedeEditar ? form : null}
+        plan={planEditando}
+        responsablesAsignables={d.responsablesAsignables}
+        personasPorId={d.personasPorId}
+        hoy={hoy}
+        onGuardar={(f) => escrituras.guardar(f).catch((e) => mensajeError(e))}
+        onEliminar={escrituras.eliminar}
+        onCerrar={() => setForm(null)}
+      />
+      <ToastPlanes avisos={escrituras.avisos} />
     </div>
   )
 }
