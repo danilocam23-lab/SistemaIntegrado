@@ -7,15 +7,22 @@ import { ESTADO_ACTIVO, ROLES_EXCLUIDOS } from './tipos'
 import type {
   AsignacionItem,
   BacklogPorPersonaMap,
+  FiltroMostrar,
   GrupoPersona,
   GrupoReq,
   HorasAzureGrupo,
+  ItemGrupo,
   OpcionReq,
+  OrdenPersonas,
   WoPersona,
 } from './tipos'
+import { cargaVacia, HORAS_MES_POR_DEFECTO, repartirIgual } from './carga'
+import type { CargaPersona } from './carga'
+import { reqIdDeAsignacion } from './resolverApp'
 import type { HorasAzureFeatureEntry } from './useHorasAzurePorFeature'
 
 interface ParametrosDerivados {
+  /** Asignaciones vigentes (sin las que están pendientes de eliminar con "Deshacer"). */
   asignaciones: AsignacionItem[]
   personas: Persona[]
   categorias: Categoria[]
@@ -27,17 +34,35 @@ interface ParametrosDerivados {
   horasAzurePorFeature: Map<number, HorasAzureFeatureEntry[]>
   filtroEstado: string
   filtroPersona: string
-  busquedaPersona: string
+  mostrar: FiltroMostrar
+  orden: OrdenPersonas
+}
+
+/** Una fila del reparto propuesto: % actual y % nuevo de una asignación activa. */
+export interface FilaReparto {
+  asig: AsignacionItem
+  reqLabel: string
+  pctActual: number
+  pctNuevo: number
 }
 
 const horasAzureVacio = (): HorasAzureGrupo => ({ originalEstimate: 0, completedWork: 0, remainingWork: 0 })
 
+const sumarEntradas = (entradas: HorasAzureFeatureEntry[]): HorasAzureGrupo =>
+  entradas.reduce(
+    (acc, e) => ({
+      originalEstimate: acc.originalEstimate + e.original_estimate,
+      completedWork: acc.completedWork + e.completed_work,
+      remainingWork: acc.remainingWork + e.remaining_work,
+    }),
+    horasAzureVacio(),
+  )
+
 /**
  * Todos los datos derivados de la pantalla de Asignaciones: mapas de apoyo,
- * opciones de requerimiento, cálculo de capacidad/porcentaje sugerido y el
- * agrupado por acta (`gruposReq` -> `gruposFiltrados`) y por persona
- * (`gruposPorPersona`, que deriva de `gruposFiltrados` y además incorpora WO y
- * backlog futuro informativo).
+ * opciones de requerimiento, carga por persona (medidor), validación de
+ * capacidad, el agrupado por acta (`gruposReq` -> `gruposFiltrados`) y por
+ * persona (`gruposPorPersona`, que además incorpora WO y backlog futuro).
  */
 export function useDerivadosAsignaciones({
   asignaciones,
@@ -51,11 +76,14 @@ export function useDerivadosAsignaciones({
   horasAzurePorFeature,
   filtroEstado,
   filtroPersona,
-  busquedaPersona,
+  mostrar,
+  orden,
 }: ParametrosDerivados) {
+  // Solo personas activas con rol operativo (sin LT_EPM): para selectores y filtros.
+  // Para MOSTRAR nombres se usa `personaPorId` (lista completa).
   const personasDisponibles = useMemo(
     () => personas
-      .filter((p) => p.rol_operativo && !ROLES_EXCLUIDOS.includes(p.rol_operativo))
+      .filter((p) => p.activo && p.rol_operativo && !ROLES_EXCLUIDOS.includes(p.rol_operativo))
       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
     [personas],
   )
@@ -95,12 +123,13 @@ export function useDerivadosAsignaciones({
   }, [categorias])
 
   const reqPorId = useMemo(() => {
-    const map = new Map<string, { sc: string; codigoReq: string; nombre: string }>()
+    const map = new Map<string, { sc: string; codigoReq: string; nombre: string; req: Requerimiento }>()
     for (const req of requerimientos) {
       map.set(req.id, {
         sc: req.solicitud?.codigo_sc ?? '',
         codigoReq: req.codigo_req,
         nombre: req.nombre ?? '',
+        req,
       })
     }
     return map
@@ -127,7 +156,8 @@ export function useDerivadosAsignaciones({
 
   const horasMesDefault = useMemo(() => {
     const config = configuraciones.find((item) => item.clave === 'horas_mes_default')
-    return config ? Number(config.valor) : 180
+    const horas = config ? Number(config.valor) : HORAS_MES_POR_DEFECTO
+    return Number.isFinite(horas) && horas > 0 ? horas : HORAS_MES_POR_DEFECTO
   }, [configuraciones])
 
   const capPorPersonaId = useMemo(() => {
@@ -147,29 +177,109 @@ export function useDerivadosAsignaciones({
     return [req.sc, req.codigoReq, req.nombre].filter(Boolean).join(' - ')
   }, [reqPorId])
 
+  const esAsignacionActiva = useCallback(
+    (a: AsignacionItem) => a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id)),
+    [reqIdsActivos],
+  )
+
+  /** % que valida el tope del 100%: solo asignaciones en requerimientos activos. */
   const capacidadUsada = useCallback((paraPersonaId: string, excluyendoId?: string) => {
     return asignaciones
       .filter((a) => a.persona_id === paraPersonaId && a.id !== excluyendoId)
-      .filter((a) => a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id)))
+      .filter(esAsignacionActiva)
       .reduce((sum, a) => sum + a.total_porcentaje, 0)
-  }, [asignaciones, reqIdsActivos])
+  }, [asignaciones, esAsignacionActiva])
 
-  const calcularPctSugerido = useCallback((pid: string) => {
-    const activas = asignaciones.filter((a) =>
+  /** Nº de asignaciones activas de una persona (para el atajo "reparto igual"). */
+  const contarActivas = useCallback((pid: string, excluyendoId?: string) => {
+    return asignaciones.filter((a) => a.persona_id === pid && a.id !== excluyendoId && esAsignacionActiva(a)).length
+  }, [asignaciones, esAsignacionActiva])
+
+  // ─── Carga por persona (medidor) ───
+  // Se calcula sobre TODAS las asignaciones (no las filtradas): el medidor de
+  // una persona no depende de los filtros de la pantalla.
+  const cargaPorPersona = useMemo(() => {
+    const map = new Map<string, CargaPersona>()
+    for (const asig of asignaciones) {
+      let carga = map.get(asig.persona_id)
+      if (!carga) {
+        const horasBase = capPorPersonaId.get(asig.persona_id)
+        carga = cargaVacia(asig.persona_id, horasBase ?? horasMesDefault, horasBase === undefined)
+        map.set(asig.persona_id, carga)
+      }
+      carga.nAsignaciones += 1
+      if (esAsignacionActiva(asig)) {
+        carga.activa += asig.total_porcentaje
+        carga.nActivas += 1
+      } else if (!asig.proyectos.some((p) => p.requerimiento_id)) {
+        carga.sinReq += asig.total_porcentaje
+      } else {
+        carga.otros += asig.total_porcentaje
+      }
+    }
+    for (const carga of map.values()) {
+      carga.total = carga.activa + carga.sinReq
+      carga.horas = carga.capacidadHoras * (carga.total / 100)
+    }
+    return map
+  }, [asignaciones, capPorPersonaId, horasMesDefault, esAsignacionActiva])
+
+  const cargaDe = useCallback((pid: string): CargaPersona => {
+    const existente = cargaPorPersona.get(pid)
+    if (existente) return existente
+    const horasBase = capPorPersonaId.get(pid)
+    return cargaVacia(pid, horasBase ?? horasMesDefault, horasBase === undefined)
+  }, [cargaPorPersona, capPorPersonaId, horasMesDefault])
+
+  /** Asignación existente de la persona en ese requerimiento (duplicado persona–requerimiento). */
+  const asignacionExistente = useCallback((pid: string, reqId: string, excluyendoId?: string) => {
+    if (!reqId) return null
+    return asignaciones.find((a) =>
       a.persona_id === pid &&
-      a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id)),
-    ).length
-    return String(Math.round(100 / (activas + 1)))
-  }, [asignaciones, reqIdsActivos])
+      a.id !== excluyendoId &&
+      a.proyectos.some((p) => p.requerimiento_id === reqId),
+    ) ?? null
+  }, [asignaciones])
+
+  /** Reparto igual (suma exactamente 100) de las asignaciones activas de una persona. */
+  const planReparto = useCallback((pid: string): FilaReparto[] => {
+    const activas = asignaciones
+      .filter((a) => a.persona_id === pid && esAsignacionActiva(a))
+      .map((asig) => ({ asig, reqLabel: etiquetaReq(reqIdDeAsignacion(asig)) }))
+      .sort((a, b) => a.reqLabel.localeCompare(b.reqLabel, 'es'))
+    const reparto = repartirIgual(activas.length)
+    return activas.map((fila, i) => ({
+      asig: fila.asig,
+      reqLabel: fila.reqLabel,
+      pctActual: fila.asig.total_porcentaje,
+      pctNuevo: reparto[i],
+    }))
+  }, [asignaciones, esAsignacionActiva, etiquetaReq])
+
+  const personasSobrecarga = useMemo(() => {
+    return personasDisponibles
+      .map((persona) => ({ persona, carga: cargaDe(persona.id) }))
+      .filter((fila) => fila.carga.total > 100)
+      .sort((a, b) => b.carga.total - a.carga.total)
+  }, [personasDisponibles, cargaDe])
+
+  /** Requerimientos activos sin ninguna asignación (nadie a cargo). */
+  const reqsSinAsignar = useMemo(() => {
+    const conAsignacion = new Set<string>()
+    for (const asig of asignaciones) {
+      for (const p of asig.proyectos) if (p.requerimiento_id) conAsignacion.add(p.requerimiento_id)
+    }
+    return opcionesReq.filter((o) => reqIdsActivos.has(o.id) && !conAsignacion.has(o.id))
+  }, [asignaciones, opcionesReq, reqIdsActivos])
 
   const gruposReq = useMemo<GrupoReq[]>(() => {
     const map = new Map<string | null, GrupoReq>()
 
     for (const asig of asignaciones) {
-      const reqId = asig.proyectos[0]?.requerimiento_id ?? null
+      const reqId = reqIdDeAsignacion(asig)
       if (!map.has(reqId)) {
-        const req = reqId ? requerimientos.find((item) => item.id === reqId) : null
         const info = reqId ? reqPorId.get(reqId) : null
+        const req = info?.req ?? null
         map.set(reqId, {
           reqId,
           reqLabel: info
@@ -179,6 +289,7 @@ export function useDerivadosAsignaciones({
           horasEstimadas: req?.total_horas_estimadas ?? null,
           idAzureHitss: req?.id_azure_hitss ?? null,
           horasAzureSinPersona: null,
+          horasAzureTotal: null,
           items: [],
         })
       }
@@ -216,18 +327,11 @@ export function useDerivadosAsignaciones({
     for (const grupo of map.values()) {
       if (grupo.idAzureHitss === null) continue
       const entradas = horasAzurePorFeature.get(grupo.idAzureHitss) ?? []
-      const sinPersona = entradas.filter((e) => {
+      grupo.horasAzureTotal = sumarEntradas(entradas)
+      grupo.horasAzureSinPersona = sumarEntradas(entradas.filter((e) => {
         const email = e.email?.trim().toLowerCase()
         return !email || !emailsPersonasConocidas.has(email)
-      })
-      grupo.horasAzureSinPersona = sinPersona.reduce(
-        (acc, e) => ({
-          originalEstimate: acc.originalEstimate + e.original_estimate,
-          completedWork: acc.completedWork + e.completed_work,
-          remainingWork: acc.remainingWork + e.remaining_work,
-        }),
-        horasAzureVacio(),
-      )
+      }))
 
       // Personas conocidas por el sistema con horas reales de Azure bajo esta
       // Feature pero sin Asignación creada en este requerimiento: se agregan
@@ -240,7 +344,7 @@ export function useDerivadosAsignaciones({
         if (!persona) continue
         if (personaIdsCubiertos.has(persona.id)) continue
         personaIdsCubiertos.add(persona.id)
-        const item: (typeof grupo.items)[number] = {
+        const item: ItemGrupo = {
           asig: {
             id: `azure-sin-asignar-${grupo.reqId}-${persona.id}`,
             persona_id: persona.id,
@@ -278,7 +382,6 @@ export function useDerivadosAsignaciones({
       })
   }, [
     asignaciones,
-    requerimientos,
     reqPorId,
     capPorPersonaId,
     horasMesDefault,
@@ -296,84 +399,145 @@ export function useDerivadosAsignaciones({
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
   }, [gruposReq])
 
-  const gruposFiltrados = useMemo(() => {
+  // Un filtro de persona guardado que ya no existe (otra aplicación, persona
+  // eliminada) se ignora en vez de dejar la pantalla vacía.
+  const personaFiltrada = filtroPersona !== '__todos__' && personaPorId.has(filtroPersona)
+    ? filtroPersona
+    : '__todos__'
+
+  // Estado + persona: base común de las dos pestañas.
+  const gruposBase = useMemo(() => {
     let resultado = gruposReq
 
-    // Filtrar por estado
-    if (filtroEstado === '__todos__') {
-      // Mantener todos
-    } else if (filtroEstado === '__sin_estado__') {
+    if (filtroEstado === '__sin_estado__') {
       resultado = resultado.filter((g) => !g.reqEstado)
-    } else {
+    } else if (filtroEstado !== '__todos__') {
       resultado = resultado.filter((g) => g.reqEstado === filtroEstado)
     }
 
-    // Filtrar por persona (dropdown)
-    if (filtroPersona !== '__todos__') {
-      resultado = resultado.map((g) => ({
-        ...g,
-        items: g.items.filter((item) => item.asig.persona_id === filtroPersona),
-      }))
-      resultado = resultado.filter((g) => g.items.length > 0)
-    }
-
-    // Filtrar por búsqueda de persona (texto)
-    if (busquedaPersona.trim()) {
-      const q = busquedaPersona.toLowerCase().trim()
-      resultado = resultado.map((g) => ({
-        ...g,
-        items: g.items.filter((item) => {
-          const persona = personaPorId.get(item.asig.persona_id)
-          return persona?.nombre.toLowerCase().includes(q)
-        }),
-      }))
-      resultado = resultado.filter((g) => g.items.length > 0)
+    if (personaFiltrada !== '__todos__') {
+      resultado = resultado
+        .map((g) => ({ ...g, items: g.items.filter((item) => item.asig.persona_id === personaFiltrada) }))
+        .filter((g) => g.items.length > 0)
     }
 
     return resultado
-  }, [gruposReq, filtroEstado, filtroPersona, busquedaPersona, personaPorId])
+  }, [gruposReq, filtroEstado, personaFiltrada])
+
+  // Pestaña "Por Actas": además aplica "Mostrar" (con alerta / prioridad) a las filas.
+  const gruposFiltrados = useMemo(() => {
+    if (mostrar === 'todo') return gruposBase
+    const pasa = (item: ItemGrupo) => {
+      if (mostrar === 'alerta') return cargaDe(item.asig.persona_id).total > 100
+      return item.asig.prioridad === true && !item.sinAsignacionFormal
+    }
+    return gruposBase
+      .map((g) => ({ ...g, items: g.items.filter(pasa) }))
+      .filter((g) => g.items.length > 0)
+  }, [gruposBase, mostrar, cargaDe])
 
   // ─── Vista por personas: agrupa asignaciones por persona_id ───
-  // INVARIANTE: `gruposPorPersona` reagrupa `gruposFiltrados` (no `gruposReq`),
-  // así que ya hereda los filtros de estado y de persona (dropdown) aplicados
-  // ahí. `busquedaPersona` se filtra en 2 niveles: aquí dentro de
-  // `gruposFiltrados` (a nivel de `item`, arriba) y otra vez aquí a nivel de
-  // `persona.nombre` (abajo) para excluir personas sin ninguna asignación que
-  // matchee pero que sí tienen WO o backlog futuro (agregados por sus mapas).
+  // Reagrupa `gruposBase` (estado + persona). Las filas sintéticas de Azure
+  // ("Sin asignación formal") NO son asignaciones: se excluyen. Las personas con
+  // solo WO o backlog futuro también se incorporan, y los filtros de persona y de
+  // estado les aplican igual (con estado activo hace falta una asignación en ese
+  // estado; con persona elegida solo aparece esa persona).
   const gruposPorPersona = useMemo(() => {
     const map = new Map<string, GrupoPersona>()
-    for (const grupo of gruposFiltrados) {
+    for (const grupo of gruposBase) {
       for (const item of grupo.items) {
+        if (item.sinAsignacionFormal) continue
         const pid = item.asig.persona_id
         if (!map.has(pid)) {
           const persona = personaPorId.get(pid)
           if (!persona) continue
           map.set(pid, { persona, reqs: [] })
         }
-        map.get(pid)!.reqs.push({ reqId: grupo.reqId, reqLabel: grupo.reqLabel, reqEstado: grupo.reqEstado, ...item })
+        map.get(pid)!.reqs.push({
+          reqId: grupo.reqId,
+          reqLabel: grupo.reqLabel,
+          reqEstado: grupo.reqEstado,
+          asig: item.asig,
+          horasCarga: item.horasCarga,
+        })
       }
     }
-    // Incluir personas que tienen WOs pero no asignaciones
-    for (const [pid] of wosPorPersonaMap) {
-      if (!map.has(pid)) {
+
+    const sinFiltroEstado = filtroEstado === '__todos__'
+    if (sinFiltroEstado) {
+      const incorporar = (pid: string) => {
+        if (map.has(pid)) return
+        if (personaFiltrada !== '__todos__' && pid !== personaFiltrada) return
         const persona = personaPorId.get(pid)
         if (persona) map.set(pid, { persona, reqs: [] })
       }
+      for (const [pid] of wosPorPersonaMap) incorporar(pid)
+      for (const [pid] of backlogPorPersonaMap) incorporar(pid)
     }
-    // Incluir personas que tienen backlog futuro pero no asignaciones reales
-    for (const [pid] of backlogPorPersonaMap) {
-      if (!map.has(pid)) {
-        const persona = personaPorId.get(pid)
-        if (persona) map.set(pid, { persona, reqs: [] })
+
+    let resultado = Array.from(map.values())
+
+    if (mostrar === 'alerta') {
+      resultado = resultado.filter((g) => cargaDe(g.persona.id).total > 100)
+    } else if (mostrar === 'prioridad') {
+      resultado = resultado
+        .map((g) => ({ ...g, reqs: g.reqs.filter((r) => r.asig.prioridad === true) }))
+        .filter((g) => g.reqs.length > 0)
+    }
+
+    resultado.sort((a, b) => {
+      if (orden === 'carga') {
+        const diferencia = cargaDe(b.persona.id).total - cargaDe(a.persona.id).total
+        if (diferencia !== 0) return diferencia
       }
-    }
-    let resultado = Array.from(map.values()).sort((a, b) => a.persona.nombre.localeCompare(b.persona.nombre, 'es'))
-    if (busquedaPersona.trim()) {
-      const q = busquedaPersona.toLowerCase().trim()
-      resultado = resultado.filter((g) => g.persona.nombre.toLowerCase().includes(q))
-    }
+      return a.persona.nombre.localeCompare(b.persona.nombre, 'es')
+    })
     return resultado
-  }, [gruposFiltrados, personaPorId, busquedaPersona, wosPorPersonaMap, backlogPorPersonaMap])
+  }, [
+    gruposBase,
+    personaPorId,
+    personaFiltrada,
+    filtroEstado,
+    mostrar,
+    orden,
+    wosPorPersonaMap,
+    backlogPorPersonaMap,
+    cargaDe,
+  ])
+
+  // ─── Resumen para KPI y mapa de carga (población: personas activas con rol) ───
+  const resumen = useMemo(() => {
+    const filas = personasDisponibles.map((persona) => ({ persona, carga: cargaDe(persona.id) }))
+    const conCarga = filas.filter((f) => f.carga.total > 0)
+    const media = filas.length > 0 ? filas.reduce((s, f) => s + f.carga.total, 0) / filas.length : 0
+    const conHolgura = filas.filter((f) => f.carga.total < 70)
+    let azureSinPersonaHoras = 0
+    let azureSinPersonaReqs = 0
+    for (const grupo of gruposReq) {
+      const trabajado = grupo.horasAzureSinPersona?.completedWork ?? 0
+      if (trabajado > 0) {
+        azureSinPersonaHoras += trabajado
+        azureSinPersonaReqs += 1
+      }
+    }
+    const mapa = [...filas].sort((a, b) => {
+      if (orden === 'carga') {
+        const diferencia = b.carga.total - a.carga.total
+        if (diferencia !== 0) return diferencia
+      }
+      return a.persona.nombre.localeCompare(b.persona.nombre, 'es')
+    })
+    return {
+      totalPersonas: filas.length,
+      conCarga: conCarga.length,
+      media,
+      capacidadBaseMedia: filas.length > 0 ? filas.reduce((s, f) => s + f.carga.capacidadHoras, 0) / filas.length : 0,
+      conHolgura,
+      azureSinPersonaHoras,
+      azureSinPersonaReqs,
+      mapa,
+    }
+  }, [personasDisponibles, cargaDe, gruposReq, orden])
 
   return {
     personasDisponibles,
@@ -387,7 +551,13 @@ export function useDerivadosAsignaciones({
     capPorPersonaId,
     etiquetaReq,
     capacidadUsada,
-    calcularPctSugerido,
+    contarActivas,
+    cargaDe,
+    asignacionExistente,
+    planReparto,
+    personasSobrecarga,
+    reqsSinAsignar,
+    resumen,
     gruposReq,
     estadosUnicos,
     gruposFiltrados,

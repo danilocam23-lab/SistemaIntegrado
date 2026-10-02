@@ -2,10 +2,15 @@
 # SPDX-License-Identifier: MIT
 
 """Router de asignaciones de carga de trabajo (proyectos y sprints embebidos)."""
+from beanie import PydanticObjectId
+from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.documents.asignacion import Asignacion, Proyecto
+from app.documents.base import ahora
+from app.documents.categoria import Categoria
+from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
@@ -18,11 +23,71 @@ router = APIRouter(prefix="/asignaciones", tags=["asignaciones"])
 class AsignacionIn(BaseModel):
     persona_id: str
     categoria_id: str
-    total_porcentaje: float = 0
+    total_porcentaje: float = Field(default=0, ge=0, le=100)
     estado: str = "active"
     activo: bool = True
     prioridad: bool = False
     proyectos: list[Proyecto] = []
+
+
+def _oid(valor: str, etiqueta: str) -> PydanticObjectId:
+    """Convierte un id recibido en el cuerpo; mal formado => 422."""
+    try:
+        return PydanticObjectId(valor)
+    except (InvalidId, TypeError):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"{etiqueta} con formato inválido"
+        ) from None
+
+
+async def _validar_referencias(
+    ctx: ContextoAplicacion,
+    persona_id: str,
+    categoria_id: str,
+    proyectos: list[Proyecto],
+    excluir_id: PydanticObjectId | None = None,
+) -> None:
+    """Valida que persona, categoría y requerimientos existan en la aplicación
+    activa (404 sin revelar datos ajenos) y que no se duplique persona+requerimiento
+    (409), tanto dentro del cuerpo como contra otras asignaciones de la persona."""
+    filtro = ctx.filtro()
+    if await Persona.find_one({**filtro, "_id": _oid(persona_id, "persona_id")}) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
+    if await Categoria.find_one({**filtro, "_id": _oid(categoria_id, "categoria_id")}) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Categoría no encontrada")
+
+    req_ids = [p.requerimiento_id for p in proyectos if p.requerimiento_id]
+    if len(set(req_ids)) != len(req_ids):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Requerimiento repetido en los proyectos de la asignación"
+        )
+    if not req_ids:
+        return
+    oids = [_oid(r, "requerimiento_id") for r in req_ids]
+    existentes = await Requerimiento.find({**filtro, "_id": {"$in": oids}}).count()
+    if existentes != len(oids):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Requerimiento no encontrado")
+
+    consulta = {**filtro, "persona_id": persona_id, "proyectos.requerimiento_id": {"$in": req_ids}}
+    if excluir_id is not None:
+        consulta["_id"] = {"$ne": excluir_id}
+    if await Asignacion.find_one(consulta) is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "La persona ya tiene una asignación con alguno de esos requerimientos",
+        )
+
+
+async def _obtener_propia(asignacion_id: str, ctx: ContextoAplicacion) -> Asignacion:
+    """Asignación de la aplicación activa; id mal formado o ajeno => 404."""
+    try:
+        oid = PydanticObjectId(asignacion_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Asignación no encontrada") from None
+    asignacion = await Asignacion.get(oid)
+    if asignacion is None or asignacion.aplicacion_id != ctx.codigo:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Asignación no encontrada")
+    return asignacion
 
 
 @router.get("", dependencies=[permiso("asignaciones.ver")])
@@ -53,6 +118,7 @@ async def crear(
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     _: Usuario = permiso("asignaciones.editar"),
 ):
+    await _validar_referencias(ctx, datos.persona_id, datos.categoria_id, datos.proyectos)
     asignacion = Asignacion(aplicacion_id=ctx.codigo, **datos.model_dump())
     await asignacion.insert()
     return asignacion
@@ -65,10 +131,18 @@ async def actualizar(
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     _: Usuario = permiso("asignaciones.editar"),
 ):
-    asignacion = await Asignacion.get(asignacion_id)
-    if asignacion is None or asignacion.aplicacion_id != ctx.codigo:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Asignación no encontrada")
-    for campo, valor in datos.model_dump().items():
+    asignacion = await _obtener_propia(asignacion_id, ctx)
+    # Solo se aplican los campos presentes en el cuerpo: lo omitido (prioridad,
+    # proyectos, ...) se conserva tal cual.
+    cambios = {c: getattr(datos, c) for c in datos.model_fields_set}
+    await _validar_referencias(
+        ctx,
+        cambios.get("persona_id", asignacion.persona_id),
+        cambios.get("categoria_id", asignacion.categoria_id),
+        cambios.get("proyectos", asignacion.proyectos),
+        excluir_id=asignacion.id,
+    )
+    for campo, valor in cambios.items():
         setattr(asignacion, campo, valor)
     asignacion.marcar_actualizado()
     await asignacion.save()
@@ -82,25 +156,21 @@ async def cambiar_prioridad(
     _: Usuario = permiso("asignaciones.editar"),
 ):
     """Marca esta asignación como prioritaria para la persona y desmarca las demás."""
-    asignacion = await Asignacion.get(asignacion_id)
-    if asignacion is None or asignacion.aplicacion_id not in ctx.codigos:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Asignación no encontrada")
+    asignacion = await _obtener_propia(asignacion_id, ctx)
 
     nueva_prioridad = not asignacion.prioridad
 
     if nueva_prioridad:
-        # Desmarcar todas las demás asignaciones de la misma persona, sin
-        # cruzar aplicaciones (S6/F1.4 del ADR-0008: antes no filtraba por
-        # aplicacion_id y podía desmarcar asignaciones de otra aplicación).
-        filtro_otras = ctx.filtro()
-        filtro_otras["persona_id"] = asignacion.persona_id
-        filtro_otras["_id"] = {"$ne": asignacion.id}
-        otras = await Asignacion.find(filtro_otras).to_list()
-        for otra in otras:
-            if otra.prioridad:
-                otra.prioridad = False
-                otra.marcar_actualizado()
-                await otra.save()
+        # Desmarcar las demás de la misma persona en esta aplicación (un solo update).
+        await Asignacion.get_pymongo_collection().update_many(
+            {
+                **ctx.filtro(),
+                "persona_id": asignacion.persona_id,
+                "_id": {"$ne": asignacion.id},
+                "prioridad": True,
+            },
+            {"$set": {"prioridad": False, "actualizado_en": ahora()}},
+        )
 
     asignacion.prioridad = nueva_prioridad
     asignacion.marcar_actualizado()
@@ -114,9 +184,7 @@ async def eliminar(
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     _: Usuario = permiso("asignaciones.editar"),
 ) -> None:
-    asignacion = await Asignacion.get(asignacion_id)
-    if asignacion is None or asignacion.aplicacion_id != ctx.codigo:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Asignación no encontrada")
+    asignacion = await _obtener_propia(asignacion_id, ctx)
     await asignacion.delete()
 
 

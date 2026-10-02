@@ -1,240 +1,200 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { FormEvent, KeyboardEvent } from 'react'
+import { useCallback, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import client from '../../api/client'
 import { mensajeError } from '../../api/hooks'
 import type { Requerimiento } from '../../types'
 import { cabecerasAplicacion } from '../../utilidades/aplicacion'
+import { resolverAppAsignacion } from './resolverApp'
 import type { AsignacionItem } from './tipos'
-import type { useFormularioAsignacion } from './useFormularioAsignacion'
+import type { FilaReparto } from './useDerivadosAsignaciones'
 
 interface ParametrosEscrituras {
-  asignaciones: AsignacionItem[]
-  requerimientos: Requerimiento[]
-  reqIdsActivos: Set<string>
+  requerimientoPorId: Map<string, Requerimiento>
   capacidadUsada: (paraPersonaId: string, excluyendoId?: string) => number
+  asignacionExistente: (pid: string, reqId: string, excluyendoId?: string) => AsignacionItem | null
   activa: string
   puedeEditar: boolean
-  setAviso: (mensaje: string) => void
   recargar: () => Promise<void> | void
-  formulario: ReturnType<typeof useFormularioAsignacion>
-  etiquetaReq: (reqId: string | null) => string
+  /** Registra (o limpia con `''`) el mensaje de error de una fila: se muestra en la propia fila/panel. */
+  registrarErrorFila: (asigId: string, mensaje: string) => void
+}
+
+/** Datos del panel "Asignar" listos para enviar. */
+export interface DatosAsignacion {
+  personaId: string
+  categoriaId: string
+  porcentaje: number
+  requerimientoId: string
+  etiquetaRequerimiento: string
+  /** Aplicación de creación ya resuelta por el panel (`''` en modo consolidado sin requerimiento). */
+  aplicacionId: string
+  prioridad: boolean
+}
+
+export interface FalloReparto {
+  asigId: string
+  mensaje: string
 }
 
 /**
- * Todas las escrituras de asignaciones: validación de capacidad, redistribución
- * equitativa del %, autofix al cargar si alguien supera el 100% (una sola vez
- * por montaje), CRUD por formulario y edición del % en línea.
+ * Mensaje de validación del tope de capacidad (solo cuenta requerimientos
+ * activos, igual que siempre); `null` si cabe.
+ */
+export function mensajeCapacidad(usado: number, nuevoPct: number): string | null {
+  if (usado + nuevoPct > 100) {
+    return `La persona ya tiene ${usado}% asignado en requerimientos activos. Agregar ${nuevoPct}% superaría el 100%.`
+  }
+  return null
+}
+
+/**
+ * Escrituras de asignaciones: alta/edición desde el panel, edición del % en
+ * línea, prioridad y aplicación explícita de un reparto. NO hay reparto
+ * automático ni corrección al montar: todo cambio de otras asignaciones pasa por
+ * `aplicarReparto`, que el usuario confirma con vista previa.
+ *
+ * Los errores del servidor (422/404/409 con `detail`) se devuelven como texto o
+ * se asocian a la fila para mostrarlos donde corresponde (no arriba de la página).
  */
 export function useEscriturasAsignaciones({
-  asignaciones,
-  requerimientos,
-  reqIdsActivos,
+  requerimientoPorId,
   capacidadUsada,
+  asignacionExistente,
   activa,
   puedeEditar,
-  setAviso,
   recargar,
-  formulario,
-  etiquetaReq,
+  registrarErrorFila,
 }: ParametrosEscrituras) {
-  const {
-    personaId,
-    categoriaId,
-    porcentaje,
-    requerimientoId,
-    opcionReqSeleccionada,
-    editandoAsig,
-    resolverAppCreacion,
-    limpiarFormulario,
-  } = formulario
-
-  // INVARIANTE (edición en línea vs. formulario): `edicionInlineId`/
-  // `edicionInlineValor` de aquí y el estado del `formulario` (`editandoAsig`,
-  // etc.) comparten el mismo `setAviso`. `abrirEdicion` (en la página) cancela
-  // la edición en línea antes de abrir el formulario, e iniciar una edición en
-  // línea limpia el aviso: se cancelan mutuamente, nunca coexisten.
+  // INVARIANTE: la edición en línea y el panel nunca coexisten (la página cancela
+  // la edición en línea antes de abrir el panel).
   const [edicionInlineId, setEdicionInlineId] = useState<string | null>(null)
   const [edicionInlineValor, setEdicionInlineValor] = useState('')
-  // INVARIANTE: `autoFixedRef` se monta a nivel de página (este hook vive en
-  // `Asignaciones.tsx`, nunca dentro de una vista `VistaPor*`), y se pone a
-  // `true` antes de lanzar las promesas de `redistribuirPct`, no después. Un
-  // remonte del hook (p. ej. si viviera en una vista que se desmonta al
-  // cambiar de pestaña) relanzaría los `PUT` masivos de redistribución —cada
-  // uno con su propio header `X-Aplicacion` resuelto por asignación— en cada
-  // montaje.
-  const autoFixedRef = useRef(false)
 
-  const resolverAppAsignacion = useCallback((asig: AsignacionItem) => {
-    if (asig.aplicacion_id) return asig.aplicacion_id
-    const reqId = asig.proyectos.find((p) => p.requerimiento_id)?.requerimiento_id
-    const req = reqId ? requerimientos.find((item) => item.id === reqId) : null
-    return req?.aplicacion_id ?? activa
-  }, [activa, requerimientos])
+  const appDe = useCallback(
+    (asig: AsignacionItem) => resolverAppAsignacion(asig, requerimientoPorId, activa),
+    [activa, requerimientoPorId],
+  )
 
-  const validarCapacidad = useCallback((pid: string, nuevoPct: number, excluyendoId?: string) => {
-    const usado = capacidadUsada(pid, excluyendoId)
-    if (usado + nuevoPct > 100) {
-      setAviso(`La persona ya tiene ${usado}% asignado en requerimientos activos. Agregar ${nuevoPct}% superaría el 100%.`)
-      return false
+  const cuerpoActualizacion = (asig: AsignacionItem, cambios: Partial<{
+    persona_id: string
+    categoria_id: string
+    total_porcentaje: number
+    proyectos: AsignacionItem['proyectos']
+  }>) => ({
+    persona_id: asig.persona_id,
+    categoria_id: asig.categoria_id,
+    total_porcentaje: asig.total_porcentaje,
+    estado: asig.estado ?? 'active',
+    activo: asig.activo ?? true,
+    prioridad: asig.prioridad === true,
+    proyectos: asig.proyectos,
+    ...cambios,
+  })
+
+  /** Alta. Devuelve el mensaje de error o `null` si se creó. */
+  const crear = useCallback(async (datos: DatosAsignacion): Promise<string | null> => {
+    if (!puedeEditar) return 'No tienes permiso para crear asignaciones.'
+    if (!Number.isFinite(datos.porcentaje) || datos.porcentaje < 0 || datos.porcentaje > 100) {
+      return 'El % de carga debe estar entre 0 y 100.'
     }
-    return true
-  }, [capacidadUsada])
+    const errorCapacidad = mensajeCapacidad(capacidadUsada(datos.personaId), datos.porcentaje)
+    if (errorCapacidad) return errorCapacidad
 
-  /** Actualiza el % de todas las asignaciones activas de una persona a distribución equitativa */
-  const redistribuirPct = useCallback(async (pid: string, excluyendoId?: string) => {
-    const activas = asignaciones.filter((a) =>
-      a.persona_id === pid &&
-      a.id !== excluyendoId &&
-      a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id)),
-    )
-    if (activas.length === 0) return
-    const pct = Math.round(100 / activas.length)
-    await Promise.allSettled(
-      activas.map((a) =>
-        client.put(
-          `/asignaciones/${a.id}`,
-          { persona_id: a.persona_id, categoria_id: a.categoria_id, total_porcentaje: pct,
-            estado: a.estado ?? 'active', activo: a.activo ?? true, proyectos: a.proyectos },
-          cabecerasAplicacion(resolverAppAsignacion(a)),
-        )
-      ),
-    )
-  }, [asignaciones, reqIdsActivos, resolverAppAsignacion])
-
-  // Al cargar, auto-corrige si alguna persona supera el 100%
-  useEffect(() => {
-    if (autoFixedRef.current || asignaciones.length === 0 || reqIdsActivos.size === 0) return
-    const totalesPorPersona = new Map<string, number>()
-    for (const a of asignaciones) {
-      if (a.proyectos.some((p) => p.requerimiento_id && reqIdsActivos.has(p.requerimiento_id))) {
-        totalesPorPersona.set(a.persona_id, (totalesPorPersona.get(a.persona_id) ?? 0) + a.total_porcentaje)
-      }
+    if (datos.requerimientoId && asignacionExistente(datos.personaId, datos.requerimientoId)) {
+      return 'Esta persona ya tiene una asignación para ese requerimiento'
     }
-    const conExceso = [...totalesPorPersona.entries()]
-      .filter(([, total]) => Math.round(total) > 100)
-      .map(([pid]) => pid)
-    autoFixedRef.current = true
-    if (conExceso.length > 0) {
-      Promise.allSettled(conExceso.map((pid) => redistribuirPct(pid)))
-        .then(() => recargar())
-        .catch(() => {})
-    }
-  }, [asignaciones, reqIdsActivos, redistribuirPct, recargar])
-
-  const crear = useCallback(async (e: FormEvent) => {
-    e.preventDefault()
-    if (!puedeEditar) return
-    setAviso('')
-
-    const nuevoPct = porcentaje ? Number(porcentaje) : 0
-    if (!validarCapacidad(personaId, nuevoPct)) return
-
-    const duplicado = requerimientoId && asignaciones.some((a) =>
-      a.persona_id === personaId &&
-      a.proyectos.some((p) => p.requerimiento_id === requerimientoId),
-    )
-    if (duplicado) {
-      setAviso('Esta persona ya tiene una asignación para ese requerimiento')
-      return
-    }
-
-    const aplicacionId = resolverAppCreacion()
-    if (!aplicacionId) {
-      setAviso('En modo consolidado debes seleccionar primero un requerimiento para crear la asignación.')
-      return
+    if (!datos.aplicacionId) {
+      return 'En modo consolidado debes seleccionar primero un requerimiento para crear la asignación.'
     }
 
     try {
-      // Usar el porcentaje ingresado por el usuario
-      await client.post(
+      const respuesta = await client.post<{ id?: string }>(
         '/asignaciones',
         {
-          persona_id: personaId,
-          categoria_id: categoriaId,
-          total_porcentaje: nuevoPct,
+          persona_id: datos.personaId,
+          categoria_id: datos.categoriaId,
+          total_porcentaje: datos.porcentaje,
           estado: 'active',
           activo: true,
-          proyectos: requerimientoId
-            ? [{ nombre: opcionReqSeleccionada?.label ?? '', estado: 'active', requerimiento_id: requerimientoId }]
+          proyectos: datos.requerimientoId
+            ? [{ nombre: datos.etiquetaRequerimiento, estado: 'active', requerimiento_id: datos.requerimientoId }]
             : [],
         },
-        cabecerasAplicacion(aplicacionId),
+        cabecerasAplicacion(datos.aplicacionId),
       )
-      limpiarFormulario()
+      const nuevoId = respuesta.data?.id
+      if (datos.prioridad && nuevoId) {
+        try {
+          await client.patch(`/asignaciones/${nuevoId}/prioridad`, {}, cabecerasAplicacion(datos.aplicacionId))
+        } catch (err) {
+          registrarErrorFila(nuevoId, `Se creó, pero no se pudo marcar como prioridad: ${mensajeError(err)}`)
+        }
+      }
       await recargar()
+      return null
     } catch (err) {
-      setAviso(mensajeError(err))
+      return mensajeError(err)
     }
-  }, [asignaciones, categoriaId, limpiarFormulario, opcionReqSeleccionada, personaId, porcentaje, puedeEditar, recargar, requerimientoId, reqIdsActivos, redistribuirPct, resolverAppCreacion, validarCapacidad])
+  }, [asignacionExistente, capacidadUsada, puedeEditar, recargar, registrarErrorFila])
 
-  const actualizar = useCallback(async (e: FormEvent) => {
-    e.preventDefault()
-    if (!puedeEditar) return
-    if (!editandoAsig) return
-    setAviso('')
-
-    const nuevoPct = porcentaje ? Number(porcentaje) : 0
-    if (!validarCapacidad(personaId, nuevoPct, editandoAsig.id)) return
-
-    const aplicacionId = resolverAppAsignacion(editandoAsig)
-    if (!aplicacionId) {
-      setAviso('No fue posible determinar la aplicación de la asignación.')
-      return
+  /** Edición desde el panel. Devuelve el mensaje de error o `null` si se guardó. */
+  const actualizar = useCallback(async (asig: AsignacionItem, datos: DatosAsignacion): Promise<string | null> => {
+    if (!puedeEditar) return 'No tienes permiso para editar asignaciones.'
+    if (!Number.isFinite(datos.porcentaje) || datos.porcentaje < 0 || datos.porcentaje > 100) {
+      return 'El % de carga debe estar entre 0 y 100.'
     }
+    const errorCapacidad = mensajeCapacidad(capacidadUsada(datos.personaId, asig.id), datos.porcentaje)
+    if (errorCapacidad) return errorCapacidad
+
+    const reqOriginal = asig.proyectos.find((p) => p.requerimiento_id)?.requerimiento_id ?? ''
+    if (datos.requerimientoId && asignacionExistente(datos.personaId, datos.requerimientoId, asig.id)) {
+      return 'Esta persona ya tiene una asignación para ese requerimiento'
+    }
+
+    const aplicacionId = appDe(asig)
+    if (!aplicacionId) return 'No fue posible determinar la aplicación de la asignación.'
+
+    // Si el requerimiento no cambió se conservan los proyectos tal cual.
+    const proyectos = datos.requerimientoId === reqOriginal
+      ? asig.proyectos
+      : datos.requerimientoId
+        ? [{ nombre: datos.etiquetaRequerimiento, estado: 'active', requerimiento_id: datos.requerimientoId }]
+        : []
 
     try {
       await client.put(
-        `/asignaciones/${editandoAsig.id}`,
-        {
-          persona_id: personaId,
-          categoria_id: categoriaId,
-          total_porcentaje: nuevoPct,
-          estado: editandoAsig.estado ?? 'active',
-          activo: editandoAsig.activo ?? true,
-          proyectos: requerimientoId
-            ? [{ nombre: opcionReqSeleccionada?.label ?? etiquetaReq(requerimientoId), estado: 'active', requerimiento_id: requerimientoId }]
-            : [],
-        },
+        `/asignaciones/${asig.id}`,
+        cuerpoActualizacion(asig, {
+          persona_id: datos.personaId,
+          categoria_id: datos.categoriaId,
+          total_porcentaje: datos.porcentaje,
+          proyectos: proyectos as AsignacionItem['proyectos'],
+        }),
         cabecerasAplicacion(aplicacionId),
       )
-      limpiarFormulario()
+      if (datos.prioridad !== (asig.prioridad === true)) {
+        try {
+          await client.patch(`/asignaciones/${asig.id}/prioridad`, {}, cabecerasAplicacion(aplicacionId))
+        } catch (err) {
+          registrarErrorFila(asig.id, `Se guardó, pero no se pudo cambiar la prioridad: ${mensajeError(err)}`)
+        }
+      }
       await recargar()
+      return null
     } catch (err) {
-      setAviso(mensajeError(err))
+      return mensajeError(err)
     }
-  }, [categoriaId, editandoAsig, etiquetaReq, limpiarFormulario, opcionReqSeleccionada, personaId, porcentaje, puedeEditar, recargar, requerimientoId, resolverAppAsignacion, validarCapacidad])
-
-  const eliminar = useCallback(async (asig: AsignacionItem) => {
-    if (!puedeEditar) return
-    if (!window.confirm('¿Eliminar esta asignación?')) return
-    setAviso('')
-
-    const aplicacionId = resolverAppAsignacion(asig)
-    if (!aplicacionId) {
-      setAviso('No fue posible determinar la aplicación de la asignación.')
-      return
-    }
-
-    try {
-      await client.delete(`/asignaciones/${asig.id}`, cabecerasAplicacion(aplicacionId))
-      if (editandoAsig?.id === asig.id) limpiarFormulario()
-      // Redistribuir % entre las asignaciones restantes
-      await redistribuirPct(asig.persona_id, asig.id)
-      await recargar()
-    } catch (err) {
-      setAviso(mensajeError(err))
-    }
-  }, [editandoAsig?.id, limpiarFormulario, puedeEditar, recargar, redistribuirPct, resolverAppAsignacion])
+  }, [appDe, asignacionExistente, capacidadUsada, puedeEditar, recargar, registrarErrorFila])
 
   const iniciarEdicionInline = useCallback((asig: AsignacionItem) => {
     if (!puedeEditar) return
-    setAviso('')
+    registrarErrorFila(asig.id, '')
     setEdicionInlineId(asig.id)
     setEdicionInlineValor(String(asig.total_porcentaje))
-  }, [puedeEditar])
+  }, [puedeEditar, registrarErrorFila])
 
   const cancelarEdicionInline = useCallback(() => {
     setEdicionInlineId(null)
@@ -245,47 +205,79 @@ export function useEscriturasAsignaciones({
     if (!puedeEditar) return
     if (edicionInlineId !== asig.id) return
 
-    const nuevoPct = edicionInlineValor ? Number(edicionInlineValor) : 0
-    setAviso('')
-    if (!validarCapacidad(asig.persona_id, nuevoPct, asig.id)) return
+    registrarErrorFila(asig.id, '')
+    const nuevoPct = edicionInlineValor === '' ? 0 : Number(edicionInlineValor)
+    if (!Number.isFinite(nuevoPct) || nuevoPct < 0 || nuevoPct > 100) {
+      registrarErrorFila(asig.id, 'El % de carga debe estar entre 0 y 100.')
+      return
+    }
+    if (nuevoPct === asig.total_porcentaje) {
+      cancelarEdicionInline()
+      return
+    }
+    const errorCapacidad = mensajeCapacidad(capacidadUsada(asig.persona_id, asig.id), nuevoPct)
+    if (errorCapacidad) {
+      registrarErrorFila(asig.id, errorCapacidad)
+      return
+    }
 
-    const aplicacionId = resolverAppAsignacion(asig)
+    const aplicacionId = appDe(asig)
     if (!aplicacionId) {
-      setAviso('No fue posible determinar la aplicación de la asignación.')
+      registrarErrorFila(asig.id, 'No fue posible determinar la aplicación de la asignación.')
       return
     }
 
     try {
       await client.put(
         `/asignaciones/${asig.id}`,
-        {
-          persona_id: asig.persona_id,
-          categoria_id: asig.categoria_id,
-          total_porcentaje: nuevoPct,
-          estado: asig.estado ?? 'active',
-          activo: asig.activo ?? true,
-          proyectos: asig.proyectos,
-        },
+        cuerpoActualizacion(asig, { total_porcentaje: nuevoPct }),
         cabecerasAplicacion(aplicacionId),
       )
       cancelarEdicionInline()
       await recargar()
     } catch (err) {
-      setAviso(mensajeError(err))
+      registrarErrorFila(asig.id, mensajeError(err))
     }
-  }, [cancelarEdicionInline, edicionInlineId, edicionInlineValor, puedeEditar, recargar, resolverAppAsignacion, validarCapacidad])
+  }, [appDe, cancelarEdicionInline, capacidadUsada, edicionInlineId, edicionInlineValor, puedeEditar, recargar, registrarErrorFila])
 
   const cambiarPrioridad = useCallback(async (asig: AsignacionItem) => {
     if (!puedeEditar) return
-    const aplicacionId = resolverAppAsignacion(asig)
+    const aplicacionId = appDe(asig)
     if (!aplicacionId) return
+    registrarErrorFila(asig.id, '')
     try {
       await client.patch(`/asignaciones/${asig.id}/prioridad`, {}, cabecerasAplicacion(aplicacionId))
       await recargar()
     } catch (err) {
-      setAviso(mensajeError(err))
+      registrarErrorFila(asig.id, mensajeError(err))
     }
-  }, [puedeEditar, recargar, resolverAppAsignacion])
+  }, [appDe, puedeEditar, recargar, registrarErrorFila])
+
+  /**
+   * Aplica un reparto propuesto (ya mostrado con vista previa y confirmado por
+   * el usuario). Devuelve los fallos por fila; las que sí se guardaron quedan.
+   */
+  const aplicarReparto = useCallback(async (filas: FilaReparto[]): Promise<FalloReparto[]> => {
+    if (!puedeEditar) return [{ asigId: '', mensaje: 'No tienes permiso para editar asignaciones.' }]
+    const cambios = filas.filter((f) => f.pctNuevo !== f.pctActual)
+    const resultados = await Promise.allSettled(
+      cambios.map((f) =>
+        client.put(
+          `/asignaciones/${f.asig.id}`,
+          cuerpoActualizacion(f.asig, { total_porcentaje: f.pctNuevo }),
+          cabecerasAplicacion(appDe(f.asig)),
+        ),
+      ),
+    )
+    const fallos: FalloReparto[] = []
+    resultados.forEach((resultado, i) => {
+      if (resultado.status === 'rejected') {
+        fallos.push({ asigId: cambios[i].asig.id, mensaje: mensajeError(resultado.reason) })
+      }
+    })
+    await recargar()
+    return fallos
+  }, [appDe, puedeEditar, recargar])
 
   const onInlineKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -298,8 +290,8 @@ export function useEscriturasAsignaciones({
   return {
     crear,
     actualizar,
-    eliminar,
     cambiarPrioridad,
+    aplicarReparto,
     edicionInlineId,
     edicionInlineValor,
     setEdicionInlineValor,

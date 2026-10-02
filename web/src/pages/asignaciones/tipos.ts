@@ -51,18 +51,46 @@ export interface GrupoReq {
    *  `email: null` y correos que no coinciden con ningún `Persona.email`).
    *  `null` si el grupo no tiene Feature vinculada. */
   horasAzureSinPersona: HorasAzureGrupo | null
+  /** Suma de todas las horas de Azure de la Feature (con o sin persona).
+   *  `null` si el grupo no tiene Feature vinculada. */
+  horasAzureTotal: HorasAzureGrupo | null
   items: ItemGrupo[]
+}
+
+export interface RequerimientoDePersona {
+  reqId: string | null
+  reqLabel: string
+  reqEstado: string | null
+  asig: AsignacionItem
+  horasCarga: number
 }
 
 export interface GrupoPersona {
   persona: Persona
-  reqs: {
-    reqId: string | null
-    reqLabel: string
-    reqEstado: string | null
-    asig: AsignacionItem
-    horasCarga: number
-  }[]
+  reqs: RequerimientoDePersona[]
+}
+
+/** Filtro "Mostrar" de la barra: todo, solo con alerta (sobrecarga) o solo prioridad. */
+export type FiltroMostrar = 'todo' | 'alerta' | 'prioridad'
+
+export type OrdenPersonas = 'carga' | 'nombre'
+
+export type VistaAsignaciones = 'actas' | 'personas'
+
+export interface FiltrosAsignaciones {
+  vista: VistaAsignaciones
+  estado: string
+  persona: string
+  mostrar: FiltroMostrar
+  orden: OrdenPersonas
+}
+
+export const FILTROS_INICIALES: FiltrosAsignaciones = {
+  vista: 'actas',
+  estado: '__todos__',
+  persona: '__todos__',
+  mostrar: 'todo',
+  orden: 'carga',
 }
 
 export interface WoPersona {

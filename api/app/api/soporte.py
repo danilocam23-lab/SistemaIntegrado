@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 
 """API de Soporte / Solicitudes Fábrica."""
+import re
+
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -180,28 +182,39 @@ async def ejecutar_carga_automatica(
 @router.get("/wo-por-persona")
 async def wo_por_persona(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    _: object = permiso("asignaciones.ver"),
 ) -> list[dict]:
-    """Devuelve WOs con campos clave para cruzar con personas en Asignaciones."""
+    """Devuelve WOs con campos clave para cruzar con personas en Asignaciones.
+
+    Lo consume la pantalla de Asignaciones, por eso exige ``asignaciones.ver``.
+    La consulta se acota en Mongo (asignadas y no cerradas) y solo trae los
+    campos que se devuelven.
+    """
     from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabrica
 
-    registros = await SoporteSolicitudFabrica.find(
-        {"aplicacion_id": {"$in": ctx.codigos}}
-    ).to_list()
+    consulta = ctx.filtro()
+    consulta["datos.Assigned To"] = {"$nin": [None, ""]}
+    consulta["datos.Status WO"] = {
+        "$not": re.compile(r"^\s*(cerrado|cancelado|terminado)\s*$", re.IGNORECASE)
+    }
+    campos = ("Assigned To", "Status WO", "Work Order ID", "Priority",
+              "Fecha_Requerida_Inicio", "Detailed Description")
+    proyeccion = {f"datos.{c}": 1 for c in campos}
     resultado = []
-    for r in registros:
-        d = r.datos or {}
-        assigned = d.get("Assigned To", "").strip()
-        status = d.get("Status WO", "").strip()
+    async for r in SoporteSolicitudFabrica.get_pymongo_collection().find(consulta, proyeccion):
+        d = r.get("datos") or {}
+        assigned = (d.get("Assigned To") or "").strip()
+        status = (d.get("Status WO") or "").strip()
         if not assigned or status.lower() in ("cerrado", "cancelado", "terminado"):
             continue
         resultado.append({
-            "id": str(r.id),
-            "wo_id": d.get("Work Order ID", ""),
+            "id": str(r["_id"]),
+            "wo_id": d.get("Work Order ID") or "",
             "assigned_to": assigned,
-            "status": d.get("Status WO", ""),
-            "priority": d.get("Priority", ""),
-            "created_date": d.get("Fecha_Requerida_Inicio", ""),
-            "descripcion": d.get("Detailed Description", ""),
+            "status": d.get("Status WO") or "",
+            "priority": d.get("Priority") or "",
+            "created_date": d.get("Fecha_Requerida_Inicio") or "",
+            "descripcion": d.get("Detailed Description") or "",
         })
     return resultado
 

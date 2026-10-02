@@ -69,7 +69,7 @@ export default function App() {
               <Route path="tarifas" element={<Navigate to="/configuracion" replace />} />
               <Route path="personas" element={<Personas />} />
               <Route path="categorias" element={<Navigate to="/configuracion" replace />} />
-              <Route path="asignaciones" element={<Asignaciones />} />
+              <Route path="asignaciones" element={<RoleRoute permiso="asignaciones.ver"><Asignaciones /></RoleRoute>} />
               <Route path="capacidades" element={<Capacidades />} />
               <Route path="planes-accion" element={<RoleRoute permiso="planes_accion.ver"><PlanesAccion /></RoleRoute>} />
               <Route path="control-horas-facturable" element={<RoleRoute permiso="control_horas_facturable.ver"><ControlHorasFacturable /></RoleRoute>} />

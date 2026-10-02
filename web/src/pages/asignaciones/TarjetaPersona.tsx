@@ -1,26 +1,19 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { Campo, Chip, Icono, TablaScroll } from '../../components/ui'
+import { Boton, Chip, Icono, TablaScroll } from '../../components/ui'
 import type { BacklogFuturo, Categoria } from '../../types'
+import { ETIQUETA_NIVEL, formatearPct, nivelCarga, TONO_CHIP_NIVEL } from './carga'
+import type { CargaPersona } from './carga'
 import { tonoEstadoChip } from './estados'
-import type { GrupoPersona, WoPersona } from './tipos'
+import type { AsignacionItem, GrupoPersona, WoPersona } from './tipos'
+import { AvatarPersona } from './AvatarPersona'
+import { FilaAsignacionMovil } from './FilaAsignacionMovil'
+import { MedidorCarga } from './MedidorCarga'
+import { PorcentajeEditable } from './PorcentajeEditable'
+import { TablaBacklogPersona } from './TablaBacklogPersona'
 import { TablaWoPersona } from './TablaWoPersona'
 import type { useEscriturasAsignaciones } from './useEscriturasAsignaciones'
-
-const ESTADO_BACKLOG_LABEL: Record<string, string> = {
-  PENDIENTE: 'Pendiente',
-  EN_PROGRESO: 'En progreso',
-  COMPLETADO: 'Completado',
-  CANCELADO: 'Cancelado',
-}
-
-const ESTADO_BACKLOG_TONO: Record<string, 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'> = {
-  PENDIENTE: 'alerta',
-  EN_PROGRESO: 'marca',
-  COMPLETADO: 'exito',
-  CANCELADO: 'neutro',
-}
 
 interface Props {
   grupo: GrupoPersona
@@ -29,15 +22,22 @@ interface Props {
   categoriaPorId: Map<string, Categoria>
   wos: WoPersona[]
   backlogFuturo: BacklogFuturo[]
+  carga: CargaPersona
   puedeEditarAsignaciones: boolean
   escrituras: ReturnType<typeof useEscriturasAsignaciones>
+  erroresFila: Record<string, string>
+  onCerrarError: (asigId: string) => void
+  onEditar: (asig: AsignacionItem) => void
+  onEliminar: (asig: AsignacionItem) => void
+  onAsignar: (personaId: string) => void
+  onRepartir: (personaId: string) => void
 }
 
 /**
- * Tarjeta de una persona en la vista "Por Personas": cabecera con contadores
- * (asignaciones, horas de carga, backlog futuro y WO) + tabla de
- * requerimientos asignados + bloque informativo de backlog futuro + tabla de
- * WO de soporte.
+ * Tarjeta de una persona en la vista "Por Personas": cabecera con medidor de
+ * carga y contadores (asignaciones, horas, backlog futuro y WO) + tabla de
+ * requerimientos asignados (con Editar / Eliminar) + bloques plegables de
+ * backlog futuro informativo y de WO de soporte.
  */
 export function TarjetaPersona({
   grupo,
@@ -46,150 +46,219 @@ export function TarjetaPersona({
   categoriaPorId,
   wos,
   backlogFuturo,
+  carga,
   puedeEditarAsignaciones,
   escrituras,
+  erroresFila,
+  onCerrarError,
+  onEditar,
+  onEliminar,
+  onAsignar,
+  onRepartir,
 }: Props) {
-  const totalHoras = grupo.reqs.reduce((s, r) => s + r.horasCarga, 0)
+  const { persona } = grupo
+  const nivel = nivelCarga(carga.total)
+  const sobrecarga = nivel === 'sobrecarga'
 
   return (
-    <section className="tarjeta overflow-hidden">
-      <div className="flex items-center justify-between gap-3 bg-marca-osc px-4 py-3 text-white">
+    <section id={`persona-${persona.id}`} className="tarjeta scroll-mt-4 overflow-hidden">
+      <div className="grid items-center gap-x-4 gap-y-2 bg-slate-50 px-3.5 py-2.5 md:grid-cols-[minmax(150px,1fr)_minmax(210px,280px)_auto]">
         <button
           type="button"
           onClick={onToggle}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          aria-expanded={expandida}
+          className="flex min-w-0 items-center gap-2 rounded text-left"
         >
-          <Icono nombre="chevron-abajo" className={`transition-transform ${expandida ? '' : '-rotate-90'}`} />
-          <span className="truncate text-sm font-semibold">{grupo.persona.nombre}</span>
-          <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-xs">{grupo.reqs.length} asignaciones</span>
-          <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-xs">{totalHoras.toFixed(0)}h carga</span>
-          {backlogFuturo.length > 0 && (
-            <span className="shrink-0 rounded-full bg-red-400/30 px-2 py-0.5 text-xs">{backlogFuturo.length} backlog</span>
-          )}
-          {wos.length > 0 && (
-            <span className="shrink-0 rounded-full bg-emerald-400/30 px-2 py-0.5 text-xs">{wos.length} WO</span>
-          )}
+          <Icono nombre="chevron-abajo" className={`shrink-0 text-slate-500 transition-transform ${expandida ? '' : '-rotate-90'}`} />
+          <AvatarPersona nombre={persona.nombre} />
+          <span className="min-w-0">
+            <b className="block truncate text-sm text-marca-osc">{persona.nombre}</b>
+            <span className="block text-[11px] text-slate-500">
+              {persona.rol_operativo || 'Sin rol'} · capacidad {formatearPct(carga.capacidadHoras)} h
+              {carga.capacidadPorDefecto && ' · por defecto'}
+            </span>
+          </span>
         </button>
-      </div>
-      {expandida && (
-        <div className="space-y-0">
-          <TablaScroll plano>
-            <table className="tabla">
-              <thead>
-                <tr>
-                  <th className="text-left">Requerimiento</th>
-                  <th className="text-left">Estado</th>
-                  <th className="text-left">Categoría</th>
-                  <th className="text-right">%</th>
-                  <th className="text-right">Horas carga</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grupo.reqs.map((r) => {
-                  const enEdicionInline = escrituras.edicionInlineId === r.asig.id
 
-                  return (
-                    <tr key={r.asig.id}>
-                      <td className="font-medium">{r.reqLabel}</td>
-                      <td>
-                        {r.reqEstado && (
-                          <Chip tono={tonoEstadoChip(r.reqEstado)} className="px-2 py-0.5 text-[10px]">
-                            {r.reqEstado}
-                          </Chip>
-                        )}
-                      </td>
-                      <td>{categoriaPorId.get(r.asig.categoria_id)?.nombre ?? '—'}</td>
-                      <td className="text-right font-medium">
-                        {enEdicionInline ? (
-                          <Campo
-                            autoFocus
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={escrituras.edicionInlineValor}
-                            onChange={(e) => escrituras.setEdicionInlineValor(e.target.value)}
-                            onBlur={() => void escrituras.guardarEdicionInline(r.asig)}
-                            onKeyDown={escrituras.onInlineKeyDown}
-                            compacto
-                            className="ml-auto w-20 text-right"
-                          />
-                        ) : (
-                          <span className="inline-flex items-center gap-1">
-                            <span className={r.asig.total_porcentaje === 0 ? 'text-red-500' : ''}>
-                              {r.asig.total_porcentaje}%
-                            </span>
-                            {puedeEditarAsignaciones && (
-                              <button
-                                type="button"
-                                onClick={() => escrituras.iniciarEdicionInline(r.asig)}
-                                title="Editar %"
-                                className="text-slate-400 hover:text-marca"
-                              >
-                                <Icono nombre="lapiz" tamano={14} />
-                              </button>
-                            )}
-                          </span>
-                        )}
-                      </td>
-                      <td className="text-right font-mono">{r.horasCarga.toFixed(1)}</td>
-                    </tr>
-                  )
-                })}
-                {grupo.reqs.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-4 text-center text-sm text-slate-400">
-                      Sin asignaciones reales para mostrar.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </TablaScroll>
-          {backlogFuturo.length > 0 && (
-            <div className="border-t bg-red-50/70 px-3 py-2">
-              {/* Se separa del bloque de asignaciones para dejar claro que no es carga real editable. */}
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-red-700">
-                Backlog futuro informativo ({backlogFuturo.length})
-              </p>
-              <TablaScroll plano>
-                <table className="tabla">
-                  <thead>
-                    <tr>
-                      <th className="text-left">Iniciativa</th>
-                      <th className="text-left">Contexto</th>
-                      <th className="text-left">Tipo de demanda</th>
-                      <th className="text-left">Estado</th>
-                      <th className="text-center">F. tentativa de inicio</th>
-                      <th className="text-right">Horas aprox.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {backlogFuturo.map((item) => (
-                      <tr key={item.id} className="bg-red-50 text-red-700">
-                        <td className="font-medium">{item.nombre_iniciativa}</td>
-                        <td>
-                          <Chip tono="error" className="px-2 py-0.5 text-[10px]">
-                            Backlog futuro
-                          </Chip>
-                        </td>
-                        <td>{item.tipo_demanda || '—'}</td>
-                        <td>
-                          <Chip tono={ESTADO_BACKLOG_TONO[item.estado] ?? 'neutro'} className="px-2 py-0.5 text-[10px]">
-                            {ESTADO_BACKLOG_LABEL[item.estado] ?? item.estado}
-                          </Chip>
-                        </td>
-                        <td className="text-center">{item.fecha_tentativa_inicio || '—'}</td>
-                        <td className="text-right font-mono">{(item.horas_aproximadas ?? 0).toFixed(1)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TablaScroll>
-            </div>
+        <div>
+          <MedidorCarga
+            activa={carga.activa}
+            sinReq={carga.sinReq}
+            otros={carga.otros}
+            etiqueta={persona.nombre}
+            leyenda
+          />
+          <div className="mt-1 flex justify-between gap-2 text-[11px] text-slate-500">
+            <span className="inline-flex items-center gap-1.5">
+              <Chip tono={TONO_CHIP_NIVEL[nivel]}>
+                {formatearPct(carga.total)}% · {ETIQUETA_NIVEL[nivel]}
+              </Chip>
+            </span>
+            <span className={`tabular-nums ${sobrecarga ? 'font-bold text-red-600' : ''}`}>
+              {carga.horas.toFixed(1)} h de {formatearPct(carga.capacidadHoras)} h
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 md:justify-end">
+          <Chip tono="neutro">
+            {grupo.reqs.length} asignación{grupo.reqs.length === 1 ? '' : 'es'}
+          </Chip>
+          {backlogFuturo.length > 0 && <Chip tono="error">{backlogFuturo.length} backlog</Chip>}
+          {wos.length > 0 && <Chip tono="exito">{wos.length} WO</Chip>}
+          {puedeEditarAsignaciones && (
+            <>
+              {sobrecarga && carga.nActivas > 0 && (
+                <Boton tamano="sm" variante="alerta" onClick={() => onRepartir(persona.id)}>
+                  Repartir…
+                </Boton>
+              )}
+              <Boton tamano="sm" variante="suave" onClick={() => onAsignar(persona.id)}>
+                + Asignar
+              </Boton>
+            </>
           )}
+        </div>
+      </div>
+
+      {expandida && (
+        <div>
+          <div className="hidden md:block">
+            <TablaScroll plano>
+              <table className="tabla">
+                <thead>
+                  <tr>
+                    <th className="text-left">Requerimiento</th>
+                    <th className="text-left">Estado</th>
+                    <th className="text-left">Categoría</th>
+                    <th className="text-right">%</th>
+                    <th className="text-right">Horas carga</th>
+                    <th className="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grupo.reqs.map((r) => (
+                    <FilaPersonaReq
+                      key={r.asig.id}
+                      r={r}
+                      categoriaPorId={categoriaPorId}
+                      puedeEditarAsignaciones={puedeEditarAsignaciones}
+                      escrituras={escrituras}
+                      errorFila={erroresFila[r.asig.id]}
+                      onCerrarError={onCerrarError}
+                      onEditar={onEditar}
+                      onEliminar={onEliminar}
+                    />
+                  ))}
+                  {grupo.reqs.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-4 text-center text-sm text-slate-400">
+                        Sin asignaciones reales para mostrar.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </TablaScroll>
+          </div>
+
+          <ul className="grid gap-2 p-2.5 md:hidden">
+            {grupo.reqs.map((r) => (
+              <FilaAsignacionMovil
+                key={r.asig.id}
+                asig={r.asig}
+                titulo={r.reqLabel}
+                detalle={
+                  <span className="inline-flex flex-wrap items-center gap-1.5">
+                    {categoriaPorId.get(r.asig.categoria_id)?.nombre ?? '—'}
+                    {r.reqEstado && (
+                      <Chip tono={tonoEstadoChip(r.reqEstado)} className="px-2 py-0.5 text-[10px]">{r.reqEstado}</Chip>
+                    )}
+                  </span>
+                }
+                horasCarga={r.horasCarga}
+                puedeEditar={puedeEditarAsignaciones}
+                escrituras={escrituras}
+                errorFila={erroresFila[r.asig.id]}
+                onCerrarError={onCerrarError}
+                onEditar={onEditar}
+                onEliminar={onEliminar}
+              />
+            ))}
+            {grupo.reqs.length === 0 && (
+              <li className="py-3 text-center text-sm text-slate-400">Sin asignaciones reales para mostrar.</li>
+            )}
+          </ul>
+
+          <TablaBacklogPersona backlogFuturo={backlogFuturo} />
           <TablaWoPersona wos={wos} />
         </div>
       )}
     </section>
+  )
+}
+
+interface PropsFila {
+  r: GrupoPersona['reqs'][number]
+  categoriaPorId: Map<string, Categoria>
+  puedeEditarAsignaciones: boolean
+  escrituras: ReturnType<typeof useEscriturasAsignaciones>
+  errorFila: string | undefined
+  onCerrarError: (asigId: string) => void
+  onEditar: (asig: AsignacionItem) => void
+  onEliminar: (asig: AsignacionItem) => void
+}
+
+/** Fila (escritorio) de un requerimiento asignado a la persona. */
+function FilaPersonaReq({
+  r,
+  categoriaPorId,
+  puedeEditarAsignaciones,
+  escrituras,
+  errorFila,
+  onCerrarError,
+  onEditar,
+  onEliminar,
+}: PropsFila) {
+  return (
+    <>
+      <tr>
+        <td className="font-medium">{r.reqLabel}</td>
+        <td>
+          {r.reqEstado && (
+            <Chip tono={tonoEstadoChip(r.reqEstado)} className="px-2 py-0.5 text-[10px]">
+              {r.reqEstado}
+            </Chip>
+          )}
+        </td>
+        <td>{categoriaPorId.get(r.asig.categoria_id)?.nombre ?? '—'}</td>
+        <td className="text-right font-medium">
+          <PorcentajeEditable asig={r.asig} puedeEditar={puedeEditarAsignaciones} escrituras={escrituras} />
+        </td>
+        <td className="text-right font-mono">{r.horasCarga.toFixed(1)}</td>
+        <td className="whitespace-nowrap text-center">
+          {puedeEditarAsignaciones && (
+            <div className="flex items-center justify-center gap-3">
+              <button type="button" onClick={() => onEditar(r.asig)} className="enlace-accion">Editar</button>
+              <button type="button" onClick={() => onEliminar(r.asig)} className="enlace-accion enlace-accion-peligro">
+                Eliminar
+              </button>
+            </div>
+          )}
+        </td>
+      </tr>
+      {errorFila && (
+        <tr className="bg-red-50">
+          <td colSpan={6} className="!py-2 text-sm text-red-700">
+            <span role="alert" className="flex flex-wrap items-center justify-between gap-2">
+              <span>{errorFila}</span>
+              <button type="button" className="enlace-accion enlace-accion-sutil" onClick={() => onCerrarError(r.asig.id)}>
+                Cerrar
+              </button>
+            </span>
+          </td>
+        </tr>
+      )}
+    </>
   )
 }

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import client from '../../api/client'
 import { CLAVE_USUARIO_ESQUEMA } from '../../components/azure/useConfigPersonaAzure'
 import type { Requerimiento } from '../../types'
@@ -29,14 +29,20 @@ export function useHorasAzurePorFeature(requerimientos: Requerimiento[]) {
   }, [requerimientos])
 
   const [horasAzurePorFeature, setHorasAzurePorFeature] = useState<Map<number, HorasAzureFeatureEntry[]>>(new Map())
+  const [cargando, setCargando] = useState(false)
+  const [error, setError] = useState('')
+  const [intento, setIntento] = useState(0)
 
   const clave = idsUnicos.join(',')
 
   useEffect(() => {
     if (!idsUnicos.length) {
       setHorasAzurePorFeature(new Map())
+      setError('')
       return
     }
+    setCargando(true)
+    setError('')
     const usuarioId = window.localStorage.getItem(CLAVE_USUARIO_ESQUEMA)
     const parametroUsuario = usuarioId ? `&usuario_id=${usuarioId}` : ''
     client
@@ -50,8 +56,15 @@ export function useHorasAzurePorFeature(requerimientos: Requerimiento[]) {
         }
         setHorasAzurePorFeature(map)
       })
-      .catch(() => setHorasAzurePorFeature(new Map()))
-  }, [clave, idsUnicos.length])
+      .catch(() => {
+        setHorasAzurePorFeature(new Map())
+        setError('No fue posible cargar las horas de Azure DevOps')
+      })
+      .finally(() => setCargando(false))
+    // `idsUnicos` se resume en `clave`: solo se vuelve a pedir si cambian los ids o se reintenta.
+  }, [clave, intento])
 
-  return { horasAzurePorFeature }
+  const reintentar = useCallback(() => setIntento((n) => n + 1), [])
+
+  return { horasAzurePorFeature, cargandoAzure: cargando, errorAzure: error, reintentarAzure: reintentar }
 }
