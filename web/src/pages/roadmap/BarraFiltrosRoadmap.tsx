@@ -3,9 +3,8 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import { BarraFiltros, Boton, Campo, Chip, FiltroDesplegable, Selector } from '../../components/ui'
-import type { Persona } from '../../types'
 import { SIN_ASIGNAR_ID, TODOS_ID } from './derivados'
-import type { ModoAgrupacion, PresetRango } from './tipos'
+import type { ModoAgrupacion, PersonaRoadmap, PresetRango } from './tipos'
 
 interface Props {
   modo: ModoAgrupacion
@@ -19,7 +18,7 @@ interface Props {
   estadosDisponibles: string[]
   estadosActivos: Set<string>
   setEstadosActivos: Dispatch<SetStateAction<Set<string>>>
-  personas: Persona[]
+  personas: PersonaRoadmap[]
   filtroPersona: string
   onFiltroPersona: (id: string) => void
   busqueda: string

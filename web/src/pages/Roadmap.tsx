@@ -40,21 +40,18 @@ export default function Roadmap() {
         descripcion="Línea de tiempo de proyectos y entregas"
       />
 
-      {datos.errores.length > 0 && (
-        <Aviso tono={datos.hayErrorCritico ? 'error' : 'alerta'} className="mb-4">
+      {datos.hayError && (
+        <Aviso tono="error" className="mb-4">
           <span role="alert" className="flex flex-wrap items-center justify-between gap-2">
-            <span>
-              No fue posible cargar: <b>{datos.errores.map((e) => e.nombre).join(', ')}</b>.
-              {!datos.hayErrorCritico && ' Los colores de categoría o la carga pueden faltar.'}
-            </span>
-            <Boton tamano="sm" onClick={datos.reintentarFallidas}>Reintentar</Boton>
+            <span>No fue posible cargar el Roadmap.</span>
+            <Boton tamano="sm" onClick={datos.reintentar}>Reintentar</Boton>
           </span>
         </Aviso>
       )}
 
       {datos.cargandoInicial ? (
         <EsqueletoRoadmap />
-      ) : datos.hayErrorCritico ? null : (
+      ) : datos.hayError ? null : (
         <>
           <KpisRoadmap resumen={r.resumen} />
           <AvisosRoadmap

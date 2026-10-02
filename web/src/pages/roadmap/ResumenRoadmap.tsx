@@ -5,11 +5,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Aviso, Boton, Kpi } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
-import type { Requerimiento } from '../../types'
 import { formatearPct } from '../asignaciones/carga'
 import { fechaCorta } from './fechas'
 import { CLASE_HITO } from './HitosEntrega'
-import type { ReqRoadmap } from './tipos'
+import type { ReqRoadmap, RequerimientoRoadmap } from './tipos'
 import type { ResumenRoadmap } from './useRoadmap'
 
 const ROJO = '#b91c1c'
@@ -48,7 +47,7 @@ export function KpisRoadmap({ resumen }: PropsKpis) {
 interface PropsAvisos {
   resumen: ResumenRoadmap
   mostrarSobrecarga: boolean
-  sinFecha: Requerimiento[]
+  sinFecha: RequerimientoRoadmap[]
   onSeleccionarVencido: (r: ReqRoadmap) => void
 }
 

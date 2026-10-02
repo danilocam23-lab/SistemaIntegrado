@@ -1,76 +1,74 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLista } from '../../api/hooks'
-import type { Asignacion, Categoria, Persona, Requerimiento } from '../../types'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import client from '../../api/client'
+import type {
+  AsignacionRoadmap, CategoriaRoadmap, PersonaRoadmap, RequerimientoRoadmap,
+} from './tipos'
 
-export interface FuenteConError {
-  nombre: string
-  /** Sin esta fuente la pantalla no se puede dibujar. */
-  critica: boolean
-  recargar: () => void
+interface RespuestaRoadmap {
+  requerimientos?: RequerimientoRoadmap[]
+  personas?: PersonaRoadmap[]
+  categorias?: CategoriaRoadmap[]
+  asignaciones?: AsignacionRoadmap[]
+}
+
+/** Primero los de código mayor (aprox. más recientes); el backend no los ordena. */
+function porCodigoDesc(a: RequerimientoRoadmap, b: RequerimientoRoadmap): number {
+  return b.codigo_req.localeCompare(a.codigo_req, 'es', { numeric: true })
 }
 
 /**
- * Carga de datos del Roadmap (solo lectura): requerimientos y personas son
- * imprescindibles; categorías (colores) y asignaciones (carga) degradan la
- * pantalla pero no la bloquean. El error de cada fuente se informa por separado.
+ * Carga de datos del Roadmap (solo lectura) en UNA llamada a `/reportes/roadmap`
+ * (permiso `roadmap.ver`). Si falla, falla la pantalla: no hay fuentes degradables.
  */
 export function useDatosRoadmap() {
-  const lRequerimientos = useLista<Requerimiento>('/requerimientos')
-  const lPersonas = useLista<Persona>('/personas')
-  const lCategorias = useLista<Categoria>('/categorias')
-  const lAsignaciones = useLista<Asignacion>('/asignaciones')
-
-  // `cargandoInicial` solo en la primera carga: un refresco no vuelve a mostrar el esqueleto.
-  const cargando = lRequerimientos.cargando || lPersonas.cargando
-  const yaCargo = useRef(false)
+  const [respuesta, setRespuesta] = useState<RespuestaRoadmap | null>(null)
+  const [hayError, setHayError] = useState(false)
   const [cargandoInicial, setCargandoInicial] = useState(true)
-  useEffect(() => {
-    if (!cargando && !yaCargo.current) {
-      yaCargo.current = true
-      setCargandoInicial(false)
-    }
-  }, [cargando])
 
-  const { recargar: recargarRequerimientos } = lRequerimientos
-  const { recargar: recargarPersonas } = lPersonas
-  const { recargar: recargarCategorias } = lCategorias
-  const { recargar: recargarAsignaciones } = lAsignaciones
+  const cargar = useCallback(() => {
+    client
+      .get<RespuestaRoadmap>('/reportes/roadmap')
+      .then((r) => {
+        setRespuesta(r.data)
+        setHayError(false)
+      })
+      .catch(() => setHayError(true))
+      .finally(() => setCargandoInicial(false))
+  }, [])
 
+  useEffect(() => { cargar() }, [cargar])
+
+  // Un refresco no vuelve a mostrar el esqueleto (`cargandoInicial` solo es true la primera vez).
+  const reintentar = useCallback(() => {
+    setHayError(false)
+    setCargandoInicial(true)
+    cargar()
+  }, [cargar])
+
+  const requerimientos = useMemo(
+    () => [...(respuesta?.requerimientos ?? [])].sort(porCodigoDesc),
+    [respuesta],
+  )
+  const personas = useMemo(() => respuesta?.personas ?? [], [respuesta])
+  const asignaciones = useMemo(() => respuesta?.asignaciones ?? [], [respuesta])
   const categoriasPorId = useMemo(() => {
-    const mapa = new Map<string, Categoria>()
-    lCategorias.datos.forEach((c) => mapa.set(c.id, c))
+    const mapa = new Map<string, CategoriaRoadmap>()
+    ;(respuesta?.categorias ?? []).forEach((c) => mapa.set(c.id, c))
     return mapa
-  }, [lCategorias.datos])
-
-  const errores = useMemo<FuenteConError[]>(() => {
-    const lista: FuenteConError[] = []
-    if (lRequerimientos.error) lista.push({ nombre: 'Requerimientos', critica: true, recargar: recargarRequerimientos })
-    if (lPersonas.error) lista.push({ nombre: 'Personas', critica: true, recargar: recargarPersonas })
-    if (lCategorias.error) lista.push({ nombre: 'Categorías', critica: false, recargar: recargarCategorias })
-    if (lAsignaciones.error) lista.push({ nombre: 'Asignaciones', critica: false, recargar: recargarAsignaciones })
-    return lista
-  }, [
-    lRequerimientos.error, lPersonas.error, lCategorias.error, lAsignaciones.error,
-    recargarRequerimientos, recargarPersonas, recargarCategorias, recargarAsignaciones,
-  ])
-
-  const reintentarFallidas = useCallback(() => {
-    errores.forEach((e) => e.recargar())
-  }, [errores])
+  }, [respuesta])
 
   return {
-    requerimientos: lRequerimientos.datos,
-    personas: lPersonas.datos,
+    requerimientos,
+    personas,
     categoriasPorId,
-    asignaciones: lAsignaciones.datos,
+    asignaciones,
     cargandoInicial,
-    errores,
-    hayErrorCritico: errores.some((e) => e.critica),
-    /** La carga de Asignaciones es confiable (cargó sin error). */
-    cargaDisponible: !lAsignaciones.error && !lAsignaciones.cargando && !lRequerimientos.error,
-    reintentarFallidas,
+    hayError,
+    /** La carga se calcula con las asignaciones de la misma respuesta. */
+    cargaDisponible: respuesta !== null && !hayError,
+    reintentar,
   }
 }

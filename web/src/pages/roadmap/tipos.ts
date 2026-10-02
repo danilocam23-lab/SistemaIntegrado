@@ -1,7 +1,33 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import type { Requerimiento } from '../../types'
+import type { Entrega, Persona, Requerimiento } from '../../types'
+
+/** Entrega tal como la sirve `GET /reportes/roadmap` (solo lo que la pantalla usa). */
+export type EntregaRoadmapDato = Pick<Entrega, 'numero' | 'fecha_comprometida' | 'fecha_aprobacion' | 'estado'>
+
+/** Requerimiento de `GET /reportes/roadmap`: sin datos económicos; `solicitud` puede venir nula. */
+export type RequerimientoRoadmap =
+  Pick<Requerimiento, 'id' | 'codigo_req' | 'nombre' | 'estado' | 'categoria_id' | 'developers_asignados'
+    | 'fecha_inicio' | 'fecha_fin' | 'fecha_solicitud_acta'>
+  & { solicitud?: { lt_hitss_id?: string | null } | null; entregas: EntregaRoadmapDato[] }
+
+export type PersonaRoadmap = Pick<Persona, 'id' | 'nombre' | 'activo' | 'rol_operativo'>
+
+export interface CategoriaRoadmap {
+  id: string
+  nombre: string
+  color: string
+}
+
+export interface AsignacionRoadmap {
+  id: string
+  persona_id: string
+  categoria_id: string
+  total_porcentaje: number
+  estado: string
+  proyectos: { requerimiento_id: string | null }[]
+}
 
 export type TonoHito = 'ok' | 'pend' | 'bad'
 
@@ -14,7 +40,7 @@ export interface HitoEntrega {
 
 /** Requerimiento con fechas dibujables (inicio, fin y entregas ya leídos en hora local). */
 export interface ReqRoadmap {
-  req: Requerimiento
+  req: RequerimientoRoadmap
   inicio: Date
   fin: Date
   hitos: HitoEntrega[]

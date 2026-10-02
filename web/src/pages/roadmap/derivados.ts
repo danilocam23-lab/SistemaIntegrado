@@ -6,18 +6,19 @@
  * dibujables, rango de meses, agrupación por persona/categoría y carga.
  */
 
-import type { Asignacion, Categoria, Persona, Requerimiento } from '../../types'
 import { ESTADO_ACTIVO } from '../asignaciones/tipos'
 import {
   diaSiguiente, etiquetaIndiceMes, indiceMes, parseFechaLocal, primerDiaDeIndice,
 } from './fechas'
 import type {
-  ColumnaMes, GrupoCategoria, GrupoRoadmap, HitoEntrega, PresetRango, RangoRoadmap, ReqRoadmap, TonoHito,
+  AsignacionRoadmap, CategoriaRoadmap, ColumnaMes, PersonaRoadmap, RequerimientoRoadmap, GrupoCategoria, GrupoRoadmap, HitoEntrega, PresetRango, RangoRoadmap, ReqRoadmap, TonoHito,
 } from './tipos'
 
 export const SIN_ASIGNAR_ID = '__sin_asignar__'
 export const TODOS_ID = '__todos__'
 const PLANO_ID = '__plano__'
+/** Literal de `ESTADOS_ENTREGA` / `ESTADOS_REQUERIMIENTO` (constantes.ts). */
+const ESTADO_ENTREGA_CARGADA = 'ENTREGA CARGADA'
 const SIN_CATEGORIA_ID = '__sin_cat__'
 /** Gris de categoría desconocida (más oscuro que el anterior para que el texto blanco se lea). */
 export const COLOR_SIN_CATEGORIA = '#64748b'
@@ -26,6 +27,8 @@ export const COLOR_SIN_CATEGORIA = '#64748b'
 function esNoVigente(estado: string): boolean {
   const e = estado.toUpperCase()
   return (
+    // Entrega ya cargada: el compromiso se cumplió, no está vencido aunque aún falte la aprobación.
+    e === ESTADO_ENTREGA_CARGADA ||
     e.includes('CANCELADO') || e.includes('REEMPLAZADO') || e.includes('SUSPENDIDO') || e.includes('DEVUELTO')
     // Cerrados: no existen hoy en ESTADOS_REQUERIMIENTO, pero se cubren por si se añaden.
     || e.includes('FACTURAD') || e.includes('FINALIZAD') || e.includes('CERRAD') || e.includes('COMPLETAD')
@@ -35,13 +38,15 @@ function esNoVigente(estado: string): boolean {
 
 function tonoDeEntrega(estado: string | null, aprobacion: string | null, fecha: Date, hoy: Date): TonoHito {
   if (estado === 'APROBADA' || aprobacion) return 'ok'
+  // Cargada (pendiente de aprobación): no cuenta como vencida; queda como pendiente.
+  if (estado === ESTADO_ENTREGA_CARGADA) return 'pend'
   return fecha.getTime() < hoy.getTime() ? 'bad' : 'pend'
 }
 
 export interface BaseRoadmap {
   dibujables: ReqRoadmap[]
   /** Requerimientos sin fecha de solicitud del acta ni de inicio: no se pueden dibujar. */
-  sinFecha: Requerimiento[]
+  sinFecha: RequerimientoRoadmap[]
   /** Primer y último mes (índice) con alguna fecha; `null` si no hay ninguna. */
   primerIndice: number | null
   ultimoIndice: number | null
@@ -49,12 +54,12 @@ export interface BaseRoadmap {
 
 /** Lee los requerimientos a barras con hitos. Inicio = acta o inicio; fin = última entrega comprometida. */
 export function construirBase(
-  requerimientos: Requerimiento[],
-  categorias: Map<string, Categoria>,
+  requerimientos: RequerimientoRoadmap[],
+  categorias: Map<string, CategoriaRoadmap>,
   hoy: Date,
 ): BaseRoadmap {
   const dibujables: ReqRoadmap[] = []
-  const sinFecha: Requerimiento[] = []
+  const sinFecha: RequerimientoRoadmap[] = []
   let primero: number | null = null
   let ultimo: number | null = null
 
@@ -186,8 +191,8 @@ export function geometriaBarra(r: ReqRoadmap, rango: RangoRoadmap): GeometriaBar
  * Capacidades (cuenta lo asignado a requerimientos activos o sin requerimiento).
  */
 export function calcularCargaPorPersona(
-  asignaciones: Asignacion[],
-  requerimientos: Requerimiento[],
+  asignaciones: AsignacionRoadmap[],
+  requerimientos: RequerimientoRoadmap[],
 ): Map<string, number> {
   const activos = new Set<string>()
   for (const req of requerimientos) {
@@ -206,7 +211,7 @@ export function calcularCargaPorPersona(
 
 /* ── Agrupación ─────────────────────────────────────────────────── */
 
-export function idsDePersonas(req: Requerimiento): string[] {
+export function idsDePersonas(req: RequerimientoRoadmap): string[] {
   const ids = new Set<string>()
   for (const id of req.developers_asignados ?? []) {
     if (id) ids.add(id)
@@ -269,8 +274,8 @@ export function agruparPlano(reqs: ReqRoadmap[]): GrupoRoadmap[] {
  */
 export function agruparPorPersona(
   reqs: ReqRoadmap[],
-  personas: Persona[],
-  asignaciones: Asignacion[],
+  personas: PersonaRoadmap[],
+  asignaciones: AsignacionRoadmap[],
   cargas: Map<string, number> | null,
   filtroPersona: string,
 ): GrupoRoadmap[] {

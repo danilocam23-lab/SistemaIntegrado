@@ -4,21 +4,20 @@
 import { useNavigate } from 'react-router-dom'
 import { Boton, Chip } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
-import type { Asignacion, Categoria, Persona } from '../../types'
 import { AvatarPersona } from '../asignaciones/AvatarPersona'
 import { formatearPct } from '../asignaciones/carga'
 import { fechaCorta } from './fechas'
 import { ETIQUETA_HITO } from './HitosEntrega'
 import { PanelLateral } from '../asignaciones/PanelLateral'
-import type { ReqRoadmap, TonoHito } from './tipos'
+import type { AsignacionRoadmap, CategoriaRoadmap, PersonaRoadmap, ReqRoadmap, TonoHito } from './tipos'
 
 const TONO_CHIP: Record<TonoHito, 'exito' | 'alerta' | 'error'> = { ok: 'exito', pend: 'alerta', bad: 'error' }
 
 interface Props {
   seleccionado: ReqRoadmap | null
-  personas: Persona[]
-  asignaciones: Asignacion[]
-  categoriasPorId: Map<string, Categoria>
+  personas: PersonaRoadmap[]
+  asignaciones: AsignacionRoadmap[]
+  categoriasPorId: Map<string, CategoriaRoadmap>
   onCerrar: () => void
 }
 
