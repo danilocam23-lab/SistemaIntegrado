@@ -19,6 +19,7 @@ from app.documents.azdo import AzdoSyncLog
 from app.services.azdo_esquema_sync import sincronizar_todas_las_configuraciones_con_pat
 from app.services.azdo_sync import leer_config_azdo, sincronizar_iteracion
 from app.services.soporte_solicitudes_fabrica_service import SoporteSolicitudesFabricaService
+from app.services.vigencia import recalcular_squads_todas
 
 _log = logging.getLogger("scheduler")
 _scheduler: AsyncIOScheduler | None = None
@@ -39,6 +40,16 @@ def _toca_sincronizar(ultima: datetime | None, intervalo: str) -> bool:
     if intervalo == "daily":
         return horas >= 24
     return False
+
+
+async def _tarea_recalcular_squads_membresias() -> None:
+    """Recalcula el derivado ``Persona.squads`` (ADR-0010): una membresía con ``hasta``
+    futuro caduca sin que nadie escriba."""
+    try:
+        cambiadas = await recalcular_squads_todas()
+        _log.info("[scheduler] Squads derivados recalculados: %s personas cambiaron", cambiadas)
+    except Exception as exc:  # noqa: BLE001
+        _log.warning("[scheduler] Recalcular squads derivados falló: %s", exc)
 
 
 async def _tarea_sync_azdo() -> None:
@@ -156,6 +167,14 @@ def iniciar_scheduler() -> None:
         "cron",
         hour="11,17",
         id="azdo_esquema_sync_automatico",
+    )
+    # 05:10 UTC = 00:10 en Bogotá: justo pasada la medianoche local
+    _scheduler.add_job(
+        _tarea_recalcular_squads_membresias,
+        "cron",
+        hour=5,
+        minute=10,
+        id="recalcular_squads_membresias",
     )
     _scheduler.start()
     _log.info("Scheduler de Azure DevOps iniciado (revisión cada 30 min)")

@@ -25,6 +25,7 @@ from app.api import (
     garantias_wo,
     importacion,
     integracion,
+    membresias,
     personas,
     plan_accion,
     reportes,
@@ -50,6 +51,7 @@ _SUBROUTERS = (
     festivos.router,
     actas.router,
     personas.router,
+    membresias.router,
     squads.router,
     categorias.router,
     asignaciones.router,
@@ -114,6 +116,7 @@ api_router.include_router(festivos.router)
 api_router.include_router(actas.router)
 # Dominio de carga de trabajo
 api_router.include_router(personas.router)
+api_router.include_router(membresias.router)
 api_router.include_router(squads.router)
 api_router.include_router(categorias.router)
 api_router.include_router(asignaciones.router)

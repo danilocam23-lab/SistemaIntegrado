@@ -20,7 +20,10 @@ class Persona(DocumentoOperativo):
     rol_operativo: str = "DEV"
     tipo_contratacion: str | None = None
     activo: bool = True
+    # Registro de cuándo se desactivó (ahora()); el efecto es la fecha editable siguiente.
     fecha_desactivacion: datetime | None = None
+    fecha_efecto_desactivacion: datetime | None = None
+    # Derivado (ADR-0010): nombres de los squads con membresía vigente hoy.
     squads: list[str] = []
     es_lider_tecnico: bool = False
     permite_sobrecarga: bool = False

@@ -92,7 +92,7 @@ async def test_put_no_mueve_a_app_sin_acceso(cliente, fabrica_aplicacion, fabric
     assert (await Persona.get(p.id)).aplicacion_id == app.codigo
 
 
-async def test_put_mueve_y_avisa_si_hay_acceso(cliente, fabrica_aplicacion, fabrica_usuario):
+async def test_put_squads_ya_no_mueve_la_aplicacion(cliente, fabrica_aplicacion, fabrica_usuario):
     app = await fabrica_aplicacion()
     otra = await fabrica_aplicacion()
     _, token = await fabrica_usuario([app.codigo, otra.codigo], permisos=BASE)
@@ -102,8 +102,9 @@ async def test_put_mueve_y_avisa_si_hay_acceso(cliente, fabrica_aplicacion, fabr
         f"/api/personas/{p.id}", json={"nombre": "Fer", "squads": [otra.nombre]}, headers=h
     )
     assert resp.status_code == 200
-    assert resp.json()["aplicacion_movida"] == {"desde": app.codigo, "hacia": otra.codigo}
-    assert (await Persona.get(p.id)).aplicacion_id == otra.codigo
+    # ADR-0010: el orden de `squads` ya no decide la aplicación dueña
+    assert "aplicacion_movida" not in resp.json()
+    assert (await Persona.get(p.id)).aplicacion_id == app.codigo
 
 
 async def test_put_delete_no_tocan_persona_ajena(cliente, fabrica_aplicacion, fabrica_usuario):

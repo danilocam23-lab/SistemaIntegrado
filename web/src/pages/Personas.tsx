@@ -67,14 +67,10 @@ function ContenidoPersonas() {
     setErrorEliminar('')
   }
 
-  function alGuardar(movidaA?: string): void {
+  function alGuardar(): void {
     cerrarPanel()
     datos.recargarTodo()
-    setMensaje(
-      movidaA
-        ? { tono: 'exito', texto: `Cambios guardados. La persona pasó a la aplicación ${movidaA}.` }
-        : { tono: 'exito', texto: 'Cambios guardados.' },
-    )
+    setMensaje({ tono: 'exito', texto: 'Cambios guardados.' })
   }
 
   async function alternarActivo(p: Persona): Promise<void> {
@@ -88,7 +84,6 @@ function ContenidoPersonas() {
         email: p.email,
         rol_operativo: p.rol_operativo,
         tipo_contratacion: p.tipo_contratacion ?? null,
-        squads: p.squads ?? [],
         activo: !p.activo,
         es_lider_tecnico: p.es_lider_tecnico ?? false,
         permite_sobrecarga: p.permite_sobrecarga ?? false,
@@ -285,7 +280,7 @@ function ContenidoPersonas() {
       {panel && (
         <PanelPersona
           key={panel.persona?.id ?? 'nueva'}
-          persona={panel.persona}
+          persona={panel.persona ? (personas.find((x) => x.id === panel.persona?.id) ?? panel.persona) : null}
           todas={personas}
           aplicaciones={datos.aplicaciones}
           roles={datos.roles}
@@ -298,6 +293,7 @@ function ContenidoPersonas() {
           aplicacionActiva={activa}
           errorExterno={errorEliminar}
           onGuardado={alGuardar}
+          onCambioMembresias={datos.recargarTodo}
           onEliminar={pedirEliminar}
           onCerrar={cerrarPanel}
         />

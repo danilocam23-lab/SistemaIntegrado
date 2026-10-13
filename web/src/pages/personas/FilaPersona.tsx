@@ -5,6 +5,7 @@ import { Boton, Chip, Interruptor, cx } from '../../components/ui'
 import type { Persona } from '../../types'
 import { AvatarRol, ChipRol } from './ChipRol'
 import { InsigniasPersona } from './InsigniasPersona'
+import { fechaCorta } from './formatoFecha'
 import { ROL_SIN_CONTRATACION } from './roles'
 
 /** Anchos de columna compartidos entre el encabezado y las filas (solo escritorio). */
@@ -71,7 +72,9 @@ export function FilaPersona({
             ) : (
               <span className="font-medium text-amber-700">— sin correo —</span>
             )}
-            {!p.activo && p.fecha_desactivacion && ` · desactivada el ${p.fecha_desactivacion.slice(0, 10)}`}
+            {!p.activo &&
+              (p.fecha_efecto_desactivacion ?? p.fecha_desactivacion) &&
+              ` · inactiva desde ${fechaCorta(p.fecha_efecto_desactivacion ?? p.fecha_desactivacion, true)}`}
           </span>
         </span>
       </button>

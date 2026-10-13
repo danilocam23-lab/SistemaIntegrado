@@ -20,6 +20,7 @@ from app.documents.azdo import AzdoWorkItem
 from app.documents.base import ahora
 from app.documents.bitacora import Bitacora
 from app.documents.capacidad import Capacidad
+from app.documents.membresia import Membresia
 from app.documents.persona import Persona
 from app.documents.squad import Squad
 from app.documents.usuario import Usuario
@@ -36,6 +37,14 @@ from app.security.deps import (
     usuario_actual,
 )
 from app.security.rbac import PERM_ADMIN_ACCESO, PERM_PERSONAS_VER_VALORES
+from app.services import membresias as svc_membresias
+from app.services.vigencia import (
+    a_datetime,
+    a_fecha_instante,
+    a_fecha_logica,
+    hoy_bogota,
+    recalcular_squads_persona,
+)
 
 router = APIRouter(prefix="/personas", tags=["personas"])
 
@@ -57,6 +66,8 @@ class PersonaIn(BaseModel):
     valor_perifericos: float | None = None
     # Solo se acepta para completar una persona ya inactiva que no tiene fecha (dato legado)
     fecha_desactivacion: datetime | None = None
+    # Desde cuándo rige la desactivación (editable; por defecto hoy, admite pasadas/futuras)
+    fecha_efecto_desactivacion: datetime | None = None
     aplicacion_id: str | None = None  # requerido en modo consolidado; derivado del squad si no se indica
 
 
@@ -260,6 +271,8 @@ async def _fusionar_personas(
             if not ganador.usuario_id and perdedor.usuario_id:
                 ganador.usuario_id = perdedor.usuario_id
             ganador.squads = squads_union
+            await svc_membresias.fusionar_membresias(pid, gid, session=session)
+            await recalcular_squads_persona(ganador, session=session)
             ganador.marcar_actualizado()
             await ganador.save(session=session)
 
@@ -434,6 +447,10 @@ async def obtener(
         persona = None
     if persona is None or not _persona_visible(persona, ctx):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
+    # El derivado `squads` caduca sin escrituras (membresías con `hasta` futuro): se
+    # refresca al leer además del job diario.
+    if await recalcular_squads_persona(persona):
+        await persona.save()
     return _salida(persona, await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES))
 
 
@@ -453,6 +470,55 @@ async def _resolver_app_id(datos: PersonaIn, ctx: ContextoAplicacion, usuario: U
     return ctx.codigo
 
 
+async def _resolver_apps_por_nombre(
+    nombres: list[str], autorizadas: list[str]
+) -> list[Aplicacion]:
+    """Aplicaciones cuyos nombres están en ``nombres`` (los que no resuelven se ignoran:
+    subequipos legados). 403 si el usuario no tiene acceso a alguna de ellas."""
+    if not nombres:
+        return []
+    apps = await Aplicacion.find({"nombre": {"$in": nombres}}).to_list()
+    for app in apps:
+        if app.codigo not in autorizadas:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, f"Sin acceso a la aplicación del squad '{app.nombre}'."
+            )
+    return apps
+
+
+def _squads_cambiados(persona: Persona, previos: list[str]) -> list[str]:
+    """Nombres de squad añadidos o quitados respecto de ``previos``."""
+    return sorted(set(persona.squads or []) ^ set(previos))
+
+
+async def _traducir_squads(
+    persona: Persona, previos: list[str], apps: list[Aplicacion], autor: str
+) -> None:
+    """Traduce un cambio del campo ``squads`` a operaciones de membresía (ADR-0010):
+    cada squad añadido abre una membresía desde hoy y cada quitado cierra la abierta con
+    efecto hoy. Los squads sin cambio no se tocan. Solo opera en personas activas.
+
+    ``apps`` son las aplicaciones de los squads cambiados, ya validadas (403) por
+    ``_resolver_apps_por_nombre`` ANTES de escribir nada."""
+    if not persona.activo:
+        return
+    nuevos = set(persona.squads or [])
+    anteriores = set(previos)
+    hoy = hoy_bogota()
+    for app in apps:
+        abierta = await Membresia.find_one(
+            {"persona_id": str(persona.id), "squad_id": app.codigo, "activo": True}
+        )
+        if app.nombre in nuevos - anteriores:
+            if abierta is None:
+                await svc_membresias.abrir(persona, app.codigo, app.codigo, hoy, autor)
+        elif abierta is not None:
+            if a_fecha_logica(abierta.desde) > hoy:
+                await abierta.delete()  # nunca llegó a regir
+            else:
+                await svc_membresias.cerrar(abierta, hoy, autor)  # 0 días si desde == hoy
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def crear(
     datos: PersonaIn,
@@ -465,7 +531,11 @@ async def crear(
     respuesta no los incluye. 409 si el correo ya existe en la aplicación."""
     app_id = await _resolver_app_id(datos, ctx, usuario)
     ver_valores = await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES)
-    data = datos.model_dump(exclude={"aplicacion_id", "fecha_desactivacion"})
+    data = datos.model_dump(
+        exclude={"aplicacion_id", "fecha_desactivacion", "fecha_efecto_desactivacion"}
+    )
+    autorizadas = await _codigos_autorizados(usuario)
+    apps_squads = await _resolver_apps_por_nombre(list(data.get("squads") or []), autorizadas)
     # `None` = no enviado: se conserva el valor por defecto (0) del documento.
     # Sin permiso para ver/editar valores se descartan siempre.
     for campo_valor in CAMPOS_VALOR:
@@ -475,7 +545,20 @@ async def crear(
     persona = Persona(aplicacion_id=app_id, **data)
     if not persona.activo:
         persona.fecha_desactivacion = ahora()
+        persona.fecha_efecto_desactivacion = a_datetime(
+            a_fecha_logica(datos.fecha_efecto_desactivacion)
+            if datos.fecha_efecto_desactivacion
+            else hoy_bogota()
+        )
     await persona.insert()
+    if persona.activo and persona.squads:
+        # Los squads del alta se traducen a membresías desde hoy; los nombres que no son
+        # una Aplicación (subequipos legados) se conservan tal cual.
+        solicitados = list(persona.squads)
+        await _traducir_squads(persona, [], apps_squads, usuario.email)
+        await recalcular_squads_persona(persona)
+        persona.squads += [s for s in solicitados if s not in persona.squads]
+        await persona.save()
     return _salida(persona, ver_valores)
 
 
@@ -483,7 +566,7 @@ async def crear(
 async def actualizar(
     persona_id: str,
     datos: PersonaIn,
-    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
     usuario: Usuario = Depends(usuario_actual),
     _: Usuario = permiso("personas.editar"),
 ) -> dict:
@@ -492,9 +575,16 @@ async def actualizar(
     valores...) se conserva.
 
     * Los valores económicos exigen ``personas.ver_valores``; sin él se ignoran.
-    * ``aplicacion_id`` solo se reasigna si cambia el primer squad y éste corresponde a
-      otra aplicación autorizada para el usuario (403 si no); la respuesta incluye
-      ``aplicacion_movida`` cuando ocurre.
+    * ``squads`` ya no decide ``aplicacion_id`` (ADR-0010): un cambio se traduce a
+      membresías (alta desde hoy / cierre con efecto hoy) y el campo se recalcula.
+    * ``fecha_efecto_desactivacion`` (por defecto hoy) rige la desactivación: al
+      desactivar cierra en cascada las membresías abiertas y acota las ya cerradas con
+      cierre posterior; editarla después solo afecta a las cerradas por cascada.
+      Reactivar no reabre, limpia ambas fechas y suelta la marca de cascada.
+    * La cascada escribe en membresías de OTRAS aplicaciones de la persona, incluso las
+      que quien edita no ve: es INTENCIONAL (la desactivación general alcanza todos sus
+      squads). Las validaciones (403 de squads, 409 de correo) corren antes de escribir
+      membresías; la persona se guarda primero y luego se aplican las membresías.
     * 409 si el correo ya pertenece a otra persona de la aplicación.
     """
     persona, autorizadas = await _cargar_para_escritura(persona_id, ctx, usuario)
@@ -502,10 +592,11 @@ async def actualizar(
     enviados = datos.model_fields_set
     activo_previo = persona.activo
     fecha_previa = persona.fecha_desactivacion
-    squad_principal_previo = persona.squads[0] if persona.squads else None
+    efecto_previo = persona.fecha_efecto_desactivacion
+    squads_previos = list(persona.squads or [])
     email_previo = (persona.email or "").strip().lower()
 
-    for campo in enviados - {"aplicacion_id", "fecha_desactivacion"}:
+    for campo in enviados - {"aplicacion_id", "fecha_desactivacion", "fecha_efecto_desactivacion"}:
         valor = getattr(datos, campo)
         if campo in CAMPOS_VALOR and (valor is None or not ver_valores):
             continue
@@ -513,41 +604,64 @@ async def actualizar(
             continue
         setattr(persona, campo, valor)
 
-    # `fecha_desactivacion` se calcula automáticamente al cambiar el estado `activo`:
-    # se marca al desactivar y se limpia al reactivar. Sin transición, solo se acepta
-    # la del body si la persona sigue inactiva y no tenía fecha (dato legado).
-    if activo_previo and not persona.activo:
+    # `fecha_desactivacion` es el REGISTRO (ahora()): se marca al desactivar y se limpia al
+    # reactivar. Sin transición, solo se acepta la del body si la persona sigue inactiva y no
+    # tenía fecha (dato legado). `fecha_efecto_desactivacion` es el EFECTO, editable.
+    efecto_body = (
+        a_fecha_logica(datos.fecha_efecto_desactivacion)
+        if datos.fecha_efecto_desactivacion
+        else None
+    )
+    desactiva = activo_previo and not persona.activo
+    reactiva = not activo_previo and persona.activo
+    efecto_a_propagar = None
+    efecto = efecto_body or hoy_bogota()
+    if desactiva:
         persona.fecha_desactivacion = ahora()
-    elif not activo_previo and persona.activo:
+        persona.fecha_efecto_desactivacion = a_datetime(efecto)
+    elif reactiva:
         persona.fecha_desactivacion = None
-    elif not persona.activo and fecha_previa is None and datos.fecha_desactivacion is not None:
-        persona.fecha_desactivacion = datos.fecha_desactivacion
+        persona.fecha_efecto_desactivacion = None
     else:
         persona.fecha_desactivacion = fecha_previa
-
-    # Si cambió el squad principal (el primero), la persona pasa a la aplicación de ese
-    # squad, siempre que el usuario tenga acceso a ella.
-    movida: dict | None = None
-    if "squads" in enviados and persona.squads and persona.squads[0] != squad_principal_previo:
-        app_doc = await Aplicacion.find_one({"nombre": persona.squads[0]})
-        if app_doc and app_doc.codigo != persona.aplicacion_id:
-            if app_doc.codigo not in autorizadas:
-                raise HTTPException(
-                    status.HTTP_403_FORBIDDEN,
-                    "Sin acceso a la aplicación del squad principal elegido.",
+        persona.fecha_efecto_desactivacion = efecto_previo
+        if not persona.activo:
+            if fecha_previa is None and datos.fecha_desactivacion is not None:
+                persona.fecha_desactivacion = datos.fecha_desactivacion
+            if efecto_body is not None:
+                nuevo_efecto = a_datetime(efecto_body)
+                if nuevo_efecto != efecto_previo:
+                    efecto_a_propagar = efecto_body
+                persona.fecha_efecto_desactivacion = nuevo_efecto
+            elif efecto_previo is None and persona.fecha_desactivacion is not None:
+                # Dato legado sin fecha de efecto: se completa con la de registro.
+                persona.fecha_efecto_desactivacion = a_datetime(
+                    a_fecha_instante(persona.fecha_desactivacion)
                 )
-            movida = {"desde": persona.aplicacion_id, "hacia": app_doc.codigo}
-            persona.aplicacion_id = app_doc.codigo
 
-    correo_cambia = (persona.email or "").strip().lower() != email_previo
-    if correo_cambia or movida:
+    # Validaciones ANTES de escribir membresías: un error no deja la cascada a medias.
+    apps_squads: list[Aplicacion] = []
+    if "squads" in enviados and persona.activo:
+        apps_squads = await _resolver_apps_por_nombre(
+            _squads_cambiados(persona, squads_previos), autorizadas
+        )
+    if (persona.email or "").strip().lower() != email_previo:
         await _validar_correo_unico(persona.aplicacion_id, persona.email, str(persona.id))
+
     persona.marcar_actualizado()
     await persona.save()
-    salida = _salida(persona, ver_valores)
-    if movida:
-        salida["aplicacion_movida"] = movida
-    return salida
+
+    if desactiva:
+        await svc_membresias.cerrar_en_cascada(persona, efecto, usuario.email)
+    elif reactiva:
+        await svc_membresias.liberar_cascada(persona)
+    elif efecto_a_propagar is not None:
+        await svc_membresias.propagar_fecha_efecto(persona, efecto_a_propagar)
+    if "squads" in enviados:
+        await _traducir_squads(persona, squads_previos, apps_squads, usuario.email)
+    if await recalcular_squads_persona(persona):
+        await persona.save()
+    return _salida(persona, ver_valores)
 
 
 async def _contar_referencias(persona_id: str) -> tuple[int, int]:
@@ -624,4 +738,5 @@ async def eliminar(
         Capacidad.scope == "persona", Capacidad.persona_id == persona_id
     ).delete()
     await AzdoWorkItem.find(AzdoWorkItem.persona_id == persona_id).delete()
+    await Membresia.find({"persona_id": persona_id}).delete()
     await persona.delete()

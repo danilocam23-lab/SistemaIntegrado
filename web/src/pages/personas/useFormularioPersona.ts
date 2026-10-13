@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import client from '../../api/client'
 import { mensajeError } from '../../api/hooks'
 import type { Aplicacion, Persona } from '../../types'
+import { hoyISO } from './formatoFecha'
 import { ROLES_DEFAULT } from './roles'
 
 interface Args {
@@ -19,8 +20,7 @@ interface Args {
   puedeGuardar: boolean
   modoConsolidado: boolean
   aplicacionActiva: string
-  /** `movida` trae el nombre de la aplicación destino si el backend movió a la persona. */
-  onGuardado: (movidaA?: string) => void
+  onGuardado: () => void
 }
 
 /**
@@ -45,8 +45,11 @@ export function useFormularioPersona({
   const [tipo, setTipo] = useState(persona?.tipo_contratacion ?? '')
   const [squads, setSquads] = useState<string[]>(persona?.squads ?? [])
   const [activo, setActivo] = useState(persona?.activo ?? true)
-  const [fechaDesactivacion, setFechaDesactivacion] = useState(
-    persona?.fecha_desactivacion ? persona.fecha_desactivacion.slice(0, 10) : '',
+  // Fecha de efecto de la desactivación: por defecto hoy, o la ya registrada si está inactiva.
+  const [fechaEfecto, setFechaEfecto] = useState(
+    persona && !persona.activo
+      ? (persona.fecha_efecto_desactivacion ?? persona.fecha_desactivacion ?? '').slice(0, 10)
+      : hoyISO(),
   )
   const [valorPersona, setValorPersona] = useState(String(persona?.valor_persona ?? 0))
   const [valorPerifericos, setValorPerifericos] = useState(String(persona?.valor_perifericos ?? 0))
@@ -72,13 +75,8 @@ export function useFormularioPersona({
 
   const nombreAplicacion = (codigo: string) => aplicaciones.find((a) => a.codigo === codigo)?.nombre ?? codigo
 
-  // Edición: el backend reasigna la aplicación según el primer squad; se avisa si ese squad cambió.
-  const squadPrincipalOriginal = persona?.squads?.[0] ?? null
-  const cambiaAplicacion = !!persona && squads.length > 0 && squads[0] !== squadPrincipalOriginal && codigoPorSquad.has(squads[0])
-
-  // Solo datos legados: ya estaba inactiva y sin fecha. Si se acaba de desmarcar «Activa», el backend fija la fecha.
-  const fechaEditable = !activo && !!persona && !persona.activo && !persona.fecha_desactivacion
-  const fechaExistente = !activo && !!persona && !persona.activo ? persona.fecha_desactivacion ?? null : null
+  // Registro de la desactivación (solo lectura): el día en que se hizo, distinto del efecto.
+  const fechaRegistro = persona && !persona.activo ? persona.fecha_desactivacion ?? null : null
 
   const opcionesRol = useMemo(() => (rol && !roles.includes(rol) ? [...roles, rol] : roles), [roles, rol])
   const opcionesTipo = useMemo(
@@ -95,13 +93,12 @@ export function useFormularioPersona({
       return
     }
 
-    // Unicidad correo + squad (squads nuevos respecto al registro original).
+    // Unicidad correo + squad (solo en el alta: en edición los squads se gestionan por membresías).
     const correo = email.trim().toLowerCase()
-    if (correo) {
-      const nuevos = persona ? squads.filter((s) => !(persona.squads ?? []).includes(s)) : squads
-      for (const squad of nuevos) {
+    if (correo && !persona) {
+      for (const squad of squads) {
         const repetida = todas.find(
-          (p) => p.id !== persona?.id && (p.email ?? '').trim().toLowerCase() === correo && (p.squads ?? []).includes(squad),
+          (p) => (p.email ?? '').trim().toLowerCase() === correo && (p.squads ?? []).includes(squad),
         )
         if (repetida) {
           setErrorCorreo(`El correo "${email}" ya está registrado en el squad "${squad}" (persona: ${repetida.nombre}).`)
@@ -115,26 +112,27 @@ export function useFormularioPersona({
       email: email.trim() || null,
       rol_operativo: rol,
       tipo_contratacion: tipo || null,
-      squads,
       activo,
     }
+    // `squads` es derivado de las membresías: solo viaja en el alta (arranca las membresías).
+    if (!persona) payload.squads = squads
     if (esGerente) {
       payload.valor_persona = Number(valorPersona) || 0
       payload.valor_perifericos = Number(valorPerifericos) || 0
     }
-    if (fechaEditable && fechaDesactivacion) payload.fecha_desactivacion = fechaDesactivacion
+    if (!activo && fechaEfecto) payload.fecha_efecto_desactivacion = fechaEfecto
 
     setGuardando(true)
     try {
       if (persona) {
         // Campos sin UI de edición: se reenvían tal cual para no perderlos.
-        const { data } = await client.put<{ aplicacion_movida?: { hacia: string } }>(`/personas/${persona.id}`, {
+        await client.put(`/personas/${persona.id}`, {
           ...payload,
           es_lider_tecnico: persona.es_lider_tecnico ?? false,
           permite_sobrecarga: persona.permite_sobrecarga ?? false,
           usuario_id: persona.usuario_id ?? null,
         })
-        onGuardado(data?.aplicacion_movida ? nombreAplicacion(data.aplicacion_movida.hacia) : undefined)
+        onGuardado()
       } else {
         if (!aplicacionEfectiva) {
           setErrorGeneral('Selecciona al menos un squad o una aplicación.')
@@ -165,15 +163,13 @@ export function useFormularioPersona({
     tipo, setTipo,
     squads, setSquads,
     activo, setActivo,
-    fechaDesactivacion, setFechaDesactivacion,
+    fechaEfecto, setFechaEfecto,
+    fechaRegistro,
     valorPersona, setValorPersona,
     valorPerifericos, setValorPerifericos,
     aplicacionManual, setAplicacionManual,
     aplicacionEfectiva,
     nombreAplicacion,
-    cambiaAplicacion,
-    fechaEditable,
-    fechaExistente,
     opcionesRol,
     opcionesTipo,
     errorCorreo,

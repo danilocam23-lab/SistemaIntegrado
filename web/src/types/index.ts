@@ -175,13 +175,40 @@ export interface Persona {
   rol_operativo: string
   tipo_contratacion?: string | null
   activo: boolean
+  /** Registro: cuándo se desactivó (solo lectura). */
   fecha_desactivacion?: string | null
+  /** Efecto: desde cuándo rige la desactivación. */
+  fecha_efecto_desactivacion?: string | null
+  /** Derivado: nombres de los squads vigentes hoy (se gestionan por membresías). */
   squads: string[]
   es_lider_tecnico?: boolean
   permite_sobrecarga?: boolean
   usuario_id?: string | null
   valor_persona?: number
   valor_perifericos?: number
+}
+
+/** Pertenencia de una persona a un squad durante `[desde, hasta)` (ADR-0010). */
+export interface Membresia {
+  id: string
+  persona_id: string
+  /** Código de la aplicación del squad. */
+  squad_id: string
+  aplicacion_id: string
+  desde: string
+  hasta: string | null
+  activo: boolean
+  fecha_desactivacion?: string | null
+  fecha_efecto_desactivacion?: string | null
+  cerrada_por_cascada?: boolean
+}
+
+/** Respuesta de `PATCH /membresias/{id}/cerrar`. */
+export interface RespuestaCierreMembresia {
+  membresia: Membresia
+  /** La persona se queda sin ningún squad vigente a la fecha de efecto. */
+  ultimo_squad: boolean
+  efecto: string
 }
 
 export interface Categoria {

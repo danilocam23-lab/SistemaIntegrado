@@ -1,14 +1,16 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { Aviso, Boton, Campo, Interruptor, Selector } from '../../components/ui'
+import { Aviso, Boton, Campo, Chip, Interruptor, Selector } from '../../components/ui'
 import type { Aplicacion, Persona } from '../../types'
 import { PanelLateral } from '../asignaciones/PanelLateral'
 import { AvatarRol, ChipRol } from './ChipRol'
 import { InsigniasPersona } from './InsigniasPersona'
+import { PestanaSquads } from './PestanaSquads'
 import { SelectorSquads } from './SelectorSquads'
+import { fechaCorta } from './formatoFecha'
 import { ROL_SIN_CONTRATACION } from './roles'
 import { useFormularioPersona } from './useFormularioPersona'
 
@@ -27,7 +29,9 @@ interface Props {
   aplicacionActiva: string
   /** Error de una acción lanzada desde fuera del formulario (p. ej. eliminar → 409). */
   errorExterno: string
-  onGuardado: (movidaA?: string) => void
+  onGuardado: () => void
+  /** Cambió alguna membresía (la persona sigue abierta en el panel): recargar el listado. */
+  onCambioMembresias: () => void
   onEliminar: (persona: Persona) => void
   onCerrar: () => void
 }
@@ -46,6 +50,7 @@ function Seccion({ titulo, nota, children }: { titulo: string; nota?: ReactNode;
 export function PanelPersona(props: Props) {
   const { persona, aplicaciones, esGerente, puedeEditar, puedeCrear, puedeEliminar, modoConsolidado } = props
   const idFormulario = useId()
+  const [pestana, setPestana] = useState<'datos' | 'squads'>('datos')
   const nuevo = persona === null
   const puedeGuardar = nuevo ? puedeCrear : puedeEditar
   const f = useFormularioPersona({
@@ -65,6 +70,7 @@ export function PanelPersona(props: Props) {
   const squadsActivos = aplicaciones.filter((a) => a.activa).map((a) => a.nombre)
   const error = f.errorGeneral || props.errorExterno
   const destino = f.aplicacionEfectiva ? f.nombreAplicacion(f.aplicacionEfectiva) : ''
+  const enSquads = !nuevo && pestana === 'squads'
 
   function alEnviar(e: FormEvent) {
     e.preventDefault()
@@ -86,8 +92,8 @@ export function PanelPersona(props: Props) {
         </Boton>
       )}
       <span className="flex-1" />
-      <Boton onClick={props.onCerrar}>{puedeGuardar ? 'Cancelar' : 'Cerrar'}</Boton>
-      {puedeGuardar && (
+      <Boton onClick={props.onCerrar}>{puedeGuardar && !enSquads ? 'Cancelar' : 'Cerrar'}</Boton>
+      {puedeGuardar && !enSquads && (
         <Boton variante="primario" type="submit" form={idFormulario} disabled={f.guardando}>
           {f.guardando ? 'Guardando…' : nuevo ? 'Crear' : 'Guardar cambios'}
         </Boton>
@@ -97,7 +103,40 @@ export function PanelPersona(props: Props) {
 
   return (
     <PanelLateral abierto titulo={titulo} onCerrar={props.onCerrar} pie={pie}>
-      <form id={idFormulario} onSubmit={alEnviar} className="space-y-4">
+      {persona && (
+        <div className="pestanas mb-4" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pestana === 'datos'}
+            onClick={() => setPestana('datos')}
+            className={`pestana ${pestana === 'datos' ? 'pestana-activa' : ''}`}
+          >
+            Datos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pestana === 'squads'}
+            onClick={() => setPestana('squads')}
+            className={`pestana ${pestana === 'squads' ? 'pestana-activa' : ''}`}
+          >
+            Squads
+          </button>
+        </div>
+      )}
+
+      {enSquads && persona && (
+        <PestanaSquads
+          persona={persona}
+          aplicaciones={aplicaciones}
+          puedeEditar={puedeEditar}
+          onCambio={props.onCambioMembresias}
+          onPersonaDesactivada={props.onGuardado}
+        />
+      )}
+
+      <form id={idFormulario} onSubmit={alEnviar} className="space-y-4" hidden={enSquads}>
         <div className="flex flex-wrap items-center gap-1.5">
           <ChipRol rol={f.rol} />
           {persona && <InsigniasPersona persona={persona} />}
@@ -165,34 +204,18 @@ export function PanelPersona(props: Props) {
           )}
         </Seccion>
 
-        <Seccion
-          titulo="Squads"
-          nota={
-            f.cambiaAplicacion
-              ? undefined
-              : 'El primer squad fija la aplicación de la persona.'
-          }
-        >
-          <SelectorSquads
-            seleccionados={f.squads}
-            disponibles={squadsActivos}
-            deshabilitado={!puedeGuardar}
-            onCambiar={(s) => {
-              f.setSquads(s)
-              f.setAplicacionManual('')
-            }}
-          />
-          {destino && (nuevo || f.cambiaAplicacion) && (
-            <p className="text-xs font-semibold text-cyan-700">Se guardará en: {destino}</p>
-          )}
-          {f.cambiaAplicacion && (
-            <Aviso tono="alerta">
-              <span role="status">
-                Cambiaste el squad principal: al guardar, la persona pasará a la aplicación {destino}.
-              </span>
-            </Aviso>
-          )}
-          {nuevo && (
+        {nuevo ? (
+          <Seccion titulo="Squads" nota="El primer squad fija la aplicación de la persona.">
+            <SelectorSquads
+              seleccionados={f.squads}
+              disponibles={squadsActivos}
+              deshabilitado={!puedeGuardar}
+              onCambiar={(s) => {
+                f.setSquads(s)
+                f.setAplicacionManual('')
+              }}
+            />
+            {destino && <p className="text-xs font-semibold text-cyan-700">Se guardará en: {destino}</p>}
             <Selector
               etiqueta={modoConsolidado ? 'Aplicación (obligatoria en modo consolidado)' : 'Aplicación'}
               value={f.aplicacionEfectiva}
@@ -205,8 +228,17 @@ export function PanelPersona(props: Props) {
                 <option key={a.codigo} value={a.codigo}>{a.nombre}</option>
               ))}
             </Selector>
-          )}
-        </Seccion>
+          </Seccion>
+        ) : (
+          <Seccion titulo="Squads vigentes hoy" nota="Se gestionan en la pestaña Squads, con fecha de efecto.">
+            <div className="flex flex-wrap gap-1.5">
+              {(persona?.squads ?? []).length === 0 && <span className="text-xs text-slate-400">Sin squads vigentes</span>}
+              {(persona?.squads ?? []).map((sq) => (
+                <Chip key={sq} tono="neutro">{sq}</Chip>
+              ))}
+            </div>
+          </Seccion>
+        )}
 
         {!sinContratacion && (
           <Seccion
@@ -244,10 +276,10 @@ export function PanelPersona(props: Props) {
           titulo="Estado"
           nota={
             f.activo
-              ? 'Al desactivar se registra la fecha automáticamente.'
+              ? 'Al desactivar se pide la fecha de efecto; se registra además el día en que lo haces.'
               : persona?.activo
-                ? 'Se registrará la fecha de desactivación al guardar.'
-                : 'Al reactivar se limpia la fecha de desactivación.'
+                ? 'La desactivación rige desde la fecha de efecto y cierra los squads abiertos.'
+                : 'Al reactivar se limpian las fechas de desactivación; los squads cerrados no se reabren.'
           }
         >
           <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -260,17 +292,18 @@ export function PanelPersona(props: Props) {
             />
             {f.activo ? 'Activa' : 'Inactiva'}
           </label>
-          {f.fechaEditable && (
+          {!f.activo && (
             <Campo
-              etiqueta="F. desactivación (dato legado: la persona está inactiva y no tiene fecha)"
+              etiqueta="Fecha de efecto de la desactivación"
               type="date"
-              value={f.fechaDesactivacion}
-              onChange={(e) => f.setFechaDesactivacion(e.target.value)}
+              value={f.fechaEfecto}
+              onChange={(e) => f.setFechaEfecto(e.target.value)}
+              disabled={!puedeGuardar}
               className="w-full"
             />
           )}
-          {f.fechaExistente && (
-            <p className="text-xs text-slate-600">F. desactivación: {f.fechaExistente.slice(0, 10)} (no editable)</p>
+          {f.fechaRegistro && (
+            <p className="text-xs text-slate-600">Registrada el {fechaCorta(f.fechaRegistro, true)} (no editable)</p>
           )}
         </Seccion>
 

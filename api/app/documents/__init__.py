@@ -26,6 +26,7 @@ from app.documents.endpoint_admin import EndpointAdmin
 from app.documents.estimacion import Estimacion
 from app.documents.festivo import Festivo
 from app.documents.garantia_wo import GarantiaWO
+from app.documents.membresia import Membresia
 from app.documents.orden_compra import OrdenCompra
 from app.documents.persona import Persona
 from app.documents.plan_accion import PlanAccion
@@ -73,6 +74,7 @@ ALL_DOCUMENTS = [
     EndpointAdmin,
     PlanAccion,
     BacklogFuturo,
+    Membresia,
 ]
 
 __all__ = [
@@ -106,4 +108,5 @@ __all__ = [
     "EndpointAdmin",
     "PlanAccion",
     "BacklogFuturo",
+    "Membresia",
 ]
