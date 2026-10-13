@@ -130,10 +130,12 @@ async def roadmap(ctx: ContextoAplicacion = Depends(contexto_aplicacion)) -> dic
         .find(filtro_personas, _PROY_PERSONA)
         .sort("nombre", 1)
     ]
+    # Categoria es global al sistema (no tiene aplicacion_id por squad): se lista
+    # sin filtrar por aplicación, igual que GET /categorias en categorias.py.
     categorias = [
         _con_id(d)
         async for d in Categoria.get_pymongo_collection()
-        .find(filtro, _PROY_CATEGORIA)
+        .find({}, _PROY_CATEGORIA)
         .sort("orden", 1)
     ]
     asignaciones_min = [

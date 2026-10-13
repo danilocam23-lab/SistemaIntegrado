@@ -47,13 +47,17 @@ async def _validar_referencias(
     proyectos: list[Proyecto],
     excluir_id: PydanticObjectId | None = None,
 ) -> None:
-    """Valida que persona, categoría y requerimientos existan en la aplicación
-    activa (404 sin revelar datos ajenos) y que no se duplique persona+requerimiento
-    (409), tanto dentro del cuerpo como contra otras asignaciones de la persona."""
+    """Valida que persona y requerimientos existan en la aplicación activa, y que
+    la categoría exista (es una colección global, no filtra por aplicación: ver
+    api/app/api/categorias.py). Responde 404 sin revelar datos ajenos y 409 si
+    se duplica persona+requerimiento, tanto dentro del cuerpo como contra otras
+    asignaciones de la persona."""
     filtro = ctx.filtro()
     if await Persona.find_one({**filtro, "_id": _oid(persona_id, "persona_id")}) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
-    if await Categoria.find_one({**filtro, "_id": _oid(categoria_id, "categoria_id")}) is None:
+    # Categoria es global al sistema (no tiene aplicacion_id por squad): se busca
+    # únicamente por _id, igual que hacen los propios endpoints de categorias.py.
+    if await Categoria.get(_oid(categoria_id, "categoria_id")) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Categoría no encontrada")
 
     req_ids = [p.requerimiento_id for p in proyectos if p.requerimiento_id]

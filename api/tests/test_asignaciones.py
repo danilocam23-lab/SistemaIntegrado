@@ -16,7 +16,9 @@ async def _escenario(fabrica_aplicacion, fabrica_usuario, permisos=None):
     app = await fabrica_aplicacion()
     _, token = await fabrica_usuario([app.codigo], permisos=permisos or EDITOR)
     persona = await Persona(aplicacion_id=app.codigo, nombre="Ana").insert()
-    cat = await Categoria(aplicacion_id=app.codigo, nombre="Dev").insert()
+    # Categoria es una colección global (ver api/app/api/categorias.py): en el mundo
+    # real SIEMPRE tiene aplicacion_id="global", nunca el código de un squad.
+    cat = await Categoria(aplicacion_id="global", nombre="Dev").insert()
     req = await Requerimiento(
         aplicacion_id=app.codigo, codigo_req="REQ-A",
         solicitud=Solicitud(codigo_sc="SC-A"), estado="ABIERTO",
@@ -131,19 +133,40 @@ async def test_validacion_rango_e_ids_ajenos(cliente, fabrica_aplicacion, fabric
 
     otra = await fabrica_aplicacion()
     p_ajena = await Persona(aplicacion_id=otra.codigo, nombre="X").insert()
-    c_ajena = await Categoria(aplicacion_id=otra.codigo, nombre="X").insert()
     r_ajeno = await Requerimiento(
         aplicacion_id=otra.codigo, codigo_req="R-X",
         solicitud=Solicitud(codigo_sc="S-X"), estado="ABIERTO",
     ).insert()
     r = await cliente.post("/api/asignaciones", json=_cuerpo(p_ajena, cat), headers=h)
     assert r.status_code == 404
-    r = await cliente.post("/api/asignaciones", json=_cuerpo(persona, c_ajena), headers=h)
-    assert r.status_code == 404
     cuerpo = _cuerpo(persona, cat, proyectos=[{"nombre": "P", "requerimiento_id": str(r_ajeno.id)}])
     assert (await cliente.post("/api/asignaciones", json=cuerpo, headers=h)).status_code == 404
     mal = {**_cuerpo(persona, cat), "persona_id": "mal"}
     assert (await cliente.post("/api/asignaciones", json=mal, headers=h)).status_code == 422
+
+
+async def test_categoria_global_no_bloquea_crear_ni_editar(
+    cliente, fabrica_aplicacion, fabrica_usuario
+):
+    """Regresión: Categoria es global (aplicacion_id="global"), no por-squad. Antes de
+    la corrección, `_validar_referencias` filtraba Categoria por aplicacion_id==ctx.codigo
+    y, como ninguna categoría real tiene ese código, SIEMPRE devolvía 404 al crear o
+    editar cualquier asignación (incluida la edición del % que reenvía categoria_id
+    sin cambios)."""
+    app, h, persona, cat, req = await _escenario(fabrica_aplicacion, fabrica_usuario)
+    assert cat.aplicacion_id == "global"
+
+    creada = await cliente.post("/api/asignaciones", json=_cuerpo(persona, cat), headers=h)
+    assert creada.status_code == 201
+    asignacion_id = creada.json()["_id"]
+
+    editada = await cliente.put(
+        f"/api/asignaciones/{asignacion_id}",
+        json=_cuerpo(persona, cat, total_porcentaje=55),
+        headers=h,
+    )
+    assert editada.status_code == 200
+    assert editada.json()["total_porcentaje"] == 55
 
 
 async def test_duplicado_persona_requerimiento(cliente, fabrica_aplicacion, fabrica_usuario):

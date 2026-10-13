@@ -68,7 +68,9 @@ async def test_forma_y_sin_valores_economicos(cliente, fabrica_aplicacion, fabri
 
     (persona,) = cuerpo["personas"]
     assert set(persona) == {"_id", "nombre", "activo", "rol_operativo"}
-    (cat,) = cuerpo["categorias"]
+    # Categoria es global al sistema (no por aplicacion: ver api/app/api/categorias.py),
+    # así que la lista puede traer otras categorías además de la sembrada aquí.
+    cat = next(c for c in cuerpo["categorias"] if c["_id"] == str(datos["categoria"].id))
     assert set(cat) == {"_id", "nombre", "color"}
     (asig,) = cuerpo["asignaciones"]
     assert asig["persona_id"] == str(datos["persona"].id) and asig["total_porcentaje"] == 50
@@ -95,7 +97,9 @@ async def test_aislamiento_y_consolidado(cliente, fabrica_aplicacion, fabrica_us
     await _sembrar(otra.codigo, "B")
     _, token = await fabrica_usuario([app.codigo], permisos=["roadmap.ver"])
     cuerpo = (await cliente.get(URL, headers=headers_con_token(token, app.codigo))).json()
-    for clave in ("requerimientos", "personas", "categorias", "asignaciones", "roadmap"):
+    # Categoria es global (no aislada por aplicación: ver api/app/api/categorias.py),
+    # así que no entra en la verificación de aislamiento por squad.
+    for clave in ("requerimientos", "personas", "asignaciones", "roadmap"):
         assert len(cuerpo[clave]) == 1
     assert [p["nombre"] for p in cuerpo["personas"]] == ["AnaA"]
 
