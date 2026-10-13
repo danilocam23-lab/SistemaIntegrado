@@ -186,6 +186,18 @@ export function useDerivadosBacklog({
     return mapa
   }, [capacidades])
 
+  /** Notas del registro de capacidad, por persona y mes (vacías no se incluyen). */
+  const notasPorPersonaMes = useMemo(() => {
+    const mapa = new Map<string, string>()
+    for (const capacidad of capacidades) {
+      const nota = capacidad.notas?.trim()
+      if (capacidad.scope === 'persona' && capacidad.persona_id && capacidad.mes && nota) {
+        mapa.set(`${capacidad.persona_id}|${capacidad.mes}`, nota)
+      }
+    }
+    return mapa
+  }, [capacidades])
+
   /**
    * Recorre periodo x persona activa (sin LT_EPM) y llama a `alVisitar` por cada
    * squad al que aporta, con las horas disponibles de esa persona en el periodo.
@@ -257,24 +269,22 @@ export function useDerivadosBacklog({
     const mapa = new Map<string, FilaDetallePersona>()
     recorrerCapacidad(({ persona, periodo, squadId, horasDefaultMes }) => {
       const claveCapacidad = `${persona.id}|${periodo}`
-      const tieneConfigPersonalizada = capacidadPorPersonaMes.has(claveCapacidad)
       const capacidadPersona = capacidadPorPersonaMes.get(claveCapacidad) ?? horasDefaultMes
+      const nota = notasPorPersonaMes.get(claveCapacidad)
       const key = `${persona.id}|${squadId}`
       const actual = mapa.get(key) ?? {
         personaId: persona.id,
         nombre: persona.nombre,
         squad: resolverNombreSquad(squadId),
         horas: 0,
-        personalizada: false,
-        predeterminada: false,
+        notas: [] as string[],
       }
       actual.horas += capacidadPersona
-      if (tieneConfigPersonalizada) actual.personalizada = true
-      else actual.predeterminada = true
+      if (nota && !actual.notas.includes(nota)) actual.notas.push(nota)
       mapa.set(key, actual)
     })
     return Array.from(mapa.values()).sort((a, b) => b.horas - a.horas || a.nombre.localeCompare(b.nombre))
-  }, [recorrerCapacidad, capacidadPorPersonaMes, resolverNombreSquad])
+  }, [recorrerCapacidad, capacidadPorPersonaMes, notasPorPersonaMes, resolverNombreSquad])
 
   const detallePersonasCapacidadFiltrado = useMemo(() => {
     const busqueda = busquedaDetallePersonas.trim().toLowerCase()

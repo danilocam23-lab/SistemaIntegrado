@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { Campo, Chip } from '../../components/ui'
+import { Campo } from '../../components/ui'
 import type { FilaDetallePersona } from './tipos'
 import { fmtNumero } from './utilidades'
 
@@ -56,7 +56,7 @@ export default function ModalDetallePersonas({ filas, totalPeriodos, busqueda, o
                 <th>Persona</th>
                 <th>Squad</th>
                 <th className="text-right">Horas</th>
-                <th className="text-center">Origen</th>
+                <th>Notas</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -65,11 +65,11 @@ export default function ModalDetallePersonas({ filas, totalPeriodos, busqueda, o
                   <td className="px-4 py-3 font-medium text-slate-800">{fila.nombre}</td>
                   <td className="px-4 py-3 text-slate-600">{fila.squad}</td>
                   <td className="px-4 py-3 text-right font-semibold text-amber-700">{fmtNumero(fila.horas)}h</td>
-                  <td className="px-4 py-3 text-center">
-                    {fila.personalizada ? (
-                      <Chip tono="marca">{fila.predeterminada ? 'Mixto' : 'Configurada'}</Chip>
+                  <td className="px-4 py-3 text-slate-600">
+                    {fila.notas.length > 0 ? (
+                      <span className="whitespace-pre-line">{fila.notas.join('\n')}</span>
                     ) : (
-                      <Chip tono="exito">Por defecto</Chip>
+                      <span className="text-slate-400">—</span>
                     )}
                   </td>
                 </tr>

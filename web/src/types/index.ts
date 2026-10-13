@@ -256,6 +256,7 @@ export interface Capacidad {
   mes: string
   horas_disponibles: number
   personas: number
+  notas?: string | null
 }
 
 export interface PlanAccion {

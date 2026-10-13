@@ -45,8 +45,8 @@ export interface FilaDetallePersona {
   nombre: string
   squad: string
   horas: number
-  personalizada: boolean
-  predeterminada: boolean
+  /** Notas del/los registro(s) de capacidad que suman estas horas (vacío = sin notas). */
+  notas: string[]
 }
 
 export interface FilaEntregasMes {
