@@ -29,6 +29,8 @@ import {
   numero,
   porcentajeCumplimiento,
 } from './utilidades'
+import { factorVigencia, squadsDePersonaEnMes } from './vigenciaCapacidad'
+import type { VigenciaMes } from './vigenciaCapacidad'
 
 interface ParametrosDerivados {
   activa: string | null | undefined
@@ -41,6 +43,8 @@ interface ParametrosDerivados {
   resolverNombreSquad: (id: string | null) => string
   squadCodigoPorNombre: Map<string, string>
   periodosSeleccionados: string[]
+  /** Vigencia de membresías por mes (null = no cargó: comportamiento legado). */
+  vigenciaPorMes: Map<string, VigenciaMes | null>
   squadDetalleAplicaciones: string | null
   squadDetallePersonas: string | null
   busquedaDetalleWo: string
@@ -92,6 +96,7 @@ export function useDerivadosBacklog({
   resolverNombreSquad,
   squadCodigoPorNombre,
   periodosSeleccionados,
+  vigenciaPorMes,
   squadDetalleAplicaciones,
   squadDetallePersonas,
   busquedaDetalleWo,
@@ -199,8 +204,12 @@ export function useDerivadosBacklog({
   }, [capacidades])
 
   /**
-   * Recorre periodo x persona activa (sin LT_EPM) y llama a `alVisitar` por cada
-   * squad al que aporta, con las horas disponibles de esa persona en el periodo.
+   * Recorre periodo x persona (sin LT_EPM) y llama a `alVisitar` por cada squad al que
+   * aporta, con las horas por defecto de esa persona en el periodo.
+   * La pertenencia es por vigencia mensual (membresías): la persona cuenta en el squad en el
+   * que estuvo algún día del mes, aunque hoy esté desactivada o en otro squad; sin membresías
+   * (legado) se usa `persona.activo` + `persona.squads`. Las horas por defecto se prorratean
+   * por los días hábiles de la membresía en el mes (una capacidad explícita las sustituye).
    * Es el recorrido común de capacidad por squad, detalle por persona y resumen.
    */
   const recorrerCapacidad = useMemo(() => {
@@ -222,23 +231,19 @@ export function useDerivadosBacklog({
         const horasDefaultMes = horasMesDefault * factorMes
 
         for (const persona of personas) {
-          if (!persona.activo || persona.rol_operativo === 'LT_EPM') continue
-          const squadsNormalizados = (persona.squads ?? []).map((squad) => squadCodigoPorNombre.get(squad) ?? squad)
-          const perteneceActiva =
-            activa !== CONSOLIDADO &&
-            !!activa &&
-            (
-              squadsNormalizados.length === 0 ||
-              squadsNormalizados.includes(activa) ||
-              (squadActivaNombre ? (persona.squads ?? []).includes(squadActivaNombre) : false)
-            )
-
-          const squadsPersona = activa !== CONSOLIDADO && activa
-            ? (perteneceActiva ? [activa] : [])
-            : squadsNormalizados
+          if (persona.rol_operativo === 'LT_EPM') continue
+          const vigencia = vigenciaPorMes.get(periodo) ?? null
+          const { squads: squadsPersona, porVigencia } = squadsDePersonaEnMes({
+            persona,
+            activa,
+            vigencia,
+            squadActivaNombre,
+            squadCodigoPorNombre,
+          })
 
           for (const squadId of squadsPersona) {
-            alVisitar({ persona, periodo, squadId, horasDefaultMes })
+            const factor = factorVigencia(vigencia, persona.id, squadId, diasHabiles, porVigencia)
+            alVisitar({ persona, periodo, squadId, horasDefaultMes: horasDefaultMes * factor })
           }
         }
       }
@@ -251,15 +256,21 @@ export function useDerivadosBacklog({
     periodosSeleccionados,
     squadCodigoPorNombre,
     resolverNombreSquad,
+    vigenciaPorMes,
   ])
 
   const filasCapacidadSquad = useMemo<FilaCapacidadSquad[]>(() => {
     const mapa = new Map<string, FilaCapacidadSquad>()
+    const personasPorSquad = new Map<string, Set<string>>()
     recorrerCapacidad(({ persona, periodo, squadId, horasDefaultMes }) => {
       const capacidadPersona = capacidadPorPersonaMes.get(`${persona.id}|${periodo}`) ?? horasDefaultMes
       const actual = mapa.get(squadId) ?? { squadId, squad: resolverNombreSquad(squadId), horas: 0, personas: 0 }
       actual.horas += capacidadPersona
-      actual.personas += 1
+      // Cada persona cuenta una sola vez por squad, aunque aparezca en varios meses.
+      const vistas = personasPorSquad.get(squadId) ?? new Set<string>()
+      vistas.add(persona.id)
+      personasPorSquad.set(squadId, vistas)
+      actual.personas = vistas.size
       mapa.set(squadId, actual)
     })
     return Array.from(mapa.values()).sort((a, b) => b.horas - a.horas || b.personas - a.personas)

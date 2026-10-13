@@ -20,12 +20,15 @@ import { useDatosBacklog } from './dashboard-backlog/useDatosBacklog'
 import { useDerivadosBacklog } from './dashboard-backlog/useDerivadosBacklog'
 import { useExportarExcelBacklog } from './dashboard-backlog/useExportarExcelBacklog'
 import { useFiltroPeriodo } from './dashboard-backlog/useFiltroPeriodo'
+import { useVigenciaBacklog } from './dashboard-backlog/useVigenciaBacklog'
 import { MESES_LABELS } from './dashboard-backlog/utilidades'
 
 /** Dashboard de Backlog (`/dashboard-backlog`): orquestador delgado; la lógica vive en `dashboard-backlog/`. */
 export default function DashboardSquad() {
   const datos = useDatosBacklog()
   const filtro = useFiltroPeriodo(datos.capacidades, datos.requerimientos, datos.soporteResumen)
+
+  const { vigenciaPorMes, cargandoVigencia } = useVigenciaBacklog(filtro.periodosSeleccionados, datos.activa)
 
   const [mostrarDetalleWo, setMostrarDetalleWo] = useState(false)
   const [busquedaDetalleWo, setBusquedaDetalleWo] = useState('')
@@ -48,6 +51,7 @@ export default function DashboardSquad() {
     resolverNombreSquad: datos.resolverNombreSquad,
     squadCodigoPorNombre: datos.squadCodigoPorNombre,
     periodosSeleccionados: filtro.periodosSeleccionados,
+    vigenciaPorMes,
     squadDetalleAplicaciones,
     squadDetallePersonas,
     busquedaDetalleWo,
@@ -59,7 +63,7 @@ export default function DashboardSquad() {
 
   const { exportarExcel } = useExportarExcelBacklog(derivados.filasAnalisis)
 
-  if (datos.cargandoTodo) {
+  if (datos.cargandoTodo || cargandoVigencia) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="text-center">
