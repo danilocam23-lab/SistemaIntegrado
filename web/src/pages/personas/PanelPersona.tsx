@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useId, useState } from 'react'
+import { useId } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { Aviso, Boton, Campo, Chip, Interruptor, Selector } from '../../components/ui'
+import { Aviso, Boton, Campo, Interruptor, Selector } from '../../components/ui'
 import type { Aplicacion, Persona } from '../../types'
 import { PanelLateral } from '../asignaciones/PanelLateral'
 import { AvatarRol, ChipRol } from './ChipRol'
 import { InsigniasPersona } from './InsigniasPersona'
-import { PestanaSquads } from './PestanaSquads'
+import { SeccionSquadsVigentes } from './SeccionSquadsVigentes'
 import { SelectorSquads } from './SelectorSquads'
 import { fechaCorta } from './formatoFecha'
 import { ROL_SIN_CONTRATACION } from './roles'
@@ -50,7 +50,6 @@ function Seccion({ titulo, nota, children }: { titulo: string; nota?: ReactNode;
 export function PanelPersona(props: Props) {
   const { persona, aplicaciones, esGerente, puedeEditar, puedeCrear, puedeEliminar, modoConsolidado } = props
   const idFormulario = useId()
-  const [pestana, setPestana] = useState<'datos' | 'squads'>('datos')
   const nuevo = persona === null
   const puedeGuardar = nuevo ? puedeCrear : puedeEditar
   const f = useFormularioPersona({
@@ -70,7 +69,6 @@ export function PanelPersona(props: Props) {
   const squadsActivos = aplicaciones.filter((a) => a.activa).map((a) => a.nombre)
   const error = f.errorGeneral || props.errorExterno
   const destino = f.aplicacionEfectiva ? f.nombreAplicacion(f.aplicacionEfectiva) : ''
-  const enSquads = !nuevo && pestana === 'squads'
 
   function alEnviar(e: FormEvent) {
     e.preventDefault()
@@ -92,8 +90,8 @@ export function PanelPersona(props: Props) {
         </Boton>
       )}
       <span className="flex-1" />
-      <Boton onClick={props.onCerrar}>{puedeGuardar && !enSquads ? 'Cancelar' : 'Cerrar'}</Boton>
-      {puedeGuardar && !enSquads && (
+      <Boton onClick={props.onCerrar}>{puedeGuardar ? 'Cancelar' : 'Cerrar'}</Boton>
+      {puedeGuardar && (
         <Boton variante="primario" type="submit" form={idFormulario} disabled={f.guardando}>
           {f.guardando ? 'Guardando…' : nuevo ? 'Crear' : 'Guardar cambios'}
         </Boton>
@@ -103,40 +101,7 @@ export function PanelPersona(props: Props) {
 
   return (
     <PanelLateral abierto titulo={titulo} onCerrar={props.onCerrar} pie={pie}>
-      {persona && (
-        <div className="pestanas mb-4" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pestana === 'datos'}
-            onClick={() => setPestana('datos')}
-            className={`pestana ${pestana === 'datos' ? 'pestana-activa' : ''}`}
-          >
-            Datos
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pestana === 'squads'}
-            onClick={() => setPestana('squads')}
-            className={`pestana ${pestana === 'squads' ? 'pestana-activa' : ''}`}
-          >
-            Squads
-          </button>
-        </div>
-      )}
-
-      {enSquads && persona && (
-        <PestanaSquads
-          persona={persona}
-          aplicaciones={aplicaciones}
-          puedeEditar={puedeEditar}
-          onCambio={props.onCambioMembresias}
-          onPersonaDesactivada={props.onGuardado}
-        />
-      )}
-
-      <form id={idFormulario} onSubmit={alEnviar} className="space-y-4" hidden={enSquads}>
+      <form id={idFormulario} onSubmit={alEnviar} className="space-y-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <ChipRol rol={f.rol} />
           {persona && <InsigniasPersona persona={persona} />}
@@ -230,13 +195,19 @@ export function PanelPersona(props: Props) {
             </Selector>
           </Seccion>
         ) : (
-          <Seccion titulo="Squads vigentes hoy" nota="Se gestionan en la pestaña Squads, con fecha de efecto.">
-            <div className="flex flex-wrap gap-1.5">
-              {(persona?.squads ?? []).length === 0 && <span className="text-xs text-slate-400">Sin squads vigentes</span>}
-              {(persona?.squads ?? []).map((sq) => (
-                <Chip key={sq} tono="neutro">{sq}</Chip>
-              ))}
-            </div>
+          <Seccion
+            titulo="Squads vigentes hoy"
+            nota="Desactivar en un squad pide una fecha de efecto. Un squad cuenta en un mes (Control de Horas y Capacidades) si la persona estuvo vigente en él al menos un día."
+          >
+            {persona && (
+              <SeccionSquadsVigentes
+                persona={persona}
+                aplicaciones={aplicaciones}
+                puedeEditar={puedeEditar}
+                onCambio={props.onCambioMembresias}
+                onPersonaDesactivada={props.onGuardado}
+              />
+            )}
           </Seccion>
         )}
 
