@@ -124,6 +124,7 @@ export function MapaCalor({
                       onGuardar={(horas) => alGuardarCelda(fila, i, horas)}
                       onCerrarEdicion={alCerrarEdicion}
                       onEliminar={() => alEliminarCelda(fila, i)}
+                      onAbrirPanel={() => alActivarCelda(fila, i, true)}
                     />
                   </td>
                 ))}

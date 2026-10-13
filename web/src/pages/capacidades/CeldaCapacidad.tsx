@@ -15,6 +15,8 @@ interface PropsEditor {
   onGuardar: (horas: number) => Promise<string | null>
   onCerrar: () => void
   onEliminar: () => void
+  /** Abre el panel completo (ahí se editan las notas). */
+  onAbrirPanel: () => void
 }
 
 /**
@@ -23,7 +25,7 @@ interface PropsEditor {
  * guarda dos veces (Enter + blur, Esc + blur) y muestra el error del servidor
  * junto a la celda sin cerrarse.
  */
-function EditorCelda({ celda, etiqueta, onGuardar, onCerrar, onEliminar }: PropsEditor) {
+function EditorCelda({ celda, etiqueta, onGuardar, onCerrar, onEliminar, onAbrirPanel }: PropsEditor) {
   const [texto, setTexto] = useState(celda.horas !== null ? String(celda.horas) : '')
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -89,6 +91,23 @@ function EditorCelda({ celda, etiqueta, onGuardar, onCerrar, onEliminar }: Props
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             terminado.current = true
+            onAbrirPanel()
+          }}
+          aria-label={`Editar notas de ${etiqueta}`}
+          title={celda.registro?.notas ? `Notas: ${celda.registro.notas}` : 'Editar notas (abre el panel)'}
+          className={cx(
+            'rounded p-1 transition-colors hover:text-marca focus-visible:outline focus-visible:outline-2 focus-visible:outline-marca disabled:opacity-40',
+            celda.registro?.notas ? 'text-marca-600' : 'text-slate-400',
+          )}
+        >
+          <Icono nombre="documento" />
+        </button>
+        <button
+          type="button"
+          disabled={guardando}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            terminado.current = true
             onEliminar()
           }}
           aria-label={`Eliminar la capacidad de ${etiqueta}`}
@@ -121,6 +140,8 @@ interface Props {
   onGuardar: (horas: number) => Promise<string | null>
   onCerrarEdicion: () => void
   onEliminar: () => void
+  /** Abre el panel completo (ahí se editan las notas) sin pasar por la edición en línea. */
+  onAbrirPanel: () => void
 }
 
 /**
@@ -131,21 +152,31 @@ interface Props {
  */
 export function CeldaCapacidadVista({
   celda, nombrePersona, modo, editable, seleccionada, editando,
-  onActivar, onGuardar, onCerrarEdicion, onEliminar,
+  onActivar, onGuardar, onCerrarEdicion, onEliminar, onAbrirPanel,
 }: Props) {
   const nombreMes = MESES_LARGO[celda.indice]
   const etiqueta = `${nombrePersona}, ${nombreMes}`
 
   if (editando && celda.registro) {
-    return <EditorCelda celda={celda} etiqueta={etiqueta} onGuardar={onGuardar} onCerrar={onCerrarEdicion} onEliminar={onEliminar} />
+    return (
+      <EditorCelda
+        celda={celda}
+        etiqueta={etiqueta}
+        onGuardar={onGuardar}
+        onCerrar={onCerrarEdicion}
+        onEliminar={onEliminar}
+        onAbrirPanel={onAbrirPanel}
+      />
+    )
   }
 
   const valor = celda.horas ?? celda.base
   const texto = textoCelda(valor, celda.base, modo) + (celda.horas === null ? '*' : '')
   const duplicado = celda.duplicados.length > 1
-  const descripcion = `${etiqueta}: ${formatearHoras(valor)} h, ${ETIQUETA_TONO[celda.tono]}${duplicado ? `, ${celda.duplicados.length} registros duplicados` : ''}`
+  const tieneNota = !!celda.registro?.notas
+  const descripcion = `${etiqueta}: ${formatearHoras(valor)} h, ${ETIQUETA_TONO[celda.tono]}${duplicado ? `, ${celda.duplicados.length} registros duplicados` : ''}${tieneNota ? ', con notas' : ''}`
   const clases = cx(
-    'block w-full min-w-[2.75rem] rounded-md px-1 py-1 text-center text-xs font-semibold tabular-nums',
+    'relative block w-full min-w-[2.75rem] rounded-md px-1 py-1 text-center text-xs font-semibold tabular-nums',
     CLASE_TONO[celda.tono],
     seleccionada && 'outline outline-2 outline-offset-1 outline-marca',
     duplicado && 'ring-1 ring-amber-500',
@@ -154,6 +185,15 @@ export function CeldaCapacidadVista({
     <>
       {texto}
       {duplicado && <span className="ml-1 text-[9px] font-bold" aria-hidden="true">· {celda.duplicados.length}×</span>}
+      {tieneNota && (
+        <span
+          className="absolute -right-0.5 -top-0.5 text-marca-600"
+          aria-hidden="true"
+          title={`Notas: ${celda.registro?.notas}`}
+        >
+          <Icono nombre="documento" tamano={10} />
+        </span>
+      )}
     </>
   )
 
@@ -165,7 +205,7 @@ export function CeldaCapacidadVista({
       type="button"
       onClick={(e: MouseEvent) => onActivar(e.shiftKey)}
       className={cx(clases, 'cursor-pointer transition hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-marca')}
-      title={`${descripcion}. Clic para ${celda.registro ? 'editar' : 'registrar'}; Mayús + clic abre el panel.`}
+      title={`${descripcion}. Clic para ${celda.registro ? 'editar' : 'registrar'}; Mayús + clic (o el ícono de notas al editar) abre el panel con las notas.`}
       aria-label={descripcion}
     >
       {contenido}
