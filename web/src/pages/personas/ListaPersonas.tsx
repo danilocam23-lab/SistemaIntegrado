@@ -14,6 +14,7 @@ import {
 } from './FilaPersona'
 import type { GrupoRol } from './useFiltrosPersonas'
 import { TAMANIO_PAGINA } from './useFiltrosPersonas'
+import { estadoEnSquadContexto } from './squadsPersona'
 import type { VistaPersonas } from './tipos'
 
 interface Props {
@@ -32,6 +33,8 @@ interface Props {
   idOcupada: string
   /** Squad elegido en el filtro (destaca el estado en ese squad). */
   squadFiltrado?: string
+  /** Squad en el que se mide el estado activa/inactiva (filtro o aplicación activa). */
+  squadContexto?: string
   onAbrir: (persona: Persona) => void
   onEliminar: (persona: Persona) => void
   onAlternarActivo: (persona: Persona) => void
@@ -67,6 +70,7 @@ export function ListaPersonas(props: Props) {
         puedeEliminar={props.puedeEliminar}
         ocupada={props.idOcupada === p.id}
         squadFiltrado={props.squadFiltrado}
+        squadContexto={props.squadContexto}
         onAbrir={props.onAbrir}
         onEliminar={props.onEliminar}
         onAlternarActivo={props.onAlternarActivo}
@@ -79,7 +83,7 @@ export function ListaPersonas(props: Props) {
       <div className="space-y-3">
         {grupos.map(({ rol, personas }) => {
           const cerrado = colapsados.has(rol)
-          const activas = personas.filter((p) => p.activo).length
+          const activas = personas.filter((p) => estadoEnSquadContexto(p, props.squadContexto)).length
           return (
             <section key={rol || 'sin-rol'} className="tarjeta overflow-hidden">
               <button

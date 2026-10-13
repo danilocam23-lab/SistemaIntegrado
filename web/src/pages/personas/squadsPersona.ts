@@ -26,3 +26,24 @@ export function activaEnSquad(p: Persona, squad: string): boolean {
 export function nombresSquads(p: Persona): string[] {
   return Array.from(new Set(detalleSquads(p).map((d) => d.squad)))
 }
+
+/**
+ * ¿La persona está activa en el listado? Se mide en el squad de contexto (el elegido en el
+ * filtro o el de la aplicación activa; `undefined` en modo consolidado -> estado general).
+ * Inactiva general => inactiva. Con squad y alguna membresía de ese squad => activa solo si
+ * alguna lo está. Con squad pero sin membresía de ese squad => estado general.
+ */
+export function estadoEnSquadContexto(p: Persona, squad?: string): boolean {
+  if (!p.activo) return false
+  if (!squad) return true
+  const delSquad = detalleSquads(p).filter((d) => d.squad === squad)
+  if (delSquad.length === 0) return p.activo
+  return delSquad.some((d) => d.activo)
+}
+
+/** Membresía cerrada más reciente de la persona en ese squad (la de `hasta` mayor), si existe. */
+export function cierreEnSquad(p: Persona, squad: string): SquadDetalle | undefined {
+  return detalleSquads(p)
+    .filter((d) => d.squad === squad && !d.activo)
+    .sort((a, b) => (b.hasta ?? '').localeCompare(a.hasta ?? ''))[0]
+}

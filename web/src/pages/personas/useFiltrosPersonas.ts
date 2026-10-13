@@ -3,7 +3,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import type { Persona } from '../../types'
-import { activaEnSquad, nombresSquads } from './squadsPersona'
+import { estadoEnSquadContexto, nombresSquads } from './squadsPersona'
 import { FILTROS_INICIALES } from './tipos'
 import type { FiltrosPersonas, VistaPersonas } from './tipos'
 
@@ -24,7 +24,7 @@ function vistaGuardada(): VistaPersonas {
 }
 
 /** Filtros, vista (recordada por sesión), agrupado por rol y paginación del directorio. */
-export function useFiltrosPersonas(personas: Persona[], roles: string[]) {
+export function useFiltrosPersonas(personas: Persona[], roles: string[], squadContexto?: string) {
   const [filtros, setFiltros] = useState<FiltrosPersonas>(FILTROS_INICIALES)
   const [vista, setVistaEstado] = useState<VistaPersonas>(vistaGuardada)
   const [pagina, setPagina] = useState(1)
@@ -63,9 +63,9 @@ export function useFiltrosPersonas(personas: Persona[], roles: string[]) {
     const q = filtros.busqueda.trim().toLowerCase()
     return personas.filter((p) => {
       if (filtros.rol && (p.rol_operativo ?? '') !== filtros.rol) return false
-      // Con un squad elegido, Activas/Inactivas es el estado de la persona EN ese squad.
+      // Activas/Inactivas se mide en el squad de contexto: el elegido en el filtro o el de la aplicación activa.
       if (filtros.squad && !nombresSquads(p).includes(filtros.squad)) return false
-      const activa = filtros.squad ? activaEnSquad(p, filtros.squad) : p.activo
+      const activa = estadoEnSquadContexto(p, filtros.squad || squadContexto)
       if (filtros.estado === 'activas' && !activa) return false
       if (filtros.estado === 'inactivas' && activa) return false
       if (filtros.contratacion && (p.tipo_contratacion ?? '') !== filtros.contratacion) return false
@@ -77,7 +77,7 @@ export function useFiltrosPersonas(personas: Persona[], roles: string[]) {
         (p.rol_operativo ?? '').toLowerCase().includes(q)
       )
     })
-  }, [personas, filtros])
+  }, [personas, filtros, squadContexto])
 
   // Roles en el orden del catálogo, luego los que existen en datos pero no en el catálogo.
   const rolesVisibles = useMemo(() => {
@@ -93,9 +93,9 @@ export function useFiltrosPersonas(personas: Persona[], roles: string[]) {
     () =>
       rolesVisibles.map((rol) => {
         const delRol = personas.filter((p) => (p.rol_operativo ?? '') === rol)
-        return { rol, total: delRol.length, activas: delRol.filter((p) => p.activo).length }
+        return { rol, total: delRol.length, activas: delRol.filter((p) => estadoEnSquadContexto(p, filtros.squad || squadContexto)).length }
       }),
-    [personas, rolesVisibles],
+    [personas, rolesVisibles, filtros.squad, squadContexto],
   )
 
   const grupos = useMemo<GrupoRol[]>(() => {
@@ -146,6 +146,7 @@ export function useFiltrosPersonas(personas: Persona[], roles: string[]) {
     alternarGrupo,
     resumenRoles,
     rolesVisibles,
+    squadEfectivo: filtros.squad || squadContexto,
     opcionesSquad,
     opcionesContratacion,
   }

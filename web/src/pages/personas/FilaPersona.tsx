@@ -7,7 +7,7 @@ import { AvatarRol, ChipRol } from './ChipRol'
 import { InsigniasPersona } from './InsigniasPersona'
 import { fechaCorta } from './formatoFecha'
 import { ROL_SIN_CONTRATACION } from './roles'
-import { detalleSquads } from './squadsPersona'
+import { cierreEnSquad, detalleSquads, estadoEnSquadContexto } from './squadsPersona'
 
 /** Anchos de columna compartidos entre el encabezado y las filas (solo escritorio). */
 export const COL_ROL = 'md:w-[150px]'
@@ -28,6 +28,8 @@ interface Props {
   ocupada: boolean
   /** Squad elegido en el filtro (destaca el estado de la persona en ese squad). */
   squadFiltrado?: string
+  /** Squad en el que se mide el estado (filtro o aplicación activa); sin él, estado general. */
+  squadContexto?: string
   onAbrir: (persona: Persona) => void
   onEliminar: (persona: Persona) => void
   onAlternarActivo: (persona: Persona) => void
@@ -60,19 +62,23 @@ export function FilaPersona({
   puedeEliminar,
   ocupada,
   squadFiltrado,
+  squadContexto,
   onAbrir,
   onEliminar,
   onAlternarActivo,
 }: Props) {
   const detalle = detalleSquads(p)
   const activoEnSquadFiltrado = squadFiltrado ? detalle.some((d) => d.squad === squadFiltrado && d.activo) : null
+  // Estado efectivo en el squad de contexto: puede ser inactiva allí aunque esté activa en general.
+  const activa = estadoEnSquadContexto(p, squadContexto)
+  const cierreContexto = p.activo && !activa && squadContexto ? cierreEnSquad(p, squadContexto) : undefined
   const sinContratacion = p.rol_operativo === ROL_SIN_CONTRATACION
   const mostrarValores = verValores && !sinContratacion && p.valor_persona !== undefined
   return (
     <li
       className={cx(
         'flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-100 px-3 py-2.5 last:border-b-0',
-        !p.activo && 'bg-slate-50/70',
+        !activa && 'bg-slate-50/70',
       )}
     >
       <button
@@ -81,14 +87,20 @@ export function FilaPersona({
         aria-label={`Ver detalle de ${p.nombre}`}
         className={cx(
           'flex min-w-[220px] flex-1 items-center gap-3 rounded text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-marca-500',
-          !p.activo && 'opacity-80',
+          !activa && 'opacity-80',
         )}
       >
-        <AvatarRol nombre={p.nombre} rol={p.rol_operativo} inactiva={!p.activo} />
+        <AvatarRol nombre={p.nombre} rol={p.rol_operativo} inactiva={!activa} />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="truncate font-semibold text-slate-800">{p.nombre}</span>
             <InsigniasPersona persona={p} />
+            {cierreContexto && (
+              <Chip tono="alerta" aria-label={`Inactivo en ${cierreContexto.squad}`}>
+                Inactivo en {cierreContexto.squad}
+                {cierreContexto.hasta ? ` · hasta ${fechaCorta(cierreContexto.hasta)}` : ''}
+              </Chip>
+            )}
           </span>
           <span className="block truncate text-xs text-slate-500">
             {p.email ? (
@@ -152,9 +164,9 @@ export function FilaPersona({
             onClick={() => onAlternarActivo(p)}
           />
         ) : (
-          <Chip tono={p.activo ? 'exito' : 'error'}>{p.activo ? 'Sí' : 'No'}</Chip>
+          <Chip tono={activa ? 'exito' : 'error'}>{activa ? 'Sí' : 'No'}</Chip>
         )}
-        <span className="text-xs text-slate-500 md:hidden">{p.activo ? 'Activa' : 'Inactiva'}</span>
+        <span className="text-xs text-slate-500 md:hidden">{activa ? 'Activa' : 'Inactiva'}</span>
       </div>
 
       <div className={cx('flex gap-1', COL_ACCIONES)}>

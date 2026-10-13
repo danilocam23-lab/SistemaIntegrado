@@ -48,7 +48,9 @@ function ContenidoPersonas() {
 
   const datos = useDatosPersonas(puedeDeduplicar)
   const { personas } = datos
-  const filtros = useFiltrosPersonas(personas, datos.roles)
+  // Squad de contexto: el de la aplicación activa (en modo consolidado no hay: estado general).
+  const squadContexto = modoConsolidado ? undefined : datos.aplicaciones.find((a) => a.codigo === activa)?.nombre
+  const filtros = useFiltrosPersonas(personas, datos.roles, squadContexto)
 
   const [verValores, setVerValores] = useState(true)
   const [panel, setPanel] = useState<PanelAbierto | null>(null)
@@ -270,6 +272,7 @@ function ContenidoPersonas() {
               puedeEliminar={puedeEliminar}
               idOcupada={idOcupada}
               squadFiltrado={filtros.filtros.squad || undefined}
+              squadContexto={filtros.squadEfectivo}
               onAbrir={(persona) => setPanel({ persona })}
               onEliminar={pedirEliminar}
               onAlternarActivo={(p) => void alternarActivo(p)}
