@@ -21,12 +21,12 @@ import type {
 import {
   contarDiasHabiles,
   fechaKey,
+  horasAprobadasRegistro,
   formatearPeriodo,
   mesDesdeEntrega,
   mesDesdeFecha,
   mesDesdeRequerimiento,
   nivelDeAvance,
-  numero,
   porcentajeCumplimiento,
 } from './utilidades'
 import { calcularCarga, horasWoPorSquad } from './cargaSquad'
@@ -420,7 +420,7 @@ export function useDerivadosBacklog({
 
       if (!periodos.has(mes)) continue
       const actual = mapa.get(mes) ?? { mes, label: formatearPeriodo(mes), horasPorWo: new Map<string, number>() }
-      const horasAprobadas = numero(registro.Horas_Aprobadas)
+      const horasAprobadas = horasAprobadasRegistro(registro)
       actual.horasPorWo.set(workOrder, Math.max(actual.horasPorWo.get(workOrder) ?? 0, horasAprobadas))
       mapa.set(mes, actual)
     }
@@ -445,7 +445,7 @@ export function useDerivadosBacklog({
       if (!periodos.has(mes)) continue
 
       const clave = `${mes}|${workOrder}`
-      const horasAprobadas = numero(registro.Horas_Aprobadas)
+      const horasAprobadas = horasAprobadasRegistro(registro)
       const actual = mapa.get(clave)
       mapa.set(clave, {
         mes,

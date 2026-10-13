@@ -26,7 +26,7 @@ export default function GraficaWoPorMes({ datos, hayDetalle, onVerDetalle }: Pro
   return (
     <ContenedorGrafica
       titulo="WO por mes"
-      descripcion="Eje X: mes · Eje Y: cantidad de WO y suma de Horas_Aprobadas"
+      descripcion="Eje X: mes · Eje Y: cantidad de WO y suma de horas y minutos aprobados"
       alto={360}
       vacio={datos.length === 0}
       acciones={

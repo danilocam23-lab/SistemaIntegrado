@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import type { RegistroSoporteResumen } from './tipos'
-import { mesDesdeFecha, numero } from './utilidades'
+import { horasAprobadasRegistro, mesDesdeFecha } from './utilidades'
 
 /**
  * Horas aprobadas de WO por squad en los periodos seleccionados. Mismo criterio que el KPI
  * global (`woSoportePorMes`): por mes, una WO cuenta una sola vez con su máximo de
- * `Horas_Aprobadas`. La WO se asocia al squad por el campo `squad` del registro de soporte
+ * horas aprobadas (horas + minutos/60). La WO se asocia al squad por el campo `squad` del registro de soporte
  * (nombre del squad), normalizado con `resolverNombreSquad`. Las WO sin squad resoluble
  * quedan fuera de las filas (el KPI global no cambia).
  */
@@ -22,7 +22,7 @@ export function horasWoPorSquad(
     const mes = mesDesdeFecha(registro.Fecha_Fin_Real)
     if (!workOrder || !mes || !periodos.has(mes)) continue
     const clave = `${mes}|${workOrder}`
-    const horas = numero(registro.Horas_Aprobadas)
+    const horas = horasAprobadasRegistro(registro)
     const squadCrudo = registro.squad?.trim() ?? ''
     const squad = squadCrudo ? resolverNombreSquad(squadCrudo) : ''
     const actual = porWo.get(clave)

@@ -19,7 +19,7 @@ export default function ModalDetalleWo({ filas, busqueda, onBusqueda, onCerrar }
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
           <div>
             <h2 className="titulo-seccion">Detalle WO por mes</h2>
-            <p className="mt-1 text-sm text-slate-500">WO individuales y Horas_Aprobadas por periodo seleccionado.</p>
+            <p className="mt-1 text-sm text-slate-500">WO individuales y Horas y Minutos aprobados por periodo seleccionado (en horas).</p>
           </div>
           <button
             type="button"
@@ -48,7 +48,7 @@ export default function ModalDetalleWo({ filas, busqueda, onBusqueda, onCerrar }
               <tr>
                 <th>Mes</th>
                 <th>Work Order ID</th>
-                <th className="text-right">Horas aprobadas</th>
+                <th className="text-right" title="Horas aprobadas + minutos aprobados / 60">Horas aprobadas</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

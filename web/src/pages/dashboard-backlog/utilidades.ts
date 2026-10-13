@@ -21,6 +21,16 @@ export function numero(valor: string | number | null | undefined): number {
   return Number.isFinite(resultado) ? resultado : 0
 }
 
+/**
+ * Horas aprobadas de un registro de soporte = `Horas_Aprobadas` + `Minutos_Aprobados` / 60
+ * (los minutos son sueltos; vacío o inválido = 0). Única fuente para KPIs, gráfica, modal y carga por squad.
+ */
+export function horasAprobadasRegistro(
+  registro: { Horas_Aprobadas?: string | number | null; Minutos_Aprobados?: string | number | null },
+): number {
+  return numero(registro.Horas_Aprobadas) + numero(registro.Minutos_Aprobados) / 60
+}
+
 export function mesActual(): string {
   const hoy = new Date()
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`

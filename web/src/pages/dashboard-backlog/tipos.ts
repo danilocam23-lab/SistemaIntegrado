@@ -28,6 +28,8 @@ export interface RegistroSoporteResumen {
   Fecha_Fin_Real: string
   Horas_Estimadas: string
   Horas_Aprobadas: string
+  /** Minutos sueltos aprobados; se suman a las horas (minutos / 60). */
+  Minutos_Aprobados?: string
   Horas_Reales: string
 }
 
