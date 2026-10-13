@@ -29,7 +29,7 @@ import {
   numero,
   porcentajeCumplimiento,
 } from './utilidades'
-import { factorVigencia, squadsDePersonaEnMes } from './vigenciaCapacidad'
+import { capacidadExplicitaCero, factorVigencia, squadsDePersonaEnMes } from './vigenciaCapacidad'
 import type { VigenciaMes } from './vigenciaCapacidad'
 
 interface ParametrosDerivados {
@@ -232,6 +232,8 @@ export function useDerivadosBacklog({
 
         for (const persona of personas) {
           if (persona.rol_operativo === 'LT_EPM') continue
+          // Capacidad explícita en 0 en el mes: no aporta ni aparece (vacío NO es 0).
+          if (capacidadExplicitaCero(capacidadPorPersonaMes, persona.id, periodo)) continue
           const vigencia = vigenciaPorMes.get(periodo) ?? null
           const { squads: squadsPersona, porVigencia } = squadsDePersonaEnMes({
             persona,
@@ -257,6 +259,7 @@ export function useDerivadosBacklog({
     squadCodigoPorNombre,
     resolverNombreSquad,
     vigenciaPorMes,
+    capacidadPorPersonaMes,
   ])
 
   const filasCapacidadSquad = useMemo<FilaCapacidadSquad[]>(() => {

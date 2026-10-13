@@ -80,3 +80,17 @@ export function factorVigencia(
   if (dias === undefined) return 1
   return Math.min(1, dias / diasHabilesMes)
 }
+
+/**
+ * ¿La persona tiene capacidad EXPLÍCITA <= 0 en el mes? Solo cuenta un registro existente con
+ * valor 0; la ausencia de registro NO es 0 (usa la capacidad por defecto) ni tampoco lo es una
+ * capacidad por defecto prorrateada que resulte 0.
+ */
+export function capacidadExplicitaCero(
+  capacidadPorPersonaMes: Map<string, number>,
+  personaId: string,
+  periodo: string,
+): boolean {
+  const explicita = capacidadPorPersonaMes.get(`${personaId}|${periodo}`)
+  return explicita !== undefined && explicita <= 0
+}
