@@ -14,6 +14,7 @@ from app.documents.persona import Persona
 from app.documents.requerimiento import Requerimiento
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.repositories.personas_repository import filtro_personas_visibles
 from app.security.deps import permiso
 from app.services.sync_catalogo import sincronizar_requerimiento_a_carga
 
@@ -49,11 +50,14 @@ async def _validar_referencias(
 ) -> None:
     """Valida que persona y requerimientos existan en la aplicación activa, y que
     la categoría exista (es una colección global, no filtra por aplicación: ver
-    api/app/api/categorias.py). Responde 404 sin revelar datos ajenos y 409 si
-    se duplica persona+requerimiento, tanto dentro del cuerpo como contra otras
-    asignaciones de la persona."""
+    api/app/api/categorias.py). La persona admite visibilidad cross-squad (ver
+    repositories/personas_repository.py). Responde 404 sin revelar datos ajenos
+    y 409 si se duplica persona+requerimiento, tanto dentro del cuerpo como
+    contra otras asignaciones de la persona."""
     filtro = ctx.filtro()
-    if await Persona.find_one({**filtro, "_id": _oid(persona_id, "persona_id")}) is None:
+    if await Persona.find_one(
+        {**filtro_personas_visibles(ctx), "_id": _oid(persona_id, "persona_id")}
+    ) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
     # Categoria es global al sistema (no tiene aplicacion_id por squad): se busca
     # únicamente por _id, igual que hacen los propios endpoints de categorias.py.

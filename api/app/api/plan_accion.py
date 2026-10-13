@@ -14,6 +14,7 @@ from app.documents.persona import Persona
 from app.documents.plan_accion import PlanAccion
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.repositories.personas_repository import filtro_personas_visibles
 from app.security.deps import permiso
 
 router = APIRouter(prefix="/planes-accion", tags=["plan_accion"])
@@ -79,7 +80,8 @@ class PlanAccionActualizar(BaseModel):
 
 
 async def _validar_responsable(ctx: ContextoAplicacion, responsable_id: str | None) -> None:
-    """El responsable debe ser una persona de la aplicación activa (422/404)."""
+    """El responsable debe ser una persona visible en la aplicación activa, propia
+    o colaboradora vía ``squads`` (422/404; ver repositories/personas_repository.py)."""
     if not responsable_id:
         return
     try:
@@ -88,7 +90,7 @@ async def _validar_responsable(ctx: ContextoAplicacion, responsable_id: str | No
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, "responsable_id con formato inválido"
         ) from None
-    if await Persona.find_one({**ctx.filtro(), "_id": oid}) is None:
+    if await Persona.find_one({**filtro_personas_visibles(ctx), "_id": oid}) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Responsable no encontrado")
 
 

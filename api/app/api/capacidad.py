@@ -10,7 +10,8 @@ Reglas de escritura (la unicidad no se garantiza con índice porque pueden exist
 duplicados históricos; se valida en servidor):
 
 * ``mes`` con formato ``YYYY-MM``; ``horas_disponibles`` finito en 0..744.
-* ``scope`` persona exige ``persona_id`` existente y de la aplicación activa.
+* ``scope`` persona exige ``persona_id`` visible en la aplicación activa (propia
+  o colaboradora vía ``squads``: ver ``repositories/personas_repository.py``).
 * No se admiten dos filas de la misma persona (o squad) y mes: 409.
 """
 from typing import Annotated, Any
@@ -26,6 +27,7 @@ from app.documents.capacidad import Capacidad
 from app.documents.persona import Persona
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.repositories.personas_repository import filtro_personas_visibles
 from app.security.deps import permiso
 
 router = APIRouter(prefix="/capacidades", tags=["capacidad"])
@@ -94,14 +96,14 @@ def _validar_scope(scope: str) -> None:
 
 
 async def _personas_validas(ids: set[str], ctx: ContextoAplicacion) -> None:
-    """Exige que todas las personas existan en la aplicación activa."""
+    """Exige que todas las personas sean visibles en la aplicación activa (propia
+    o colaboradora vía ``squads``: ver ``repositories/personas_repository.py``)."""
     if any(not ObjectId.is_valid(i) for i in ids):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "persona_id inválido")
+    consulta = {"_id": {"$in": [ObjectId(i) for i in ids]}, **filtro_personas_visibles(ctx)}
     encontrados = {
         str(p["_id"])
-        async for p in Persona.get_pymongo_collection().find(
-            {"_id": {"$in": [ObjectId(i) for i in ids]}, **ctx.filtro()}, {"_id": 1}
-        )
+        async for p in Persona.get_pymongo_collection().find(consulta, {"_id": 1})
     }
     if encontrados != ids:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")

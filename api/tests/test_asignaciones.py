@@ -145,6 +145,27 @@ async def test_validacion_rango_e_ids_ajenos(cliente, fabrica_aplicacion, fabric
     assert (await cliente.post("/api/asignaciones", json=mal, headers=h)).status_code == 422
 
 
+async def test_persona_cross_squad_no_da_404(cliente, fabrica_aplicacion, fabrica_usuario):
+    """Regresión: una persona cuyo `aplicacion_id` pertenece a OTRO squad pero que
+    colabora en el squad activo vía `squads` (igual que la ve `GET /personas`) no
+    debe fallar con 404 al validarla en asignaciones (crear y editar)."""
+    app, h, _, cat, _ = await _escenario(fabrica_aplicacion, fabrica_usuario)
+    otra = await fabrica_aplicacion("CRM")
+    cruzada = await Persona(
+        aplicacion_id=otra.codigo, nombre="Marleida", squads=[app.nombre]
+    ).insert()
+
+    creada = await cliente.post("/api/asignaciones", json=_cuerpo(cruzada, cat), headers=h)
+    assert creada.status_code == 201
+
+    editada = await cliente.put(
+        f"/api/asignaciones/{creada.json()['_id']}",
+        json=_cuerpo(cruzada, cat, total_porcentaje=50),
+        headers=h,
+    )
+    assert editada.status_code == 200
+
+
 async def test_categoria_global_no_bloquea_crear_ni_editar(
     cliente, fabrica_aplicacion, fabrica_usuario
 ):

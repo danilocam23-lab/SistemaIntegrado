@@ -54,6 +54,28 @@ async def test_responsable_ajeno_o_mal_formado(cliente, fabrica_aplicacion, fabr
     assert r.status_code == 404
 
 
+async def test_responsable_cross_squad_no_da_404(cliente, fabrica_aplicacion, fabrica_usuario):
+    """Regresión: un responsable cuyo `aplicacion_id` pertenece a OTRO squad pero que
+    colabora en el squad activo vía `squads` (igual que lo ve `GET /personas`) no
+    debe fallar con 404 al crear/editar un plan de acción."""
+    app, h, _ = await _escenario(fabrica_aplicacion, fabrica_usuario)
+    otra = await fabrica_aplicacion("CRM")
+    cruzado = await Persona(
+        aplicacion_id=otra.codigo, nombre="Marleida", squads=[app.nombre]
+    ).insert()
+
+    creado = await cliente.post(
+        URL, json={"titulo": "t", "responsable_id": str(cruzado.id)}, headers=h
+    )
+    assert creado.status_code == 201
+
+    sin_responsable = await PlanAccion(aplicacion_id=app.codigo, titulo="otro").insert()
+    editado = await cliente.put(
+        f"{URL}/{sin_responsable.id}", json={"responsable_id": str(cruzado.id)}, headers=h
+    )
+    assert editado.status_code == 200
+
+
 async def test_consolidado_rechaza_escrituras(cliente, fabrica_aplicacion, fabrica_usuario):
     app = await fabrica_aplicacion()
     _, token = await fabrica_usuario([app.codigo, "otra-app"], permisos=EDITOR)

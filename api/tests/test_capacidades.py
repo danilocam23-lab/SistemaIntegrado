@@ -143,6 +143,33 @@ async def test_bulk_upsert(cliente, fabrica_aplicacion, fabrica_usuario):
     assert again.json()["creadas"] == 0
 
 
+async def test_persona_cross_squad_no_da_404(cliente, fabrica_aplicacion, fabrica_usuario):
+    """Regresión: una persona cuyo `aplicacion_id` pertenece a OTRO squad pero que
+    colabora en el squad activo vía `squads` (igual que la ve `GET /personas`) no
+    debe fallar con 404 al validarla en capacidades (crear, PUT y bulk)."""
+    app, h, _ = await _escenario(fabrica_aplicacion, fabrica_usuario)
+    otra = await fabrica_aplicacion("CRM")
+    cruzada = await Persona(
+        aplicacion_id=otra.codigo, nombre="Marleida", squads=[app.nombre]
+    ).insert()
+
+    creada = await cliente.post(URL, json=_cuerpo(cruzada), headers=h)
+    assert creada.status_code == 201
+    cap_id = creada.json()["_id"]
+
+    # El PUT reenvía persona_id (igual que haría un formulario que reenvía la fila
+    # completa), forzando la revalidación de la persona en `_validar_destino`.
+    put = await cliente.put(
+        f"{URL}/{cap_id}",
+        json={"persona_id": str(cruzada.id), "horas_disponibles": 120},
+        headers=h,
+    )
+    assert put.status_code == 200
+
+    bulk = {"filas": [_cuerpo(cruzada, mes="2026-04")]}
+    assert (await cliente.put(f"{URL}/bulk", json=bulk, headers=h)).status_code == 200
+
+
 async def test_bulk_validaciones(cliente, fabrica_aplicacion, fabrica_usuario):
     app, h, persona = await _escenario(fabrica_aplicacion, fabrica_usuario)
     otra = await fabrica_aplicacion()
