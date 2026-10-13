@@ -58,7 +58,7 @@ export default function BannerRiesgo({ filas, resumen }: Props) {
           )}
           {sobrecargados.length > 0 && (
             <li>
-              <strong>{sobrecargados.length} squad(s) en sobrecarga</strong>: las horas de entregas del periodo superan la capacidad disponible ({listarNombres(sobrecargados)}).
+              <strong>{sobrecargados.length} squad(s) en sobrecarga</strong>: las horas de entregas y WO del periodo superan la capacidad disponible ({listarNombres(sobrecargados)}).
             </li>
           )}
         </ul>

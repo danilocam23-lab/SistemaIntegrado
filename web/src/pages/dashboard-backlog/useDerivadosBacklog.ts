@@ -29,6 +29,7 @@ import {
   numero,
   porcentajeCumplimiento,
 } from './utilidades'
+import { calcularCarga, horasWoPorSquad } from './cargaSquad'
 import { capacidadExplicitaCero, factorVigencia, squadsDePersonaEnMes } from './vigenciaCapacidad'
 import type { VigenciaMes } from './vigenciaCapacidad'
 
@@ -503,6 +504,8 @@ export function useDerivadosBacklog({
       personasPorNombre.set(fila.squad, (personasPorNombre.get(fila.squad) ?? 0) + 1)
     }
 
+    const woPorSquad = horasWoPorSquad(soporteResumen, periodos, resolverNombreSquad)
+
     return filas.map((fila) => {
       const porcentajeActa = porcentajeCumplimiento(fila.ansActaCumple, fila.ansActaTotal)
       const porcentajeEntrega = porcentajeCumplimiento(fila.ansEntregaCumple, fila.ansEntregaTotal)
@@ -510,6 +513,8 @@ export function useDerivadosBacklog({
       const nivelEntrega = porcentajeEntrega === null ? null : nivelDeAvance(porcentajeEntrega)
       const capacidad = capacidadPorNombre.get(fila.squad) ?? 0
       const capacidadHoras = capacidad > 0 ? capacidad : null
+      const horasWo = woPorSquad.get(fila.squad) ?? 0
+      const carga = calcularCarga(fila.horasEntregas, horasWo, capacidadHoras)
       return {
         ...fila,
         porcentajeActa,
@@ -519,11 +524,13 @@ export function useDerivadosBacklog({
         nivelGlobal: peorNivel(nivelActa, nivelEntrega),
         capacidadHoras,
         personasCapacidad: personasPorNombre.get(fila.squad) ?? 0,
-        utilizacion: capacidadHoras === null ? null : Math.round((fila.horasEntregas / capacidadHoras) * 100),
-        sobrecarga: capacidadHoras !== null && fila.horasEntregas > capacidadHoras,
+        horasWo,
+        horasCarga: carga.horasCarga,
+        utilizacion: carga.utilizacion,
+        sobrecarga: carga.sobrecarga,
       }
     })
-  }, [filas, filasCapacidadSquad, detallePersonasCapacidad])
+  }, [filas, filasCapacidadSquad, detallePersonasCapacidad, soporteResumen, periodos, resolverNombreSquad])
 
   const resumenRiesgo = useMemo<ResumenRiesgo>(() => {
     let criticos = 0

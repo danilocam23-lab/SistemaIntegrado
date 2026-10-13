@@ -23,6 +23,8 @@ export interface FilaSquad {
 export interface RegistroSoporteResumen {
   id: string
   Work_Order_ID: string
+  /** Nombre del squad al que pertenece la WO (puede faltar). */
+  squad?: string | null
   Fecha_Fin_Real: string
   Horas_Estimadas: string
   Horas_Aprobadas: string
@@ -97,7 +99,11 @@ export interface FilaSquadAnalisis extends FilaSquad {
   capacidadHoras: number | null
   /** Personas distintas que aportan capacidad al squad en los periodos seleccionados. */
   personasCapacidad: number
-  /** Horas de entregas del periodo / capacidad del periodo, en % (null si no hay capacidad). */
+  /** Horas aprobadas de las WO del squad en el periodo. */
+  horasWo: number
+  /** Carga del periodo = horas de entregas + horas aprobadas WO. */
+  horasCarga: number
+  /** Carga del periodo / capacidad del periodo, en % (null si no hay capacidad). */
   utilizacion: number | null
   sobrecarga: boolean
 }

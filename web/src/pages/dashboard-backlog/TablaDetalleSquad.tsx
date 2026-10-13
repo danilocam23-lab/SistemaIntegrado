@@ -30,7 +30,7 @@ function EstadoSquad({ fila }: { fila: FilaSquadAnalisis }) {
     return <Chip tono="alerta" title="ANS entre 50% y 74%">En atención</Chip>
   }
   if (fila.sobrecarga) {
-    return <Chip tono="alerta" title="Las horas de entregas del periodo superan la capacidad disponible">Sobrecarga</Chip>
+    return <Chip tono="alerta" title="Las horas de entregas y WO del periodo superan la capacidad disponible">Sobrecarga</Chip>
   }
   if (fila.nivelGlobal === 'exito') return <Chip tono="exito">Cumple</Chip>
   return <Chip tono="neutro">Sin datos</Chip>
@@ -39,19 +39,24 @@ function EstadoSquad({ fila }: { fila: FilaSquadAnalisis }) {
 const COLOR_CARGA = { normal: 'bg-marca-500', alta: 'bg-amber-500', sobrecarga: 'bg-red-500' } as const
 
 function CargaSquad({ fila }: { fila: FilaSquadAnalisis }) {
+  const desglose = `${fmtNumero(fila.horasEntregas)}h entregas + ${fmtNumero(fila.horasWo)}h WO`
   if (fila.capacidadHoras === null || fila.utilizacion === null) {
     return (
-      <div className="text-center" title="Horas de entregas del periodo (sin capacidad configurada para compararlas)">
-        <Chip tono="alerta">{`${fmtNumero(fila.horasEntregas)}h`}</Chip>
-        <p className="mt-1 text-xs text-slate-400">Sin capacidad</p>
+      <div
+        className="text-center"
+        title={`Carga del periodo: horas de entregas + horas aprobadas WO (${desglose}); sin capacidad configurada para compararla`}
+      >
+        <Chip tono="alerta">{`${fmtNumero(fila.horasCarga)}h`}</Chip>
+        <p className="mt-1 text-xs text-slate-500">{desglose}</p>
+        <p className="text-xs text-slate-400">Sin capacidad</p>
       </div>
     )
   }
   const nivel = fila.sobrecarga ? 'sobrecarga' : fila.utilizacion >= 90 ? 'alta' : 'normal'
   return (
-    <div className="mx-auto w-32" title="Horas de entregas del periodo frente a la capacidad del periodo">
+    <div className="mx-auto w-32" title={`Carga del periodo (horas de entregas + horas aprobadas WO: ${desglose}) frente a la capacidad del periodo`}>
       <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="font-semibold text-slate-800">{`${fmtNumero(fila.horasEntregas)}h`}</span>
+        <span className="font-semibold text-slate-800">{`${fmtNumero(fila.horasCarga)}h`}</span>
         <span className="text-slate-500">{`de ${fmtNumero(fila.capacidadHoras)}h`}</span>
       </div>
       <div
@@ -60,7 +65,7 @@ function CargaSquad({ fila }: { fila: FilaSquadAnalisis }) {
         aria-valuenow={Math.min(fila.utilizacion, 100)}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`Carga del periodo de ${fila.squad}: horas de entregas al ${fila.utilizacion}% de la capacidad`}
+        aria-label={`Carga del periodo de ${fila.squad}: horas de entregas más WO (${desglose}) al ${fila.utilizacion}% de la capacidad`}
       >
         <div
           className={`h-full rounded-full ${COLOR_CARGA[nivel]}`}
@@ -70,6 +75,7 @@ function CargaSquad({ fila }: { fila: FilaSquadAnalisis }) {
       <p className={fila.sobrecarga ? 'mt-0.5 text-xs font-semibold text-red-700' : 'mt-0.5 text-xs text-slate-500'}>
         {fila.utilizacion}% de la capacidad
       </p>
+      <p className="text-xs text-slate-500">{desglose}</p>
     </div>
   )
 }
@@ -96,7 +102,7 @@ export default function TablaDetalleSquad({ filas, onVerAplicaciones, onVerPerso
                   <th>Squad</th>
                   <th className="text-center">Reqs</th>
                   <th className="text-center" title="Personas que suman a la capacidad del squad">Personas</th>
-                  <th className="text-center" title="Horas de entregas del periodo frente a la capacidad del periodo">
+                  <th className="text-center" title="Horas de entregas + horas aprobadas WO del periodo frente a la capacidad del periodo">
                     Carga del periodo
                   </th>
                   <th className="text-center">Entregas</th>
