@@ -18,7 +18,7 @@ ROLES_OBSOLETOS = ("editor", "soporte_ans_editor")
 # Permisos nuevos a conceder a roles de sistema que ya existen en la BD. Se limita a lo
 # listado (no se sincroniza todo rbac.py para no pisar ajustes hechos por el admin).
 MIGRACION_PERMISOS: dict[str, tuple[str, ...]] = {
-    "admin_app": ("personas.ver_valores", "requerimientos.editar", "asignaciones.editar"),
+    "admin_app": ("personas.ver_valores", "requerimientos.analista.editar", "asignaciones.editar"),
     "viewer": ("personas.ver_valores",),
 }
 

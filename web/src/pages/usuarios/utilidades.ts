@@ -14,6 +14,7 @@ export const PERMISOS_INFO: Record<string, { modulo: string; nombre: string; des
   'requerimientos.crear': { modulo: 'Desarrollos de fábrica', nombre: 'Crear requerimientos', descripcion: 'Permite registrar nuevos requerimientos.' },
   'requerimientos.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar requerimientos', descripcion: 'Permite actualizar requerimientos, entregas y estimaciones.' },
   'requerimientos.tipificacion.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar Seguimiento Hitss / Tipificación', descripcion: 'Permite editar Seguimiento Hitss y Tipificación del requerimiento, y Observaciones Hitss y Tipificación de la entrega, sin permiso completo de edición.' },
+  'requerimientos.analista.editar': { modulo: 'Desarrollos de fábrica', nombre: 'Editar Analista de requerimientos', descripcion: 'Permite asignar el Analista de requerimientos en el detalle del requerimiento, sin permiso completo de edición.' },
   'requerimientos.eliminar': { modulo: 'Desarrollos de fábrica', nombre: 'Eliminar requerimientos', descripcion: 'Permite borrar requerimientos.' },
   'entregas_actas.ver': { modulo: 'Desarrollos de fábrica', nombre: 'Ver entregas de actas', descripcion: 'Permite consultar entregas de actas.' },
   'entregas_actas.exportar': { modulo: 'Desarrollos de fábrica', nombre: 'Exportar entregas de actas', descripcion: 'Permite exportar a Excel el listado de entregas de actas con los filtros aplicados.' },

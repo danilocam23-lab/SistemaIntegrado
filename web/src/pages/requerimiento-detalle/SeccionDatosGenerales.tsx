@@ -88,12 +88,130 @@ function CampoIdAzureHitss({
   )
 }
 
+/**
+ * Campo "Analista de requerimientos" con guardado propio (PATCH independiente
+ * del `guardar()` general del formulario), para que quien solo tenga
+ * `requerimientos.analista.editar` (sin `requerimientos.editar`) pueda
+ * editarlo sin pasar por el botón "Guardar cambios" (gateado por el permiso
+ * general, que le devolvería 403). Mismo patrón que `CampoIdAzureHitss`.
+ *
+ * Quien sí tiene `requerimientos.editar` sigue viendo el selector tal como
+ * antes: ligado al estado compartido del formulario y guardado junto con el
+ * resto por "Guardar cambios" (sin cambios de comportamiento para ese caso).
+ */
+function CampoAnalistaRequerimientos({
+  reqId,
+  valorSeleccionado,
+  onCambiarSeleccion,
+  valorPersistido,
+  squadId,
+  analistas,
+  personas,
+  personasSquad,
+  analistaAsignado,
+  puedeEditarReq,
+  puedeEditarAnalista,
+  onGuardado,
+}: {
+  reqId: string
+  valorSeleccionado: string
+  onCambiarSeleccion: (id: string) => void
+  valorPersistido: string | null
+  squadId: string
+  analistas: Persona[]
+  personas: Persona[]
+  personasSquad: Persona[]
+  analistaAsignado: Persona | null
+  puedeEditarReq: boolean
+  puedeEditarAnalista: boolean
+  onGuardado: () => void
+}) {
+  const [valor, setValor] = useState(valorPersistido ?? '')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  function opcionActual(id: string): string {
+    return personas.find((p) => p.id === id)?.nombre
+      ?? personasSquad.find((p) => p.id === id)?.nombre
+      ?? analistaAsignado?.nombre
+      ?? id
+  }
+
+  // Permiso completo: selector ligado al estado compartido del formulario,
+  // se guarda junto con el resto de "Datos generales" (sin botón propio).
+  if (puedeEditarReq) {
+    return (
+      <label className="text-sm">
+        <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
+        <Selector value={valorSeleccionado} onChange={(e) => onCambiarSeleccion(e.target.value)}
+          disabled={!squadId}
+          className="w-full">
+          <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
+          {valorSeleccionado && !analistas.some((p) => p.id === valorSeleccionado) && (
+            <option value={valorSeleccionado}>{opcionActual(valorSeleccionado)}</option>
+          )}
+          {analistas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+        </Selector>
+      </label>
+    )
+  }
+
+  if (!puedeEditarAnalista) {
+    return (
+      <label className="text-sm">
+        <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
+        <Campo value={valorPersistido ? opcionActual(valorPersistido) : '—'} disabled className="w-full" />
+      </label>
+    )
+  }
+
+  const modificado = valor !== (valorPersistido ?? '')
+
+  async function guardar(): Promise<void> {
+    setGuardando(true)
+    setError('')
+    try {
+      await client.patch(`/requerimientos/${reqId}/analista`, { analista_requerimientos_id: valor || null })
+      onGuardado()
+    } catch (err) {
+      setError(mensajeError(err))
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <label className="text-sm">
+      <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
+      <div className="flex items-center gap-2">
+        <Selector value={valor} onChange={(e) => setValor(e.target.value)}
+          disabled={!squadId}
+          className="w-full">
+          <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
+          {valor && !analistas.some((p) => p.id === valor) && (
+            <option value={valor}>{opcionActual(valor)}</option>
+          )}
+          {analistas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+        </Selector>
+        {modificado && (
+          <Boton variante="secundario" tamano="sm" onClick={guardar} disabled={guardando}>
+            {guardando ? 'Guardando…' : 'Guardar'}
+          </Boton>
+        )}
+      </div>
+      {error && <Aviso tono="error" className="mt-1">{error}</Aviso>}
+    </label>
+  )
+}
+
 interface Props {
   campos: CamposRequerimiento
   req: Requerimiento
   puedeEditarReq: boolean
   puedeEditarIdAzure: boolean
   onGuardadoIdAzure: () => void
+  puedeEditarAnalista: boolean
+  onGuardadoAnalista: () => void
   squads: Aplicacion[]
   resolverNombreSquad: (id: string) => string
   ltHitss: Persona[]
@@ -114,6 +232,8 @@ export default function SeccionDatosGenerales({
   puedeEditarReq,
   puedeEditarIdAzure,
   onGuardadoIdAzure,
+  puedeEditarAnalista,
+  onGuardadoAnalista,
   squads,
   resolverNombreSquad,
   ltHitss,
@@ -208,23 +328,22 @@ export default function SeccionDatosGenerales({
             {scrums.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </Selector>
         </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
-          <Selector value={valores.analistaId} onChange={(e) => actualizar('analistaId', e.target.value)}
-            disabled={!valores.squadId}
-            className="w-full">
-            <option value="">{valores.squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
-            {valores.analistaId && !analistas.some((p) => p.id === valores.analistaId) && (
-              <option value={valores.analistaId}>
-                {personas.find((p) => p.id === valores.analistaId)?.nombre
-                  ?? personasSquad.find((p) => p.id === valores.analistaId)?.nombre
-                  ?? analistaAsignado?.nombre
-                  ?? valores.analistaId}
-              </option>
-            )}
-            {analistas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </Selector>
-        </label>
+      </fieldset>
+      <CampoAnalistaRequerimientos
+        reqId={req.id}
+        valorSeleccionado={valores.analistaId}
+        onCambiarSeleccion={(id) => actualizar('analistaId', id)}
+        valorPersistido={req.solicitud?.analista_requerimientos_id ?? null}
+        squadId={valores.squadId}
+        analistas={analistas}
+        personas={personas}
+        personasSquad={personasSquad}
+        analistaAsignado={analistaAsignado}
+        puedeEditarReq={puedeEditarReq}
+        puedeEditarAnalista={puedeEditarAnalista}
+        onGuardado={onGuardadoAnalista}
+      />
+      <fieldset disabled={!puedeEditarReq} style={{ display: 'contents' }}>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Horas estimadas</span>
           <Campo value={valores.horas} onChange={(e) => actualizar('horas', e.target.value)} type="number" step="any"
