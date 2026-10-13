@@ -6,7 +6,7 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { AreaTexto, Aviso, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
-import type { Festivo, Persona } from '../types'
+import type { Festivo, MetaMembresia, Persona } from '../types'
 
 interface Fila {
   key: string
@@ -64,6 +64,14 @@ function calcularHorasMeta(anio: number, mes: number, festivos: Festivo[]): numb
   return horas
 }
 
+/** Meta de una fila (persona + squad) recortada a sus membresías del mes. */
+interface MetaFila {
+  horas: number
+  dias: number
+  desde: string
+  hasta: string
+}
+
 export default function ControlHorasFacturable() {
   const { tienePermiso } = useAuth()
   const puedeEditarHoras = tienePermiso('control_horas_facturable.editar')
@@ -92,6 +100,7 @@ export default function ControlHorasFacturable() {
   const [keysConDatos, setKeysConDatos] = useState<Set<string>>(new Set())
   const [guardandoFila, setGuardandoFila] = useState<Set<string>>(new Set())
   const [guardandoTodos, setGuardandoTodos] = useState(false)
+  const { datos: metasMes, cargando: cargandoMetas, error: errorMetas } = useLista<MetaMembresia>(`/membresias/metas?anio=${anio}&mes=${mes}`)
   const [aviso, setAviso] = useState('')
   const [avisoOk, setAvisoOk] = useState('')
 
@@ -191,6 +200,47 @@ export default function ControlHorasFacturable() {
     return mapa
   }, [ltHitssPersonas])
 
+  // Metas por persona + squad (suma las membresías del mismo squad dentro del mes).
+  // Se descartan filas de otro período mientras llega la respuesta del actual.
+  const metasPorKey = useMemo(() => {
+    const periodo = `${anio}-${String(mes).padStart(2, '0')}`
+    const mapa = new Map<string, MetaFila>()
+    for (const m of metasMes) {
+      if (m.desde_efectivo.slice(0, 7) !== periodo) continue
+      const key = `${m.persona_id}_${m.squad}`
+      const previo = mapa.get(key)
+      mapa.set(key, {
+        horas: (previo?.horas ?? 0) + m.horas_meta,
+        dias: (previo?.dias ?? 0) + m.dias_habiles,
+        desde: previo && previo.desde < m.desde_efectivo ? previo.desde : m.desde_efectivo,
+        hasta: previo && previo.hasta > m.hasta_efectivo ? previo.hasta : m.hasta_efectivo,
+      })
+    }
+    return mapa
+  }, [metasMes, anio, mes])
+
+  // Squads con membresía vigente en el mes por persona (aunque ya no estén en p.squads).
+  const squadsMesPorPersona = useMemo(() => {
+    const mapa = new Map<string, string[]>()
+    for (const clave of metasPorKey.keys()) {
+      const i = clave.indexOf('_')
+      const personaId = clave.slice(0, i)
+      const squad = clave.slice(i + 1)
+      mapa.set(personaId, [...(mapa.get(personaId) ?? []), squad])
+    }
+    return mapa
+  }, [metasPorKey])
+
+  // Las metas del período son confiables solo cuando /metas terminó sin error.
+  const metasListas = !cargandoMetas && !errorMetas
+
+  // Personas + squad con alguna membresía (de cualquier fecha); el resto es legado sin membresía.
+  const conMembresia = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of personas) for (const d of p.squads_detalle ?? []) set.add(`${p.id}_${d.squad}`)
+    return set
+  }, [personas])
+
   // Una fila por squad (duplica personas con 2+ squads)
   const filasBase = useMemo<Fila[]>(() => {
     const resultado: Fila[] = []
@@ -198,10 +248,13 @@ export default function ControlHorasFacturable() {
       if (p.rol_operativo === 'LT_EPM') continue
       // Inactivos: solo mostrar si tienen datos guardados en este período
       const esInactivo = !p.activo
-      const squads = p.squads.length > 0 ? p.squads : ['—']
+      const squadsPersona = Array.from(new Set([...p.squads, ...(squadsMesPorPersona.get(p.id) ?? [])]))
+      const squads = squadsPersona.length > 0 ? squadsPersona : ['—']
       for (const sq of squads) {
         const key = `${p.id}_${sq}`
         if (esInactivo && !keysConDatos.has(key)) continue
+        // Con metas ya cargadas, un squad con membresías pero ninguna en el mes no genera fila (salvo datos guardados).
+        if (metasListas && conMembresia.has(key) && !metasPorKey.has(key) && !keysConDatos.has(key)) continue
         const opciones = (ltHitssPorSquad.get(sq) ?? []).sort((a, b) => a.localeCompare(b, 'es'))
         resultado.push({
           key: `${p.id}_${sq}`,
@@ -215,7 +268,7 @@ export default function ControlHorasFacturable() {
       }
     }
     return resultado.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-  }, [personas, ltHitssPorSquad, keysConDatos])
+  }, [personas, ltHitssPorSquad, keysConDatos, squadsMesPorPersona, metasListas, conMembresia, metasPorKey])
 
   const filas = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
@@ -226,6 +279,31 @@ export default function ControlHorasFacturable() {
 
   // Meta de horas facturables del período: días hábiles del mes (lun-jue 8.5h, vie 8h), sin festivos
   const horasMeta = useMemo(() => calcularHorasMeta(anio, mes, festivos), [anio, mes, festivos])
+
+  /**
+   * Meta de la fila: la de su(s) membresía(s) del mes. Sin membresía en el mes -> 0 (si /metas cargó).
+   * Mes completo solo para squads sin ninguna membresía (legado) o si /metas falló.
+   * `null` mientras /metas carga: no hay meta confiable todavía.
+   */
+  function metaFila(fila: Fila): number | null {
+    const m = metasPorKey.get(fila.key)
+    if (m) return m.horas
+    if (cargandoMetas) return null
+    if (errorMetas) return horasMeta
+    return conMembresia.has(fila.key) ? 0 : horasMeta
+  }
+
+  /** Texto «01–13 de octubre, 9 días hábiles» cuando la meta está recortada respecto al mes completo. */
+  function tituloMeta(fila: Fila): string | undefined {
+    const m = metasPorKey.get(fila.key)
+    if (!m) return undefined
+    const ultimoDia = new Date(anio, mes, 0).getDate()
+    const dIni = Number(m.desde.slice(8, 10))
+    const dFin = Number(m.hasta.slice(8, 10))
+    if (dIni === 1 && dFin === ultimoDia) return undefined
+    const dd = (n: number) => String(n).padStart(2, '0')
+    return `${dd(dIni)}–${dd(dFin)} de ${_MESES[mes - 1].toLowerCase()}, ${m.dias} días hábiles`
+  }
 
   function ltSeleccionado(fila: Fila): string {
     return seleccionLt[fila.key] ?? fila.opcionesLt[0] ?? '—'
@@ -381,6 +459,11 @@ export default function ControlHorasFacturable() {
         </span>
       </div>
 
+      {errorMetas && (
+        <Aviso tono="alerta">
+          No se pudieron cargar las metas por vigencia de squad; se usa la meta del mes completo en todas las filas.
+        </Aviso>
+      )}
       {aviso && <Aviso tono="error">{aviso}</Aviso>}
       {avisoOk && <Aviso tono="exito">{avisoOk}</Aviso>}
 
@@ -410,7 +493,12 @@ export default function ControlHorasFacturable() {
               <th className="text-right">Horas Soporte Proy.</th>
               <th className="text-right">Horas Desarrollo Proy.</th>
               <th className="text-right">Total Horas Fact. Proy.</th>
-              <th className="text-right">Validación Meta {horasMeta}</th>
+              <th
+                className="text-right"
+                title="Meta del mes completo. Cada fila puede tener una meta menor si la membresía del squad cubre solo parte del mes."
+              >
+                Meta del mes {horasMeta}
+              </th>
               <th className="text-right">Horas Soporte Cerrado</th>
               <th className="text-right">Horas Desarrollo Cerrado</th>
               <th className="text-right">Total Horas Fact. Cerrado</th>
@@ -482,7 +570,10 @@ export default function ControlHorasFacturable() {
                     <Chip tono={ROL_TONO[f.rol] ?? 'neutro'}>{f.rol}</Chip>
                   </td>
                   <td className="text-slate-600">{f.tipoContratacion}</td>
-                  <td className="text-right font-mono text-slate-700">{horasMeta}</td>
+                  <td className="text-right font-mono text-slate-700" title={tituloMeta(f)}>
+                    {metaFila(f) ?? '—'}
+                    {tituloMeta(f) && <span className="sr-only"> ({tituloMeta(f)})</span>}
+                  </td>
                   <td>
                     <Campo
                       type="number"
@@ -508,12 +599,13 @@ export default function ControlHorasFacturable() {
                   </td>
                   {(() => {
                     const total = (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0);
-                    const diff = total - horasMeta;
+                    const metaDiff = metaFila(f);
+                    const diff = metaDiff === null ? null : total - metaDiff;
                     return (
                       <td className={`text-right font-mono font-semibold ${
-                        diff === 0 ? 'text-blue-600' : diff > 0 ? 'text-green-600' : 'text-red-600'
+                        diff === null ? 'text-slate-400' : diff === 0 ? 'text-blue-600' : diff > 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {diff === 0 ? '✓ OK' : diff > 0 ? `+${diff}` : `${diff}`}
+                        {diff === null ? '—' : diff === 0 ? '✓ OK' : diff > 0 ? `+${diff}` : `${diff}`}
                       </td>
                     );
                   })()}
@@ -542,12 +634,13 @@ export default function ControlHorasFacturable() {
                   </td>
                   {(() => {
                     const totalCerrado = (horasSopCerrado[f.key] ?? 0) + (horasDesCerrado[f.key] ?? 0);
-                    const pct = Math.round((totalCerrado / horasMeta) * 100);
+                    const meta = metaFila(f);
+                    const pct = meta === null ? null : meta > 0 ? Math.round((totalCerrado / meta) * 100) : 0;
                     return (
                       <td className={`text-right font-mono font-semibold ${
-                        pct >= 100 ? 'text-green-600' : pct >= 75 ? 'text-yellow-600' : 'text-red-600'
+                        pct === null ? 'text-slate-400' : pct >= 100 ? 'text-green-600' : pct >= 75 ? 'text-yellow-600' : 'text-red-600'
                       }`}>
-                        {pct}%
+                        {pct === null ? '—' : `${pct}%`}
                       </td>
                     );
                   })()}
@@ -651,7 +744,7 @@ export default function ControlHorasFacturable() {
           <tfoot>
             <tr className="bg-slate-100 font-bold text-sm sticky bottom-0">
               <td colSpan={5}>Totales</td>
-              <td className="text-right font-mono">{filas.length * horasMeta}</td>
+              <td className="text-right font-mono">{cargandoMetas ? '—' : filas.reduce((s, f) => s + (metaFila(f) ?? 0), 0)}</td>
               <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0), 0)}</td>
               <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasDesarrollo[f.key] ?? 0), 0)}</td>
               <td className="text-right font-mono">{filas.reduce((s, f) => s + (horasSoporte[f.key] ?? 0) + (horasDesarrollo[f.key] ?? 0), 0)}</td>

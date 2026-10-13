@@ -181,6 +181,8 @@ export interface Persona {
   fecha_efecto_desactivacion?: string | null
   /** Derivado: nombres de los squads vigentes hoy (se gestionan por membresías). */
   squads: string[]
+  /** Todas las membresías (vigentes y cerradas). Puede faltar en respuestas viejas. */
+  squads_detalle?: SquadDetalle[]
   es_lider_tecnico?: boolean
   permite_sobrecarga?: boolean
   usuario_id?: string | null
@@ -189,18 +191,45 @@ export interface Persona {
 }
 
 /** Pertenencia de una persona a un squad durante `[desde, hasta)` (ADR-0010). */
+/** Membresía resumida dentro de `Persona.squads_detalle`. */
+export interface SquadDetalle {
+  /** Nombre del squad. */
+  squad: string
+  /** Código de la aplicación del squad. */
+  squad_id: string
+  /** Vigente hoy. */
+  activo: boolean
+  /** null = desde el inicio del proyecto. */
+  desde: string | null
+  /** Último día activo (incluido); null = abierta. */
+  hasta: string | null
+}
+
 export interface Membresia {
   id: string
   persona_id: string
   /** Código de la aplicación del squad. */
   squad_id: string
   aplicacion_id: string
-  desde: string
+  /** null = desde el inicio del proyecto. */
+  desde: string | null
+  /** Último día activo (incluido); null = abierta. */
   hasta: string | null
   activo: boolean
   fecha_desactivacion?: string | null
   fecha_efecto_desactivacion?: string | null
   cerrada_por_cascada?: boolean
+}
+
+/** Fila de `GET /membresias/metas`: meta de horas de una membresía recortada al mes. */
+export interface MetaMembresia {
+  persona_id: string
+  squad: string
+  squad_id: string
+  desde_efectivo: string
+  hasta_efectivo: string
+  dias_habiles: number
+  horas_meta: number
 }
 
 /** Respuesta de `PATCH /membresias/{id}/cerrar`. */

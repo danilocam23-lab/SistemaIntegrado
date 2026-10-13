@@ -4,7 +4,8 @@
 """Colección operativa: membresía persona-squad con vigencia (ADR-0010).
 
 ``desde``/``hasta`` son fechas de calendario de Bogotá guardadas a medianoche.
-Intervalo semiabierto ``[desde, hasta)``; ``hasta = None`` significa abierta.
+Intervalo CERRADO ``[desde, hasta]``: ``hasta`` es el ÚLTIMO día activo, incluido.
+``hasta = None`` significa abierta y ``desde = None`` significa «desde el inicio del proyecto».
 """
 from datetime import datetime
 
@@ -21,12 +22,12 @@ class Membresia(DocumentoOperativo):
 
     persona_id: str
     squad_id: str
-    desde: datetime
+    desde: datetime | None = None
     hasta: datetime | None = None
     activo: bool = True
     # Registro: cuándo se hizo el cierre (no editable).
     fecha_desactivacion: datetime | None = None
-    # Efecto: desde cuándo deja de pertenecer. Si activo es False, hasta == este valor.
+    # Efecto: último día activo (incluido). Si activo es False, hasta == este valor.
     fecha_efecto_desactivacion: datetime | None = None
     cerrada_por_cascada: bool = False
 

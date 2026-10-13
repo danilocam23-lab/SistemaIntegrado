@@ -3,6 +3,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import type { Persona } from '../../types'
+import { activaEnSquad, nombresSquads } from './squadsPersona'
 import { FILTROS_INICIALES } from './tipos'
 import type { FiltrosPersonas, VistaPersonas } from './tipos'
 
@@ -62,15 +63,17 @@ export function useFiltrosPersonas(personas: Persona[], roles: string[]) {
     const q = filtros.busqueda.trim().toLowerCase()
     return personas.filter((p) => {
       if (filtros.rol && (p.rol_operativo ?? '') !== filtros.rol) return false
-      if (filtros.estado === 'activas' && !p.activo) return false
-      if (filtros.estado === 'inactivas' && p.activo) return false
-      if (filtros.squad && !(p.squads ?? []).includes(filtros.squad)) return false
+      // Con un squad elegido, Activas/Inactivas es el estado de la persona EN ese squad.
+      if (filtros.squad && !nombresSquads(p).includes(filtros.squad)) return false
+      const activa = filtros.squad ? activaEnSquad(p, filtros.squad) : p.activo
+      if (filtros.estado === 'activas' && !activa) return false
+      if (filtros.estado === 'inactivas' && activa) return false
       if (filtros.contratacion && (p.tipo_contratacion ?? '') !== filtros.contratacion) return false
       if (!q) return true
       return (
         p.nombre.toLowerCase().includes(q) ||
         (p.email ?? '').toLowerCase().includes(q) ||
-        (p.squads ?? []).join(' ').toLowerCase().includes(q) ||
+        nombresSquads(p).join(' ').toLowerCase().includes(q) ||
         (p.rol_operativo ?? '').toLowerCase().includes(q)
       )
     })
@@ -106,7 +109,7 @@ export function useFiltrosPersonas(personas: Persona[], roles: string[]) {
 
   const opcionesSquad = useMemo(() => {
     const s = new Set<string>()
-    for (const p of personas) for (const q of p.squads ?? []) s.add(q)
+    for (const p of personas) for (const q of nombresSquads(p)) s.add(q)
     return Array.from(s).sort((a, b) => a.localeCompare(b, 'es'))
   }, [personas])
 

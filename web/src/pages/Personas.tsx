@@ -269,6 +269,7 @@ function ContenidoPersonas() {
               puedeEditar={puedeEditar}
               puedeEliminar={puedeEliminar}
               idOcupada={idOcupada}
+              squadFiltrado={filtros.filtros.squad || undefined}
               onAbrir={(persona) => setPanel({ persona })}
               onEliminar={pedirEliminar}
               onAlternarActivo={(p) => void alternarActivo(p)}

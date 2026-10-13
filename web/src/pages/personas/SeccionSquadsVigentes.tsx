@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import { useLista } from '../../api/hooks'
 import { Aviso, Boton, Chip } from '../../components/ui'
 import type { Aplicacion, Membresia, Persona } from '../../types'
+import { EditorFechasMembresia } from './EditorFechasMembresia'
 import { fechaCorta, hoyISO } from './formatoFecha'
 import { ModalAbrirSquad } from './ModalAbrirSquad'
 import { ModalDesactivarSquad } from './ModalDesactivarSquad'
@@ -24,18 +25,18 @@ type Dialogo =
   | { tipo: 'abrir'; squadFijo?: string }
 
 function EstadoMembresia({ m, hoy }: { m: Membresia; hoy: string }) {
-  const desde = m.desde.slice(0, 10)
+  const desde = m.desde?.slice(0, 10) ?? null
   const hasta = m.hasta?.slice(0, 10) ?? null
   if (m.activo) {
-    return desde > hoy ? (
+    return desde && desde > hoy ? (
       <Chip tono="alerta">Desde {fechaCorta(m.desde)}</Chip>
     ) : (
       <Chip tono="exito">Activo</Chip>
     )
   }
-  // Cerrada con efecto futuro: sigue vigente hasta esa fecha.
-  if (hasta && hasta > hoy) return <Chip tono="alerta">Activo hasta {fechaCorta(m.hasta)}</Chip>
-  return <Chip tono="neutro">Inactivo desde {fechaCorta(m.hasta)}</Chip>
+  // `hasta` es el último día activo (incluido): hasta hoy o después sigue vigente.
+  if (hasta && hasta >= hoy) return <Chip tono="alerta">Activo hasta {fechaCorta(m.hasta)}</Chip>
+  return <Chip tono="neutro">Hasta {fechaCorta(m.hasta)}</Chip>
 }
 
 /** Squads vigentes de una persona con sus acciones (desactivar/reabrir/agregar) — ADR-0010. */
@@ -49,7 +50,7 @@ export function SeccionSquadsVigentes({ persona, aplicaciones, puedeEditar, onCa
 
   const filas = useMemo(() => {
     const nombre = (codigo: string) => nombrePorCodigo.get(codigo) ?? codigo
-    return [...datos].sort((a, b) => nombre(a.squad_id).localeCompare(nombre(b.squad_id)) || a.desde.localeCompare(b.desde))
+    return [...datos].sort((a, b) => nombre(a.squad_id).localeCompare(nombre(b.squad_id)) || (a.desde ?? '').localeCompare(b.desde ?? ''))
   }, [datos, nombrePorCodigo])
   const conAbierta = useMemo(() => new Set(datos.filter((m) => m.activo).map((m) => m.squad_id)), [datos])
   // Última fila de cada squad (la más reciente): es la única que se puede reabrir.
@@ -59,8 +60,8 @@ export function SeccionSquadsVigentes({ persona, aplicaciones, puedeEditar, onCa
     return mapa
   }, [filas])
 
-  // Vigentes: abiertas o cerradas con efecto futuro. Historial: cerradas cuyo efecto ya rige.
-  const esVigente = (m: Membresia) => m.activo || (!!m.hasta && m.hasta.slice(0, 10) > hoy)
+  // Vigentes: abiertas o cerradas cuyo último día activo es hoy o posterior. Historial: el resto.
+  const esVigente = (m: Membresia) => m.activo || (!!m.hasta && m.hasta.slice(0, 10) >= hoy)
   const vigentes = filas.filter(esVigente)
   const historial = filas.filter((m) => !esVigente(m))
 
@@ -106,6 +107,13 @@ export function SeccionSquadsVigentes({ persona, aplicaciones, puedeEditar, onCa
                     Desactivar en este squad…
                   </Boton>
                 )}
+                <EditorFechasMembresia
+                  key={`${m.id}-${m.desde}-${m.hasta}`}
+                  membresia={m}
+                  nombreSquad={nombre}
+                  puedeEditar={puedeEditar}
+                  onGuardada={alCambiar}
+                />
               </li>
             )
           })}
@@ -136,6 +144,13 @@ export function SeccionSquadsVigentes({ persona, aplicaciones, puedeEditar, onCa
                       Reabrir…
                     </Boton>
                   )}
+                  <EditorFechasMembresia
+                    key={`${m.id}-${m.desde}-${m.hasta}`}
+                    membresia={m}
+                    nombreSquad={nombre}
+                    puedeEditar={puedeEditar}
+                    onGuardada={alCambiar}
+                  />
                 </li>
               )
             })}

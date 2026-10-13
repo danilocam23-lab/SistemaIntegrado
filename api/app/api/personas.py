@@ -5,7 +5,7 @@
 import re
 import unicodedata
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -44,6 +44,7 @@ from app.services.vigencia import (
     a_fecha_logica,
     hoy_bogota,
     recalcular_squads_persona,
+    squads_detalle_lote,
 )
 
 router = APIRouter(prefix="/personas", tags=["personas"])
@@ -113,10 +114,14 @@ def _agrupar_duplicados(todas: list[Persona]) -> dict[tuple, list[Persona]]:
 CAMPOS_VALOR = ("valor_persona", "valor_perifericos")
 
 
-def _salida(persona: Persona, ver_valores: bool) -> dict:
+def _salida(
+    persona: Persona, ver_valores: bool, squads_detalle: list[dict] | None = None
+) -> dict:
     """DTO de salida: misma forma que la serialización del documento, pero sin los
-    valores económicos cuando el usuario no tiene ``personas.ver_valores``."""
+    valores económicos cuando el usuario no tiene ``personas.ver_valores``. Añade
+    ``squads_detalle`` (todas las membresías de la persona, ver ``squads_detalle_lote``)."""
     datos = persona.model_dump(mode="json", by_alias=True)
+    datos["squads_detalle"] = squads_detalle or []
     if not ver_valores:
         for campo in CAMPOS_VALOR:
             datos.pop(campo, None)
@@ -380,6 +385,20 @@ async def deduplicar_personas(
         )
 
 
+async def _salida_lote(
+    personas: list[Persona], ver_valores: bool, usuario: Usuario
+) -> list[dict]:
+    """``_salida`` de varias personas con el detalle de squads resuelto en lote."""
+    detalle = await squads_detalle_lote(
+        [str(p.id) for p in personas], await _codigos_autorizados(usuario)
+    )
+    return [_salida(p, ver_valores, detalle.get(str(p.id))) for p in personas]
+
+
+async def _salida_una(persona: Persona, ver_valores: bool, usuario: Usuario) -> dict:
+    return (await _salida_lote([persona], ver_valores, usuario))[0]
+
+
 @router.get("", dependencies=[permiso("personas.ver")])
 async def listar(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
@@ -390,7 +409,7 @@ async def listar(
     ver_valores = await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES)
     if ctx.modo_consolidado:
         personas = await Persona.find(ctx.filtro()).sort("nombre").to_list()
-        return [_salida(p, ver_valores) for p in personas]
+        return await _salida_lote(personas, ver_valores, usuario)
     # Query por aplicacion_id + query por squad (nombre del app), unión sin duplicados
     por_id = await Persona.find(ctx.filtro()).to_list()
     if ctx.nombre_app:
@@ -400,7 +419,7 @@ async def listar(
             if str(p.id) not in vistos:
                 por_id.append(p)
     por_id.sort(key=lambda p: p.nombre)
-    return [_salida(p, ver_valores) for p in por_id]
+    return await _salida_lote(por_id, ver_valores, usuario)
 
 
 def _persona_visible(persona: Persona, ctx: ContextoAplicacion) -> bool:
@@ -451,7 +470,9 @@ async def obtener(
     # refresca al leer además del job diario.
     if await recalcular_squads_persona(persona):
         await persona.save()
-    return _salida(persona, await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES))
+    return await _salida_una(
+        persona, await tiene_permiso(usuario, PERM_PERSONAS_VER_VALORES), usuario
+    )
 
 
 async def _resolver_app_id(datos: PersonaIn, ctx: ContextoAplicacion, usuario: Usuario) -> str:
@@ -496,7 +517,9 @@ async def _traducir_squads(
 ) -> None:
     """Traduce un cambio del campo ``squads`` a operaciones de membresía (ADR-0010):
     cada squad añadido abre una membresía desde hoy y cada quitado cierra la abierta con
-    efecto hoy. Los squads sin cambio no se tocan. Solo opera en personas activas.
+    efecto desde hoy (último día activo: ayer). Los squads sin cambio no se tocan. Solo
+    opera en personas activas. «Abierta» = ``hasta`` nulo o ``hasta >= hoy`` (aún vigente
+    hoy): al añadir un squad con una así se REABRE (``hasta = None``) en vez de crear otra.
 
     ``apps`` son las aplicaciones de los squads cambiados, ya validadas (403) por
     ``_resolver_apps_por_nombre`` ANTES de escribir nada."""
@@ -506,17 +529,22 @@ async def _traducir_squads(
     anteriores = set(previos)
     hoy = hoy_bogota()
     for app in apps:
-        abierta = await Membresia.find_one(
-            {"persona_id": str(persona.id), "squad_id": app.codigo, "activo": True}
-        )
+        abierta = await Membresia.find_one({
+            "persona_id": str(persona.id),
+            "squad_id": app.codigo,
+            "$or": [{"hasta": None}, {"hasta": {"$gte": a_datetime(hoy)}}],
+        })
         if app.nombre in nuevos - anteriores:
             if abierta is None:
                 await svc_membresias.abrir(persona, app.codigo, app.codigo, hoy, autor)
+            elif abierta.hasta is not None:
+                await svc_membresias.editar(abierta, persona, {"hasta": None}, autor)
         elif abierta is not None:
-            if a_fecha_logica(abierta.desde) > hoy:
-                await abierta.delete()  # nunca llegó a regir
+            if abierta.desde is not None and a_fecha_logica(abierta.desde) >= hoy:
+                await abierta.delete()  # nunca llegó a regir antes de hoy
             else:
-                await svc_membresias.cerrar(abierta, hoy, autor)  # 0 días si desde == hoy
+                # Quitarlo de la lista = hoy ya no pertenece: último día activo, ayer.
+                await svc_membresias.cerrar(abierta, hoy - timedelta(days=1), autor)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -559,7 +587,7 @@ async def crear(
         await recalcular_squads_persona(persona)
         persona.squads += [s for s in solicitados if s not in persona.squads]
         await persona.save()
-    return _salida(persona, ver_valores)
+    return await _salida_una(persona, ver_valores, usuario)
 
 
 @router.put("/{persona_id}")
@@ -658,10 +686,16 @@ async def actualizar(
     elif efecto_a_propagar is not None:
         await svc_membresias.propagar_fecha_efecto(persona, efecto_a_propagar)
     if "squads" in enviados:
-        await _traducir_squads(persona, squads_previos, apps_squads, usuario.email)
+        try:
+            await _traducir_squads(persona, squads_previos, apps_squads, usuario.email)
+        except HTTPException:
+            # No dejar la persona guardada con squads que las membresías no respaldan.
+            persona.squads = squads_previos
+            await persona.save()
+            raise
     if await recalcular_squads_persona(persona):
         await persona.save()
-    return _salida(persona, ver_valores)
+    return await _salida_una(persona, ver_valores, usuario)
 
 
 async def _contar_referencias(persona_id: str) -> tuple[int, int]:

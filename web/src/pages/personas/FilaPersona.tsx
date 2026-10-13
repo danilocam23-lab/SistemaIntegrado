@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { Boton, Chip, Interruptor, cx } from '../../components/ui'
-import type { Persona } from '../../types'
+import type { Persona, SquadDetalle } from '../../types'
 import { AvatarRol, ChipRol } from './ChipRol'
 import { InsigniasPersona } from './InsigniasPersona'
 import { fechaCorta } from './formatoFecha'
 import { ROL_SIN_CONTRATACION } from './roles'
+import { detalleSquads } from './squadsPersona'
 
 /** Anchos de columna compartidos entre el encabezado y las filas (solo escritorio). */
 export const COL_ROL = 'md:w-[150px]'
@@ -25,9 +26,30 @@ interface Props {
   puedeEditar: boolean
   puedeEliminar: boolean
   ocupada: boolean
+  /** Squad elegido en el filtro (destaca el estado de la persona en ese squad). */
+  squadFiltrado?: string
   onAbrir: (persona: Persona) => void
   onEliminar: (persona: Persona) => void
   onAlternarActivo: (persona: Persona) => void
+}
+
+/** `CRM` o, si está cerrado, `CRM · hasta 13-oct`. */
+function etiquetaSquad(d: SquadDetalle): string {
+  return d.activo || !d.hasta ? d.squad : `${d.squad} · hasta ${fechaCorta(d.hasta)}`
+}
+
+/** Chip de squad: activo en tono normal, cerrado atenuado con su último día activo. */
+function ChipSquad({ d, destacado }: { d: SquadDetalle; destacado: boolean }) {
+  const cerrado = !d.activo
+  return (
+    <Chip
+      tono={destacado ? (cerrado ? 'alerta' : 'exito') : 'neutro'}
+      className={cx('max-w-full truncate', cerrado && 'opacity-60')}
+      title={cerrado ? `Inactiva en ${d.squad}${d.hasta ? ` · último día activo ${fechaCorta(d.hasta, true)}` : ''}` : undefined}
+    >
+      {etiquetaSquad(d)}
+    </Chip>
+  )
 }
 
 /** Fila del directorio: tarjeta en móvil, fila densa en escritorio. */
@@ -37,11 +59,13 @@ export function FilaPersona({
   puedeEditar,
   puedeEliminar,
   ocupada,
+  squadFiltrado,
   onAbrir,
   onEliminar,
   onAlternarActivo,
 }: Props) {
-  const squads = p.squads ?? []
+  const detalle = detalleSquads(p)
+  const activoEnSquadFiltrado = squadFiltrado ? detalle.some((d) => d.squad === squadFiltrado && d.activo) : null
   const sinContratacion = p.rol_operativo === ROL_SIN_CONTRATACION
   const mostrarValores = verValores && !sinContratacion && p.valor_persona !== undefined
   return (
@@ -74,7 +98,7 @@ export function FilaPersona({
             )}
             {!p.activo &&
               (p.fecha_efecto_desactivacion ?? p.fecha_desactivacion) &&
-              ` · inactiva desde ${fechaCorta(p.fecha_efecto_desactivacion ?? p.fecha_desactivacion, true)}`}
+              ` · activa hasta ${fechaCorta(p.fecha_efecto_desactivacion ?? p.fecha_desactivacion, true)}`}
           </span>
         </span>
       </button>
@@ -84,12 +108,22 @@ export function FilaPersona({
       </div>
 
       <div className={cx('flex min-w-0 flex-wrap gap-1', COL_SQUADS)}>
-        {squads.length === 0 && <span className="text-xs text-slate-400">—</span>}
-        {squads.slice(0, 2).map((s) => (
-          <Chip key={s} tono="neutro" className="max-w-full truncate">{s}</Chip>
+        {detalle.length === 0 && <span className="text-xs text-slate-400">—</span>}
+        {detalle.slice(0, 2).map((d, i) => (
+          <ChipSquad key={`${d.squad_id}-${i}`} d={d} destacado={d.squad === squadFiltrado} />
         ))}
-        {squads.length > 2 && (
-          <Chip tono="neutro" title={squads.slice(2).join(', ')}>+{squads.length - 2}</Chip>
+        {detalle.length > 2 && (
+          <Chip
+            tono="neutro"
+            title={detalle.slice(2).map((d) => etiquetaSquad(d)).join(', ')}
+          >
+            +{detalle.length - 2}
+          </Chip>
+        )}
+        {activoEnSquadFiltrado !== null && (
+          <span className="sr-only">
+            {activoEnSquadFiltrado ? `Activa en ${squadFiltrado}` : `Inactiva en ${squadFiltrado}`}
+          </span>
         )}
       </div>
 

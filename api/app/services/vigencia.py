@@ -4,8 +4,10 @@
 """Vigencia de la pertenencia persona-squad (ADR-0010).
 
 Fuente única de la regla: un squad cuenta a la persona en un mes si estuvo
-vigente AL MENOS UN DÍA de ese mes. Con el intervalo ``[desde, hasta)``:
-``desde < inicio_mes_siguiente`` y (``hasta`` es ``None`` o ``hasta > inicio_mes``).
+vigente AL MENOS UN DÍA de ese mes. Intervalo CERRADO ``[desde, hasta]``: ``hasta`` es el
+ÚLTIMO día activo, incluido (desactivar el 13-oct => cuenta del 1 al 13). Solapa con un mes si
+``desde < inicio_mes_siguiente`` y (``hasta`` es ``None`` o ``hasta >= inicio_mes``).
+``desde`` ``None`` = desde el inicio del proyecto; ``hasta`` ``None`` = abierta.
 Todas las fechas son de calendario de Bogotá (UTC-5, sin horario de verano).
 """
 from datetime import UTC, date, datetime, timedelta, timezone
@@ -35,6 +37,11 @@ def a_fecha_logica(valor: datetime | date) -> date:
             return valor.astimezone(UTC).date()
         return valor.date()
     return valor
+
+
+def desde_logica(valor: datetime | date | None) -> date:
+    """``desde`` como fecha lógica; ``None`` («desde el inicio del proyecto») es -infinito."""
+    return date.min if valor is None else a_fecha_logica(valor)
 
 
 def a_fecha_instante(valor: datetime | date) -> date:
@@ -86,24 +93,28 @@ def meses_entre(desde: str, hasta: str) -> list[str]:
 
 
 def solapa(m: Membresia, inicio: date, fin: date) -> bool:
-    """¿La membresía estuvo vigente algún día de ``[inicio, fin)``? Una de 0 días
-    (``hasta == desde``) nunca solapa."""
-    desde = a_fecha_logica(m.desde)
+    """¿La membresía estuvo vigente algún día de ``[inicio, fin)``? (``fin`` exclusivo;
+    ``m.hasta`` es el último día activo, incluido; una membresía dura al menos 1 día)."""
+    desde = desde_logica(m.desde)
     if desde >= fin:
         return False
     if m.hasta is None:
         return True
-    hasta = a_fecha_logica(m.hasta)
-    return hasta > desde and hasta > inicio
+    return a_fecha_logica(m.hasta) >= inicio
 
 
 def _filtro_solape(inicio: date, fin: date) -> dict:
     return {
-        "desde": {"$lt": a_datetime(fin)},
-        "$or": [
-            {"hasta": None},
-            {"hasta": {"$gt": a_datetime(inicio)}, "$expr": {"$gt": ["$hasta", "$desde"]}},
-        ],
+        "$and": [
+            # ``desde`` nulo = desde el inicio del proyecto (cuenta como -infinito).
+            {"$or": [{"desde": None}, {"desde": {"$lt": a_datetime(fin)}}]},
+            {
+                "$or": [
+                    {"hasta": None},
+                    {"hasta": {"$gte": a_datetime(inicio)}},
+                ]
+            },
+        ]
     }
 
 
@@ -139,23 +150,54 @@ async def squads_vigentes(
     rangos = {mes: rango_periodo(mes) for mes in meses}
     resultado: dict[str, dict[str, list[str]]] = {}
     async for doc in cursor:
-        d = a_fecha_logica(doc["desde"])
+        d = desde_logica(doc.get("desde"))
         h = a_fecha_logica(doc["hasta"]) if doc.get("hasta") else None
-        if h is not None and h <= d:
-            continue  # membresía de 0 días: nunca rigió
         for mes, (ini_mes, fin_mes) in rangos.items():
-            if d < fin_mes and (h is None or h > ini_mes):
+            if d < fin_mes and (h is None or h >= ini_mes):
                 lista = resultado.setdefault(doc["persona_id"], {}).setdefault(mes, [])
                 if doc["squad_id"] not in lista:
                     lista.append(doc["squad_id"])
     return resultado
 
 
+async def squads_detalle_lote(
+    persona_ids: list[str], codigos_autorizados: list[str]
+) -> dict[str, list[dict]]:
+    """Detalle de TODAS las membresías (vigentes y cerradas) por persona, en lote:
+    una consulta de ``Membresia`` y una de ``Aplicacion``, sin N+1. Solo las de las
+    aplicaciones autorizadas. ``activo`` = vigente HOY (regla inclusiva).
+
+    Devuelve ``{persona_id: [{squad, squad_id, activo, desde, hasta}]}`` con fechas ISO
+    (``YYYY-MM-DD``) o ``None``."""
+    if not persona_ids:
+        return {}
+    membresias = await Membresia.find(
+        {"persona_id": {"$in": persona_ids}, "aplicacion_id": {"$in": codigos_autorizados}}
+    ).to_list()
+    codigos = {m.squad_id for m in membresias}
+    apps = await Aplicacion.find({"codigo": {"$in": list(codigos)}}).to_list() if codigos else []
+    nombre_de = {a.codigo: a.nombre for a in apps}
+    hoy = hoy_bogota()
+    manana = hoy + timedelta(days=1)
+    resultado: dict[str, list[dict]] = {}
+    for m in sorted(membresias, key=lambda x: (desde_logica(x.desde), x.squad_id)):
+        resultado.setdefault(m.persona_id, []).append({
+            "squad": nombre_de.get(m.squad_id, m.squad_id),
+            "squad_id": m.squad_id,
+            "activo": solapa(m, hoy, manana),
+            "desde": a_fecha_logica(m.desde).isoformat() if m.desde else None,
+            "hasta": a_fecha_logica(m.hasta).isoformat() if m.hasta else None,
+        })
+    return resultado
+
+
 async def recalcular_squads_persona(persona: Persona, session: Any = None) -> bool:
     """Recalcula ``persona.squads`` (derivado) con las membresías vigentes hoy.
 
-    Conserva los nombres de ``squads`` que ninguna membresía de la persona cubre
-    (datos legados aún no migrados o subequipos que no son una ``Aplicacion``).
+    Conserva el orden de ``squads`` y los nombres que ninguna membresía de la persona
+    cubre (datos legados aún no migrados o subequipos que no son una ``Aplicacion``).
+    Limitación: si una ``Aplicacion`` se renombró, el nombre viejo no se puede ligar al
+    nuevo y queda como «extra» junto al nuevo.
     Solo toca el campo en memoria; el llamador guarda. Devuelve si cambió.
 
     Consulta por ``persona_id`` (id único global) sin ``aplicacion_id``: es un cálculo
@@ -175,8 +217,17 @@ async def recalcular_squads_persona(persona: Persona, session: Any = None) -> bo
             nombre = nombre_de.get(m.squad_id, m.squad_id)
             if nombre not in vigentes_hoy:
                 vigentes_hoy.append(nombre)
-    extras = [s for s in (persona.squads or []) if s not in cubiertos]
-    nuevos = vigentes_hoy + [s for s in extras if s not in vigentes_hoy]
+    # Conserva el orden previo: se quitan los cubiertos por una membresía que ya no está
+    # vigente, se mantienen los demás (incluidos los que ninguna membresía cubre) y los
+    # squads vigentes que faltaban se añaden al final. Sin duplicados.
+    nuevos: list[str] = []
+    for nombre in persona.squads or []:
+        if nombre in nuevos:
+            continue
+        if nombre in cubiertos and nombre not in vigentes_hoy:
+            continue
+        nuevos.append(nombre)
+    nuevos += [n for n in vigentes_hoy if n not in nuevos]
     if nuevos == list(persona.squads or []):
         return False
     persona.squads = nuevos

@@ -28,11 +28,11 @@ export function ModalAbrirSquad({ persona, opciones, squadFijo, onCerrar, onAbie
   const reabrir = !!squadFijo
 
   async function confirmar(): Promise<void> {
-    if (!squad || !desde || enviando) return
+    if (!squad || enviando) return
     setEnviando(true)
     setError('')
     try {
-      await client.post(`/membresias/persona/${persona.id}`, { squad_id: squad, desde })
+      await client.post(`/membresias/persona/${persona.id}`, { squad_id: squad, desde: desde || null })
       onAbierta()
       onCerrar()
     } catch (err) {
@@ -72,11 +72,15 @@ export function ModalAbrirSquad({ persona, opciones, squadFijo, onCerrar, onAbie
           value={desde}
           onChange={(e) => setDesde(e.target.value)}
           className="w-full"
-          ayuda={reabrir ? 'Se abre una nueva membresía; el periodo anterior se conserva.' : undefined}
+          ayuda={
+            reabrir
+              ? 'Se abre una nueva membresía; el periodo anterior se conserva. Vacío = desde el inicio del proyecto.'
+              : 'Vacío = desde el inicio del proyecto'
+          }
         />
         <div className="flex justify-end gap-2">
           <Boton onClick={onCerrar}>Cancelar</Boton>
-          <Boton variante="primario" onClick={() => void confirmar()} disabled={!squad || !desde || enviando}>
+          <Boton variante="primario" onClick={() => void confirmar()} disabled={!squad || enviando}>
             {enviando ? 'Guardando…' : reabrir ? 'Reabrir' : 'Agregar'}
           </Boton>
         </div>

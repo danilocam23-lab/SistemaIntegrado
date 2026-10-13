@@ -78,8 +78,8 @@ export function ModalDesactivarSquad({
           )}
           <Aviso tono="alerta">
             <span role="status">
-              {persona.nombre} ya no tiene squads activos desde el {fechaCorta(ultimo.efecto, true)}. Puedes dejarla
-              activa sin squad o desactivarla por completo con esa fecha de efecto.
+              {persona.nombre} no tendrá squads activos después del {fechaCorta(ultimo.efecto, true)} (su último día
+              activo). Puedes dejarla activa sin squad o desactivarla por completo con ese último día activo.
             </span>
           </Aviso>
           <div className="flex justify-end gap-2">
@@ -102,12 +102,12 @@ export function ModalDesactivarSquad({
           </Aviso>
         )}
         <Campo
-          etiqueta="Fecha de efecto"
+          etiqueta="Último día activo"
           type="date"
           value={fecha}
           onChange={(e) => setFecha(e.target.value)}
           className="w-full"
-          ayuda="Se puede registrar una fecha pasada o futura. Quedará guardado también el día en que lo registras. Su estado general y los demás squads no cambian."
+          ayuda="Es el último día en que la persona cuenta en el squad (incluido). Puede ser una fecha pasada o futura. Quedará guardado también el día en que lo registras. Su estado general y los demás squads no cambian."
         />
         <div className="flex justify-end gap-2">
           <Boton onClick={onCerrar}>Cancelar</Boton>

@@ -30,6 +30,8 @@ interface Props {
   puedeEditar: boolean
   puedeEliminar: boolean
   idOcupada: string
+  /** Squad elegido en el filtro (destaca el estado en ese squad). */
+  squadFiltrado?: string
   onAbrir: (persona: Persona) => void
   onEliminar: (persona: Persona) => void
   onAlternarActivo: (persona: Persona) => void
@@ -64,6 +66,7 @@ export function ListaPersonas(props: Props) {
         puedeEditar={props.puedeEditar}
         puedeEliminar={props.puedeEliminar}
         ocupada={props.idOcupada === p.id}
+        squadFiltrado={props.squadFiltrado}
         onAbrir={props.onAbrir}
         onEliminar={props.onEliminar}
         onAlternarActivo={props.onAlternarActivo}

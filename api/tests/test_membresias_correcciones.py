@@ -70,10 +70,12 @@ async def test_desactivar_con_efecto_anterior_a_desde_no_pierde_historia(
         f"/api/personas/{persona.id}", json=_efecto(persona.nombre, "2026-09-01"), headers=h
     )
     assert resp.status_code == 200, resp.text
-    m = await Membresia.get(m.id)  # sigue existiendo, de 0 días
+    m = await Membresia.get(m.id)  # sigue existiendo, acotada a 1 día (hasta == desde)
     assert m is not None and m.activo is False
     assert a_fecha_logica(m.hasta) == a_fecha_logica(m.desde) == _d("2026-10-01")
-    assert not await vigente(_ctx(a), str(persona.id), a.codigo, "2026-10")
+    assert await vigente(_ctx(a), str(persona.id), a.codigo, (_d("2026-10-01"), _d("2026-10-01")))
+    oct2 = (_d("2026-10-02"), _d("2026-10-31"))
+    assert not await vigente(_ctx(a), str(persona.id), a.codigo, oct2)
     # Cierre manual: hasta == desde se permite; anterior a desde da 422
     q = await Persona(aplicacion_id=a.codigo, nombre="Q").insert()
     otra = await _membresia(a, q, "2026-10-01")
@@ -157,15 +159,16 @@ async def test_vigencia_bordes_de_mes():
     def cuenta(mem, mes):
         return solapa(mem, *rango_periodo(mes))
 
-    assert not cuenta(m("2026-07-01", "2026-09-01"), "2026-09")  # hasta = día 1: no cuenta
+    assert cuenta(m("2026-07-01", "2026-09-01"), "2026-09")  # hasta = día 1: incluido, cuenta
+    assert not cuenta(m("2026-07-01", "2026-08-31"), "2026-09")  # último día = fin de agosto
     assert cuenta(m("2026-07-01", "2026-09-01"), "2026-08")
     assert cuenta(m("2026-09-30"), "2026-09")  # desde = último día: cuenta
     assert not cuenta(m("2026-09-30"), "2026-08")
     assert cuenta(m("2026-12-31"), "2026-12") and not cuenta(m("2026-12-31"), "2026-11")
     assert cuenta(m("2026-12-31"), "2027-01")  # diciembre -> enero
-    assert not cuenta(m("2026-07-01", "2027-01-01"), "2027-01")
-    assert cuenta(m("2026-07-01", "2027-01-02"), "2027-01")
-    assert not cuenta(m("2026-09-10", "2026-09-10"), "2026-09")  # 0 días: nunca rige
+    assert cuenta(m("2026-07-01", "2027-01-01"), "2027-01")
+    assert not cuenta(m("2026-07-01", "2026-12-31"), "2027-01")
+    assert cuenta(m("2026-09-10", "2026-09-10"), "2026-09")  # hasta == desde: 1 día
 
 
 async def test_eliminar_persona_borra_membresias(cliente, fabrica_aplicacion, fabrica_usuario):

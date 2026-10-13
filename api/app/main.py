@@ -19,6 +19,7 @@ from app.bootstrap import bootstrap
 from app.config import get_settings
 from app.db import cerrar_db, init_db
 from app.errors import ErrorDominio
+from app.services.membresias_backfill import detener_backfill, lanzar_backfill_en_segundo_plano
 from app.services.scheduler import detener_scheduler, iniciar_scheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -33,9 +34,11 @@ _DIST = Path(__file__).resolve().parents[2] / "web" / "dist"
 async def lifespan(_app: FastAPI):
     await init_db()
     await bootstrap()
+    lanzar_backfill_en_segundo_plano()
     iniciar_scheduler()
     yield
     detener_scheduler()
+    await detener_backfill()
     await cerrar_db()
 
 

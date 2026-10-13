@@ -65,7 +65,7 @@ def _ctx(*apps) -> ContextoAplicacion:
 async def test_caso_alejandro_vigencia_mensual(fabrica_aplicacion, fabrica_usuario):
     crm, net, _, persona, _, _ = await _alejandro(fabrica_aplicacion, fabrica_usuario)
     pid, ctx = str(persona.id), _ctx(crm, net)
-    # CRM: cuenta en julio, agosto y septiembre (vigente del 1 al 14); no en octubre.
+    # CRM: cuenta de julio a septiembre (vigente del 1 al 15, ambos incluidos); no en octubre.
     assert await vigente(ctx, pid, crm.codigo, "2026-07")
     assert await vigente(ctx, pid, crm.codigo, "2026-09")
     assert not await vigente(ctx, pid, crm.codigo, "2026-10")
@@ -73,7 +73,8 @@ async def test_caso_alejandro_vigencia_mensual(fabrica_aplicacion, fabrica_usuar
     # .NET sigue vigente y por rango de fechas
     assert await vigente(ctx, pid, net.codigo, "2026-10")
     assert await vigente(ctx, pid, crm.codigo, (_d("2026-09-14"), _d("2026-09-30")))
-    assert not await vigente(ctx, pid, crm.codigo, (_d("2026-09-15"), _d("2026-09-30")))
+    assert await vigente(ctx, pid, crm.codigo, (_d("2026-09-15"), _d("2026-09-30")))
+    assert not await vigente(ctx, pid, crm.codigo, (_d("2026-09-16"), _d("2026-09-30")))
     lote = await squads_vigentes(ctx, "2026-06", "2026-10")
     assert set(lote[pid]) == {"2026-07", "2026-08", "2026-09", "2026-10"}
     assert sorted(lote[pid]["2026-09"]) == sorted([crm.codigo, net.codigo])
