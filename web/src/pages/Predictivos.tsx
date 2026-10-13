@@ -13,6 +13,7 @@ type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 interface FilaPredictiva {
   reqId: string
   codigoReq: string
+  sc: string
   squad: string
   nombreActa: string
   entregaNum: number
@@ -25,6 +26,7 @@ interface FilaPredictiva {
 interface FilaEstadoReq {
   reqId: string
   codigoReq: string
+  sc: string
   squad: string
   nombreActa: string
   analista: string
@@ -105,6 +107,7 @@ export default function Predictivos() {
         resultado.push({
           reqId: req.id,
           codigoReq: req.codigo_req,
+          sc: req.solicitud?.codigo_sc ?? '',
           squad: squadNombre,
           nombreActa: req.nombre ?? '',
           entregaNum: en.numero,
@@ -132,6 +135,7 @@ export default function Predictivos() {
       resultado.push({
         reqId: req.id,
         codigoReq: req.codigo_req,
+        sc: req.solicitud?.codigo_sc ?? '',
         squad: squadNombre,
         nombreActa: req.nombre ?? '',
         analista: analistaNombre,
@@ -190,6 +194,7 @@ export default function Predictivos() {
               <thead>
                 <tr>
                   <th>Código Req</th>
+                  <th>SC</th>
                   <th>Squad</th>
                   <th>Acta de trabajo</th>
                   <th>Analista</th>
@@ -207,6 +212,7 @@ export default function Predictivos() {
                         {f.codigoReq}
                       </Link>
                     </td>
+                    <td>{f.sc || '—'}</td>
                     <td>{f.squad}</td>
                     <td>{f.nombreActa}</td>
                     <td>{f.analista}</td>
@@ -249,6 +255,7 @@ export default function Predictivos() {
               <thead>
                 <tr>
                   <th>Código Req</th>
+                  <th>SC</th>
                   <th>Squad</th>
                   <th>Acta de trabajo</th>
                   <th>Analista</th>
@@ -264,6 +271,7 @@ export default function Predictivos() {
                         {f.codigoReq}
                       </Link>
                     </td>
+                    <td>{f.sc || '—'}</td>
                     <td>{f.squad}</td>
                     <td>{f.nombreActa}</td>
                     <td>{f.analista}</td>

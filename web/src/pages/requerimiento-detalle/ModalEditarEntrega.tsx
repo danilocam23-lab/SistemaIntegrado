@@ -3,7 +3,7 @@
 
 import type { FormEvent } from 'react'
 import Modal from '../../components/Modal'
-import { Boton, Campo, Selector } from '../../components/ui'
+import { AreaTexto, Boton, Campo, Selector } from '../../components/ui'
 import { MESES_ES } from '../../constantes'
 import type { FormularioEntregaControl } from './useFormularioEntrega'
 
@@ -89,19 +89,21 @@ export default function ModalEditarEntrega({
         )}
         <label className="min-w-[280px] flex-1 text-sm">
           <span className="mb-1 block text-slate-600">Observaciones EPM</span>
-          <Campo
+          <AreaTexto
             value={valores.observaciones}
             onChange={(e) => form.actualizar('observaciones', e.target.value)}
             placeholder="Notas de la entrega (EPM)"
+            rows={3}
             className="w-full"
           />
         </label>
         <label className="min-w-[280px] flex-1 text-sm">
           <span className="mb-1 block text-slate-600">Observaciones Hitss</span>
-          <Campo
+          <AreaTexto
             value={valores.observacionesHitss}
             onChange={(e) => form.actualizar('observacionesHitss', e.target.value)}
             placeholder="Notas de la entrega (Hitss)"
+            rows={3}
             className="w-full"
           />
         </label>
