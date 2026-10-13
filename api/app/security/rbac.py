@@ -88,6 +88,7 @@ ROLES_BASE: list[dict] = [
             "dashboard.estados.ver",
             "dashboard.squad.ver",
             "requerimientos.ver",
+            "requerimientos.editar",
             "entregas_actas.ver",
             "entregas_actas.exportar",
             "requerimientos.exportar",
