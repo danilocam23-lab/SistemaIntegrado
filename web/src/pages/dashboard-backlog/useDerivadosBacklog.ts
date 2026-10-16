@@ -506,7 +506,32 @@ export function useDerivadosBacklog({
 
     const woPorSquad = horasWoPorSquad(soporteResumen, periodos, resolverNombreSquad)
 
-    return filas.map((fila) => {
+    // Base de filas: squads con requerimientos en el periodo, más los squads que solo
+    // tienen capacidad configurada (p. ej. un mes futuro sin entregas todavía). Sin esto,
+    // un periodo sin requerimientos deja la tabla vacía aunque haya capacidad que mostrar.
+    const basePorSquad = new Map<string, FilaSquad>()
+    for (const fila of filas) basePorSquad.set(fila.squad, fila)
+    for (const fila of filasCapacidadSquad) {
+      if (basePorSquad.has(fila.squad)) continue
+      basePorSquad.set(fila.squad, {
+        squadId: fila.squadId,
+        squad: fila.squad,
+        reqs: 0,
+        horas: 0,
+        horasEntregas: 0,
+        entregas: 0,
+        ansActaCumple: 0,
+        ansActaTotal: 0,
+        ansEntregaCumple: 0,
+        ansEntregaTotal: 0,
+        aplicacionesEpmCount: 0,
+      })
+    }
+    const basesFilas = Array.from(basePorSquad.values()).sort(
+      (a, b) => b.reqs - a.reqs || b.horas - a.horas,
+    )
+
+    return basesFilas.map((fila) => {
       const porcentajeActa = porcentajeCumplimiento(fila.ansActaCumple, fila.ansActaTotal)
       const porcentajeEntrega = porcentajeCumplimiento(fila.ansEntregaCumple, fila.ansEntregaTotal)
       const nivelActa = porcentajeActa === null ? null : nivelDeAvance(porcentajeActa)
