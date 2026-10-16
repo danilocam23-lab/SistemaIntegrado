@@ -78,20 +78,33 @@ export function useMatrizCapacidades({
     const filas: FilaCapacidad[] = []
     for (const persona of personas) {
       if (!persona.rol_operativo || ROLES_EXCLUIDOS_CAPACIDAD.includes(persona.rol_operativo)) continue
-      // Inactivas: solo si tienen histórico en el año visible (gris, solo lectura).
-      if (!persona.activo && !conRegistroEnAnio.has(persona.id)) continue
+      // Mes desde el cual deja de estar vigente (inclusive, se ve hasta ese mes): el efecto
+      // de la desactivación, o el registro si no hay fecha de efecto.
+      const mesDesactivacion = !persona.activo
+        ? (persona.fecha_efecto_desactivacion ?? persona.fecha_desactivacion)?.slice(0, 7) ?? null
+        : null
+      // Inactivas: si se conoce el mes de desactivación, se excluye el año completo cuando
+      // quedó todo él después de ese mes; sin fecha, se usa el histórico como antes.
+      if (!persona.activo) {
+        if (mesDesactivacion) {
+          if (mesDesactivacion < `${anio}-01`) continue
+        } else if (!conRegistroEnAnio.has(persona.id)) {
+          continue
+        }
+      }
 
       let total = 0
       let conRegistro = 0
       const celdas: CeldaCapacidad[] = meses.map(({ mes, indice, base }) => {
-        const duplicados = porClave.get(`${persona.id}|${mes}`) ?? []
+        const vigente = !mesDesactivacion || mes <= mesDesactivacion
+        const duplicados = vigente ? (porClave.get(`${persona.id}|${mes}`) ?? []) : []
         const registro = duplicados.length > 0 ? duplicados[duplicados.length - 1] : null
         const horas = registro ? Number(registro.horas_disponibles) : null
         if (horas !== null) {
           total += horas
           conRegistro += 1
         }
-        return { mes, indice, registro, duplicados, horas, base, tono: tonoCelda(horas, base) }
+        return { mes, indice, registro, duplicados, horas, base, tono: tonoCelda(horas, base), vigente }
       })
 
       const carga = cargaDisponible ? (cargaPorPersona.get(persona.id) ?? { pct: 0, nAsignaciones: 0 }) : null

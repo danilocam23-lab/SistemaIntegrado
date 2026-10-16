@@ -171,21 +171,25 @@ export function CeldaCapacidadVista({
   }
 
   const valor = celda.horas ?? celda.base
-  const texto = textoCelda(valor, celda.base, modo) + (celda.horas === null ? '*' : '')
+  const texto = celda.vigente
+    ? textoCelda(valor, celda.base, modo) + (celda.horas === null ? '*' : '')
+    : '—'
   const duplicado = celda.duplicados.length > 1
   const tieneNota = !!celda.registro?.notas
-  const descripcion = `${etiqueta}: ${formatearHoras(valor)} h, ${ETIQUETA_TONO[celda.tono]}${duplicado ? `, ${celda.duplicados.length} registros duplicados` : ''}${tieneNota ? ', con notas' : ''}`
+  const descripcion = celda.vigente
+    ? `${etiqueta}: ${formatearHoras(valor)} h, ${ETIQUETA_TONO[celda.tono]}${duplicado ? `, ${celda.duplicados.length} registros duplicados` : ''}${tieneNota ? ', con notas' : ''}`
+    : `${etiqueta}: persona desactivada ese mes, no aplica`
   const clases = cx(
     'relative block w-full min-w-[2.75rem] rounded-md px-1 py-1 text-center text-xs font-semibold tabular-nums',
-    CLASE_TONO[celda.tono],
+    celda.vigente ? CLASE_TONO[celda.tono] : 'border border-dashed border-slate-200 text-slate-300',
     seleccionada && 'outline outline-2 outline-offset-1 outline-marca',
     duplicado && 'ring-1 ring-amber-500',
   )
   const contenido = (
     <>
       {texto}
-      {duplicado && <span className="ml-1 text-[9px] font-bold" aria-hidden="true">· {celda.duplicados.length}×</span>}
-      {tieneNota && (
+      {celda.vigente && duplicado && <span className="ml-1 text-[9px] font-bold" aria-hidden="true">· {celda.duplicados.length}×</span>}
+      {celda.vigente && tieneNota && (
         <span
           className="absolute -right-0.5 -top-0.5 text-marca-600"
           aria-hidden="true"
@@ -197,7 +201,7 @@ export function CeldaCapacidadVista({
     </>
   )
 
-  if (!editable) {
+  if (!editable || !celda.vigente) {
     return <span className={clases} title={descripcion} aria-label={descripcion}>{contenido}</span>
   }
   return (

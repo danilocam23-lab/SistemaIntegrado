@@ -46,6 +46,8 @@ export interface CeldaCapacidad {
   /** Base sugerida del mes. */
   base: number
   tono: TonoCelda
+  /** `false` = la persona ya estaba desactivada ese mes: la celda no cuenta ni se edita. */
+  vigente: boolean
 }
 
 export interface CargaFila {

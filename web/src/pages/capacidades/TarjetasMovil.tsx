@@ -65,19 +65,21 @@ export function TarjetasMovil({
             <div className="mt-3 grid grid-cols-4 gap-1.5">
               {fila.celdas.map((celda, i) => {
                 const valor = celda.horas ?? celda.base
-                const descripcion = `${fila.persona.nombre}, ${MESES_LARGO[i]}: ${formatearHoras(valor)} h, ${ETIQUETA_TONO[celda.tono]}`
+                const descripcion = celda.vigente
+                  ? `${fila.persona.nombre}, ${MESES_LARGO[i]}: ${formatearHoras(valor)} h, ${ETIQUETA_TONO[celda.tono]}`
+                  : `${fila.persona.nombre}, ${MESES_LARGO[i]}: persona desactivada ese mes, no aplica`
                 const clases = cx(
                   'rounded-md px-1 py-1.5 text-center text-xs font-semibold tabular-nums',
-                  CLASE_TONO[celda.tono],
+                  celda.vigente ? CLASE_TONO[celda.tono] : 'border border-dashed border-slate-200 text-slate-300',
                   i === indiceMesActual && 'outline outline-2 outline-marca',
                 )
                 const contenido = (
                   <>
                     <small className="block text-[9px] font-bold uppercase opacity-70">{MESES_ABREV[i]}</small>
-                    {textoCelda(valor, celda.base, modo)}{celda.horas === null ? '*' : ''}
+                    {celda.vigente ? `${textoCelda(valor, celda.base, modo)}${celda.horas === null ? '*' : ''}` : '—'}
                   </>
                 )
-                return puedeTocar ? (
+                return puedeTocar && celda.vigente ? (
                   <button key={celda.mes} type="button" className={clases} aria-label={descripcion}
                     onClick={() => onAbrirMes(fila, i)}>
                     {contenido}
