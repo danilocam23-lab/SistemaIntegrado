@@ -54,7 +54,9 @@ export default function Capacidades() {
 
 function ContenidoCapacidades() {
   const { tienePermiso } = useAuth()
-  const { aplicaciones, modoConsolidado } = useAplicacion()
+  const { aplicaciones, activa, modoConsolidado } = useAplicacion()
+  // Squad de la aplicación activa (undefined en consolidado): acota la vigencia por membresía.
+  const squadContexto = modoConsolidado ? undefined : aplicaciones.find((a) => a.codigo === activa)?.nombre
   // En modo consolidado el servidor rechaza las escrituras (409): la pantalla es solo lectura.
   const puedeEditar = tienePermiso('capacidades.editar') && !modoConsolidado
 
@@ -88,6 +90,7 @@ function ContenidoCapacidades() {
     cargaDisponible: datos.cargaDisponible,
     ocultos: eliminacion.ocultos,
     filtros,
+    squadContexto,
   })
   const { indicadores, filasTodas, filas, meses, mesActual } = matriz
   const indiceMesActual = matriz.esAnioActual ? matriz.indiceMesActual : -1

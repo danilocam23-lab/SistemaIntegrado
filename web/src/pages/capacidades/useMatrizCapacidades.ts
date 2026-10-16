@@ -4,6 +4,7 @@
 import { useMemo } from 'react'
 import { baseSugeridaMes, claveMes, mesEnCurso, tonoCelda } from './base'
 import { MESES_ABREV, ROLES_EXCLUIDOS_CAPACIDAD, SIN_SQUAD } from './tipos'
+import { detalleSquads, estadoEnSquadContexto } from '../personas/squadsPersona'
 import type {
   CapacidadFila, CargaFila, CeldaCapacidad, FilaCapacidad, FilaEquipo, PersonaConApp, TotalMes,
 } from './tipos'
@@ -30,6 +31,8 @@ interface Parametros {
   /** Ids de registros ocultos porque están pendientes de eliminar con "Deshacer". */
   ocultos: Set<string>
   filtros: FiltrosCapacidades
+  /** Squad de la aplicación activa; undefined en modo consolidado. */
+  squadContexto?: string
 }
 
 const sinTildes = (texto: string): string =>
@@ -42,7 +45,7 @@ const sinTildes = (texto: string): string =>
  */
 export function useMatrizCapacidades({
   capacidades, personas, anio, horasMesDefault, festivosPorMes, cargaPorPersona,
-  cargaDisponible, ocultos, filtros,
+  cargaDisponible, ocultos, filtros, squadContexto,
 }: Parametros) {
   const mesActual = mesEnCurso()
   const anioActual = Number(mesActual.slice(0, 4))
@@ -93,10 +96,22 @@ export function useMatrizCapacidades({
         }
       }
 
+      // Membresías del squad de la aplicación activa: si las hay, el mes solo es vigente si
+      // alguna solapa con él (hasta es el último día activo, inclusive).
+      const membresias = squadContexto
+        ? detalleSquads(persona).filter((d) => d.squad === squadContexto)
+        : []
+
       let total = 0
       let conRegistro = 0
       const celdas: CeldaCapacidad[] = meses.map(({ mes, indice, base }) => {
-        const vigente = !mesDesactivacion || mes <= mesDesactivacion
+        const primerDia = `${mes}-01`
+        const ultimoDia = `${mes}-31`
+        const vigenteEnSquad = membresias.length === 0 || membresias.some(
+          (d) => (!d.desde || d.desde.slice(0, 10) <= ultimoDia)
+            && (!d.hasta || d.hasta.slice(0, 10) >= primerDia),
+        )
+        const vigente = (!mesDesactivacion || mes <= mesDesactivacion) && vigenteEnSquad
         const duplicados = vigente ? (porClave.get(`${persona.id}|${mes}`) ?? []) : []
         const registro = duplicados.length > 0 ? duplicados[duplicados.length - 1] : null
         const horas = registro ? Number(registro.horas_disponibles) : null
@@ -107,6 +122,10 @@ export function useMatrizCapacidades({
         return { mes, indice, registro, duplicados, horas, base, tono: tonoCelda(horas, base), vigente }
       })
 
+      // Con squad de contexto, sin ningún mes vigente en el año no hay fila.
+      if (membresias.length > 0 && !celdas.some((c) => c.vigente)) continue
+      const activaEnContexto = estadoEnSquadContexto(persona, squadContexto)
+
       const carga = cargaDisponible ? (cargaPorPersona.get(persona.id) ?? { pct: 0, nAsignaciones: 0 }) : null
       // Capacidad del mes en curso (registro o base) para convertir la carga a horas.
       const registrosActual = porClave.get(`${persona.id}|${mesActual}`)
@@ -115,11 +134,12 @@ export function useMatrizCapacidades({
 
       const sobrecarga = !!carga && carga.pct > UMBRAL_SOBRECARGA
       const subutilizada = !!carga && carga.nAsignaciones > 0 && carga.pct < UMBRAL_SUBUTILIZACION
-      const vacioMesActual = persona.activo && esAnioActual && celdas[indiceMesActual].registro === null
+      const vacioMesActual = activaEnContexto && esAnioActual
+        && celdas[indiceMesActual].vigente && celdas[indiceMesActual].registro === null
 
       filas.push({
         persona,
-        inactiva: !persona.activo,
+        inactiva: !activaEnContexto,
         celdas,
         total,
         conRegistro,
@@ -128,14 +148,14 @@ export function useMatrizCapacidades({
         sobrecarga,
         subutilizada,
         vacioMesActual,
-        conAlerta: persona.activo && (sobrecarga || subutilizada || vacioMesActual),
+        conAlerta: activaEnContexto && (sobrecarga || subutilizada || vacioMesActual),
       })
     }
     filas.sort((a, b) => a.persona.nombre.localeCompare(b.persona.nombre, 'es'))
     return filas
   }, [
     capacidades, personas, ocultos, anio, meses, cargaPorPersona, cargaDisponible,
-    mesActual, horasMesDefault, festivosPorMes, esAnioActual, indiceMesActual,
+    mesActual, horasMesDefault, festivosPorMes, esAnioActual, indiceMesActual, squadContexto,
   ])
 
   const roles = useMemo(
