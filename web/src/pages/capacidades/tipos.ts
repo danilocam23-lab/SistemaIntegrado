@@ -96,6 +96,9 @@ export interface ItemLote {
 
 export type AccionLote = 'crear' | 'actualizar' | 'omitir'
 
+/** Reemplazo en «Rellenar año»: solo los que siguen con la base anterior, o todos. */
+export type ModoReemplazo = 'sin_editar' | 'todos'
+
 export interface FilaPlanLote {
   personaId: string
   nombre: string

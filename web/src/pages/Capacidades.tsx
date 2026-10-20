@@ -21,6 +21,7 @@ import { ToastEliminacion } from './capacidades/ToastEliminacion'
 import { etiquetaMes } from './capacidades/plan'
 import { MESES_ABREV } from './capacidades/tipos'
 import type { FilaCapacidad, ResultadoLote } from './capacidades/tipos'
+import { baseAnteriorMes, claveMes } from './capacidades/base'
 import { useDatosCapacidades } from './capacidades/useDatosCapacidades'
 import { useEliminacionCapacidad } from './capacidades/useEliminacionCapacidad'
 import { useEscriturasCapacidades } from './capacidades/useEscriturasCapacidades'
@@ -96,6 +97,13 @@ function ContenidoCapacidades() {
 
   const personasEditables = useMemo(() => filasTodas.filter((f) => !f.inactiva), [filasTodas])
   const basePorMes = useMemo(() => meses.map((m) => m.base), [meses])
+  const baseAnteriorPorMes = useMemo(
+    () => meses.map((_, i) => {
+      const mes = claveMes(anio, i)
+      return baseAnteriorMes(mes, datos.festivosPorMes.get(mes) ?? new Set<string>(), datos.horasMesDefault)
+    }),
+    [meses, anio, datos.festivosPorMes, datos.horasMesDefault],
+  )
 
   const nombreAplicacion = useCallback(
     (persona: FilaCapacidad['persona']) => {
@@ -352,6 +360,7 @@ function ContenidoCapacidades() {
             anio={anio}
             filas={personasEditables}
             basePorMes={basePorMes}
+            baseAnteriorPorMes={baseAnteriorPorMes}
             indiceMesActual={indiceMesActual}
             guardando={escrituras.guardando}
             aplicarLote={escrituras.aplicarLote}

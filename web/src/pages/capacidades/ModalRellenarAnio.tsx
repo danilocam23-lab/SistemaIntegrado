@@ -7,7 +7,7 @@ import { Aviso, Boton, Selector } from '../../components/ui'
 import { formatearHoras } from './base'
 import { contarPlan, etiquetaMes, planificarRellenoCompleto } from './plan'
 import { MESES_ABREV, MESES_LARGO } from './tipos'
-import type { FilaCapacidad, FilaPlanLote, ResultadoLote } from './tipos'
+import type { FilaCapacidad, FilaPlanLote, ModoReemplazo, ResultadoLote } from './tipos'
 
 interface Props {
   abierto: boolean
@@ -16,6 +16,8 @@ interface Props {
   filas: FilaCapacidad[]
   /** Base sugerida de cada mes del año visible. */
   basePorMes: number[]
+  /** Base que se sugería antes (prorrateo de horas_mes_default): reconoce lo no editado. */
+  baseAnteriorPorMes: number[]
   /** Mes en curso (índice) si el año visible es el actual; `-1` si no. */
   indiceMesActual: number
   guardando: boolean
@@ -29,14 +31,16 @@ interface Props {
  * crea; nunca pisa un registro existente.
  */
 export function ModalRellenarAnio({
-  abierto, onCerrar, anio, filas, basePorMes, indiceMesActual, guardando, aplicarLote, onResultado,
+  abierto, onCerrar, anio, filas, basePorMes, baseAnteriorPorMes, indiceMesActual, guardando, aplicarLote, onResultado,
 }: Props) {
   const [desdeMes, setDesdeMes] = useState(indiceMesActual >= 0 ? indiceMesActual : 0)
   const [reemplazar, setReemplazar] = useState(false)
+  const [modoReemplazo, setModoReemplazo] = useState<ModoReemplazo>('sin_editar')
   const plan = useMemo(
-    () => planificarRellenoCompleto(filas, desdeMes, basePorMes, reemplazar),
-    [filas, desdeMes, basePorMes, reemplazar],
+    () => planificarRellenoCompleto(filas, desdeMes, basePorMes, reemplazar, modoReemplazo, baseAnteriorPorMes),
+    [filas, desdeMes, basePorMes, reemplazar, modoReemplazo, baseAnteriorPorMes],
   )
+  const editadosAMano = plan.filter((p) => p.motivo === 'editado a mano').length
   const conteo = contarPlan(plan)
   const personas = filas.filter((f) => !f.inactiva).length
   const aEscribir = conteo.crear + conteo.actualizar
@@ -46,7 +50,7 @@ export function ModalRellenarAnio({
     const resultado = await aplicarLote(plan)
     onResultado(
       reemplazar
-        ? `Rellenar ${anio} (reemplazando registros)`
+        ? `Rellenar ${anio} (reemplazando ${modoReemplazo === 'sin_editar' ? 'los no editados' : 'todos los registros'})`
         : `Rellenar ${anio} desde ${MESES_LARGO[desdeMes].toLowerCase()}`,
       resultado,
     )
@@ -79,7 +83,10 @@ export function ModalRellenarAnio({
             className="mt-0.5"
             checked={reemplazar}
             disabled={guardando}
-            onChange={(e) => setReemplazar(e.target.checked)}
+            onChange={(e) => {
+              setReemplazar(e.target.checked)
+              if (e.target.checked) setModoReemplazo('sin_editar')
+            }}
           />
           <span>
             Reemplazar registros existentes por la base sugerida
@@ -88,6 +95,32 @@ export function ModalRellenarAnio({
             </span>
           </span>
         </label>
+
+        {reemplazar && (
+          <fieldset className="grid gap-2 pl-6 text-sm text-slate-700" disabled={guardando}>
+            <legend className="sr-only">Qué registros reemplazar</legend>
+            <label className="flex items-start gap-2">
+              <input
+                type="radio"
+                name="modo-reemplazo"
+                className="mt-0.5"
+                checked={modoReemplazo === 'sin_editar'}
+                onChange={() => setModoReemplazo('sin_editar')}
+              />
+              <span>Reemplazar solo los que siguen con la base anterior (recomendado)</span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input
+                type="radio"
+                name="modo-reemplazo"
+                className="mt-0.5"
+                checked={modoReemplazo === 'todos'}
+                onChange={() => setModoReemplazo('todos')}
+              />
+              <span>Reemplazar todos (incluye los editados a mano)</span>
+            </label>
+          </fieldset>
+        )}
 
         <Aviso tono="info">
           <p>
@@ -102,21 +135,24 @@ export function ModalRellenarAnio({
 
         {reemplazar ? (
           <>
-            <Aviso tono="alerta">
-              <p>
-                Se reemplazarán <b>{conteo.actualizar}</b> registros existentes que difieren de la base sugerida.
-                Se pierden las horas editadas a mano en esos registros.
-              </p>
-              {ejemplo && (
-                <p className="mt-1">
-                  Ejemplo: {ejemplo.nombre}, {etiquetaMes(ejemplo.mes)}:{' '}
-                  <b>{formatearHoras(ejemplo.horasActuales ?? 0)} → {formatearHoras(ejemplo.horas)}</b>.
+            {modoReemplazo === 'todos' && (
+              <Aviso tono="alerta">
+                <p>
+                  Se reemplazarán <b>{conteo.actualizar}</b> registros existentes que difieren de la base sugerida.
+                  Se pierden las horas editadas a mano en esos registros.
                 </p>
-              )}
-            </Aviso>
+              </Aviso>
+            )}
+            {ejemplo && (
+              <p className="text-sm text-slate-600">
+                Ejemplo: {ejemplo.nombre}, {etiquetaMes(ejemplo.mes)}:{' '}
+                <b>{formatearHoras(ejemplo.horasActuales ?? 0)} → {formatearHoras(ejemplo.horas)}</b>.
+              </p>
+            )}
             <p className="text-sm text-slate-600" role="status">
-              Crear <b>{conteo.crear}</b> · Actualizar <b>{conteo.actualizar}</b> · Omitir <b>{conteo.omitir}</b>{' '}
-              (sin cambios o meses no vigentes).
+              Crear <b>{conteo.crear}</b> · Actualizar <b>{conteo.actualizar}</b> · Omitir <b>{conteo.omitir}</b>
+              {modoReemplazo === 'sin_editar' && <> (de ellos, <b>{editadosAMano}</b> editados a mano)</>}
+              {' '}(el resto: sin cambios o meses no vigentes).
             </p>
           </>
         ) : (

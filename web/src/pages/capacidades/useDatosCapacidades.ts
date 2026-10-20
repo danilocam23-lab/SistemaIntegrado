@@ -3,7 +3,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLista } from '../../api/hooks'
-import type { Asignacion, Festivo, Requerimiento } from '../../types'
+import type { Asignacion, Configuracion, Festivo, Requerimiento } from '../../types'
+import { HORAS_MES_POR_DEFECTO } from '../asignaciones/carga'
 import { ESTADO_ACTIVO } from '../asignaciones/tipos'
 import { fechaKey } from '../dashboard-backlog/utilidades'
 import type { CapacidadFila, CargaFila, PersonaConApp } from './tipos'
@@ -20,6 +21,7 @@ export function useDatosCapacidades() {
   const lCapacidades = useLista<CapacidadFila>('/capacidades')
   const lPersonas = useLista<PersonaConApp>('/personas')
   const lFestivos = useLista<Festivo>('/festivos')
+  const lConfiguracion = useLista<Configuracion>('/configuracion')
   const lAsignaciones = useLista<Asignacion>('/asignaciones')
   const lRequerimientos = useLista<Requerimiento>('/requerimientos')
 
@@ -32,6 +34,13 @@ export function useDatosCapacidades() {
       setCargandoInicial(false)
     }
   }, [cargando])
+
+  // Solo para reconocer la base anterior (prorrateo de horas_mes_default) al reemplazar.
+  const horasMesDefault = useMemo(() => {
+    const config = lConfiguracion.datos.find((item) => item.clave === 'horas_mes_default')
+    const horas = config ? Number(config.valor) : HORAS_MES_POR_DEFECTO
+    return Number.isFinite(horas) && horas > 0 ? horas : HORAS_MES_POR_DEFECTO
+  }, [lConfiguracion.datos])
 
   const festivosPorMes = useMemo(() => {
     const mapa = new Map<string, Set<string>>()
@@ -69,6 +78,7 @@ export function useDatosCapacidades() {
   const { recargar: recargarCapacidades } = lCapacidades
   const { recargar: recargarPersonas } = lPersonas
   const { recargar: recargarFestivos } = lFestivos
+  const { recargar: recargarConfiguracion } = lConfiguracion
   const { recargar: recargarAsignaciones } = lAsignaciones
   const { recargar: recargarRequerimientos } = lRequerimientos
 
@@ -79,11 +89,12 @@ export function useDatosCapacidades() {
     recargarCapacidades()
     recargarPersonas()
     recargarFestivos()
+    recargarConfiguracion()
     recargarAsignaciones()
     recargarRequerimientos()
   }, [
     recargarCapacidades, recargarPersonas, recargarFestivos,
-    recargarAsignaciones, recargarRequerimientos,
+    recargarConfiguracion, recargarAsignaciones, recargarRequerimientos,
   ])
 
   const avisosSecundarios = useMemo(() => {
@@ -97,6 +108,7 @@ export function useDatosCapacidades() {
     capacidades: lCapacidades.datos,
     personas: lPersonas.datos,
     festivosPorMes,
+    horasMesDefault,
     cargaPorPersona,
     cargaDisponible,
     cargandoInicial,

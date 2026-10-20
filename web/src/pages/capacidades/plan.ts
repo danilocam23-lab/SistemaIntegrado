@@ -7,7 +7,7 @@
  */
 
 import { MESES_LARGO } from './tipos'
-import type { AlcanceAplicacion, FilaCapacidad, FilaPlanLote, ItemLote } from './tipos'
+import type { AlcanceAplicacion, ModoReemplazo, FilaCapacidad, FilaPlanLote, ItemLote } from './tipos'
 
 function filaPlan(
   fila: FilaCapacidad, indice: number, horas: number, sobrescribir: boolean,
@@ -67,6 +67,7 @@ export function planificarRelleno(
  */
 export function planificarRellenoCompleto(
   filas: FilaCapacidad[], desdeMes: number, basePorMes: number[], reemplazar: boolean,
+  modoReemplazo: ModoReemplazo = 'todos', baseAnteriorPorMes: number[] = [],
 ): FilaPlanLote[] {
   if (reemplazar) {
     const plan: FilaPlanLote[] = []
@@ -74,7 +75,16 @@ export function planificarRellenoCompleto(
       if (fila.inactiva) continue
       for (let i = 0; i < 12; i++) {
         if (!fila.celdas[i].vigente) continue
-        plan.push(filaPlan(fila, i, basePorMes[i], true))
+        const item = filaPlan(fila, i, basePorMes[i], true)
+        const horasActuales = item.horasActuales
+        if (
+          modoReemplazo === 'sin_editar' && item.accion === 'actualizar'
+          && (horasActuales === null || Math.abs(horasActuales - baseAnteriorPorMes[i]) > 0.5)
+        ) {
+          plan.push({ ...item, accion: 'omitir', motivo: 'editado a mano' })
+        } else {
+          plan.push(item)
+        }
       }
     }
     return plan

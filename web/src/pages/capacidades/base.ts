@@ -41,6 +41,17 @@ export function baseSugeridaMes(mes: string, festivosMes: Set<string>) {
   return { diasHabiles, base: Math.round(horas * 10) / 10 }
 }
 
+/**
+ * Base que se sugería ANTES de la jornada real: `horasMesDefault` prorrateado por
+ * días hábiles (con festivos) sobre días laborables (lun-vie). Solo sirve para reconocer
+ * los registros que nunca se editaron.
+ */
+export function baseAnteriorMes(mes: string, festivosMes: Set<string>, horasMesDefault: number): number {
+  const diasLaborables = contarDiasHabiles(mes, new Set())
+  const diasHabiles = contarDiasHabiles(mes, festivosMes)
+  return diasLaborables > 0 ? Math.round((horasMesDefault * diasHabiles) / diasLaborables) : horasMesDefault
+}
+
 /** Tono de una celda contra la base del mes: ±5 % en la base, <50 % crítico, >105 % alto. */
 export function tonoCelda(horas: number | null, base: number): TonoCelda {
   if (horas === null) return 'sin'
