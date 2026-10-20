@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
+from app.documents.aplicacion import Aplicacion
 from app.documents.base import ahora
 from app.documents.bitacora import Bitacora
 from app.documents.membresia import Membresia
@@ -115,6 +116,35 @@ async def cerrar(
         autor=autor,
     ).insert()
     return m
+
+
+async def eliminar(m: Membresia, persona: Persona, autor: str | None) -> bool:
+    """Borra físicamente una membresía (p. ej. squad asignado por error).
+
+    Nada la referencia salvo la bitácora, que se conserva como rastro del borrado.
+    Quita de ``persona.squads`` (en memoria; el llamador guarda) el nombre del squad si ya
+    ninguna otra membresía lo cubre: ``recalcular_squads_persona`` lo trataría como dato
+    legado y lo conservaría. Devuelve ``True`` si la persona se queda sin membresías.
+    """
+    await m.delete()
+    if not await Membresia.find({"persona_id": str(persona.id), "squad_id": m.squad_id}).count():
+        app = await Aplicacion.find_one(Aplicacion.codigo == m.squad_id)
+        quitar = {m.squad_id, app.nombre if app else m.squad_id}
+        persona.squads = [s for s in persona.squads or [] if s not in quitar]
+    await Bitacora(
+        aplicacion_id=m.aplicacion_id,
+        entidad_tipo="membresia",
+        entidad_id=str(m.id),
+        accion="eliminar",
+        descripcion=f"Membresía de '{persona.nombre}' en {m.squad_id} eliminada",
+        autor=autor,
+    ).insert()
+    return (
+        await Membresia.get_pymongo_collection().count_documents(
+            {"persona_id": str(persona.id)}, limit=1
+        )
+        == 0
+    )
 
 
 async def cerrar_en_cascada(persona: Persona, efecto: date, autor: str | None) -> int:

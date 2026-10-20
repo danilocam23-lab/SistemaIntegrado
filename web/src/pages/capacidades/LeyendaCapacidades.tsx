@@ -26,8 +26,8 @@ export function LeyendaCapacidades() {
         ))}
       </ul>
       <p className="mt-1.5">
-        * Base sugerida = horas del mes por defecto × días hábiles ÷ días laborables; es la misma fórmula del
-        Dashboard Backlog. Solo se sugiere: no se guarda sola.
+        * Base sugerida = suma de la jornada de cada día hábil del mes (lunes a jueves 8,5 h, viernes 8 h; fines de
+        semana y festivos 0 h). Solo se sugiere: no se guarda sola.
       </p>
     </div>
   )

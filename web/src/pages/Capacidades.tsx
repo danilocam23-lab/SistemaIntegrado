@@ -84,7 +84,6 @@ function ContenidoCapacidades() {
     capacidades: datos.capacidades,
     personas: datos.personas,
     anio,
-    horasMesDefault: datos.horasMesDefault,
     festivosPorMes: datos.festivosPorMes,
     cargaPorPersona: datos.cargaPorPersona,
     cargaDisponible: datos.cargaDisponible,
@@ -327,7 +326,6 @@ function ContenidoCapacidades() {
           anio={anio}
           personasElegibles={personasEditables}
           filasNavegables={filas.filter((f) => !f.inactiva)}
-          horasMesDefault={datos.horasMesDefault}
           mesActual={mesActual}
           escrituras={escrituras}
           onNavegar={(personaId, indice) => setPanel({ personaId, indice })}

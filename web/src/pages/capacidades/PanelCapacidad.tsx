@@ -30,7 +30,6 @@ interface Props {
   personasElegibles: FilaCapacidad[]
   /** Filas visibles en pantalla, para pasar a la persona de arriba/abajo. */
   filasNavegables: FilaCapacidad[]
-  horasMesDefault: number
   /** Mes en curso (`YYYY-MM`) para avisar al editar un mes pasado. */
   mesActual: string
   escrituras: ReturnType<typeof useEscriturasCapacidades>
@@ -47,7 +46,7 @@ interface Props {
  * por persona y mes: al navegar, el formulario se reinicia.
  */
 export function PanelCapacidad({
-  fila, indice, anio, personasElegibles, filasNavegables, horasMesDefault, mesActual,
+  fila, indice, anio, personasElegibles, filasNavegables, mesActual,
   escrituras, onNavegar, onCerrar, onEliminar,
 }: Props) {
   const celda = fila ? fila.celdas[indice] : null
@@ -263,8 +262,7 @@ export function PanelCapacidad({
               <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Atajos de horas">
                 {[
                   { etiqueta: 'Base sugerida', valor: base },
-                  { etiqueta: 'Horas del mes', valor: horasMesDefault },
-                  { etiqueta: '½ mes', valor: Math.round(base / 2) },
+                  { etiqueta: '½ mes', valor: Math.round(base * 5) / 10 },
                   { etiqueta: 'Sin disponibilidad', valor: 0 },
                 ].map((atajo) => (
                   <Boton

@@ -240,6 +240,13 @@ export interface RespuestaCierreMembresia {
   efecto: string
 }
 
+export interface RespuestaEliminacionMembresia {
+  eliminada: boolean
+  squads: string[]
+  /** La persona quedó sin ninguna membresía de squad. */
+  ultimo_squad: boolean
+}
+
 export interface Categoria {
   id: string
   nombre: string

@@ -22,15 +22,23 @@ export function mesEnCurso(): string {
 }
 
 /**
- * Días hábiles y base sugerida de un mes: horas del mes por defecto × días hábiles
- * ÷ días laborables (lunes a viernes). Misma fórmula del Dashboard Backlog
- * (`useDerivadosBacklog`), redondeada a la hora para mostrarla y sugerirla.
+ * Días hábiles y base sugerida de un mes según la jornada real: lunes a jueves 8,5 h,
+ * viernes 8 h, sábado, domingo y festivos 0 h. Misma regla que `metas_horas.py` y que
+ * `calcularHorasMeta` de Control de Horas. Redondeada a 1 decimal.
  */
-export function baseSugeridaMes(mes: string, horasMesDefault: number, festivosMes: Set<string>) {
-  const diasLaborables = contarDiasHabiles(mes, new Set())
+export function baseSugeridaMes(mes: string, festivosMes: Set<string>) {
   const diasHabiles = contarDiasHabiles(mes, festivosMes)
-  const factor = diasLaborables > 0 ? diasHabiles / diasLaborables : 1
-  return { diasHabiles, base: Math.round(horasMesDefault * factor) }
+  const [anio, mesNumero] = mes.split('-').map(Number)
+  const ultimoDia = new Date(anio, mesNumero, 0).getDate()
+  let horas = 0
+  for (let dia = 1; dia <= ultimoDia; dia += 1) {
+    const dow = new Date(anio, mesNumero - 1, dia).getDay()
+    if (dow === 0 || dow === 6) continue
+    const clave = `${anio}-${String(mesNumero).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+    if (festivosMes.has(clave)) continue
+    horas += dow === 5 ? 8 : 8.5
+  }
+  return { diasHabiles, base: Math.round(horas * 10) / 10 }
 }
 
 /** Tono de una celda contra la base del mes: ±5 % en la base, <50 % crítico, >105 % alto. */

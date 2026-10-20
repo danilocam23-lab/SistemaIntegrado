@@ -9,6 +9,7 @@ import { EditorFechasMembresia } from './EditorFechasMembresia'
 import { fechaCorta, hoyISO } from './formatoFecha'
 import { ModalAbrirSquad } from './ModalAbrirSquad'
 import { ModalDesactivarSquad } from './ModalDesactivarSquad'
+import { ModalEliminarSquad } from './ModalEliminarSquad'
 
 interface Props {
   persona: Persona
@@ -22,6 +23,7 @@ interface Props {
 
 type Dialogo =
   | { tipo: 'cerrar'; membresia: Membresia }
+  | { tipo: 'eliminar'; membresia: Membresia }
   | { tipo: 'abrir'; squadFijo?: string }
 
 function EstadoMembresia({ m, hoy }: { m: Membresia; hoy: string }) {
@@ -107,6 +109,16 @@ export function SeccionSquadsVigentes({ persona, aplicaciones, puedeEditar, onCa
                     Desactivar en este squad…
                   </Boton>
                 )}
+                {puedeEditar && (
+                  <Boton
+                    tamano="sm"
+                    variante="peligro-suave"
+                    aria-label={`Eliminar el squad ${nombre} de ${persona.nombre}`}
+                    onClick={() => setDialogo({ tipo: 'eliminar', membresia: m })}
+                  >
+                    Eliminar…
+                  </Boton>
+                )}
                 <EditorFechasMembresia
                   key={`${m.id}-${m.desde}-${m.hasta}`}
                   membresia={m}
@@ -144,6 +156,16 @@ export function SeccionSquadsVigentes({ persona, aplicaciones, puedeEditar, onCa
                       Reabrir…
                     </Boton>
                   )}
+                  {puedeEditar && (
+                    <Boton
+                      tamano="sm"
+                      variante="peligro-suave"
+                      aria-label={`Eliminar el squad ${nombre} de ${persona.nombre}`}
+                      onClick={() => setDialogo({ tipo: 'eliminar', membresia: m })}
+                    >
+                      Eliminar…
+                    </Boton>
+                  )}
                   <EditorFechasMembresia
                     key={`${m.id}-${m.desde}-${m.hasta}`}
                     membresia={m}
@@ -172,6 +194,15 @@ export function SeccionSquadsVigentes({ persona, aplicaciones, puedeEditar, onCa
           onCerrar={() => setDialogo(null)}
           onCerrada={alCambiar}
           onPersonaDesactivada={onPersonaDesactivada}
+        />
+      )}
+      {dialogo?.tipo === 'eliminar' && (
+        <ModalEliminarSquad
+          persona={persona}
+          membresia={dialogo.membresia}
+          nombreSquad={nombreSquad(dialogo.membresia.squad_id)}
+          onCerrar={() => setDialogo(null)}
+          onEliminada={alCambiar}
         />
       )}
       {dialogo?.tipo === 'abrir' && (

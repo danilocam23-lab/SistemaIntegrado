@@ -209,6 +209,28 @@ async def editar(
     return _salida(m)
 
 
+@router.delete("/{membresia_id}")
+async def eliminar(
+    membresia_id: str,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    usuario: Usuario = Depends(usuario_actual),
+    _: Usuario = permiso("personas.editar"),
+) -> dict:
+    """Elimina por completo (borrado físico) una membresía, abierta o cerrada.
+
+    Pensado para squads asignados por error; para dar de baja con historia se usa
+    ``/cerrar``. Recalcula ``Persona.squads`` y no cambia el estado activo de la persona.
+    ``ultimo_squad: true`` si la persona se queda sin ninguna membresía.
+    """
+    m = await _membresia_accesible(membresia_id, usuario)
+    persona = await _persona_accesible(m.persona_id, ctx)
+    ultimo = await svc.eliminar(m, persona, usuario.email)
+    await recalcular_squads_persona(persona)
+    persona.marcar_actualizado()
+    await persona.save()
+    return {"eliminada": membresia_id, "squads": list(persona.squads), "ultimo_squad": ultimo}
+
+
 @router.patch("/{membresia_id}/cerrar")
 async def cerrar(
     membresia_id: str,

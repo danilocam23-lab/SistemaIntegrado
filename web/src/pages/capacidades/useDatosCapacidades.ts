@@ -3,16 +3,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLista } from '../../api/hooks'
-import type { Asignacion, Configuracion, Festivo, Requerimiento } from '../../types'
-import { HORAS_MES_POR_DEFECTO } from '../asignaciones/carga'
+import type { Asignacion, Festivo, Requerimiento } from '../../types'
 import { ESTADO_ACTIVO } from '../asignaciones/tipos'
 import { fechaKey } from '../dashboard-backlog/utilidades'
 import type { CapacidadFila, CargaFila, PersonaConApp } from './tipos'
 
 /**
  * Carga de datos de Capacidades: `/capacidades` y `/personas` (bloqueantes),
- * `/festivos` y `/configuracion` (la base sugerida cae a 180 h sin festivos si
- * fallan) y `/asignaciones` + `/requerimientos` (solo para la carga vigente por
+ * `/festivos` (si falla, la base sugerida no los descuenta) y `/asignaciones` + `/requerimientos` (solo para la carga vigente por
  * persona; si fallan la columna de carga queda "no disponible").
  *
  * `cargandoInicial` es `true` solo en la primera carga: los refrescos tras
@@ -22,7 +20,6 @@ export function useDatosCapacidades() {
   const lCapacidades = useLista<CapacidadFila>('/capacidades')
   const lPersonas = useLista<PersonaConApp>('/personas')
   const lFestivos = useLista<Festivo>('/festivos')
-  const lConfiguracion = useLista<Configuracion>('/configuracion')
   const lAsignaciones = useLista<Asignacion>('/asignaciones')
   const lRequerimientos = useLista<Requerimiento>('/requerimientos')
 
@@ -35,12 +32,6 @@ export function useDatosCapacidades() {
       setCargandoInicial(false)
     }
   }, [cargando])
-
-  const horasMesDefault = useMemo(() => {
-    const config = lConfiguracion.datos.find((item) => item.clave === 'horas_mes_default')
-    const horas = config ? Number(config.valor) : HORAS_MES_POR_DEFECTO
-    return Number.isFinite(horas) && horas > 0 ? horas : HORAS_MES_POR_DEFECTO
-  }, [lConfiguracion.datos])
 
   const festivosPorMes = useMemo(() => {
     const mapa = new Map<string, Set<string>>()
@@ -78,7 +69,6 @@ export function useDatosCapacidades() {
   const { recargar: recargarCapacidades } = lCapacidades
   const { recargar: recargarPersonas } = lPersonas
   const { recargar: recargarFestivos } = lFestivos
-  const { recargar: recargarConfiguracion } = lConfiguracion
   const { recargar: recargarAsignaciones } = lAsignaciones
   const { recargar: recargarRequerimientos } = lRequerimientos
 
@@ -89,26 +79,23 @@ export function useDatosCapacidades() {
     recargarCapacidades()
     recargarPersonas()
     recargarFestivos()
-    recargarConfiguracion()
     recargarAsignaciones()
     recargarRequerimientos()
   }, [
     recargarCapacidades, recargarPersonas, recargarFestivos,
-    recargarConfiguracion, recargarAsignaciones, recargarRequerimientos,
+    recargarAsignaciones, recargarRequerimientos,
   ])
 
   const avisosSecundarios = useMemo(() => {
     const lista: string[] = []
     if (lFestivos.error) lista.push('festivos (la base sugerida no los descuenta)')
-    if (lConfiguracion.error) lista.push(`configuración (se usan ${HORAS_MES_POR_DEFECTO} h por mes)`)
     if (lAsignaciones.error || lRequerimientos.error) lista.push('asignaciones (la carga no está disponible)')
     return lista
-  }, [lFestivos.error, lConfiguracion.error, lAsignaciones.error, lRequerimientos.error])
+  }, [lFestivos.error, lAsignaciones.error, lRequerimientos.error])
 
   return {
     capacidades: lCapacidades.datos,
     personas: lPersonas.datos,
-    horasMesDefault,
     festivosPorMes,
     cargaPorPersona,
     cargaDisponible,

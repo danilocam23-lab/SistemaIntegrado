@@ -24,7 +24,6 @@ interface Parametros {
   capacidades: CapacidadFila[]
   personas: PersonaConApp[]
   anio: number
-  horasMesDefault: number
   festivosPorMes: Map<string, Set<string>>
   cargaPorPersona: Map<string, CargaFila>
   cargaDisponible: boolean
@@ -44,7 +43,7 @@ const sinTildes = (texto: string): string =>
  * totales, KPI y la vista por equipo. No llama a la API.
  */
 export function useMatrizCapacidades({
-  capacidades, personas, anio, horasMesDefault, festivosPorMes, cargaPorPersona,
+  capacidades, personas, anio, festivosPorMes, cargaPorPersona,
   cargaDisponible, ocultos, filtros, squadContexto,
 }: Parametros) {
   const mesActual = mesEnCurso()
@@ -55,10 +54,10 @@ export function useMatrizCapacidades({
   const meses = useMemo(
     () => MESES_ABREV.map((_, i) => {
       const mes = claveMes(anio, i)
-      const { base, diasHabiles } = baseSugeridaMes(mes, horasMesDefault, festivosPorMes.get(mes) ?? new Set())
+      const { base, diasHabiles } = baseSugeridaMes(mes, festivosPorMes.get(mes) ?? new Set())
       return { mes, indice: i, base, diasHabiles }
     }),
-    [anio, horasMesDefault, festivosPorMes],
+    [anio, festivosPorMes],
   )
 
   const filasTodas = useMemo<FilaCapacidad[]>(() => {
@@ -74,9 +73,7 @@ export function useMatrizCapacidades({
       if (cap.mes.startsWith(`${anio}-`)) conRegistroEnAnio.add(cap.persona_id)
     }
 
-    const baseActual = baseSugeridaMes(
-      mesActual, horasMesDefault, festivosPorMes.get(mesActual) ?? new Set(),
-    ).base
+    const baseActual = baseSugeridaMes(mesActual, festivosPorMes.get(mesActual) ?? new Set()).base
 
     const filas: FilaCapacidad[] = []
     for (const persona of personas) {
@@ -155,7 +152,7 @@ export function useMatrizCapacidades({
     return filas
   }, [
     capacidades, personas, ocultos, anio, meses, cargaPorPersona, cargaDisponible,
-    mesActual, horasMesDefault, festivosPorMes, esAnioActual, indiceMesActual, squadContexto,
+    mesActual, festivosPorMes, esAnioActual, indiceMesActual, squadContexto,
   ])
 
   const roles = useMemo(
