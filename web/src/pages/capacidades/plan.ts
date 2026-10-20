@@ -56,6 +56,29 @@ export function planificarCopiaMes(
 export function planificarRelleno(
   filas: FilaCapacidad[], desdeMes: number, basePorMes: number[],
 ): FilaPlanLote[] {
+  return planificarRellenoCompleto(filas, desdeMes, basePorMes, false)
+    .filter((p) => p.accion === 'crear')
+}
+
+/**
+ * Plan completo del relleno (con todas las acciones). Con `reemplazar` se compara
+ * cada mes vigente con la base sugerida: crea, actualiza si difiere u omite si es igual.
+ * Sin `reemplazar` solo se crean los meses vacíos (comportamiento original).
+ */
+export function planificarRellenoCompleto(
+  filas: FilaCapacidad[], desdeMes: number, basePorMes: number[], reemplazar: boolean,
+): FilaPlanLote[] {
+  if (reemplazar) {
+    const plan: FilaPlanLote[] = []
+    for (const fila of filas) {
+      if (fila.inactiva) continue
+      for (let i = 0; i < 12; i++) {
+        if (!fila.celdas[i].vigente) continue
+        plan.push(filaPlan(fila, i, basePorMes[i], true))
+      }
+    }
+    return plan
+  }
   const plan: FilaPlanLote[] = []
   for (const fila of filas) {
     if (fila.inactiva) continue

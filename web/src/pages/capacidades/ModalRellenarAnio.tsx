@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import Modal from '../../components/Modal'
 import { Aviso, Boton, Selector } from '../../components/ui'
 import { formatearHoras } from './base'
-import { contarPlan, planificarRelleno } from './plan'
+import { contarPlan, etiquetaMes, planificarRellenoCompleto } from './plan'
 import { MESES_ABREV, MESES_LARGO } from './tipos'
 import type { FilaCapacidad, FilaPlanLote, ResultadoLote } from './tipos'
 
@@ -32,13 +32,24 @@ export function ModalRellenarAnio({
   abierto, onCerrar, anio, filas, basePorMes, indiceMesActual, guardando, aplicarLote, onResultado,
 }: Props) {
   const [desdeMes, setDesdeMes] = useState(indiceMesActual >= 0 ? indiceMesActual : 0)
-  const plan = useMemo(() => planificarRelleno(filas, desdeMes, basePorMes), [filas, desdeMes, basePorMes])
+  const [reemplazar, setReemplazar] = useState(false)
+  const plan = useMemo(
+    () => planificarRellenoCompleto(filas, desdeMes, basePorMes, reemplazar),
+    [filas, desdeMes, basePorMes, reemplazar],
+  )
   const conteo = contarPlan(plan)
   const personas = filas.filter((f) => !f.inactiva).length
+  const aEscribir = conteo.crear + conteo.actualizar
+  const ejemplo = plan.find((p) => p.accion === 'actualizar')
 
   async function rellenar() {
     const resultado = await aplicarLote(plan)
-    onResultado(`Rellenar ${anio} desde ${MESES_LARGO[desdeMes].toLowerCase()}`, resultado)
+    onResultado(
+      reemplazar
+        ? `Rellenar ${anio} (reemplazando registros)`
+        : `Rellenar ${anio} desde ${MESES_LARGO[desdeMes].toLowerCase()}`,
+      resultado,
+    )
     if (resultado.errores.length === 0) onCerrar()
   }
 
@@ -52,10 +63,31 @@ export function ModalRellenarAnio({
               {anio}
             </p>
           </div>
-          <Selector etiqueta="Desde el mes" value={desdeMes} onChange={(e) => setDesdeMes(Number(e.target.value))}>
+          <Selector
+            etiqueta="Desde el mes"
+            value={reemplazar ? 0 : desdeMes}
+            disabled={reemplazar}
+            onChange={(e) => setDesdeMes(Number(e.target.value))}
+          >
             {MESES_LARGO.map((m, i) => <option key={m} value={i}>{m}</option>)}
           </Selector>
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={reemplazar}
+            disabled={guardando}
+            onChange={(e) => setReemplazar(e.target.checked)}
+          />
+          <span>
+            Reemplazar registros existentes por la base sugerida
+            <span className="block text-xs text-slate-500">
+              Revisa todo el año desde enero y corrige los meses que difieran de la base.
+            </span>
+          </span>
+        </label>
 
         <Aviso tono="info">
           <p>
@@ -65,17 +97,38 @@ export function ModalRellenarAnio({
             Horas: la base sugerida de cada mes (días hábiles según los festivos):{' '}
             {MESES_ABREV.slice(desdeMes).map((m, k) => `${m} ${formatearHoras(basePorMes[desdeMes + k])}`).join(' · ')}.
           </p>
-          <p className="mt-1">Solo se crean las que faltan; nunca se pisa un registro existente.</p>
+          {!reemplazar && <p className="mt-1">Solo se crean las que faltan; nunca se pisa un registro existente.</p>}
         </Aviso>
 
-        <p className="text-sm text-slate-600" role="status">
-          Se crearán <b>{conteo.crear}</b> registros{conteo.crear === 0 ? ': todo lo que se ve ya tiene registro.' : '.'}
-        </p>
+        {reemplazar ? (
+          <>
+            <Aviso tono="alerta">
+              <p>
+                Se reemplazarán <b>{conteo.actualizar}</b> registros existentes que difieren de la base sugerida.
+                Se pierden las horas editadas a mano en esos registros.
+              </p>
+              {ejemplo && (
+                <p className="mt-1">
+                  Ejemplo: {ejemplo.nombre}, {etiquetaMes(ejemplo.mes)}:{' '}
+                  <b>{formatearHoras(ejemplo.horasActuales ?? 0)} → {formatearHoras(ejemplo.horas)}</b>.
+                </p>
+              )}
+            </Aviso>
+            <p className="text-sm text-slate-600" role="status">
+              Crear <b>{conteo.crear}</b> · Actualizar <b>{conteo.actualizar}</b> · Omitir <b>{conteo.omitir}</b>{' '}
+              (sin cambios o meses no vigentes).
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-slate-600" role="status">
+            Se crearán <b>{conteo.crear}</b> registros{conteo.crear === 0 ? ': todo lo que se ve ya tiene registro.' : '.'}
+          </p>
+        )}
 
         <div className="flex justify-end gap-2">
           <Boton onClick={onCerrar} disabled={guardando}>Cancelar</Boton>
-          <Boton variante="primario" disabled={guardando || conteo.crear === 0} onClick={() => void rellenar()}>
-            {guardando ? 'Creando…' : 'Crear registros'}
+          <Boton variante="primario" disabled={guardando || aEscribir === 0} onClick={() => void rellenar()}>
+            {guardando ? 'Guardando…' : reemplazar ? 'Aplicar base sugerida' : 'Crear registros'}
           </Boton>
         </div>
       </div>
