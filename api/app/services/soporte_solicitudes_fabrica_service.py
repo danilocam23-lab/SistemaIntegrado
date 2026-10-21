@@ -11,7 +11,7 @@ import logging
 import re
 import time
 import unicodedata
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urlparse, urlunparse
 
@@ -158,6 +158,65 @@ def _to_text(v: object) -> str:
     if isinstance(v, datetime):
         return v.isoformat()
     return str(v).strip()
+
+
+# Estados de WO que ya no se consideran abiertas (comparación sin mayúsculas).
+ESTADOS_WO_CERRADOS = ("cerrado", "cancelado", "terminado")
+REGEX_ESTADO_WO_CERRADO = re.compile(
+    r"^\s*(" + "|".join(ESTADOS_WO_CERRADOS) + r")\s*$", re.IGNORECASE
+)
+
+
+def _sin_tildes_minusculas(valor: str) -> str:
+    base = unicodedata.normalize("NFD", valor)
+    return "".join(c for c in base if not unicodedata.combining(c)).strip().lower()
+
+
+def estado_wo_cerrado(status: object) -> bool:
+    """¿El ``Status WO`` es cerrado/cancelado/terminado? Insensible a mayúsculas,
+    tildes y espacios sobrantes."""
+    return _sin_tildes_minusculas(str(status or "")) in ESTADOS_WO_CERRADOS
+
+
+def parsear_fecha_wo(valor: object) -> date | None:
+    """Convierte la fecha de una WO a ``date``; ``None`` si falta o no se reconoce.
+
+    Acepta ISO (``2026-10-25``, con hora tras ``T`` o espacio), ``dd/mm/yyyy``
+    (o con ``-``) con hora opcional y ``yyyy/mm/dd``."""
+    if isinstance(valor, datetime):
+        return valor.date()
+    if isinstance(valor, date):
+        return valor
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+    solo_fecha = re.split(r"[T\s]", texto, maxsplit=1)[0]
+    m = re.fullmatch(r"(\d{4})[-/](\d{1,2})[-/](\d{1,2})", solo_fecha)
+    if m:
+        anio, mes, dia = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    else:
+        m = re.fullmatch(r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})", solo_fecha)
+        if not m:
+            return None
+        dia, mes, anio = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    try:
+        return date(anio, mes, dia)
+    except ValueError:
+        return None
+
+
+def clasificar_wo_proxima_vencer(datos: dict, hoy: date, dias: int) -> tuple[str, int] | None:
+    """``(fecha_iso, dias_restantes)`` si la WO está abierta y vence en ``<= dias`` días
+    de calendario (negativo = vencida); ``None`` si no aplica."""
+    if estado_wo_cerrado(datos.get("Status WO")):
+        return None
+    fecha = parsear_fecha_wo(datos.get("Fecha_Programada_Fin"))
+    if fecha is None:
+        return None
+    restantes = (fecha - hoy).days
+    if restantes > dias:
+        return None
+    return fecha.isoformat(), restantes
 
 
 def _extraer_lider_squad(row_por_key: dict[str, str]) -> tuple[str | None, str | None]:

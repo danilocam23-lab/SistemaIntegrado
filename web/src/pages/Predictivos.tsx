@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import client from '../api/client'
-import { useLista } from '../api/hooks'
+import { mensajeError, useLista } from '../api/hooks'
 import { Aviso, Chip, EncabezadoPagina, Icono, Tarjeta, TablaScroll } from '../components/ui'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
 
@@ -32,6 +32,18 @@ interface FilaEstadoReq {
   analista: string
   estado: string
   fechaSolicitud: string
+}
+
+interface WoPorVencer {
+  id: string
+  lider: string
+  squad: string
+  wo_id: string
+  summary: string
+  assigned_to: string
+  status: string
+  fecha_programada_fin: string
+  dias_restantes: number
 }
 
 const ESTADOS_INCLUIDOS = ['PENDIENTE', 'RECHAZADA', 'ENTREGA NO CARGADA']
@@ -75,6 +87,18 @@ export default function Predictivos() {
           .then((r) => setSquadsCol(r.data))
           .catch(() => {})
       })
+  }, [])
+
+  const [wo, setWo] = useState<WoPorVencer[]>([])
+  const [cargandoWo, setCargandoWo] = useState(true)
+  const [errorWo, setErrorWo] = useState('')
+
+  useEffect(() => {
+    client
+      .get<WoPorVencer[]>('/soporte/wo-proximas-vencer', { params: { dias: 5 } })
+      .then((r) => setWo(r.data))
+      .catch((e) => setErrorWo(mensajeError(e)))
+      .finally(() => setCargandoWo(false))
   }, [])
 
   const squadPorId = useMemo(() => {
@@ -278,6 +302,67 @@ export default function Predictivos() {
                     <td className="text-center">{f.fechaSolicitud ? f.fechaSolicitud.slice(0, 10) : '—'}</td>
                     <td className="text-center">
                       <Chip tono={tonoEstadoReq(f.estado)}>{f.estado}</Chip>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TablaScroll>
+        )
+      )}
+
+      <Tarjeta className="mb-4 mt-8">
+        <h2 className="titulo-seccion text-sm mb-1">
+          WO próximas a vencer (≤ 5 días)
+        </h2>
+        <p className="text-xs text-slate-500">
+          Work Orders no cerradas ni canceladas cuya fecha programada de fin vence en 5 días o menos
+          (incluye vencidas y sin asignar).
+        </p>
+      </Tarjeta>
+
+      {cargandoWo && <Aviso tono="info"><span role="status">Cargando WO…</span></Aviso>}
+      {errorWo && <Aviso tono="error">{errorWo}</Aviso>}
+
+      {!cargandoWo && !errorWo && (
+        wo.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white p-16 text-center text-slate-500">
+            <Icono nombre="check-circulo" className="h-10 w-10 text-emerald-500" />
+            <p className="text-sm">No hay WO próximas a vencer en este momento.</p>
+          </div>
+        ) : (
+          <TablaScroll>
+            <table className="tabla">
+              <thead>
+                <tr>
+                  <th>Líder</th>
+                  <th>Work Order ID</th>
+                  <th>Summary</th>
+                  <th>Assigned To</th>
+                  <th className="text-center">Status WO</th>
+                  <th className="text-center">F. Programada Fin</th>
+                  <th className="text-center">Días restantes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wo.map((w) => (
+                  <tr key={w.id}>
+                    <td>{w.lider || '—'}</td>
+                    <td>{w.wo_id}</td>
+                    <td>
+                      <span className="block max-w-xs truncate" title={w.summary || undefined}>
+                        {w.summary || '—'}
+                      </span>
+                    </td>
+                    <td>{w.assigned_to ? w.assigned_to : <Chip tono="alerta">Sin asignar</Chip>}</td>
+                    <td className="text-center">
+                      <Chip tono="neutro">{w.status}</Chip>
+                    </td>
+                    <td className="text-center">{w.fecha_programada_fin}</td>
+                    <td className="text-center">
+                      <Chip tono={tonoDias(w.dias_restantes)}>
+                        {w.dias_restantes < 0 ? `Vencida (${Math.abs(w.dias_restantes)}d)` : `${w.dias_restantes}d`}
+                      </Chip>
                     </td>
                   </tr>
                 ))}

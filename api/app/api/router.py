@@ -128,6 +128,7 @@ api_router.include_router(configuracion.router)
 api_router.include_router(azdo.router)
 api_router.include_router(importacion.router)
 api_router.include_router(soporte.router)
+api_router.include_router(soporte.router_alias)
 api_router.include_router(garantias_wo.router)
 api_router.include_router(control_horas.router)
 # Transversal

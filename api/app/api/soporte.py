@@ -2,18 +2,24 @@
 # SPDX-License-Identifier: MIT
 
 """API de Soporte / Solicitudes Fábrica."""
-import re
-
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion
 from app.security.deps import permiso
 from app.security.rbac import PERM_ADMIN_ACCESO
-from app.services.soporte_solicitudes_fabrica_service import SoporteSolicitudesFabricaService
- 
+from app.services.soporte_solicitudes_fabrica_service import (
+    REGEX_ESTADO_WO_CERRADO,
+    SoporteSolicitudesFabricaService,
+    clasificar_wo_proxima_vencer,
+    estado_wo_cerrado,
+)
+from app.services.vigencia import hoy_bogota
+
 router = APIRouter(prefix="/soporte/solicitudes-fabrica", tags=["soporte"])
+# Alias con el contrato corto ``/soporte/wo-proximas-vencer`` (mismo handler).
+router_alias = APIRouter(prefix="/soporte", tags=["soporte"])
 
 
 class DetalleAnsUpdate(BaseModel):
@@ -194,9 +200,7 @@ async def wo_por_persona(
 
     consulta = ctx.filtro()
     consulta["datos.Assigned To"] = {"$nin": [None, ""]}
-    consulta["datos.Status WO"] = {
-        "$not": re.compile(r"^\s*(cerrado|cancelado|terminado)\s*$", re.IGNORECASE)
-    }
+    consulta["datos.Status WO"] = {"$not": REGEX_ESTADO_WO_CERRADO}
     campos = ("Assigned To", "Status WO", "Work Order ID", "Priority",
               "Fecha_Requerida_Inicio", "Detailed Description")
     proyeccion = {f"datos.{c}": 1 for c in campos}
@@ -205,7 +209,7 @@ async def wo_por_persona(
         d = r.get("datos") or {}
         assigned = (d.get("Assigned To") or "").strip()
         status = (d.get("Status WO") or "").strip()
-        if not assigned or status.lower() in ("cerrado", "cancelado", "terminado"):
+        if not assigned or estado_wo_cerrado(status):
             continue
         resultado.append({
             "id": str(r["_id"]),
@@ -216,6 +220,47 @@ async def wo_por_persona(
             "created_date": d.get("Fecha_Requerida_Inicio") or "",
             "descripcion": d.get("Detailed Description") or "",
         })
+    return resultado
+
+
+@router.get("/wo-proximas-vencer")
+@router_alias.get("/wo-proximas-vencer")
+async def wo_proximas_vencer(
+    dias: int = Query(5, ge=0, le=3650),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    _: object = permiso("soporte.solicitudes_fabrica.ver"),
+) -> list[dict]:
+    """WO abiertas (asignadas o no) cuya ``Fecha_Programada_Fin`` vence en ``dias``
+    días de calendario o menos, incluidas las ya vencidas (``dias_restantes`` < 0).
+    Ordenadas por ``dias_restantes`` ascendente."""
+    from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabrica
+
+    consulta = ctx.filtro()
+    consulta["datos.Fecha_Programada_Fin"] = {"$nin": [None, ""]}
+    campos = ("Work Order ID", "Summary", "Assigned To", "Status WO", "Fecha_Programada_Fin")
+    proyeccion = {f"datos.{c}": 1 for c in campos}
+    proyeccion["lider"] = 1
+    proyeccion["squad"] = 1
+    hoy = hoy_bogota()
+    resultado = []
+    async for r in SoporteSolicitudFabrica.get_pymongo_collection().find(consulta, proyeccion):
+        d = r.get("datos") or {}
+        clasif = clasificar_wo_proxima_vencer(d, hoy, dias)
+        if clasif is None:
+            continue
+        fecha_iso, restantes = clasif
+        resultado.append({
+            "id": str(r["_id"]),
+            "lider": r.get("lider") or "",
+            "squad": r.get("squad") or "",
+            "wo_id": d.get("Work Order ID") or "",
+            "summary": d.get("Summary") or "",
+            "assigned_to": (d.get("Assigned To") or "").strip(),
+            "status": d.get("Status WO") or "",
+            "fecha_programada_fin": fecha_iso,
+            "dias_restantes": restantes,
+        })
+    resultado.sort(key=lambda x: x["dias_restantes"])
     return resultado
 
 
