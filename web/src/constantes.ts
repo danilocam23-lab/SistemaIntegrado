@@ -28,6 +28,13 @@ export const ESTADOS_ENTREGA = [
 
 export const TIPOS_COSTO = ['TYM', 'FIJO']
 
+/** Opciones de tipificación (a quién se atribuye un incumplimiento de ANS).
+ *  El dato real (ans_acta / ans_entrega) no se modifica. */
+export const TIPIFICACIONES = [
+  { valor: 'HITSS', etiqueta: 'Hitss' },
+  { valor: 'EPM', etiqueta: 'EPM' },
+] as const
+
 export const MESES_ES = [
   'Enero',
   'Febrero',

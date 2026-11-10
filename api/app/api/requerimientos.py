@@ -4,14 +4,18 @@
 """Router de requerimientos — núcleo del dominio de liquidación."""
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Literal
 
 from beanie.operators import In
+from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError
 
 from app.documents.aplicacion import Aplicacion
 from app.documents.bitacora import Bitacora
+from app.documents.enums import Tipificacion
 from app.documents.estimacion import Estimacion
 from app.documents.requerimiento import Entrega, Requerimiento, Solicitud
 from app.documents.usuario import Usuario
@@ -146,8 +150,6 @@ async def _historial_estados_entrega(entidad_id: str, numero: int, entrega: Entr
 
 
 async def _buscar(ctx: ContextoAplicacion, codigo_req: str) -> Requerimiento:
-    from bson import ObjectId
-    from bson.errors import InvalidId
     # Busca primero por _id (ObjectId) para soportar URLs únicas globalmente
     try:
         oid = ObjectId(codigo_req)
@@ -771,13 +773,19 @@ class DetalleAnsReqUpdate(BaseModel):
     observaciones: str | None = None
     seguimiento: str | None = None
     observaciones_hitss: str | None = None
-    tipificacion: str | None = None
+    # "" o null limpian el valor; cualquier otra cadena debe ser un valor del enum.
+    tipificacion: Tipificacion | Literal[""] | None = None
+
+
+def _texto_o_none(valor: str | None) -> str | None:
+    """Normaliza cadena vacía a None (limpiar el campo)."""
+    return valor or None
 
 
 @router.patch("/detalle-ans")
 async def actualizar_detalle_ans_req(
     body: DetalleAnsReqUpdate,
-    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Actualiza se_levanto_ans y/u observaciones_ans de un requerimiento o entrega.
@@ -791,17 +799,36 @@ async def actualizar_detalle_ans_req(
     if not puede_ans and not puede_tipificacion:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
 
-    from bson import ObjectId
-    req = await Requerimiento.get(ObjectId(body.req_id))
-    if not req or req.aplicacion_id not in ctx.codigos:
+    try:
+        oid = ObjectId(body.req_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "req_id inválido") from None
+    req = await Requerimiento.find_one({**ctx.filtro(), "_id": oid})
+    if not req:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Requerimiento no encontrado")
 
+    # Campos "limpiables": enviar null o "" los borra; no enviarlos los deja intactos.
+    enviados = body.model_fields_set
     quiere_ans = body.se_levanto_ans is not None or body.observaciones is not None
-    quiere_tipificacion = body.seguimiento is not None or body.observaciones_hitss is not None or body.tipificacion is not None
+    quiere_tipificacion = bool(
+        enviados & {"seguimiento", "observaciones_hitss", "tipificacion"}
+    )
     if quiere_ans and not puede_ans:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
     if quiere_tipificacion and not puede_tipificacion:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
+
+    antes: dict = {}
+    despues: dict = {}
+
+    def _cambiar(objeto: Requerimiento | Entrega, campo: str, nuevo: str | None) -> None:
+        anterior = getattr(objeto, campo)
+        anterior_txt = str(anterior) if anterior is not None else None
+        if anterior_txt == nuevo:
+            return
+        antes[campo] = anterior_txt
+        despues[campo] = nuevo
+        setattr(objeto, campo, nuevo)
 
     if body.tipo == "entrega" and body.entrega_numero is not None:
         entrega = next((e for e in (req.entregas or []) if e.numero == body.entrega_numero), None)
@@ -811,20 +838,35 @@ async def actualizar_detalle_ans_req(
             entrega.se_levanto_ans = body.se_levanto_ans
         if body.observaciones is not None:
             entrega.observaciones_ans = body.observaciones
-        if body.observaciones_hitss is not None:
-            entrega.observaciones_hitss = body.observaciones_hitss
-        if body.tipificacion is not None:
-            entrega.tipificacion = body.tipificacion or None
+        if "observaciones_hitss" in enviados:
+            _cambiar(entrega, "observaciones_hitss", _texto_o_none(body.observaciones_hitss))
+        if "tipificacion" in enviados:
+            _cambiar(entrega, "tipificacion", _texto_o_none(body.tipificacion))
+        objetivo = f"entrega {body.entrega_numero}"
     else:
         if body.se_levanto_ans is not None:
             req.se_levanto_ans = body.se_levanto_ans
         if body.observaciones is not None:
             req.observaciones_ans = body.observaciones
-        if body.seguimiento is not None:
-            req.seguimiento = body.seguimiento
-        if body.tipificacion is not None:
-            req.tipificacion = body.tipificacion or None
+        if "seguimiento" in enviados:
+            _cambiar(req, "seguimiento", _texto_o_none(body.seguimiento))
+        if "tipificacion" in enviados:
+            _cambiar(req, "tipificacion", _texto_o_none(body.tipificacion))
+        objetivo = "requerimiento"
 
     req.marcar_actualizado()
     await req.save()
+    if despues:
+        cambios = ", ".join(
+            f"{campo}: '{antes[campo] or ''}' → '{despues[campo] or ''}'" for campo in despues
+        )
+        await _registrar_bitacora(
+            ctx.codigo,
+            str(req.id),
+            "actualizar",
+            f"Detalle ANS ({objetivo}): {cambios}",
+            usuario,
+            datos_antes={"objetivo": objetivo, **antes},
+            datos_despues={"objetivo": objetivo, **despues},
+        )
     return {"ok": True}

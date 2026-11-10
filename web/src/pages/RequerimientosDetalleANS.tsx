@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
+import { useAplicacion } from '../context/AplicacionContext'
 import type { Aplicacion, Persona, Requerimiento, Squad } from '../types'
 import { Aviso, BarraFiltros, Boton, Campo, Chip, EncabezadoPagina, Icono, Kpi, Selector, Tarjeta } from '../components/ui'
 import { COLOR_GRAFICA } from '../components/ui/graficas'
@@ -33,9 +34,12 @@ export default function RequerimientosDetalleANS() {
   const [guardandoCheck, setGuardandoCheck] = useState<Set<string>>(new Set())
   const [guardandoObs, setGuardandoObs] = useState<Set<string>>(new Set())
   const [obsEdicion, setObsEdicion] = useState<Record<string, string>>({})
+  const [guardandoTipificacion, setGuardandoTipificacion] = useState<Set<string>>(new Set())
   const [aviso, setAviso] = useState('')
   const { tienePermiso } = useAuth()
+  const { modoConsolidado } = useAplicacion()
   const puedeEditar = tienePermiso('requerimientos.detalle_ans.editar') || tienePermiso('requerimientos.editar')
+  const puedeEditarTipificacion = tienePermiso('requerimientos.tipificacion.editar') || puedeEditar
 
   useEffect(() => {
     const onVisible = () => {
@@ -204,8 +208,25 @@ export default function RequerimientosDetalleANS() {
     )
   }
 
+  // PATCH /requerimientos/detalle-ans exige un contexto de escritura concreto (409 en
+  // modo consolidado). Se usa la aplicación del propio requerimiento; si no se puede
+  // determinar en modo consolidado, se avisa en vez de fallar mudo.
+  function configEscritura(reqId: string): { headers: { 'X-Aplicacion': string } } | {} | null {
+    if (!modoConsolidado) return {}
+    const req = requerimientos.find((r) => r.id === reqId)
+    const appCode = req?.aplicacion_id || req?.solicitud?.squad_id
+    if (!appCode) {
+      setAviso('No se pudo determinar la aplicación del requerimiento. Selecciona un squad concreto en el selector superior para guardar.')
+      return null
+    }
+    return { headers: { 'X-Aplicacion': String(appCode) } }
+  }
+
   async function guardarCheck(tipo: 'requerimiento' | 'entrega', reqId: string, checked: boolean, entregaNumero?: number) {
     const key = tipo === 'entrega' ? `${reqId}-${entregaNumero}` : reqId
+    setAviso('')
+    const config = configEscritura(reqId)
+    if (!config) return
     setGuardandoCheck((s) => new Set(s).add(key))
     try {
       await client.patch('/requerimientos/detalle-ans', {
@@ -213,7 +234,7 @@ export default function RequerimientosDetalleANS() {
         req_id: reqId,
         entrega_numero: entregaNumero ?? null,
         se_levanto_ans: checked,
-      })
+      }, config)
       await recargar()
     } catch (err) { setAviso(mensajeError(err)) }
     finally { setGuardandoCheck((s) => { const n = new Set(s); n.delete(key); return n }) }
@@ -222,6 +243,9 @@ export default function RequerimientosDetalleANS() {
   async function guardarObservacion(tipo: 'requerimiento' | 'entrega', reqId: string, entregaNumero?: number) {
     const key = tipo === 'entrega' ? `${reqId}-${entregaNumero}` : reqId
     const obs = obsEdicion[key] ?? ''
+    setAviso('')
+    const config = configEscritura(reqId)
+    if (!config) return
     setGuardandoObs((s) => new Set(s).add(key))
     try {
       await client.patch('/requerimientos/detalle-ans', {
@@ -229,11 +253,31 @@ export default function RequerimientosDetalleANS() {
         req_id: reqId,
         entrega_numero: entregaNumero ?? null,
         observaciones: obs,
-      })
+      }, config)
       await recargar()
       setObsEdicion((p) => { const n = { ...p }; delete n[key]; return n })
     } catch (err) { setAviso(mensajeError(err)) }
     finally { setGuardandoObs((s) => { const n = new Set(s); n.delete(key); return n }) }
+  }
+
+  // Guardado inmediato al cambiar el selector; '' limpia. Independiente por nivel.
+  async function guardarTipificacion(tipo: 'requerimiento' | 'entrega', reqId: string, valor: string, entregaNumero?: number) {
+    const key = tipo === 'entrega' ? `${reqId}-${entregaNumero}` : reqId
+    if (guardandoTipificacion.has(key)) return
+    setAviso('')
+    const config = configEscritura(reqId)
+    if (!config) return
+    setGuardandoTipificacion((s) => new Set(s).add(key))
+    try {
+      await client.patch('/requerimientos/detalle-ans', {
+        tipo,
+        req_id: reqId,
+        entrega_numero: entregaNumero ?? null,
+        tipificacion: valor === '' ? null : valor,
+      }, config)
+      await recargar()
+    } catch (err) { setAviso(mensajeError(err)) }
+    finally { setGuardandoTipificacion((s) => { const n = new Set(s); n.delete(key); return n }) }
   }
 
   return (
@@ -337,6 +381,9 @@ export default function RequerimientosDetalleANS() {
             onCambiarObs={(id, valor) => setObsEdicion((p) => ({ ...p, [id]: valor }))}
             onGuardarCheck={(reqId, checked) => void guardarCheck('requerimiento', reqId, checked)}
             onGuardarObs={(reqId) => void guardarObservacion('requerimiento', reqId)}
+            puedeEditarTipificacion={puedeEditarTipificacion}
+            guardandoTipificacion={guardandoTipificacion}
+            onGuardarTipificacion={(reqId, valor) => void guardarTipificacion('requerimiento', reqId, valor)}
           />
         )}
       </Tarjeta>
@@ -381,6 +428,9 @@ export default function RequerimientosDetalleANS() {
             onCambiarObs={(id, valor) => setObsEdicion((p) => ({ ...p, [id]: valor }))}
             onGuardarCheck={(reqId, checked, entregaNumero) => void guardarCheck('entrega', reqId, checked, entregaNumero)}
             onGuardarObs={(reqId, entregaNumero) => void guardarObservacion('entrega', reqId, entregaNumero)}
+            puedeEditarTipificacion={puedeEditarTipificacion}
+            guardandoTipificacion={guardandoTipificacion}
+            onGuardarTipificacion={(reqId, valor, entregaNumero) => void guardarTipificacion('entrega', reqId, valor, entregaNumero)}
           />
         )}
       </Tarjeta>

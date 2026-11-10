@@ -3,8 +3,10 @@
 
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Boton, Campo, Chip } from '../../components/ui'
+import { Boton, Campo, Chip, Selector } from '../../components/ui'
+import { TIPIFICACIONES } from '../../constantes'
 import type { TonoChip } from './utilidadesAns'
+import { tipificacionEtiqueta } from './utilidadesAns'
 
 export interface CampoDetalleAns {
   etiqueta: string
@@ -32,6 +34,12 @@ interface Props {
    * `obsEdicion`): se despliega sola, mismo criterio que `TarjetaEntrega`
    * en `SeccionEntregas.tsx`. */
   forzarExpandido: boolean
+  /** Tipificación actual de este nivel (requerimiento o entrega). */
+  tipificacion: string | null
+  puedeEditarTipificacion: boolean
+  guardandoTipificacion: boolean
+  /** Guardado inmediato al cambiar; '' limpia la tipificación. */
+  onCambiarTipificacion: (valor: string) => void
 }
 
 function CampoAns({ etiqueta, valor, ancho }: CampoDetalleAns) {
@@ -63,6 +71,10 @@ export default function FilaAns({
   guardandoObs,
   onGuardarObs,
   forzarExpandido,
+  tipificacion,
+  puedeEditarTipificacion,
+  guardandoTipificacion,
+  onCambiarTipificacion,
 }: Props) {
   const [expandido, setExpandido] = useState(forzarExpandido)
 
@@ -121,6 +133,28 @@ export default function FilaAns({
           {camposDetalle.map((campo) => (
             <CampoAns key={campo.etiqueta} {...campo} />
           ))}
+          <div>
+            <p className="etiqueta-sup mb-0.5">Tipificación</p>
+            {puedeEditarTipificacion ? (
+              <div className="flex items-center gap-1.5">
+                <Selector
+                  compacto
+                  aria-label="Tipificación"
+                  value={tipificacion ?? ''}
+                  disabled={guardandoTipificacion}
+                  onChange={(ev) => onCambiarTipificacion(ev.target.value)}
+                >
+                  <option value="">— Sin tipificar —</option>
+                  {TIPIFICACIONES.map((t) => (
+                    <option key={t.valor} value={t.valor}>{t.etiqueta}</option>
+                  ))}
+                </Selector>
+                {guardandoTipificacion && <span className="text-xs text-slate-400">…</span>}
+              </div>
+            ) : (
+              <div className="text-sm text-slate-700">{tipificacionEtiqueta(tipificacion)}</div>
+            )}
+          </div>
           <div className="col-span-2 sm:col-span-4">
             <p className="etiqueta-sup mb-0.5">Observaciones</p>
             <div className="flex min-w-0 gap-1.5">

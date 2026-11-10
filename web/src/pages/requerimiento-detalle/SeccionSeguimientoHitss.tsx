@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import { AreaTexto, Boton, Selector } from '../../components/ui'
+import { TIPIFICACIONES } from '../../constantes'
 import type { ValoresRequerimiento } from './useRequerimientoDetalle'
 
 interface Props {
@@ -113,8 +114,7 @@ export default function SeccionSeguimientoHitss({
             disabled={!puedeEditarTipificacion}
             className="w-full">
             <option value="">— Seleccionar —</option>
-            <option value="HITSS">Hitss</option>
-            <option value="EPM">EPM</option>
+            {TIPIFICACIONES.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
           </Selector>
         </label>
       </div>

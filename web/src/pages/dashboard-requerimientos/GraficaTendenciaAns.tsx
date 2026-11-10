@@ -21,12 +21,14 @@ interface Props {
   claveCumple: string
   /** dataKey de la serie "No cumple" (en %). */
   claveNoCumple: string
+  /** Texto opcional bajo el título (p. ej. nota de atribución EPM). */
+  descripcion?: string
 }
 
 /** Tendencia mensual de cumplimiento ANS (Cumple vs No cumple, en %). */
-export function GraficaTendenciaAns({ titulo, icono, datos, claveCumple, claveNoCumple }: Props) {
+export function GraficaTendenciaAns({ titulo, descripcion, icono, datos, claveCumple, claveNoCumple }: Props) {
   return (
-    <ContenedorGrafica titulo={titulo} icono={icono} alto={240} vacio={datos.length === 0}>
+    <ContenedorGrafica titulo={titulo} descripcion={descripcion} icono={icono} alto={240} vacio={datos.length === 0}>
       <LineChart data={datos} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
         <CartesianGrid {...rejilla()} />
         <XAxis dataKey="mes" {...ejeCategoria(10)} />

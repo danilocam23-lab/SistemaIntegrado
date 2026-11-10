@@ -301,7 +301,8 @@ export default function EntregasActas() {
         if (filtroMes && (f.mesAprobacion ?? '') !== filtroMes) return false
         if (filtroReqEstado && f.reqEstado !== filtroReqEstado) return false
         if (filtroSquad && f.squad !== filtroSquad) return false
-        if (filtroTipificacion && (f.tipificacionEntrega ?? f.tipificacionReq ?? '') !== filtroTipificacion) return false
+        // Cada fila es una entrega: filtra solo por su tipificación (sin herencia del requerimiento).
+        if (filtroTipificacion && (f.tipificacionEntrega ?? '') !== filtroTipificacion) return false
         if (filtroGarantia === 'SI' && !f.garantia) return false
         if (filtroGarantia === 'NO' && f.garantia) return false
         if (filtroTexto) {
@@ -375,11 +376,11 @@ export default function EntregasActas() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
   }, [filas])
 
-  /** Tipificaciones (entrega o requerimiento) únicas presentes en los datos */
+  /** Tipificaciones de entrega únicas presentes en los datos (sin herencia del requerimiento) */
   const tipificacionesEnBD = useMemo(() => {
     const set = new Set<string>()
     for (const f of filas) {
-      const t = f.tipificacionEntrega ?? f.tipificacionReq
+      const t = f.tipificacionEntrega
       if (t) set.add(t)
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))

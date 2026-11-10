@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Entrega } from '../../types'
+import { TIPIFICACIONES } from '../../constantes'
 import { Campo, Chip, Selector } from '../../components/ui/primitivos'
 
 type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
@@ -160,8 +161,7 @@ function TarjetaEntrega({
                 compacto
               >
                 <option value="">— Seleccionar —</option>
-                <option value="HITSS">Hitss</option>
-                <option value="EPM">EPM</option>
+                {TIPIFICACIONES.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
               </Selector>
             ) : (en.tipificacion ?? '—')}
           </CampoEntrega>

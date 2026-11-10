@@ -7,7 +7,7 @@ import { Chip } from '../../components/ui'
 import FilaAns from './FilaAns'
 import Paginacion from './Paginacion'
 import type { FilaEntrega } from './utilidadesAns'
-import { TAMANO_PAGINA_ANS, calcularDiasTranscurridos, normalizarAns, tipificacionEtiqueta, tonoAns } from './utilidadesAns'
+import { TAMANO_PAGINA_ANS, calcularDiasTranscurridos, normalizarAns, tonoAns } from './utilidadesAns'
 
 interface Props {
   filas: FilaEntrega[]
@@ -18,6 +18,9 @@ interface Props {
   onCambiarObs: (id: string, valor: string) => void
   onGuardarCheck: (reqId: string, checked: boolean, entregaNumero: number) => void
   onGuardarObs: (reqId: string, entregaNumero: number) => void
+  puedeEditarTipificacion: boolean
+  guardandoTipificacion: Set<string>
+  onGuardarTipificacion: (reqId: string, valor: string, entregaNumero: number) => void
 }
 
 /** Lista densa (con paginación client-side) de entregas con ANS incumplido —
@@ -32,6 +35,9 @@ export default function ListaEntregasAns({
   onCambiarObs,
   onGuardarCheck,
   onGuardarObs,
+  puedeEditarTipificacion,
+  guardandoTipificacion,
+  onGuardarTipificacion,
 }: Props) {
   const [pagina, setPagina] = useState(1)
 
@@ -91,8 +97,11 @@ export default function ListaEntregasAns({
               { etiqueta: 'F. Real', valor: e.fechaReal ? e.fechaReal.slice(0, 10) : '—' },
               { etiqueta: 'Observaciones EPM', valor: e.observacionesEpm || '—', ancho: 2 },
               { etiqueta: 'Observaciones Hitss', valor: e.observacionesHitss || '—', ancho: 2 },
-              { etiqueta: 'Tipificación', valor: tipificacionEtiqueta(e.tipificacion) },
             ]}
+            tipificacion={e.tipificacion}
+            puedeEditarTipificacion={puedeEditarTipificacion}
+            guardandoTipificacion={guardandoTipificacion.has(e.id)}
+            onCambiarTipificacion={(valor) => onGuardarTipificacion(e.reqId, valor, e.entregaNumero)}
           />
         ))
       )}

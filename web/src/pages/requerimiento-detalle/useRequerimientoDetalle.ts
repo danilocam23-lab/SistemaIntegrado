@@ -149,6 +149,18 @@ export function useRequerimientoDetalle(
     return appCode ? { headers: { 'X-Aplicacion': appCode } } : {}
   }
 
+  // PATCH /requerimientos/detalle-ans exige un contexto de escritura concreto:
+  // en modo consolidado sin código de aplicación el backend responde 409.
+  // Se avisa antes de enviar en vez de fallar mudo.
+  function configDetalleAns(): ReturnType<typeof writeConfig> | null {
+    const config = writeConfig()
+    if (modoConsolidado && !('headers' in config)) {
+      setAviso('No se pudo determinar la aplicación del requerimiento. Selecciona un squad concreto en el selector superior para guardar.')
+      return null
+    }
+    return config
+  }
+
   async function guardar(e: FormEvent): Promise<void> {
     e.preventDefault()
     setAviso('')
@@ -196,13 +208,15 @@ export function useRequerimientoDetalle(
       return
     }
     if (!req) return
+    const config = configDetalleAns()
+    if (!config) return
     try {
       await client.patch('/requerimientos/detalle-ans', {
         tipo: 'requerimiento',
         req_id: req.id,
         seguimiento: valores.seguimiento || null,
         tipificacion: valores.tipificacion || null,
-      }, writeConfig())
+      }, config)
       setOk('Cambios guardados.')
       recargar()
     } catch (err) {
@@ -289,6 +303,9 @@ export function useRequerimientoDetalle(
   async function guardarTipifEntrega(numero: number): Promise<void> {
     const edicion = tipifEdicion[numero]
     if (!edicion || !req) return
+    setAviso('')
+    const config = configDetalleAns()
+    if (!config) return
     setGuardandoTipif((s) => new Set(s).add(numero))
     try {
       await client.patch('/requerimientos/detalle-ans', {
@@ -297,7 +314,7 @@ export function useRequerimientoDetalle(
         entrega_numero: numero,
         observaciones_hitss: edicion.obs || null,
         tipificacion: edicion.tip || null,
-      }, writeConfig())
+      }, config)
       setTipifEdicion((p) => { const n = { ...p }; delete n[numero]; return n })
       recargar()
     } catch (err) {

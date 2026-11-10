@@ -3,7 +3,7 @@
 
 import type { FormEvent } from 'react'
 import { Boton, Campo, Icono, Selector } from '../../components/ui'
-import { MESES_ES } from '../../constantes'
+import { MESES_ES, TIPIFICACIONES } from '../../constantes'
 import type { FormularioEntregaControl } from './useFormularioEntrega'
 
 interface Props {
@@ -104,8 +104,7 @@ export default function FormularioEntrega({
           onChange={(e) => form.actualizar('tipificacion', e.target.value)}
         >
           <option value="">— Seleccionar —</option>
-          <option value="HITSS">Hitss</option>
-          <option value="EPM">EPM</option>
+          {TIPIFICACIONES.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
         </Selector>
       </label>
       <label className="flex items-center gap-2 text-sm">

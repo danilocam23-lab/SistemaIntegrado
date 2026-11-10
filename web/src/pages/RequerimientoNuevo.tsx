@@ -8,7 +8,7 @@ import client from '../api/client'
 import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
-import { TIPOS_COSTO } from '../constantes'
+import { TIPIFICACIONES, TIPOS_COSTO } from '../constantes'
 import { AreaTexto, Boton, Campo, Selector } from '../components/ui'
 import type { Aplicacion, Persona } from '../types'
 
@@ -216,8 +216,7 @@ export default function RequerimientoNuevo() {
           <Selector etiqueta="Tipificación" value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
-            <option value="HITSS">Hitss</option>
-            <option value="EPM">EPM</option>
+            {TIPIFICACIONES.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
           </Selector>
         </div>
         <p className="mt-2 text-xs text-slate-400">

@@ -17,6 +17,16 @@ import {
   rejilla,
 } from '../components/ui/graficas'
 import { GraficaTendenciaAns } from './dashboard-requerimientos/GraficaTendenciaAns'
+import {
+  NOTA_ATRIBUCION_EPM,
+  calcularAns,
+  calcularTendenciaAns,
+  estaCanceladoOReemplazado,
+  itemsAnsEntrega,
+  itemsAnsReq,
+  normalizarAns,
+  porcentajeCumple,
+} from './dashboard-requerimientos/calculoAns'
 
 
 function normalizarTexto(v: string): string {
@@ -26,20 +36,6 @@ function normalizarTexto(v: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ')
-}
-
-function normalizarAns(valor: string | null | undefined): string {
-  return normalizarTexto(valor ?? '').replace(/\s+/g, '_')
-}
-
-function conPorcentajes<T extends { total: number; cumple: number; noCumple: number }>(
-  v: T,
-): T & { cumplePct: number; noCumplePct: number } {
-  return {
-    ...v,
-    cumplePct: v.total > 0 ? parseFloat(((v.cumple / v.total) * 100).toFixed(1)) : 0,
-    noCumplePct: v.total > 0 ? parseFloat(((v.noCumple / v.total) * 100).toFixed(1)) : 0,
-  }
 }
 
 export default function DashboardRequerimientos() {
@@ -189,42 +185,31 @@ export default function DashboardRequerimientos() {
     })
 
     // ANS Estimación: usa el campo ANS Acta y su fecha de solicitud de acta.
-    const reqsActivos = requerimientosFiltradosAnsActa.filter((r) => {
-      const normalized = r.estado.toUpperCase()
-      return !normalized.includes('CANCELADO') && !normalized.includes('REEMPLAZADO')
+    const reqsActivos = requerimientosFiltradosAnsActa.filter((r) => !estaCanceladoOReemplazado(r.estado))
+    const itemsReq = itemsAnsReq(reqsActivos).filter((i) => normalizarAns(i.ans))
+    const ansReq = calcularAns(itemsReq, { atribuirEpm: false })
+    // (Hitss): un NO_CUMPLE con tipificación EPM cuenta como cumple
+    const ansReqEpm = calcularAns(itemsReq, { atribuirEpm: true })
+
+    // ANS Entregas: ans_entrega de cada entrega (excluye entregas de requerimientos cancelados/reemplazados)
+    const itemsEnt = itemsAnsEntrega(reqs).filter((i) => {
+      if (!normalizarAns(i.ans)) return false
+      if (!filtroReqActivo) return true
+      const fecha = i.e.fecha_recepcion ?? i.e.fecha_comprometida
+      return !!fecha && pasaFiltroReq(fecha.substring(0, 7))
     })
-    const requerimentosConAns = reqsActivos.filter((r) => normalizarAns(r.ans_acta))
-    const ansReqCumple = requerimentosConAns.filter((r) => normalizarAns(r.ans_acta) === 'cumple').length
-    const ansReqPct = requerimentosConAns.length > 0 ? parseFloat(((ansReqCumple / requerimentosConAns.length) * 100).toFixed(1)) : 0
-
-    // ANS Estimación (Hitss): si Tipificación es EPM, un "No cumple" pasa a "Cumple"
-    const ansReqEpmCumple = requerimentosConAns.filter((r) => {
-      const ans = normalizarAns(r.ans_acta)
-      const esEpm = (r as any).tipificacion === 'EPM'
-      return ans === 'cumple' || (esEpm && ans === 'no_cumple')
-    }).length
-    const ansReqEpmPct = requerimentosConAns.length > 0 ? parseFloat(((ansReqEpmCumple / requerimentosConAns.length) * 100).toFixed(1)) : 0
-
-    // ANS Entregas: campo ans_entrega de cada entrega
-    const conAnsEnt    = entregasFiltradas.filter((e) => e.ans_entrega)
-    const ansEntCumple = conAnsEnt.filter((e) => e.ans_entrega === 'CUMPLE').length
-    const ansEntPct    = conAnsEnt.length > 0 ? parseFloat(((ansEntCumple / conAnsEnt.length) * 100).toFixed(1)) : 0
-
-    // ANS Entregas (Hitss): si Tipificación de la entrega es EPM, un "No cumple" pasa a "Cumple"
-    const ansEntEpmCumple = conAnsEnt.filter((e) => {
-      const esEpm = (e as any).tipificacion === 'EPM'
-      return e.ans_entrega === 'CUMPLE' || (esEpm && e.ans_entrega === 'NO_CUMPLE')
-    }).length
-    const ansEntEpmPct = conAnsEnt.length > 0 ? parseFloat(((ansEntEpmCumple / conAnsEnt.length) * 100).toFixed(1)) : 0
+    const ansEnt = calcularAns(itemsEnt, { atribuirEpm: false })
+    const ansEntEpm = calcularAns(itemsEnt, { atribuirEpm: true })
 
     return {
       total: requerimientosFiltrados.length, totalHoras, totalEntregas, activos: reqsActivos.length,
-      ansReqPct, ansReqCumple, ansReqTotal: requerimentosConAns.length,
-      ansReqEpmPct, ansReqEpmCumple,
-      ansEntPct, ansEntCumple, ansEntTotal: conAnsEnt.length,
-      ansEntEpmPct, ansEntEpmCumple,
+      ansReqPct: porcentajeCumple(ansReq), ansReqCumple: ansReq.cumple, ansReqTotal: ansReq.total,
+      ansReqEpmPct: porcentajeCumple(ansReqEpm), ansReqEpmCumple: ansReqEpm.cumple,
+      ansEntPct: porcentajeCumple(ansEnt), ansEntCumple: ansEnt.cumple, ansEntTotal: ansEnt.total,
+      ansEntEpmPct: porcentajeCumple(ansEntEpm), ansEntEpmCumple: ansEntEpm.cumple,
     }
   }, [reqs, anosReq, mesesReq])
+
 
   // ─── Requerimientos por mes (fecha_inicio) ──────────────
   const porMes = useMemo(() => {
@@ -268,90 +253,32 @@ export default function DashboardRequerimientos() {
   }, [reqs, personas])
 
   // ─── Tendencia mensual (entregas por mes) ───────────────
-  const tendencia = useMemo(() => {
-    const hoy = new Date().toISOString().substring(0, 10)
-    const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
-    for (const r of reqs) {
-      for (const e of r.entregas ?? []) {
-        const fecha = e.fecha_recepcion ?? e.fecha_comprometida
-        if (!fecha) continue
-        if (fecha.substring(0, 10) > hoy) continue
-        const mes = fecha.substring(0, 7)
-        if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
-        map[mes].total++
-        if (e.ans_entrega === 'CUMPLE') map[mes].cumple++
-        else if (e.ans_entrega === 'NO_CUMPLE') map[mes].noCumple++
-      }
-    }
-   return Object.entries(map)
-     .sort(([a], [b]) => a.localeCompare(b))
-     .map(([mes, v]) => conPorcentajes({ mes, ...v }))
-  }, [reqs])
+  const tendencia = useMemo(
+    () => calcularTendenciaAns(itemsAnsEntrega(reqs), (i) => i.e.fecha_recepcion ?? i.e.fecha_comprometida, { atribuirEpm: false }),
+    [reqs],
+  )
 
   // ─── Tendencia mensual (entregas por mes) considerando Tipificación EPM como cumple ───
-  const tendenciaEpm = useMemo(() => {
-    const hoy = new Date().toISOString().substring(0, 10)
-    const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
-    for (const r of reqs) {
-      for (const e of r.entregas ?? []) {
-        const esEpm = (e as any).tipificacion === 'EPM'
-        const fecha = e.fecha_recepcion ?? e.fecha_comprometida
-        if (!fecha) continue
-        if (fecha.substring(0, 10) > hoy) continue
-        const mes = fecha.substring(0, 7)
-        if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
-        map[mes].total++
-        const cumple = e.ans_entrega === 'CUMPLE' || (esEpm && e.ans_entrega === 'NO_CUMPLE')
-        if (cumple) map[mes].cumple++
-        else if (e.ans_entrega === 'NO_CUMPLE') map[mes].noCumple++
-      }
-    }
-   return Object.entries(map)
-     .sort(([a], [b]) => a.localeCompare(b))
-     .map(([mes, v]) => conPorcentajes({ mes, ...v }))
-  }, [reqs])
-  const tendenciaReqs = useMemo(() => {
-    const hoy = new Date().toISOString().substring(0, 10)
-    const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
-    for (const r of reqs) {
-      const ans = normalizarAns(r.ans_acta)
-      if (ans !== 'cumple' && ans !== 'no_cumple') continue
-      const fecha = r.fecha_solicitud_acta ?? r.fecha_inicio
-      if (!fecha) continue
-      if (fecha.substring(0, 10) > hoy) continue
-      const mes = fecha.substring(0, 7)
-      if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
-      map[mes].total++
-      if (ans === 'cumple') map[mes].cumple++
-      else map[mes].noCumple++
-    }
-    return Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([mes, v]) => conPorcentajes({ mes, ...v }))
-  }, [reqs])
+  const tendenciaEpm = useMemo(
+    () => calcularTendenciaAns(itemsAnsEntrega(reqs), (i) => i.e.fecha_recepcion ?? i.e.fecha_comprometida, { atribuirEpm: true }),
+    [reqs],
+  )
+
+  // ─── Tendencia mensual (ANS requerimientos): solo con ANS cumple / no cumple ───
+  const itemsTendenciaReqs = useMemo(
+    () => itemsAnsReq(reqs).filter((i) => ['cumple', 'no_cumple'].includes(normalizarAns(i.ans))),
+    [reqs],
+  )
+  const tendenciaReqs = useMemo(
+    () => calcularTendenciaAns(itemsTendenciaReqs, (i) => i.r.fecha_solicitud_acta ?? i.r.fecha_inicio, { atribuirEpm: false }),
+    [itemsTendenciaReqs],
+  )
 
   // ─── Tendencia mensual (ANS requerimientos) considerando Tipificación EPM como cumple ───
-  const tendenciaReqsEpm = useMemo(() => {
-    const hoy = new Date().toISOString().substring(0, 10)
-    const map: Record<string, { total: number; cumple: number; noCumple: number }> = {}
-    for (const r of reqs) {
-      const ans = normalizarAns(r.ans_acta)
-      if (ans !== 'cumple' && ans !== 'no_cumple') continue
-      const fecha = r.fecha_solicitud_acta ?? r.fecha_inicio
-      if (!fecha) continue
-      if (fecha.substring(0, 10) > hoy) continue
-      const mes = fecha.substring(0, 7)
-      if (!map[mes]) map[mes] = { total: 0, cumple: 0, noCumple: 0 }
-      map[mes].total++
-      const esEpm = (r as any).tipificacion === 'EPM'
-      const cumple = ans === 'cumple' || (esEpm && ans === 'no_cumple')
-      if (cumple) map[mes].cumple++
-      else map[mes].noCumple++
-    }
-    return Object.entries(map)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([mes, v]) => conPorcentajes({ mes, ...v }))
-  }, [reqs])
+  const tendenciaReqsEpm = useMemo(
+    () => calcularTendenciaAns(itemsTendenciaReqs, (i) => i.r.fecha_solicitud_acta ?? i.r.fecha_inicio, { atribuirEpm: true }),
+    [itemsTendenciaReqs],
+  )
 
   // ─── Años disponibles por fuente ───────────────────────
   const anosDisponiblesReq = useMemo(() => {
@@ -485,6 +412,9 @@ export default function DashboardRequerimientos() {
               <Kpi rotulo="ANS Entregas" valor={`${kpis.ansEntPct}%`} nota={`${kpis.ansEntCumple} / ${kpis.ansEntTotal}`} acento={COLOR_GRAFICA.ok} />
               <Kpi rotulo="ANS Entregas (Hitss)" valor={`${kpis.ansEntEpmPct}%`} nota={`${kpis.ansEntEpmCumple} / ${kpis.ansEntTotal}`} acento={COLOR_GRAFICA.ok} />
             </div>
+            <Aviso tono="info">
+              <strong>Vistas «(Hitss)»:</strong> {NOTA_ATRIBUCION_EPM}
+            </Aviso>
 
             {/* Gráfica: Requerimientos por mes */}
             <ContenedorGrafica titulo="Requerimientos por mes" icono={<Icono nombre="grafico-barras" />} alto={240} vacio={porMesFiltrado.length === 0}>
@@ -531,13 +461,13 @@ export default function DashboardRequerimientos() {
             <GraficaTendenciaAns titulo="ANS de entregas" icono={<Icono nombre="grafico-linea" />} datos={tendenciaFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
 
             {/* Gráfica: Tendencia de entregas (Tipificación EPM cuenta como cumple) */}
-            <GraficaTendenciaAns titulo="ANS de entregas (Hitss)" icono={<Icono nombre="grafico-linea" />} datos={tendenciaEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
+            <GraficaTendenciaAns titulo="ANS de entregas (Hitss)" descripcion={NOTA_ATRIBUCION_EPM} icono={<Icono nombre="grafico-linea" />} datos={tendenciaEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
 
             {/* Gráfica: Tendencia de estimación */}
             <GraficaTendenciaAns titulo="ANS de estimación" icono={<Icono nombre="portafolio" />} datos={tendenciaReqsFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
 
             {/* Gráfica: Tendencia de estimación (Hitss) */}
-            <GraficaTendenciaAns titulo="ANS de estimación (Hitss)" icono={<Icono nombre="portafolio" />} datos={tendenciaReqsEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
+            <GraficaTendenciaAns titulo="ANS de estimación (Hitss)" descripcion={NOTA_ATRIBUCION_EPM} icono={<Icono nombre="portafolio" />} datos={tendenciaReqsEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
           </section>
 
           {/* ════════════════════════════════════════════════════════════════════

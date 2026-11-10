@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import FilaAns from './FilaAns'
 import Paginacion from './Paginacion'
 import type { FilaRequerimiento } from './utilidadesAns'
-import { TAMANO_PAGINA_ANS, calcularDiasTranscurridos, normalizarAns, tipificacionEtiqueta, tonoAns } from './utilidadesAns'
+import { TAMANO_PAGINA_ANS, calcularDiasTranscurridos, normalizarAns, tonoAns } from './utilidadesAns'
 
 interface Props {
   filas: FilaRequerimiento[]
@@ -17,6 +17,9 @@ interface Props {
   onCambiarObs: (id: string, valor: string) => void
   onGuardarCheck: (reqId: string, checked: boolean) => void
   onGuardarObs: (reqId: string) => void
+  puedeEditarTipificacion: boolean
+  guardandoTipificacion: Set<string>
+  onGuardarTipificacion: (reqId: string, valor: string) => void
 }
 
 /** Lista densa (con paginación client-side) de requerimientos con ANS
@@ -31,6 +34,9 @@ export default function ListaRequerimientosAns({
   onCambiarObs,
   onGuardarCheck,
   onGuardarObs,
+  puedeEditarTipificacion,
+  guardandoTipificacion,
+  onGuardarTipificacion,
 }: Props) {
   const [pagina, setPagina] = useState(1)
 
@@ -91,8 +97,11 @@ export default function ListaRequerimientosAns({
               },
               { etiqueta: 'Seguimiento Hitss', valor: r.seguimientoHitss || '—', ancho: 2 },
               { etiqueta: 'Seguimiento EPM', valor: r.seguimientoEpm || '—', ancho: 2 },
-              { etiqueta: 'Tipificación', valor: tipificacionEtiqueta(r.tipificacion) },
             ]}
+            tipificacion={r.tipificacion}
+            puedeEditarTipificacion={puedeEditarTipificacion}
+            guardandoTipificacion={guardandoTipificacion.has(r.id)}
+            onCambiarTipificacion={(valor) => onGuardarTipificacion(r.id, valor)}
           />
         ))
       )}
