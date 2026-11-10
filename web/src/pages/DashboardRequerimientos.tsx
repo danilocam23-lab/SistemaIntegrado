@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts'
 import { useLista } from '../api/hooks'
 import client from '../api/client'
@@ -17,11 +17,14 @@ import {
   rejilla,
 } from '../components/ui/graficas'
 import { GraficaTendenciaAns } from './dashboard-requerimientos/GraficaTendenciaAns'
+import { ModalDetalleAnsHitss } from './dashboard-requerimientos/ModalDetalleAnsHitss'
 import {
   NOTA_ATRIBUCION_EPM,
   calcularAns,
   calcularTendenciaAns,
   estaCanceladoOReemplazado,
+  filasDetalleEntrega,
+  filasDetalleReq,
   itemsAnsEntrega,
   itemsAnsReq,
   normalizarAns,
@@ -209,6 +212,30 @@ export default function DashboardRequerimientos() {
       ansEntEpmPct: porcentajeCumple(ansEntEpm), ansEntEpmCumple: ansEntEpm.cumple,
     }
   }, [reqs, anosReq, mesesReq])
+
+  // ─── Detalle de las gráficas ANS (Hitss): mismo universo que los KPI "(Hitss)" ───
+  const [detalleAns, setDetalleAns] = useState<'entregas' | 'estimacion' | null>(null)
+  const cerrarDetalleAns = useCallback(() => setDetalleAns(null), [])
+  const filasDetalleAns = useMemo(() => {
+    if (!detalleAns) return []
+    const nombrePersona = (id: string | null): string =>
+      id ? (personas.find((p) => p.id === id)?.nombre ?? id) : '—'
+    const filtroActivo = anosReq.size > 0 || mesesReq.size > 0
+    if (detalleAns === 'estimacion') {
+      const activos = reqs
+        .filter((r) => !filtroActivo || (!!r.fecha_solicitud_acta && pasaFiltroReq(r.fecha_solicitud_acta.substring(0, 7))))
+        .filter((r) => !estaCanceladoOReemplazado(r.estado))
+      return filasDetalleReq(itemsAnsReq(activos).filter((i) => normalizarAns(i.ans)), nombrePersona)
+    }
+    const items = itemsAnsEntrega(reqs).filter((i) => {
+      if (!normalizarAns(i.ans)) return false
+      if (!filtroActivo) return true
+      const fecha = i.e.fecha_recepcion ?? i.e.fecha_comprometida
+      return !!fecha && pasaFiltroReq(fecha.substring(0, 7))
+    })
+    return filasDetalleEntrega(items, reqs, nombrePersona)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detalleAns, reqs, personas, anosReq, mesesReq])
 
 
   // ─── Requerimientos por mes (fecha_inicio) ──────────────
@@ -461,13 +488,20 @@ export default function DashboardRequerimientos() {
             <GraficaTendenciaAns titulo="ANS de entregas" icono={<Icono nombre="grafico-linea" />} datos={tendenciaFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
 
             {/* Gráfica: Tendencia de entregas (Tipificación EPM cuenta como cumple) */}
-            <GraficaTendenciaAns titulo="ANS de entregas (Hitss)" descripcion={NOTA_ATRIBUCION_EPM} icono={<Icono nombre="grafico-linea" />} datos={tendenciaEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
+            <GraficaTendenciaAns titulo="ANS de entregas (Hitss)" descripcion={NOTA_ATRIBUCION_EPM} icono={<Icono nombre="grafico-linea" />} datos={tendenciaEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" acciones={<Boton tamano="sm" onClick={() => setDetalleAns('entregas')}>Detalle</Boton>} />
 
             {/* Gráfica: Tendencia de estimación */}
             <GraficaTendenciaAns titulo="ANS de estimación" icono={<Icono nombre="portafolio" />} datos={tendenciaReqsFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
 
             {/* Gráfica: Tendencia de estimación (Hitss) */}
-            <GraficaTendenciaAns titulo="ANS de estimación (Hitss)" descripcion={NOTA_ATRIBUCION_EPM} icono={<Icono nombre="portafolio" />} datos={tendenciaReqsEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" />
+            <GraficaTendenciaAns titulo="ANS de estimación (Hitss)" descripcion={NOTA_ATRIBUCION_EPM} icono={<Icono nombre="portafolio" />} datos={tendenciaReqsEpmFiltrada} claveCumple="cumplePct" claveNoCumple="noCumplePct" acciones={<Boton tamano="sm" onClick={() => setDetalleAns('estimacion')}>Detalle</Boton>} />
+            <ModalDetalleAnsHitss
+              abierto={detalleAns !== null}
+              onCerrar={cerrarDetalleAns}
+              titulo={detalleAns === 'entregas' ? 'ANS de entregas (Hitss)' : 'ANS de estimación (Hitss)'}
+              filas={filasDetalleAns}
+              esEntrega={detalleAns === 'entregas'}
+            />
           </section>
 
           {/* ════════════════════════════════════════════════════════════════════

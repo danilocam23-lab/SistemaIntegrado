@@ -17,6 +17,7 @@ export function useExportarExcelBacklog(filas: FilaSquadAnalisis[]) {
       'Carga del periodo (h entregas + WO)': Math.round(fila.horasCarga * 10) / 10,
       'Horas entregas': Math.round(fila.horasEntregas * 10) / 10,
       'Horas aprobadas WO': Math.round(fila.horasWo * 10) / 10,
+      'Cantidad WO': fila.cantidadWo,
       Entregas: fila.entregas,
       'ANS Acta cumple': fila.ansActaCumple,
       'ANS Acta total': fila.ansActaTotal,

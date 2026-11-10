@@ -90,6 +90,87 @@ export function calcularTendenciaAns<T extends ItemAns>(
     })
 }
 
+export interface ClasificacionAns<T extends ItemAns> {
+  /** ANS real = CUMPLE. */
+  cumple: T[]
+  /** ANS real = NO_CUMPLE y tipificación distinta de EPM. */
+  noCumple: T[]
+  /** ANS real = NO_CUMPLE atribuido a EPM (en la vista "(Hitss)" cuenta como cumple). */
+  noCumpleEpm: T[]
+  /** Elementos con otro valor de ANS (no se listan, pero sí cuentan en el total del KPI). */
+  otros: number
+}
+
+/** Separa los elementos en las 3 categorías del detalle "(Hitss)". Función pura. */
+export function clasificarAns<T extends ItemAns>(items: T[]): ClasificacionAns<T> {
+  const r: ClasificacionAns<T> = { cumple: [], noCumple: [], noCumpleEpm: [], otros: 0 }
+  for (const it of items) {
+    const ans = normalizarAns(it.ans)
+    if (ans === 'cumple') r.cumple.push(it)
+    else if (ans === 'no_cumple') (it.tipificacion === 'EPM' ? r.noCumpleEpm : r.noCumple).push(it)
+    else r.otros++
+  }
+  return r
+}
+
+/** Fila normalizada del modal de detalle (requerimiento o entrega). */
+export interface FilaDetalleAns extends ItemAns {
+  clave: string
+  reqId: string
+  codigoReq: string
+  /** N.° de entrega; `null` en filas de requerimiento. */
+  numeroEntrega: number | null
+  nombre: string
+  estado: string
+  ltHitss: string
+  /** Fecha relevante (YYYY-MM-DD…) o `null`. */
+  fecha: string | null
+}
+
+/** Filas de detalle desde ítems de requerimiento (fecha = fecha_solicitud_acta). */
+export function filasDetalleReq(
+  items: ReturnType<typeof itemsAnsReq>,
+  nombrePersona: (id: string | null) => string,
+): FilaDetalleAns[] {
+  return items.map(({ r, ans, tipificacion }) => ({
+    clave: r.id,
+    reqId: r.id,
+    codigoReq: r.codigo_req,
+    numeroEntrega: null,
+    nombre: r.nombre ?? r.acta_trabajo ?? '—',
+    estado: r.estado,
+    ltHitss: nombrePersona(r.solicitud?.lt_hitss_id ?? null),
+    fecha: r.fecha_solicitud_acta,
+    ans,
+    tipificacion,
+  }))
+}
+
+/** Filas de detalle desde ítems de entrega (fecha = fecha_recepcion ?? fecha_comprometida). */
+export function filasDetalleEntrega(
+  items: ReturnType<typeof itemsAnsEntrega>,
+  reqs: Requerimiento[],
+  nombrePersona: (id: string | null) => string,
+): FilaDetalleAns[] {
+  const porEntrega = new Map<Entrega, Requerimiento>()
+  for (const r of reqs) for (const e of r.entregas ?? []) porEntrega.set(e, r)
+  return items.map(({ e, ans, tipificacion }) => {
+    const r = porEntrega.get(e)
+    return {
+      clave: `${r?.id ?? ''}-${e.numero}`,
+      reqId: r?.id ?? '',
+      codigoReq: r?.codigo_req ?? '—',
+      numeroEntrega: e.numero,
+      nombre: r?.nombre ?? '—',
+      estado: e.estado ?? '—',
+      ltHitss: nombrePersona(r?.solicitud?.lt_hitss_id ?? null),
+      fecha: e.fecha_recepcion ?? e.fecha_comprometida,
+      ans,
+      tipificacion,
+    }
+  })
+}
+
 /** Elementos ANS de requerimientos con un valor ANS (cualquiera). */
 export function itemsAnsReq(reqs: Requerimiento[]): (ItemAns & { r: Requerimiento })[] {
   return reqs.map((r) => ({ ans: r.ans_acta, tipificacion: r.tipificacion, r }))

@@ -74,6 +74,15 @@ export interface FilaDetalleWo {
   horasAprobadas: number
 }
 
+/** Resumen de la suma de WO por squad en los periodos seleccionados. */
+export interface ResumenWoPorSquad {
+  porSquad: Map<string, { horas: number; cantidad: number }>
+  /** WO (por mes) de los periodos cuyo squad no se pudo resolver: no aparecen en las filas. */
+  sinSquad: { cantidad: number; horas: number }
+  /** WO sumadas de cada squad (mes, WO, horas), ordenadas por mes y WO. */
+  detallePorSquad: Map<string, FilaDetalleWo[]>
+}
+
 export interface FilaDetalleAplicacionEpm {
   aplicacionEpm: string
   cantidadRequerimientos: number
@@ -103,6 +112,8 @@ export interface FilaSquadAnalisis extends FilaSquad {
   personasCapacidad: number
   /** Horas aprobadas de las WO del squad en el periodo. */
   horasWo: number
+  /** Cantidad de WO distintas (por mes) que suman a `horasWo`. */
+  cantidadWo: number
   /** Carga del periodo = horas de entregas + horas aprobadas WO. */
   horasCarga: number
   /** Carga del periodo / capacidad del periodo, en % (null si no hay capacidad). */

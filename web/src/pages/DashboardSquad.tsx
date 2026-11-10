@@ -14,6 +14,7 @@ import ModalDetalleAplicaciones from './dashboard-backlog/ModalDetalleAplicacion
 import ModalDetalleEntregas from './dashboard-backlog/ModalDetalleEntregas'
 import ModalDetallePersonas from './dashboard-backlog/ModalDetallePersonas'
 import ModalDetalleWo from './dashboard-backlog/ModalDetalleWo'
+import ModalReglasWo from './dashboard-backlog/ModalReglasWo'
 import SeccionKpis from './dashboard-backlog/SeccionKpis'
 import TablaDetalleSquad from './dashboard-backlog/TablaDetalleSquad'
 import { useDatosBacklog } from './dashboard-backlog/useDatosBacklog'
@@ -32,6 +33,8 @@ export default function DashboardSquad() {
 
   const [mostrarDetalleWo, setMostrarDetalleWo] = useState(false)
   const [busquedaDetalleWo, setBusquedaDetalleWo] = useState('')
+  const [squadDetalleWo, setSquadDetalleWo] = useState<string | null>(null)
+  const [mostrarReglasWo, setMostrarReglasWo] = useState(false)
   const [mostrarDetallePersonas, setMostrarDetallePersonas] = useState(false)
   const [busquedaDetallePersonas, setBusquedaDetallePersonas] = useState('')
   const [squadDetalleAplicaciones, setSquadDetalleAplicaciones] = useState<string | null>(null)
@@ -55,6 +58,7 @@ export default function DashboardSquad() {
     squadDetalleAplicaciones,
     squadDetallePersonas,
     busquedaDetalleWo,
+    squadDetalleWo,
     busquedaDetallePersonas,
     busquedaDetalleAplicaciones,
     squadDetalleEntregas,
@@ -182,6 +186,11 @@ export default function DashboardSquad() {
                 setBusquedaDetalleEntregas('')
                 setSquadDetalleEntregas(squad)
               }}
+              onVerWo={(squad) => {
+                setBusquedaDetalleWo('')
+                setSquadDetalleWo(squad)
+              }}
+              onVerReglasWo={() => setMostrarReglasWo(true)}
             />
           </div>
         </div>
@@ -194,6 +203,20 @@ export default function DashboardSquad() {
           onBusqueda={setBusquedaDetalleWo}
           onCerrar={() => setMostrarDetalleWo(false)}
         />
+      )}
+
+      {squadDetalleWo !== null && (
+        <ModalDetalleWo
+          squad={squadDetalleWo}
+          filas={derivados.detalleWoSquadFiltrado}
+          busqueda={busquedaDetalleWo}
+          onBusqueda={setBusquedaDetalleWo}
+          onCerrar={() => setSquadDetalleWo(null)}
+        />
+      )}
+
+      {mostrarReglasWo && (
+        <ModalReglasWo woSinSquad={derivados.woSinSquad} onCerrar={() => setMostrarReglasWo(false)} />
       )}
 
       {mostrarDetallePersonas && (

@@ -11,6 +11,8 @@ interface Props {
   onVerAplicaciones: (squad: string) => void
   onVerPersonas: (squad: string) => void
   onVerEntregas: (squad: string) => void
+  onVerWo: (squad: string) => void
+  onVerReglasWo: () => void
 }
 
 /** Resalte sutil de la fila según el peor indicador (fondo + borde izquierdo). */
@@ -80,7 +82,14 @@ function CargaSquad({ fila }: { fila: FilaSquadAnalisis }) {
   )
 }
 
-export default function TablaDetalleSquad({ filas, onVerAplicaciones, onVerPersonas, onVerEntregas }: Props) {
+export default function TablaDetalleSquad({
+  filas,
+  onVerAplicaciones,
+  onVerPersonas,
+  onVerEntregas,
+  onVerWo,
+  onVerReglasWo,
+}: Props) {
   return (
     <Tarjeta padding={false} className="min-w-0">
       <div className="tarjeta-encabezado">
@@ -104,6 +113,20 @@ export default function TablaDetalleSquad({ filas, onVerAplicaciones, onVerPerso
                   <th className="text-center" title="Personas que suman a la capacidad del squad">Personas</th>
                   <th className="text-center" title="Horas de entregas + horas aprobadas WO del periodo frente a la capacidad del periodo">
                     Carga del periodo
+                  </th>
+                  <th className="text-center">
+                    <span className="inline-flex items-center gap-1">
+                      WO
+                      <button
+                        type="button"
+                        className="cursor-pointer text-slate-400 hover:text-marca-600"
+                        onClick={onVerReglasWo}
+                        aria-label="Ver cómo se suman las WO"
+                        title="¿Qué condiciones cumple un registro para sumar como WO?"
+                      >
+                        <Icono nombre="info" />
+                      </button>
+                    </span>
                   </th>
                   <th className="text-center">Entregas</th>
                   <th className="text-center">ANS Acta</th>
@@ -148,6 +171,20 @@ export default function TablaDetalleSquad({ filas, onVerAplicaciones, onVerPerso
                     </td>
                     <td className="px-6 py-4">
                       <CargaSquad fila={fila} />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {fila.cantidadWo > 0 ? (
+                        <button
+                          type="button"
+                          className="cursor-pointer"
+                          onClick={() => onVerWo(fila.squad)}
+                          aria-label={`Ver las ${fila.cantidadWo} WO sumadas de ${fila.squad}`}
+                        >
+                          <Chip tono="marca">{`${fmtNumero(fila.horasWo)}h · ${fmtNumero(fila.cantidadWo)} WO`}</Chip>
+                        </button>
+                      ) : (
+                        <span className="text-slate-400">0 WO</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-center">
                       {fila.entregas > 0 ? (

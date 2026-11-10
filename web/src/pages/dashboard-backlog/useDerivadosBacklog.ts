@@ -29,7 +29,7 @@ import {
   nivelDeAvance,
   porcentajeCumplimiento,
 } from './utilidades'
-import { calcularCarga, horasWoPorSquad } from './cargaSquad'
+import { calcularCarga, resumenWoPorSquad } from './cargaSquad'
 import { capacidadExplicitaCero, factorVigencia, squadsDePersonaEnMes } from './vigenciaCapacidad'
 import type { VigenciaMes } from './vigenciaCapacidad'
 
@@ -49,6 +49,8 @@ interface ParametrosDerivados {
   squadDetalleAplicaciones: string | null
   squadDetallePersonas: string | null
   busquedaDetalleWo: string
+  /** Squad cuyo detalle de WO se muestra (null = ninguno). */
+  squadDetalleWo: string | null
   busquedaDetallePersonas: string
   busquedaDetalleAplicaciones: string
   squadDetalleEntregas: string | null
@@ -101,6 +103,7 @@ export function useDerivadosBacklog({
   squadDetalleAplicaciones,
   squadDetallePersonas,
   busquedaDetalleWo,
+  squadDetalleWo,
   busquedaDetallePersonas,
   busquedaDetalleAplicaciones,
   squadDetalleEntregas,
@@ -466,6 +469,20 @@ export function useDerivadosBacklog({
     return detalleWoSoporte.filter((fila) => fila.workOrder.toLowerCase().includes(busqueda))
   }, [busquedaDetalleWo, detalleWoSoporte])
 
+  /** Suma de WO por squad (horas, cantidad, detalle) y WO sin squad resoluble. */
+  const resumenWo = useMemo(
+    () => resumenWoPorSquad(soporteResumen, periodos, resolverNombreSquad),
+    [soporteResumen, periodos, resolverNombreSquad],
+  )
+
+  const detalleWoSquadFiltrado = useMemo<FilaDetalleWo[]>(() => {
+    if (squadDetalleWo === null) return []
+    const lista = resumenWo.detallePorSquad.get(squadDetalleWo) ?? []
+    const busqueda = busquedaDetalleWo.trim().toLowerCase()
+    if (!busqueda) return lista
+    return lista.filter((fila) => fila.workOrder.toLowerCase().includes(busqueda))
+  }, [resumenWo, squadDetalleWo, busquedaDetalleWo])
+
   const horasEntregasFiltradas = useMemo(() => {
     const totalHoras = entregasPorMes.reduce((sum, item) => sum + item.horas, 0)
     const totalEntregas = entregasPorMes.reduce((sum, item) => sum + item.entregas, 0)
@@ -504,7 +521,7 @@ export function useDerivadosBacklog({
       personasPorNombre.set(fila.squad, (personasPorNombre.get(fila.squad) ?? 0) + 1)
     }
 
-    const woPorSquad = horasWoPorSquad(soporteResumen, periodos, resolverNombreSquad)
+    const woPorSquad = resumenWo.porSquad
 
     // Base de filas: squads con requerimientos en el periodo, más los squads que solo
     // tienen capacidad configurada (p. ej. un mes futuro sin entregas todavía). Sin esto,
@@ -538,7 +555,8 @@ export function useDerivadosBacklog({
       const nivelEntrega = porcentajeEntrega === null ? null : nivelDeAvance(porcentajeEntrega)
       const capacidad = capacidadPorNombre.get(fila.squad) ?? 0
       const capacidadHoras = capacidad > 0 ? capacidad : null
-      const horasWo = woPorSquad.get(fila.squad) ?? 0
+      const horasWo = woPorSquad.get(fila.squad)?.horas ?? 0
+      const cantidadWo = woPorSquad.get(fila.squad)?.cantidad ?? 0
       const carga = calcularCarga(fila.horasEntregas, horasWo, capacidadHoras)
       return {
         ...fila,
@@ -550,12 +568,13 @@ export function useDerivadosBacklog({
         capacidadHoras,
         personasCapacidad: personasPorNombre.get(fila.squad) ?? 0,
         horasWo,
+        cantidadWo,
         horasCarga: carga.horasCarga,
         utilizacion: carga.utilizacion,
         sobrecarga: carga.sobrecarga,
       }
     })
-  }, [filas, filasCapacidadSquad, detallePersonasCapacidad, soporteResumen, periodos, resolverNombreSquad])
+  }, [filas, filasCapacidadSquad, detallePersonasCapacidad, resumenWo])
 
   const resumenRiesgo = useMemo<ResumenRiesgo>(() => {
     let criticos = 0
@@ -589,6 +608,8 @@ export function useDerivadosBacklog({
     horasEntregasFiltradas,
     horasWoFiltradas,
     totalHorasEntregasWo,
+    woSinSquad: resumenWo.sinSquad,
+    detalleWoSquadFiltrado,
     kpis,
     festivosPorMes,
   }

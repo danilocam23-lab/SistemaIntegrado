@@ -6,26 +6,33 @@ import type { FilaDetalleWo } from './tipos'
 import { fmtNumero } from './utilidades'
 
 interface Props {
+  /** Si se indica, el modal muestra solo las WO sumadas de ese squad. */
+  squad?: string
   filas: FilaDetalleWo[]
   busqueda: string
   onBusqueda: (valor: string) => void
   onCerrar: () => void
 }
 
-export default function ModalDetalleWo({ filas, busqueda, onBusqueda, onCerrar }: Props) {
+export default function ModalDetalleWo({ squad, filas, busqueda, onBusqueda, onCerrar }: Props) {
+  const titulo = squad ? `WO sumadas · ${squad}` : 'Detalle WO por mes'
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
           <div>
-            <h2 className="titulo-seccion">Detalle WO por mes</h2>
-            <p className="mt-1 text-sm text-slate-500">WO individuales y Horas y Minutos aprobados por periodo seleccionado (en horas).</p>
+            <h2 className="titulo-seccion">{titulo}</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {squad
+                ? 'WO que suman a las horas WO del squad en el periodo (una vez por mes y WO, con su máximo de horas aprobadas).'
+                : 'WO individuales y Horas y Minutos aprobados por periodo seleccionado (en horas).'}
+            </p>
           </div>
           <button
             type="button"
             onClick={onCerrar}
             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Cerrar detalle WO por mes"
+            aria-label={`Cerrar ${titulo.toLowerCase()}`}
           >
             ✕
           </button>
@@ -62,7 +69,7 @@ export default function ModalDetalleWo({ filas, busqueda, onBusqueda, onCerrar }
               {filas.length === 0 && (
                 <tr>
                   <td className="px-4 py-8 text-center text-sm text-slate-400" colSpan={3}>
-                    No se encontraron WO con esa búsqueda.
+                    No se encontraron WO{busqueda.trim() ? ' con esa búsqueda' : ''}.
                   </td>
                 </tr>
               )}
