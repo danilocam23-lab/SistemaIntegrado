@@ -226,7 +226,7 @@ export default function FacturacionGeneral() {
     <div className="space-y-4">
       <EncabezadoPagina
         icono={<Icono nombre="facturacion" />}
-        titulo="Facturación — General"
+        titulo="Facturación — General fábrica"
         descripcion="Tabla manual: sin funciones automáticas en horas. El valor hora viene automático de configuración."
         acciones={
           puedeEditarFacturacion ? (

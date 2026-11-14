@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as XLSX from 'xlsx'
+import { analitica } from '../../analitica'
 import type { Persona } from '../../types'
 
 /** Exporta a Excel el listado filtrado. Las columnas de valores solo van con `personas.ver_valores`. */
@@ -27,4 +28,5 @@ export function exportarPersonasExcel(personas: Persona[], incluirValores: boole
   XLSX.utils.book_append_sheet(libro, hoja, 'Personas')
   const fecha = new Date().toISOString().slice(0, 10)
   XLSX.writeFile(libro, `personas_${fecha}.xlsx`)
+  analitica.exportacion('personas_excel')
 }

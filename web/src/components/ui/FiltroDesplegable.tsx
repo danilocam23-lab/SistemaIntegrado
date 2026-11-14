@@ -76,7 +76,7 @@ export default function FiltroDesplegable({
 
   return (
     <details ref={ref} className="group relative">
-      <summary className={cx('filtro-desplegable', hayActivos && 'filtro-desplegable-activo')}>
+      <summary data-analytics-id="filtro.abrir" className={cx('filtro-desplegable', hayActivos && 'filtro-desplegable-activo')}>
         <span className="whitespace-nowrap">
           {icono && <span className="mr-1">{icono}</span>}
           {label}
@@ -98,10 +98,11 @@ export default function FiltroDesplegable({
 
       <div className="panel-desplegable" style={{ minWidth: anchoPanel }}>
         <div className="mb-2 flex justify-end gap-3">
-          <button type="button" className="enlace-mini" onClick={() => setActivos(new Set(todas))}>
+          <button data-analytics-id="filtro.todos" type="button" className="enlace-mini" onClick={() => setActivos(new Set(todas))}>
             Todos
           </button>
           <button
+            data-analytics-id="filtro.limpiar"
             type="button"
             className="text-2xs font-semibold text-slate-400 hover:underline"
             onClick={() => setActivos(new Set())}
@@ -118,7 +119,7 @@ export default function FiltroDesplegable({
                 key={k}
                 className={cx('opcion-filtro', marcado ? 'opcion-filtro-on' : 'opcion-filtro-off')}
               >
-                <input type="checkbox" checked={marcado} onChange={() => alternar(k)} className="h-3.5 w-3.5" />
+                <input data-analytics-id="filtro.opcion" type="checkbox" checked={marcado} onChange={() => alternar(k)} className="h-3.5 w-3.5" />
                 {o}
               </label>
             )

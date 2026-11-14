@@ -9,6 +9,11 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from 'react'
+import type { IdControl } from '../../analitica/catalogo'
+
+interface PropsAnalitica {
+  'data-analytics-id'?: IdControl
+}
 
 /* ═══════════════════════════════════════════════════════════════
    PRIMITIVOS DEL SISTEMA DE DISEÑO
@@ -52,7 +57,7 @@ const TAMANOS: Record<TamanoBoton, string> = {
   lg: 'btn-lg',
 }
 
-interface PropsBoton extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface PropsBoton extends ButtonHTMLAttributes<HTMLButtonElement>, PropsAnalitica {
   variante?: VarianteBoton
   tamano?: TamanoBoton
   bloque?: boolean
@@ -83,7 +88,7 @@ export function Boton({
 
 /* ── Interruptor ──────────────────────────────────────────────── */
 
-interface PropsInterruptor extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface PropsInterruptor extends ButtonHTMLAttributes<HTMLButtonElement>, PropsAnalitica {
   activo: boolean
   etiquetaActivo: string
   etiquetaInactivo: string
@@ -122,7 +127,7 @@ export function Interruptor({
 
 /* ── Campos de formulario ──────────────────────────────────────── */
 
-interface PropsCampo extends InputHTMLAttributes<HTMLInputElement> {
+interface PropsCampo extends InputHTMLAttributes<HTMLInputElement>, PropsAnalitica {
   etiqueta?: string
   ayuda?: string
   compacto?: boolean
@@ -142,7 +147,7 @@ export function Campo({ etiqueta, ayuda, compacto, className, ...resto }: PropsC
   )
 }
 
-interface PropsSelector extends SelectHTMLAttributes<HTMLSelectElement> {
+interface PropsSelector extends SelectHTMLAttributes<HTMLSelectElement>, PropsAnalitica {
   etiqueta?: string
   compacto?: boolean
 }
@@ -166,7 +171,7 @@ export function Selector({ etiqueta, compacto, className, children, multiple, ..
   )
 }
 
-interface PropsArea extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface PropsArea extends TextareaHTMLAttributes<HTMLTextAreaElement>, PropsAnalitica {
   etiqueta?: string
 }
 

@@ -78,7 +78,7 @@ function CampoIdAzureHitss({
           placeholder="ID del work item en Azure DevOps"
           className="w-full" />
         {modificado && (
-          <Boton variante="secundario" tamano="sm" onClick={guardar} disabled={guardando}>
+          <Boton data-analytics-id="requerimiento.guardar_azure" variante="secundario" tamano="sm" onClick={guardar} disabled={guardando}>
             {guardando ? 'Guardando…' : 'Guardar'}
           </Boton>
         )}
@@ -143,7 +143,7 @@ function CampoAnalistaRequerimientos({
     return (
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
-        <Selector value={valorSeleccionado} onChange={(e) => onCambiarSeleccion(e.target.value)}
+        <Selector data-analytics-id="requerimiento.analista" value={valorSeleccionado} onChange={(e) => onCambiarSeleccion(e.target.value)}
           disabled={!squadId}
           className="w-full">
           <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
@@ -184,7 +184,7 @@ function CampoAnalistaRequerimientos({
     <label className="text-sm">
       <span className="mb-1 block text-slate-600">Analista de requerimientos</span>
       <div className="flex items-center gap-2">
-        <Selector value={valor} onChange={(e) => setValor(e.target.value)}
+        <Selector data-analytics-id="requerimiento.analista" value={valor} onChange={(e) => setValor(e.target.value)}
           disabled={!squadId}
           className="w-full">
           <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
@@ -194,7 +194,7 @@ function CampoAnalistaRequerimientos({
           {analistas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
         </Selector>
         {modificado && (
-          <Boton variante="secundario" tamano="sm" onClick={guardar} disabled={guardando}>
+          <Boton data-analytics-id="requerimiento.guardar_analista" variante="secundario" tamano="sm" onClick={guardar} disabled={guardando}>
             {guardando ? 'Guardando…' : 'Guardar'}
           </Boton>
         )}
@@ -250,7 +250,7 @@ export default function SeccionDatosGenerales({
   const { valores, actualizar } = campos
 
   return (
-    <form id={ID_FORMULARIO_DATOS_GENERALES} onSubmit={onSubmit} className="tarjeta tarjeta-pad">
+    <form data-analytics-form="requerimiento_general" id={ID_FORMULARIO_DATOS_GENERALES} onSubmit={onSubmit} className="tarjeta tarjeta-pad">
       <h2 className="etiqueta-sup mb-3">
         Datos generales
       </h2>
@@ -273,7 +273,7 @@ export default function SeccionDatosGenerales({
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Tipo de costo</span>
-          <Selector value={valores.tipoCosto} onChange={(e) => actualizar('tipoCosto', e.target.value)}
+          <Selector data-analytics-id="requerimiento.tipo_costo" value={valores.tipoCosto} onChange={(e) => actualizar('tipoCosto', e.target.value)}
             className="w-full">
             {TIPOS_COSTO.map((t) => <option key={t} value={t}>{t}</option>)}
           </Selector>
@@ -286,6 +286,7 @@ export default function SeccionDatosGenerales({
           </div>
           {puedeEditarReq && (
             <Selector
+              data-analytics-id="requerimiento.squad"
               value={valores.squadId}
               onChange={(e) => onCambiarSquad(e.target.value)}
               className="w-full"
@@ -297,7 +298,7 @@ export default function SeccionDatosGenerales({
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Líder técnico</span>
-          <Selector value={valores.ltHitssId} onChange={(e) => actualizar('ltHitssId', e.target.value)}
+          <Selector data-analytics-id="requerimiento.lt_hitss" value={valores.ltHitssId} onChange={(e) => actualizar('ltHitssId', e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
             {ltHitss.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
@@ -305,7 +306,7 @@ export default function SeccionDatosGenerales({
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Líder técnico EPM</span>
-          <Selector value={valores.ltEpmId} onChange={(e) => actualizar('ltEpmId', e.target.value)}
+          <Selector data-analytics-id="requerimiento.lt_epm" value={valores.ltEpmId} onChange={(e) => actualizar('ltEpmId', e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
             {ltEpm.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
@@ -313,7 +314,7 @@ export default function SeccionDatosGenerales({
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Scrum</span>
-          <Selector value={valores.scrumId} onChange={(e) => actualizar('scrumId', e.target.value)}
+          <Selector data-analytics-id="requerimiento.scrum" value={valores.scrumId} onChange={(e) => actualizar('scrumId', e.target.value)}
             disabled={!valores.squadId}
             className="w-full">
             <option value="">{valores.squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>

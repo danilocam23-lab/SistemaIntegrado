@@ -42,7 +42,7 @@ export default function ModalEditarEntrega({
       onCerrar={onCerrar}
       ancho="xl"
     >
-      <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
+      <form data-analytics-form="entrega_editar" onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Horas</span>
           <Campo
@@ -71,7 +71,7 @@ export default function ModalEditarEntrega({
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Estado</span>
-          <Selector value={valores.estado} onChange={(e) => form.cambiarEstado(e.target.value)}>
+          <Selector data-analytics-id="entrega.estado" value={valores.estado} onChange={(e) => form.cambiarEstado(e.target.value)}>
             {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
           </Selector>
         </label>
@@ -79,6 +79,7 @@ export default function ModalEditarEntrega({
           <label className="text-sm">
             <span className="mb-1 block text-slate-600">Mes de aprobación</span>
             <Selector
+              data-analytics-id="entrega.mes"
               value={valores.mesAprobacion}
               onChange={(e) => form.actualizar('mesAprobacion', e.target.value)}
             >
@@ -110,6 +111,7 @@ export default function ModalEditarEntrega({
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Tipificación</span>
           <Selector
+            data-analytics-id="entrega.tipificacion"
             value={valores.tipificacion}
             onChange={(e) => form.actualizar('tipificacion', e.target.value)}
           >
@@ -118,7 +120,7 @@ export default function ModalEditarEntrega({
           </Selector>
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={valores.garantia} onChange={(e) => form.cambiarGarantia(e.target.checked)} />
+          <input data-analytics-id="entrega.garantia" type="checkbox" checked={valores.garantia} onChange={(e) => form.cambiarGarantia(e.target.checked)} />
           <span className="text-slate-600">Garantía</span>
         </label>
         {valores.garantia && (
@@ -135,10 +137,10 @@ export default function ModalEditarEntrega({
           </label>
         )}
         <div className="flex w-full justify-end gap-2 border-t pt-3">
-          <Boton variante="secundario" type="button" onClick={onCerrar}>
+          <Boton data-analytics-id="entrega.cancelar" variante="secundario" type="button" onClick={onCerrar}>
             Cancelar
           </Boton>
-          <Boton variante="primario" type="submit">
+          <Boton data-analytics-id="entrega.guardar" variante="primario" type="submit">
             Guardar
           </Boton>
         </div>

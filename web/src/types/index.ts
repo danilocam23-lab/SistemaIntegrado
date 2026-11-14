@@ -15,6 +15,7 @@ export interface Rol {
 
 export interface Usuario {
   id: string
+  id_analitico?: string | null
   nombre: string
   email: string
   rol: RolUsuario

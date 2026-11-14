@@ -13,11 +13,13 @@ from app.security.deps import (
     permiso,
     usuario_actual,
 )
+from app.services.auditoria import RutaAuditada
 
 # F1.1 (ADR-0008 S1): GET /api/configuracion no exigía ningún tipo de
 # autenticación; ahora todo el router exige, como mínimo, JWT válido.
 router = APIRouter(
-    prefix="/configuracion", tags=["configuracion"], dependencies=[Depends(usuario_actual)]
+    prefix="/configuracion", tags=["configuracion"], dependencies=[Depends(usuario_actual)],
+    route_class=RutaAuditada,
 )
 
 _APP_GLOBAL = "global"

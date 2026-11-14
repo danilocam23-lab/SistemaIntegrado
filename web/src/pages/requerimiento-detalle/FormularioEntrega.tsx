@@ -25,7 +25,7 @@ export default function FormularioEntrega({
   const fechaComprometidaRequerida = estadoRequerimiento.toUpperCase() !== 'CONTROL DE CAMBIOS'
 
   return (
-    <form onSubmit={onSubmit} className={`flex flex-wrap items-end gap-3 border-t pt-3 ${editando ? 'rounded-lg bg-amber-50 p-3' : ''}`}>
+    <form data-analytics-form="entrega" onSubmit={onSubmit} className={`flex flex-wrap items-end gap-3 border-t pt-3 ${editando ? 'rounded-lg bg-amber-50 p-3' : ''}`}>
       {editando && (
         <div className="flex w-full items-center gap-1.5 text-xs font-semibold text-amber-700">
           <Icono nombre="lapiz" />
@@ -63,7 +63,7 @@ export default function FormularioEntrega({
       </label>
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">Estado</span>
-        <Selector value={valores.estado} onChange={(e) => form.cambiarEstado(e.target.value)}>
+        <Selector data-analytics-id="entrega.estado" value={valores.estado} onChange={(e) => form.cambiarEstado(e.target.value)}>
           {estadosEnt.map((s) => <option key={s} value={s}>{s}</option>)}
         </Selector>
       </label>
@@ -71,6 +71,7 @@ export default function FormularioEntrega({
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Mes de aprobación</span>
           <Selector
+            data-analytics-id="entrega.mes"
             value={valores.mesAprobacion}
             onChange={(e) => form.actualizar('mesAprobacion', e.target.value)}
           >
@@ -100,6 +101,7 @@ export default function FormularioEntrega({
       <label className="text-sm">
         <span className="mb-1 block text-slate-600">Tipificación</span>
         <Selector
+          data-analytics-id="entrega.tipificacion"
           value={valores.tipificacion}
           onChange={(e) => form.actualizar('tipificacion', e.target.value)}
         >
@@ -108,7 +110,7 @@ export default function FormularioEntrega({
         </Selector>
       </label>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={valores.garantia} onChange={(e) => form.cambiarGarantia(e.target.checked)} />
+        <input data-analytics-id="entrega.garantia" type="checkbox" checked={valores.garantia} onChange={(e) => form.cambiarGarantia(e.target.checked)} />
         <span className="text-slate-600">Garantía</span>
       </label>
       {valores.garantia && (
@@ -118,16 +120,16 @@ export default function FormularioEntrega({
             compacto className="w-20" />
         </label>
       )}
-      <Boton variante="primario" type="submit">
+      <Boton data-analytics-id="entrega.guardar" variante="primario" type="submit">
         {editando ? 'Guardar cambios' : 'Guardar entrega'}
       </Boton>
       {editando && (
-        <Boton variante="secundario" onClick={onVerHistorial}>
+        <Boton data-analytics-id="entrega.historial" variante="secundario" onClick={onVerHistorial}>
           Historial de estados
         </Boton>
       )}
       {editando && (
-        <Boton variante="secundario" onClick={form.cancelar}>
+        <Boton data-analytics-id="entrega.cancelar" variante="secundario" onClick={form.cancelar}>
           Cancelar
         </Boton>
       )}

@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import client, { TOKEN_KEY, USUARIO_KEY, APP_KEY } from '../api/client'
 import type { TokenResponse, Usuario } from '../types'
+import { analitica, establecerIdentidadAnalitica } from '../analitica'
 
 interface AuthContextValue {
   usuario: Usuario | null
@@ -31,10 +32,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!localStorage.getItem(TOKEN_KEY)) return
     const refrescar = () => {
+      const tokenAlSolicitar = localStorage.getItem(TOKEN_KEY)
+      if (!tokenAlSolicitar) return
       client.get<Usuario>('/auth/me')
         .then((r) => {
+          // No resucitar sesión/identidad por una respuesta anterior al logout/login.
+          if (localStorage.getItem(TOKEN_KEY) !== tokenAlSolicitar) return
           localStorage.setItem(USUARIO_KEY, JSON.stringify(r.data))
           setUsuario(r.data)
+          establecerIdentidadAnalitica({ id_analitico: r.data.id_analitico, rol: r.data.rol })
         })
         .catch(() => {})
     }
@@ -51,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(TOKEN_KEY, data.access_token)
     localStorage.setItem(USUARIO_KEY, JSON.stringify(data.usuario))
     setUsuario(data.usuario)
+    establecerIdentidadAnalitica({ id_analitico: data.usuario.id_analitico, rol: data.usuario.rol })
+    analitica.sesion('login')
   }
 
   function logout(): void {
@@ -58,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USUARIO_KEY)
     localStorage.removeItem(APP_KEY)
     setUsuario(null)
+    analitica.sesion('logout')
+    establecerIdentidadAnalitica(null)
   }
 
   function tienePermiso(permiso: string): boolean {

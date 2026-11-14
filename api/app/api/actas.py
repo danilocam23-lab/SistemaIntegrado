@@ -10,8 +10,9 @@ from pydantic import BaseModel
 
 from app.documents.acta_trabajo import ActaTrabajo
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.services.auditoria import RutaAuditada
 
-router = APIRouter(prefix="/actas", tags=["actas-trabajo"])
+router = APIRouter(prefix="/actas", tags=["actas-trabajo"], route_class=RutaAuditada)
 
 
 class ActaIn(BaseModel):

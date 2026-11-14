@@ -5,7 +5,7 @@
 from typing import Any
 
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -19,6 +19,7 @@ _bearer = HTTPBearer(auto_error=False)
 
 
 async def usuario_actual(
+    request: Request,
     credenciales: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> Usuario:
     """Valida el token JWT y devuelve el usuario autenticado."""
@@ -33,6 +34,7 @@ async def usuario_actual(
         usuario = None
     if usuario is None or not usuario.activo:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario no válido")
+    request.state.usuario_autenticado = usuario
     return usuario
 
 

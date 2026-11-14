@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analítica y auditoría del Sistema Integrado</title>
+  <style>
+    body { font: 16px/1.6 system-ui, sans-serif; color: #172b40; background: #f5f7fa; margin: 0; }
+    main { max-width: 1100px; margin: auto; padding: 32px 24px; }
+    section { background: white; padding: 24px; margin: 20px 0; border: 1px solid #dce3eb; border-radius: 8px; }
+    h1, h2, h3 { line-height: 1.25; }
+    h2 { color: #1e5fa8; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; vertical-align: top; padding: 10px; border-bottom: 1px solid #dce3eb; }
+    code { background: #edf2f7; padding: 2px 5px; overflow-wrap: anywhere; }
+    .pendiente { border-left: 5px solid #a66b00; }
+    a { color: #17518c; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Analítica y auditoría del Sistema Integrado</h1>
+  <p>Contraste del prompt, contrato de medición y configuración externa. Fecha del análisis: 2026-11-13.</p>
+
+  <section class="pendiente">
+    <h2>Estado y límites de verificación</h2>
+    <p>Contenedor: <code>GTM-W86DRFZ3</code>. La descarga pública, sin ejecutar JavaScript,
+      respondió HTTP 200. Su recurso publicado contenía <code>tags: []</code>,
+      <code>predicates: []</code> y <code>rules: []</code>. Esto comprueba la disponibilidad
+      del contenedor y la ausencia de etiquetas en esa versión publicada; no permite
+      inspeccionar borradores privados del espacio de trabajo.</p>
+    <p>El identificador de medición GA4 está <strong>pendiente de proporcionar</strong>.
+      No se ha inventado un identificador, publicado una etiqueta desde el repositorio
+      ni comprobado recepción de eventos en Google Analytics. Los eventos locales
+      preparados en <code>dataLayer</code> no equivalen a datos recibidos por GA4.</p>
+    <p>El fragmento proporcionado por el usuario es una instalación de GTM documentada
+      por Google. La aplicación adapta la carga a consentimiento previo usando el
+      bootstrap clásico compatible; no instala un segundo contenedor ni GA4 directo.</p>
+  </section>
+
+  <section>
+    <h2>Correcciones al contexto del prompt</h2>
+    <table>
+      <thead><tr><th>Supuesto</th><th>Aplicación real y tratamiento</th></tr></thead>
+      <tbody>
+        <tr><td>Actas con aprobación, rechazo, cierre y reapertura</td><td>Actas de trabajo dispone de CRUD. No se añaden estados, endpoints ni eventos de procesos inexistentes. Los cambios de estado de requerimientos y entregas se distinguen del CRUD de actas.</td></tr>
+        <tr><td>Actas y Entregas de Actas son la misma pantalla</td><td><code>EntregasActas</code> es una consulta con exportación de entregas. La página <code>Actas.tsx</code> existe, pero no figura en las rutas activas examinadas. No se crea una ruta nueva para satisfacer el inventario.</td></tr>
+        <tr><td>Cada usuario tiene varios roles activos</td><td>La sesión resuelve un rol RBAC y permisos configurables. No se confunde con <code>Persona.rol_operativo</code> ni se inventa un selector de rol activo.</td></tr>
+        <tr><td>GA4 identifica a la persona y certifica operaciones</td><td>GA4 es analítica consentida, con un seudónimo opaco. La identidad real, los recursos y los resultados de operaciones pertenecen a la auditoría protegida del backend.</td></tr>
+        <tr><td>Todos los clics se pueden recolectar automáticamente</td><td>Solo controles identificados semánticamente mediante un catálogo permitido. No se extraen textos visibles, valores de campos, URLs dinámicas ni contenido de negocio.</td></tr>
+        <tr><td>El historial ya se mide en Google</td><td>No hay activadores publicados en el contenedor inspeccionado. El usuario eligió React como única fuente de vistas SPA, con configuración externa pendiente.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Arquitectura y fronteras de datos</h2>
+    <p><strong>Analítica:</strong> interacción identificada, navegación o resultado de
+      operación &rarr; servicio central con lista permitida y consentimiento &rarr;
+      <code>dataLayer</code> &rarr; activador personalizado de GTM &rarr; etiqueta GA4
+      administrada y publicada en la cuenta de Google.</p>
+    <p><strong>Auditoría:</strong> petición autenticada &rarr; autorización y aplicación
+      validadas &rarr; operación backend y resultado &rarr; registro interno protegido.
+      La auditoría no depende del consentimiento de analítica ni acepta del navegador
+      la identidad del autor como fuente de verdad.</p>
+    <p><strong>Identidad:</strong> seudónimo aleatorio persistido de forma estable en el
+      backend, sin derivarlo del correo ni del identificador MongoDB. Solo ese
+      seudónimo se utiliza como <code>user_id</code> analítico. La correspondencia
+      con la identidad real permanece restringida en el sistema. Un seudónimo
+      vinculable sigue siendo un dato personal: no representa anonimato irreversible.</p>
+    <p>Quedan fuera de GA4: nombres, correos, contraseñas, JWT, claves API, permisos
+      detallados, códigos de aplicaciones, identificadores de actas o requerimientos,
+      importes, descripciones, archivos, búsquedas y valores de configuración.
+      Tampoco se envían mensajes crudos de errores ni cuerpos HTTP.</p>
+    <p>Las rutas analíticas son plantillas de pantalla; los segmentos de recursos,
+      query y fragmentos se eliminan. El administrador debe aplicar las mismas
+      restricciones a todas las etiquetas del contenedor. El código local no puede
+      garantizar el comportamiento de etiquetas externas añadidas posteriormente.</p>
+  </section>
+
+  <section>
+    <h2>Contrato de eventos</h2>
+    <p>El catálogo y los tipos del servicio son la fuente de verdad de los atributos
+      permitidos. El inventario de instrumentación se conserva en
+      <a href="../web/inventario-analitica.json">web/inventario-analitica.json</a>.
+      Los identificadores son funcionales, no identificadores de registros.</p>
+    <p>Inventario ejecutado: <strong>785 controles</strong>, con 90 callsites
+      explícitos, 628 instrumentados estáticamente, 43 compartidos, 10 excluidos
+      por seguridad, 10 sin handler y 4 callsites de componentes personalizados
+      pendientes de adaptar. Hay <strong>689 callsites instrumentados alcanzables</strong>
+      desde el punto de entrada. Son posiciones de código, no instancias renderizadas
+      ni clics observados. Se identificaron 27 formularios, de los que seis tienen
+      confirmación asociada, y 179 llamadas HTTP, con 110 coincidencias estáticas
+      de catálogo y 16 expresiones dinámicas por verificar.</p>
+    <table>
+      <thead><tr><th>Evento local</th><th>Uso</th><th>Tratamiento en GA4</th></tr></thead>
+      <tbody>
+        <tr><td><code>app_page_view</code></td><td>Una vista por navegación real con ruta canónica y referencia sanitizada.</td><td>Enviar como <code>page_view</code>, exclusivamente mediante el activador personalizado.</td></tr>
+        <tr><td><code>app_interaction</code></td><td>Acción de control semántico registrado; no demuestra éxito de negocio.</td><td>Evento del mismo nombre, con módulo, pantalla, elemento, acción y tipo.</td></tr>
+        <tr><td><code>app_session</code></td><td>Inicio o fin de sesión confirmado; no cada refresco de <code>/auth/me</code>.</td><td>Evento del mismo nombre. Configurar <code>user_id</code> como identidad, no como dimensión pública.</td></tr>
+        <tr><td><code>app_operation</code></td><td>Intento y resultado de una operación existente, correlacionados sin ID de recurso.</td><td>Evento del mismo nombre, con acción, resultado y categoría de recurso.</td></tr>
+        <tr><td><code>app_error</code></td><td>Categoría segura y código HTTP, sin mensaje o contenido sensible.</td><td>Evento del mismo nombre. No enviar stacks ni respuestas HTTP.</td></tr>
+        <tr><td><code>app_form</code></td><td>Inicio, envío, abandono o cancelación donde exista instrumentación real.</td><td>Evento del mismo nombre; envío no implica ejecución backend exitosa.</td></tr>
+        <tr><td><code>app_screen_engagement</code></td><td>Duración de pantalla según visibilidad, no tiempo humano certificado.</td><td>Evento del mismo nombre y métrica de duración; no suplantar <code>user_engagement</code> de GA4.</td></tr>
+        <tr><td><code>app_export</code></td><td>Exportación local instrumentada tras completar la función de descarga.</td><td>Evento del mismo nombre. El clic de exportar por sí solo no confirma la exportación.</td></tr>
+      </tbody>
+    </table>
+    <p>Los campos locales de contexto son <code>module</code>, <code>screen</code>,
+      <code>user_role</code>, <code>role_group</code>, <code>environment</code> y
+      <code>app_version</code>. El rol representa RBAC, no la función operativa de una
+      persona. No registrar <code>user_id</code> ni identificadores de operación como
+      dimensiones personalizadas de alta cardinalidad.</p>
+    <p>Contrato exacto: 22 campos más <code>event</code>. Cada push establece en
+      <code>null</code> todos los campos no aplicables para no heredar datos de un
+      evento anterior: <code>environment, app_version, timestamp_ms, user_id,
+      user_role, role_group, module, screen, route_template, page_location,
+      page_referrer, interaction_id, interaction_type, action_name, outcome,
+      resource_type, operation_id, status_code, error_type, form_id, elapsed_ms,
+      export_id</code>. Puede mapearse <code>module</code> a
+      <code>module_name</code>, <code>screen</code> a <code>screen_name</code> e
+      <code>interaction_id</code> a <code>element_id</code> en las etiquetas GA4,
+      sin cambiar los nombres reales de las variables locales.</p>
+    <p>El servicio descarta eventos anteriores al consentimiento, en desarrollo o
+      fuera del catálogo. No se reenvía un historial retrospectivo al aceptar.
+      El cierre de sesión debe borrar el contexto de identidad de la capa de datos
+      para evitar atribución a la persona anterior.</p>
+    <p>La primera vista de una pantalla protegida espera el contexto de sesión
+      confirmado por <code>/auth/me</code> o login; no utiliza el usuario antiguo
+      de localStorage. Los cambios de objetos o refrescos de permisos no duplican
+      la vista ya emitida. La pantalla de login puede medirse sin identidad.</p>
+  </section>
+
+  <section>
+    <h2>Configurar GTM y GA4 en la cuenta de Google</h2>
+    <ol>
+      <li>Crear o seleccionar la propiedad GA4 y su flujo web. Obtener el
+        identificador real de medición. Esta operación está pendiente y exige acceso
+        autorizado a la cuenta; no sustituirlo por el ID del contenedor GTM.</li>
+      <li>Abrir <code>GTM-W86DRFZ3</code> y revisar el espacio de trabajo y la versión
+        publicada. Confirmar que no hay otra instalación del contenedor desde IIS,
+        otro script, un plugin o una etiqueta HTML.</li>
+      <li>Crear variables de capa de datos de versión 2 para los campos utilizados.
+        Usar exclusivamente campos del contrato; no variables de texto DOM,
+        formularios, URL completa ni identificadores de recursos.</li>
+      <li>Crear una etiqueta de Google con el identificador real. Configurar
+        <code>send_page_view</code> en <code>false</code>. Desactivar en el flujo GA4
+        los cambios de página basados en historial y revisar la medición mejorada,
+        especialmente búsquedas, formularios, clics y descargas automáticas.</li>
+      <li>Configurar la etiqueta base con URL, referencia y título sanitizados del
+        servicio, antes de las etiquetas de eventos y no con la URL completa del
+        navegador. Usar la secuenciación de etiquetas en el primer
+        <code>app_page_view</code> para disponer de esos valores incluso al aceptar
+        tras la navegación inicial. Para <code>page_title</code> utilizar
+        <code>screen</code>, no texto del DOM. Para cada evento,
+        establecer <code>user_id</code> desde el seudónimo actual; cuando no exista
+        identidad, borrarlo, sin usar la identidad persistida de una sesión anterior.</li>
+      <li>Crear un activador de evento personalizado con nombre exacto
+        <code>app_page_view</code>. Asociarlo a una etiqueta GA4 de evento
+        <code>page_view</code>, con <code>page_location</code>,
+        <code>page_referrer</code> sanitizados del servicio y
+        <code>page_title</code> tomado de <code>screen</code>.
+        No añadir un activador History Change, All Clicks ni otro envío inicial de
+        <code>page_view</code>.</li>
+      <li>Crear activadores exactos y etiquetas para los demás eventos del contrato.
+        Enviar solamente parámetros aplicables al evento. La persistencia de
+        variables en <code>dataLayer</code> no debe reutilizar valores de eventos o
+        sesiones anteriores.</li>
+      <li>Registrar dimensiones personalizadas de alcance evento para módulo,
+        pantalla, rol, grupo, versión, elemento, acción y resultado donde sea útil.
+        Registrar métricas numéricas de duración con unidades correctas.
+        Mantener el número de parámetros dentro de los límites de GA4.</li>
+      <li>No añadir publicidad, remarketing, personalización ni etiquetas de terceros
+        bajo un consentimiento que solo cubre analítica. Revisar retención, accesos,
+        política de privacidad y obligaciones aplicables con la organización.</li>
+      <li>Usar Preview/Tag Assistant y GA4 DebugView con datos de prueba no sensibles.
+        Revisar cada envío de red y publicar únicamente tras superar las
+        comprobaciones siguientes.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Comprobaciones antes de publicar</h2>
+    <table>
+      <thead><tr><th>Escenario</th><th>Resultado esperado</th></tr></thead>
+      <tbody>
+        <tr><td>Primera visita sin decisión; rechazo; desarrollo</td><td>Ninguna carga ni evento de esta integración GTM. Las fuentes de Google preexistentes son independientes de GTM y no se han eliminado.</td></tr>
+        <tr><td>Aceptación y posteriores remontajes React</td><td>Una carga del contenedor por documento; sin repetir vistas por StrictMode, polling o refresco de permisos.</td></tr>
+        <tr><td>Navegar entre pantallas bajo <code>/SistemaIntegrado/</code></td><td>Una vista por pantalla y rutas sanitizadas, sin IDs reales, query o fragmentos.</td></tr>
+        <tr><td>Clic sobre icono dentro de botón</td><td>Una interacción semántica, no dos eventos de padre e hijo.</td></tr>
+        <tr><td>Formulario o filtro con correo, contraseña o descripción de prueba</td><td>Ningún valor ni texto libre en los parámetros enviados.</td></tr>
+        <tr><td>Operación rechazada por el backend</td><td>Resultado fallido, sin evento de éxito; auditoría interna con actor validado cuando exista.</td></tr>
+        <tr><td>Cambio de usuario o logout</td><td>No reutilizar identidad o rol anterior. No enviar el ID interno de usuario como sustituto del seudónimo.</td></tr>
+        <tr><td>Pestaña oculta o abandono de formulario</td><td>No contar tiempo de fondo como actividad; evitar confundir submit o éxito con abandono.</td></tr>
+        <tr><td>Retirar consentimiento</td><td>Guardar rechazo y recargar la URL actual para detener etiquetas previamente ejecutadas. Las cookies ya creadas no se borran automáticamente.</td></tr>
+        <tr><td>Consulta interna de auditoría o identidad</td><td>Permiso administrativo y alcance de aplicación verificados; sin exposición pública ni acceso cruzado a otras aplicaciones.</td></tr>
+      </tbody>
+    </table>
+    <p>La prueba de recepción GA4 y la comprobación del contenedor publicado
+      requieren la cuenta externa y un entorno de prueba apropiado. Una compilación
+      satisfactoria no acredita estas verificaciones.</p>
+    <p>Validación local reproducible en <code>web</code>:
+      <code>npm run test:analitica</code>, <code>npm run build</code>,
+      <code>npm run analitica:inventario</code> y
+      <code>npx tsc -p tsconfig.node.json --noEmit</code>. La instrumentación
+      automática se aplica por AST durante Vite: no reescribe todos los archivos
+      de páginas. El inventario también se emite en el build; las pruebas usan
+      mocks sin ejecutar etiquetas de Google.</p>
+  </section>
+
+  <section>
+    <h2>Indicadores y fuente de verdad</h2>
+    <table>
+      <thead><tr><th>Pregunta</th><th>Fuente y criterio</th></tr></thead>
+      <tbody>
+        <tr><td>Usuarios diarios y horarios pico</td><td>GA4: población consentida, zona horaria definida en la propiedad. Auditoría de acceso: solicitudes de login confirmadas; no equivalen a todas las sesiones activas con JWT ya existente.</td></tr>
+        <tr><td>Quién realizó una operación y sobre qué acta</td><td>Auditoría interna protegida, con actor y recurso reales. No buscar identidad personal o IDs de actas en GA4.</td></tr>
+        <tr><td>Roles, módulos y pantallas más usados</td><td>GA4: vistas e interacciones por rol, grupo, módulo y pantalla; rol de sesión RBAC.</td></tr>
+        <tr><td>Botones más utilizados</td><td><code>app_interaction</code> por elemento registrado y pantalla. Comparar con cobertura del inventario, no con controles no instrumentados.</td></tr>
+        <tr><td>Tiempo por módulo y rol</td><td>Duraciones de pantalla visibles con unidad explícita; distinguir de métricas de engagement calculadas por Google y del tiempo total de una pestaña abierta.</td></tr>
+        <tr><td>Creaciones, ediciones y cambios de estado</td><td>Operaciones confirmadas existentes y bitácora de dominio. Las etapas de aprobación o cierre solo se calculan cuando existan transiciones reales.</td></tr>
+        <tr><td>Funcionalidades menos usadas</td><td>Catálogo de funciones instrumentadas comparado con eventos, contemplando permisos y población elegible. Ausencia de evento no prueba que una función no se use.</td></tr>
+        <tr><td>Errores y procesos con dificultades</td><td>Resultados fallidos frente a intentos por acción; categorías de error y duración. No interpretar cancelación o rechazo de permisos como error inesperado.</td></tr>
+        <tr><td>Recorridos y abandono</td><td>Exploraciones de rutas sanitizadas y formularios instrumentados. No atribuir a todas las personas datos observados solo en usuarios que consienten.</td></tr>
+        <tr><td>Configuraciones consultadas o modificadas</td><td>Distinguir vista/interacción de mutación backend exitosa. No enviar los valores de configuración a GA4.</td></tr>
+      </tbody>
+    </table>
+    <p>Estos criterios preparan informes; no constituyen un dashboard publicado.
+      Analítica de cliente puede perder eventos por bloqueadores, pérdida de red,
+      cierres abruptos o falta de consentimiento. No debe usarse como prueba
+      contable, registro exhaustivo ni mecanismo de seguridad.</p>
+    <p>La auditoría requiere una política organizacional de retención, acceso y
+      respaldo. Si una escritura de negocio y su auditoría no son una transacción
+      atómica, no se debe prometer integridad transaccional ni reconstrucción
+      infalible de todas las operaciones.</p>
+  </section>
+
+  <section>
+    <h2>Fuentes oficiales consultadas</h2>
+    <ul>
+      <li><a href="https://support.google.com/tagmanager/answer/14847097">Instalación de contenedor web GTM: snippet actual y bootstrap clásico compatible</a></li>
+      <li><a href="https://developers.google.com/analytics/devguides/collection/ga4/single-page-applications">Medición de aplicaciones SPA y prevención de vistas duplicadas</a></li>
+      <li><a href="https://developers.google.com/analytics/devguides/collection/ga4/measure-spa-gtm">Medición SPA mediante GTM</a></li>
+      <li><a href="https://developers.google.com/tag-platform/security/guides/consent">Consentimiento y límites de las integraciones Google</a></li>
+      <li><a href="https://support.google.com/analytics/answer/6366371">Evitar datos personales en URLs, títulos, búsquedas y parámetros</a></li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

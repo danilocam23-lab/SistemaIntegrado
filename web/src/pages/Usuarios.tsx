@@ -6,6 +6,7 @@ import type { ComponentProps, FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import { EncabezadoPagina } from '../components/ui'
+import { analitica } from '../analitica'
 import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Rol, Usuario } from '../types'
 import FormularioRol from './usuarios/FormularioRol'
@@ -183,6 +184,7 @@ export default function Usuarios() {
   async function guardarEdicion(e: FormEvent): Promise<void> {
     e.preventDefault()
     if (!editando) return
+    const confirmarFormulario = analitica.prepararEnvioFormulario('usuario')
     setEditAviso('')
     try {
       await client.put(`/usuarios/${editando.id}`, {
@@ -191,6 +193,7 @@ export default function Usuarios() {
         rol_id: editRolId || null,
         aplicaciones_codigos: editApps,
       })
+      confirmarFormulario()
       cerrarModal()
       recargar()
     } catch (err) {
@@ -200,6 +203,7 @@ export default function Usuarios() {
 
   async function crear(e: FormEvent): Promise<void> {
     e.preventDefault()
+    const confirmarFormulario = analitica.prepararEnvioFormulario('usuario')
     setAviso('')
     try {
       await client.post('/usuarios', {
@@ -209,6 +213,7 @@ export default function Usuarios() {
         rol_id: rolId || null,
         aplicaciones_codigos: aplicacionesNuevo,
       })
+      confirmarFormulario()
       setNombre('')
       setEmail('')
       setPassword('')
@@ -303,6 +308,7 @@ export default function Usuarios() {
   }
 
   function abrirNuevoRol(): void {
+    analitica.abandonarFormulario('rol')
     setNuevoRolClave('')
     setNuevoRolNombre('')
     setNuevoRolDescripcion('')
@@ -313,6 +319,7 @@ export default function Usuarios() {
   }
 
   function seleccionarRol(rol: Rol): void {
+    analitica.abandonarFormulario('rol')
     setRolEditando({ ...rol })
     setMostrandoNuevoRol(false)
     setAvisoRoles('')
@@ -320,6 +327,7 @@ export default function Usuarios() {
 
   async function crearRol(e: FormEvent): Promise<void> {
     e.preventDefault()
+    const confirmarFormulario = analitica.prepararEnvioFormulario('rol')
     setAvisoRoles('')
     try {
       await client.post('/roles', {
@@ -328,6 +336,7 @@ export default function Usuarios() {
         descripcion: nuevoRolDescripcion,
         permisos: nuevoRolPermisos,
       })
+      confirmarFormulario()
       setNuevoRolClave('')
       setNuevoRolNombre('')
       setNuevoRolDescripcion('')
@@ -342,6 +351,7 @@ export default function Usuarios() {
 
   async function guardarRol(): Promise<void> {
     if (!rolEditando) return
+    const confirmarFormulario = analitica.prepararEnvioFormulario('rol')
     setAvisoRoles('')
     try {
       await client.put(`/roles/${rolEditando.id}`, {
@@ -350,6 +360,7 @@ export default function Usuarios() {
         activo: rolEditando.activo,
         permisos: rolEditando.permisos,
       })
+      confirmarFormulario()
       setRolEditando(null)
       recargarRoles()
       recargar()
@@ -421,6 +432,7 @@ export default function Usuarios() {
 
       <div className="pestanas mb-4" role="tablist">
         <button
+          data-analytics-id="usuarios.tab_usuarios"
           type="button"
           role="tab"
           aria-selected={tab === 'usuarios'}
@@ -431,6 +443,7 @@ export default function Usuarios() {
         </button>
         {puedeVerRoles && (
           <button
+            data-analytics-id="usuarios.tab_roles"
             type="button"
             role="tab"
             aria-selected={tab === 'roles'}

@@ -28,10 +28,11 @@ from app.middleware.aplicacion import (
     contexto_aplicacion,
 )
 from app.security.deps import permiso
+from app.services.auditoria import RutaAuditada
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/importacion", tags=["importacion"])
+router = APIRouter(prefix="/importacion", tags=["importacion"], route_class=RutaAuditada)
 
 
 async def _crear_importador(

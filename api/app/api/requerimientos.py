@@ -33,9 +33,10 @@ from app.security.deps import (
     usuario_actual,
 )
 from app.services.ans import ANSService
+from app.services.auditoria import RutaAuditada
 from app.services.liquidacion import LiquidacionService
 
-router = APIRouter(prefix="/requerimientos", tags=["requerimientos"])
+router = APIRouter(prefix="/requerimientos", tags=["requerimientos"], route_class=RutaAuditada)
 
 
 async def _registrar_bitacora(

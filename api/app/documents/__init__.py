@@ -9,6 +9,7 @@ from app.documents.acta_trabajo import ActaTrabajo
 from app.documents.aplicacion import Aplicacion
 from app.documents.aplicativo import Aplicativo
 from app.documents.asignacion import Asignacion
+from app.documents.auditoria import Auditoria
 from app.documents.azdo import (
     AzdoEsquemaItem,
     AzdoEsquemaSyncLog,
@@ -26,6 +27,7 @@ from app.documents.endpoint_admin import EndpointAdmin
 from app.documents.estimacion import Estimacion
 from app.documents.festivo import Festivo
 from app.documents.garantia_wo import GarantiaWO
+from app.documents.identidad_analitica import IdentidadAnalitica
 from app.documents.membresia import Membresia
 from app.documents.orden_compra import OrdenCompra
 from app.documents.persona import Persona
@@ -45,6 +47,8 @@ ALL_DOCUMENTS = [
     Aplicacion,
     Rol,
     Usuario,
+    Auditoria,
+    IdentidadAnalitica,
     # Operativas — base
     Persona,
     Categoria,
@@ -82,6 +86,8 @@ __all__ = [
     "Aplicacion",
     "Rol",
     "Usuario",
+    "Auditoria",
+    "IdentidadAnalitica",
     "Persona",
     "Categoria",
     "Configuracion",

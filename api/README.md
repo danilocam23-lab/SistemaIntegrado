@@ -57,6 +57,56 @@ Toda consulta operativa filtra además con `ctx.filtro()` (o `ctx.filtro_con_squ
 para colecciones con un campo `squads` tipo lista, como `Persona`) — nunca se omite
 `aplicacion_id` en una consulta sobre una colección que hereda de `DocumentoOperativo`.
 
+## Identidad analítica y auditoría interna
+
+`POST /api/auth/login` y `GET /api/auth/me` incluyen `id_analitico`: un UUID aleatorio
+estable, distinto del ID MongoDB. La correspondencia protegida se guarda en
+`identidades_analiticas`, con índice único por usuario; una edición simultánea de
+la cuenta no cambia el seudónimo. No se modifica el JWT. El seudónimo sigue siendo
+un dato personal vinculable internamente, no identidad anónima.
+
+`RutaAuditada` registra mutaciones de actas, requerimientos/entregas, usuarios,
+roles, configuración, importación y login, además de consultas administrativas,
+consultas de actas/detalle de requerimiento y accesos a la resolución de identidad.
+Los sondeos de `/auth/me`, dashboards y consultas de la propia lista de auditoría
+no se registran. No inventa estados de aprobación/cierre de actas.
+
+La colección `auditoria` conserva actor autenticado, seudónimo, recurso, ruta
+plantilla, acción, resultado HTTP, duración, fecha UTC y aplicaciones **validadas**.
+No guarda cuerpos, tokens, claves, contraseñas, búsquedas, mensajes de error ni
+valores de configuración. La bitácora de dominio existente mantiene su historial
+de cambios; esta auditoría no es un registro transaccional de todos los valores
+antes/después. Las creaciones solo capturan el ID cuando la respuesta JSON lo
+expone directamente; las importaciones y operaciones por lotes pueden no tener
+un recurso individual.
+
+Consultas, todas con `admin.auditoria.ver` (no concedido automáticamente a roles
+base salvo el wildcard de superadmin):
+
+- `GET /api/auditoria`: requiere `X-Aplicacion`; filtra por aplicaciones autorizadas,
+  excluyendo también eventos consolidados que incluyen aplicaciones ajenas.
+  Admite filtros de actor, seudónimo, recurso, acción, resultado, fechas y paginación.
+- `GET /api/auditoria/plataforma`: solo superadmin; incluye administración global y
+  fallos ocurridos antes de resolver un contexto autorizado.
+- `GET /api/auditoria/identidad/{id_analitico}`: requiere `X-Aplicacion` y el permiso;
+  solo resuelve cuentas pertenecientes al ámbito autorizado, salvo superadmin.
+  No expone contraseñas ni tokens. Si la cuenta fue eliminada, devuelve 404.
+
+No hay endpoints de edición o borrado de auditoría. El administrador de MongoDB
+debe aplicar su propia política de retención, respaldos y permisos. Un fallo de
+persistencia de auditoría se registra como `AUDITORIA_NO_PERSISTIDA` sin convertir
+una escritura de negocio ya confirmada en 500: **no hay garantía transaccional**
+entre la operación y el evento, ni cobertura de escrituras fuera de estos routers.
+La auditoría no depende del consentimiento GA4 ni envía información a Google.
+
+Pruebas focales: `pytest tests\test_analitica_auditoria.py tests\test_rbac.py
+tests\test_aislamiento.py --no-cov`. En entornos compartidos, ejecutar con
+`MONGO_URL=mongodb://localhost:27017` y un `MONGO_DB` único de pruebas (la
+infraestructura de tests elimina esa base al iniciar y finalizar).
+La configuración de GTM/GA4 y sus límites se documentan en
+`docs/analitica-ga4.html` en la raíz del repositorio; el Measurement ID GA4 sigue
+pendiente y no se ha publicado ninguna etiqueta desde el código.
+
 ## RBAC — cómo declarar el permiso de una ruta
 
 Cada endpoint operativo protege su acceso con el permiso RBAC que corresponda del

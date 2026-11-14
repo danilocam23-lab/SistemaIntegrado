@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../../api/client'
+import { analitica } from '../../analitica'
 import { mensajeError } from '../../api/hooks'
 import type { Entrega, EventoBitacora, Liquidacion, Requerimiento } from '../../types'
 
@@ -163,6 +164,7 @@ export function useRequerimientoDetalle(
 
   async function guardar(e: FormEvent): Promise<void> {
     e.preventDefault()
+    const confirmarFormulario = analitica.prepararEnvioFormulario('requerimiento_general')
     setAviso('')
     setOk('')
     if (!puedeEditarReq) {
@@ -193,6 +195,7 @@ export function useRequerimientoDetalle(
         acta_trabajo: valores.actaTrabajo || null,
         id_azure_hitss: valores.idAzureHitss ? Number(valores.idAzureHitss) : null,
       }, writeConfig())
+      confirmarFormulario()
       setOk('Cambios guardados.')
       recargar()
     } catch (err) {
@@ -245,6 +248,8 @@ export function useRequerimientoDetalle(
     alGuardar: () => void,
   ): Promise<void> {
     e.preventDefault()
+    const idFormulario = e.currentTarget.getAttribute('data-analytics-form')
+    const confirmarFormulario = analitica.prepararEnvioFormulario(idFormulario === 'entrega_editar' ? 'entrega_editar' : 'entrega')
     setAviso('')
     setOk('')
     if (!puedeEditarReq) {
@@ -253,6 +258,7 @@ export function useRequerimientoDetalle(
     }
     try {
       await client.post(`/requerimientos/${reqId}/entregas`, construirCuerpo(), writeConfig())
+      confirmarFormulario()
       alGuardar()
       recargar()
     } catch (err) {

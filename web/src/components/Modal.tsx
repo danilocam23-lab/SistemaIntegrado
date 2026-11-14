@@ -38,6 +38,7 @@ export default function Modal({
   if (!abierto) return null
   return (
     <div
+      data-analytics-id="modal.fondo"
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-2 sm:items-center sm:p-4"
       onClick={onCerrar}
     >
@@ -60,6 +61,7 @@ export default function Modal({
           <div className="flex shrink-0 items-center gap-2">
             {acciones}
             <button
+              data-analytics-id="modal.cerrar"
               type="button"
               onClick={onCerrar}
               className="text-lg leading-none text-slate-400 hover:text-slate-700"

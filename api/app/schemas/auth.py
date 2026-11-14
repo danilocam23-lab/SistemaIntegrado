@@ -25,6 +25,7 @@ class UsuarioOut(BaseModel):
     activo: bool
     aplicaciones_codigos: list[str]
     permisos: list[str]
+    id_analitico: str | None = None
 
 
 class TokenOut(BaseModel):

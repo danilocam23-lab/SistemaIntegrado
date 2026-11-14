@@ -60,7 +60,7 @@ const GRUPOS: Grupo[] = [
     titulo: 'Facturación',
     icono: 'facturacion',
     items: [
-      { to: '/facturacion/general', label: 'General', icono: 'facturacion', permiso: 'facturacion.ver' },
+      { to: '/facturacion/general', label: 'General fábrica', icono: 'facturacion', permiso: 'facturacion.ver' },
       { to: '/facturacion/ans-descontados', label: 'Ans descontados', icono: 'objetivo', permiso: 'facturacion.ans_descontados.ver' },
       { to: '/facturacion/valores-proyecto', label: 'Valores de proyecto', icono: 'grafico-linea', permiso: 'facturacion.ver' },
     ],
@@ -170,6 +170,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
     <>
       {/* Velo en móvil */}
       <div
+        data-analytics-id="menu.cerrar"
         onClick={onCerrar}
         className={`fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm transition-opacity md:hidden ${
           abierto ? 'opacity-100' : 'pointer-events-none opacity-0'
@@ -203,6 +204,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
             </div>
             {/* Colapsar (escritorio) */}
             <button
+              data-analytics-id="menu.colapsar"
               type="button"
               onClick={() => setColapsado((v) => !v)}
               title={colapsado ? 'Expandir menú' : 'Colapsar menú'}
@@ -214,6 +216,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
             </button>
             {/* Cerrar (móvil) */}
             <button
+              data-analytics-id="menu.cerrar"
               type="button"
               onClick={onCerrar}
               title="Cerrar menú"
@@ -236,6 +239,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
               if (colapsado) {
                 return (
                   <button
+                    data-analytics-id="menu.grupo"
                     key={grupo.titulo}
                     type="button"
                     title={grupo.titulo}
@@ -261,6 +265,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
               return (
                 <div key={grupo.titulo}>
                   <button
+                    data-analytics-id="menu.grupo"
                     type="button"
                     onClick={() => alternarGrupo(grupo.titulo)}
                     className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-2xs font-bold uppercase tracking-widest transition-colors hover:bg-white/5 hover:text-white ${
@@ -280,6 +285,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                     <div className="mb-3 mt-1 flex flex-col gap-0.5 pl-2">
                       {items.map((item) => (
                         <NavLink
+                          data-analytics-id="menu.navegar"
                           key={item.to}
                           to={item.to}
                           end={item.to === '/dashboard'}
@@ -323,6 +329,7 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                 <div className="truncate text-2xs text-slate-400">{usuario?.rol_nombre ?? usuario?.rol}</div>
               </div>
               <button
+                data-analytics-id="menu.salir"
                 type="button"
                 onClick={logout}
                 title="Cerrar sesión"

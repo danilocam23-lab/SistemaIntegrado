@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 import axios from 'axios'
+import { analitica, establecerIdentidadAnalitica } from '../analitica'
+import { crearAdaptadorOperaciones } from '../analitica/operaciones'
 
 export const TOKEN_KEY = 'si_token'
 export const USUARIO_KEY = 'si_usuario'
@@ -9,11 +11,13 @@ export const APP_KEY = 'si_aplicacion'
 export const CONSOLIDADO = '__todas__'
 
 const client = axios.create({ baseURL: `${import.meta.env.BASE_URL}api` })
+const operacionesAnaliticas = crearAdaptadorOperaciones(analitica)
 
 // Adjunta el token JWT y la aplicación activa a cada petición.
 // Si la petición ya trae X-Aplicacion (ej. escrituras desde modo consolidado),
 // se respeta ese valor y no se sobreescribe con el de localStorage.
 client.interceptors.request.use((config) => {
+  operacionesAnaliticas.solicitar(config)
   const token = localStorage.getItem(TOKEN_KEY)
   if (token) config.headers.Authorization = `Bearer ${token}`
   if (!config.headers['X-Aplicacion']) {
@@ -43,11 +47,14 @@ function normalizarIds(data: unknown): unknown {
 
 client.interceptors.response.use(
   (resp) => {
+    operacionesAnaliticas.finalizar(resp.config, resp.status)
     resp.data = normalizarIds(resp.data)
     return resp
   },
-  (error) => {
-    if (error.response?.status === 401) {
+  (error: unknown) => {
+    if (axios.isAxiosError(error)) operacionesAnaliticas.finalizar(error.config, error.response?.status, axios.isCancel(error))
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      establecerIdentidadAnalitica(null)
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USUARIO_KEY)
       if (window.location.pathname !== `${import.meta.env.BASE_URL}login`) window.location.href = `${import.meta.env.BASE_URL}login`

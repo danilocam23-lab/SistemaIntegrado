@@ -3,6 +3,7 @@
 
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { crearInstrumentacionAnalitica } from './scripts/instrumentacion-analitica'
 
 // El backend FastAPI corre en :8000. En desarrollo, Vite hace proxy de /api.
 // En producción (IIS), VITE_APP_BASE define el sub-path (p.ej. /SistemaIntegrado/).
@@ -21,7 +22,7 @@ export default defineConfig(({ mode }) => {
     // La env var de shell (la usa deploy/publicar-iis.bat) tiene prioridad;
     // si no, se admite VITE_APP_BASE desde un archivo .env.
     base: process.env.VITE_APP_BASE || env.VITE_APP_BASE || '/',
-    plugins: [react()],
+    plugins: [crearInstrumentacionAnalitica(), react()],
     server: {
       port: 5173,
       proxy: {

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import client from '../api/client'
+import { analitica } from '../analitica'
 import { mensajeError, useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
@@ -77,6 +78,7 @@ export default function RequerimientoNuevo() {
 
   async function crear(e: FormEvent): Promise<void> {
     e.preventDefault()
+    const confirmarFormulario = analitica.prepararEnvioFormulario('requerimiento_nuevo')
     setAviso('')
     if (!puedeCrear) {
       setAviso('No tienes permiso para crear requerimientos.')
@@ -112,6 +114,7 @@ export default function RequerimientoNuevo() {
         seguimiento_epm: seguimientoEpm || null,
         tipificacion: tipificacion || null,
       }, config)
+      confirmarFormulario()
       navigate(`/requerimientos/${resp.data.id}`)
     } catch (err) {
       setAviso(mensajeError(err))
@@ -121,7 +124,7 @@ export default function RequerimientoNuevo() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/requerimientos" className="text-sm text-marca hover:underline">
+        <Link data-analytics-id="requerimiento.volver" to="/requerimientos" className="text-sm text-marca hover:underline">
           ← Requerimientos
         </Link>
         <h1 className="titulo-pagina mt-1">Nuevo Requerimiento</h1>
@@ -135,7 +138,7 @@ export default function RequerimientoNuevo() {
         </div>
       )}
 
-      <form onSubmit={crear} className="tarjeta tarjeta-pad">
+      <form data-analytics-form="requerimiento_nuevo" onSubmit={crear} className="tarjeta tarjeta-pad">
         <fieldset disabled={!puedeCrear} className="space-y-0">
         {modoConsolidado && (
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
@@ -147,6 +150,7 @@ export default function RequerimientoNuevo() {
                 Estás en modo "Todos los squads". Selecciona el squad al que pertenecerá este requerimiento.
               </p>
               <Selector
+                data-analytics-id="requerimiento.squad_destino"
                 value={aplicacionDestino}
                 onChange={(e) => setAplicacionDestino(e.target.value)}
                 required
@@ -170,32 +174,32 @@ export default function RequerimientoNuevo() {
             placeholder="RP-SSC-0964" className="w-full" />
           <Campo etiqueta="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
             placeholder="Nombre del requerimiento" className="w-full" />
-          <Selector etiqueta="Tipo de costo" value={tipoCosto} onChange={(e) => setTipoCosto(e.target.value)}
+          <Selector data-analytics-id="requerimiento.tipo_costo" etiqueta="Tipo de costo" value={tipoCosto} onChange={(e) => setTipoCosto(e.target.value)}
             className="w-full">
             {TIPOS_COSTO.map((t) => <option key={t} value={t}>{t}</option>)}
           </Selector>
-          <Selector etiqueta="Squad" value={squadId} onChange={(e) => cambiarSquad(e.target.value)}
+          <Selector data-analytics-id="requerimiento.squad" etiqueta="Squad" value={squadId} onChange={(e) => cambiarSquad(e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
             {squads.filter((s) => s.activa).map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}
           </Selector>
-          <Selector etiqueta="Líder técnico" value={ltHitssId} onChange={(e) => setLtHitssId(e.target.value)}
+          <Selector data-analytics-id="requerimiento.lt_hitss" etiqueta="Líder técnico" value={ltHitssId} onChange={(e) => setLtHitssId(e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
             {ltHitss.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </Selector>
-          <Selector etiqueta="Líder técnico EPM" value={ltEpmId} onChange={(e) => setLtEpmId(e.target.value)}
+          <Selector data-analytics-id="requerimiento.lt_epm" etiqueta="Líder técnico EPM" value={ltEpmId} onChange={(e) => setLtEpmId(e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
             {ltEpm.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </Selector>
-          <Selector etiqueta="Scrum" value={scrumId} onChange={(e) => setScrumId(e.target.value)}
+          <Selector data-analytics-id="requerimiento.scrum" etiqueta="Scrum" value={scrumId} onChange={(e) => setScrumId(e.target.value)}
             disabled={!squadId}
             className="w-full">
             <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
             {scrums.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </Selector>
-          <Selector etiqueta="Analista de requerimientos" value={analistaId} onChange={(e) => setAnalistaId(e.target.value)}
+          <Selector data-analytics-id="requerimiento.analista" etiqueta="Analista de requerimientos" value={analistaId} onChange={(e) => setAnalistaId(e.target.value)}
             disabled={!squadId}
             className="w-full">
             <option value="">{squadId ? '— Seleccionar —' : 'Elige un squad primero'}</option>
@@ -213,7 +217,7 @@ export default function RequerimientoNuevo() {
             <AreaTexto etiqueta="Seguimiento EPM" value={seguimientoEpm} onChange={(e) => setSeguimientoEpm(e.target.value)} rows={2}
               className="w-full" />
           </div>
-          <Selector etiqueta="Tipificación" value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
+          <Selector data-analytics-id="requerimiento.tipificacion" etiqueta="Tipificación" value={tipificacion} onChange={(e) => setTipificacion(e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
             {TIPIFICACIONES.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
@@ -223,7 +227,7 @@ export default function RequerimientoNuevo() {
           La cantidad de entregas inicia en 0 y se calcula automáticamente al registrar
           entregas en el requerimiento.
         </p>
-        <Boton variante="primario" type="submit" className="mt-4">
+        <Boton data-analytics-id="requerimiento.crear" variante="primario" type="submit" className="mt-4">
           Crear requerimiento
         </Boton>
         </fieldset>

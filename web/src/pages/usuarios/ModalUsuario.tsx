@@ -41,7 +41,7 @@ export default function ModalUsuario({
 }: Props) {
   return (
     <Modal titulo={titulo} abierto={abierto} onCerrar={onCerrar}>
-      <form onSubmit={onSubmit} className="space-y-3">
+      <form data-analytics-form="usuario" onSubmit={onSubmit} className="space-y-3">
         {aviso && <Aviso tono="error">{aviso}</Aviso>}
         <label className="block text-sm">
           <span className="mb-1 block text-slate-600">Nombre</span>
@@ -59,7 +59,7 @@ export default function ModalUsuario({
         )}
         <label className="block text-sm">
           <span className="mb-1 block text-slate-600">Rol</span>
-          <Selector value={rolId} onChange={(e) => setRolId(e.target.value)} className="w-full">
+          <Selector data-analytics-id="usuarios.rol" value={rolId} onChange={(e) => setRolId(e.target.value)} className="w-full">
             <option value="">Seleccione</option>
             {rolesDisponibles.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
           </Selector>
@@ -68,10 +68,10 @@ export default function ModalUsuario({
           <div className="mb-1 flex items-center justify-between gap-3">
             <span className="block text-slate-600">Squads</span>
             <div className="flex gap-2 text-[11px] font-semibold">
-              <button type="button" className="enlace-accion" onClick={() => setSquads(appsActivasDisponibles.map((a) => a.codigo))}>
+              <button data-analytics-id="usuarios.squads_todos" type="button" className="enlace-accion" onClick={() => setSquads(appsActivasDisponibles.map((a) => a.codigo))}>
                 Todos
               </button>
-              <button type="button" className="enlace-accion-sutil" onClick={() => setSquads([])}>
+              <button data-analytics-id="usuarios.squads_limpiar" type="button" className="enlace-accion-sutil" onClick={() => setSquads([])}>
                 Limpiar
               </button>
             </div>
@@ -79,6 +79,7 @@ export default function ModalUsuario({
           <div className="max-h-40 space-y-1 overflow-y-auto rounded border px-3 py-2">
             <label className="mb-1 flex cursor-pointer items-center gap-2 rounded px-1 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               <input
+                data-analytics-id="usuarios.squad"
                 type="checkbox"
                 checked={appsActivasDisponibles.length > 0 && appsActivasDisponibles.every((a) => squads.includes(a.codigo))}
                 onChange={(e) => setSquads(e.target.checked ? appsActivasDisponibles.map((a) => a.codigo) : [])}
@@ -87,17 +88,17 @@ export default function ModalUsuario({
             </label>
             {appsActivasDisponibles.map((a) => (
               <label key={a.codigo} className="flex cursor-pointer items-center gap-2 rounded px-1 text-sm hover:bg-slate-50">
-                <input type="checkbox" checked={squads.includes(a.codigo)} onChange={() => onToggleSquad(a.codigo)} />
+                <input data-analytics-id="usuarios.squad" type="checkbox" checked={squads.includes(a.codigo)} onChange={() => onToggleSquad(a.codigo)} />
                 <span>{a.nombre}</span>
               </label>
             ))}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <Boton type="button" variante="secundario" onClick={onCerrar}>
+          <Boton data-analytics-id="usuarios.cancelar" type="button" variante="secundario" onClick={onCerrar}>
             Cancelar
           </Boton>
-          <Boton variante="primario" type="submit">
+          <Boton data-analytics-id="usuarios.guardar" variante="primario" type="submit">
             {textoSubmit}
           </Boton>
         </div>

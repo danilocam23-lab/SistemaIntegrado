@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 """Router de autenticación."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.documents.rol import Rol
 from app.documents.usuario import Usuario
@@ -10,8 +10,10 @@ from app.schemas.auth import LoginIn, TokenOut, UsuarioOut
 from app.security.deps import permisos_usuario, rol_actual, usuario_actual
 from app.security.hashing import verificar_password
 from app.security.jwt import crear_token
+from app.services.auditoria import RutaAuditada
+from app.services.identidad_analitica import obtener_id_analitico
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["auth"], route_class=RutaAuditada)
 
 
 async def _usuario_out(u: Usuario) -> UsuarioOut:
@@ -28,11 +30,12 @@ async def _usuario_out(u: Usuario) -> UsuarioOut:
         activo=u.activo,
         aplicaciones_codigos=u.aplicaciones_codigos,
         permisos=permisos,
+        id_analitico=await obtener_id_analitico(u),
     )
 
 
 @router.post("/login", response_model=TokenOut)
-async def login(datos: LoginIn) -> TokenOut:
+async def login(datos: LoginIn, request: Request) -> TokenOut:
     """Valida credenciales y devuelve un token JWT."""
     usuario = await Usuario.find_one(Usuario.email == datos.email)
     if (
@@ -42,6 +45,7 @@ async def login(datos: LoginIn) -> TokenOut:
     ):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuario o contraseña incorrectos")
     rol = await rol_actual(usuario)
+    request.state.usuario_autenticado = usuario
     clave_rol = rol.clave if rol else (usuario.rol or "viewer")
     token = crear_token(str(usuario.id), clave_rol)
     return TokenOut(access_token=token, usuario=await _usuario_out(usuario))

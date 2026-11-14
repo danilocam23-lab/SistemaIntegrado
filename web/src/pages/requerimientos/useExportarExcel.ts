@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as XLSX from 'xlsx'
+import { analitica } from '../../analitica'
 import { REQUERIMIENTOS_COLUMNAS } from '../../constantes'
 import type { Requerimiento } from '../../types'
 
@@ -30,6 +31,7 @@ export function useExportarExcel(
     // INVARIANTE 16: nombre de archivo con fecha UTC.
     const fecha = new Date().toISOString().slice(0, 10)
     XLSX.writeFile(libro, `requerimientos_${fecha}.xlsx`)
+    analitica.exportacion('requerimientos_excel')
   }
 
   return { exportarExcel }

@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import client from '../api/client'
+import { analitica } from '../analitica'
 import { useLista } from '../api/hooks'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -511,7 +512,7 @@ export default function EntregasActas() {
         return {
           className: '',
           content: (
-            <Link to={`/requerimientos/${f.reqId}`} className="text-marca hover:underline font-medium">
+            <Link data-analytics-id="entregas.detalle" to={`/requerimientos/${f.reqId}`} className="text-marca hover:underline font-medium">
               {f.codigoReq}
             </Link>
           ),
@@ -584,6 +585,7 @@ export default function EntregasActas() {
     XLSX.utils.book_append_sheet(libro, hoja, 'Entregas de actas')
     const fecha = new Date().toISOString().slice(0, 10)
     XLSX.writeFile(libro, `entregas_actas_${fecha}.xlsx`)
+    analitica.exportacion('entregas_excel')
   }
 
   return (
@@ -595,6 +597,7 @@ export default function EntregasActas() {
         acciones={
           puedeExportar ? (
             <Boton
+              data-analytics-id="entregas.exportar"
               variante="exito"
               onClick={exportarExcel}
               disabled={filasFiltradas.length === 0}
@@ -610,6 +613,7 @@ export default function EntregasActas() {
       <BarraFiltros>
         {filtrosActivos.has('texto') && (
           <Campo
+            data-analytics-id="entregas.buscar"
             etiqueta="Buscar"
             value={filtroTexto}
             onChange={(e) => setFiltroTexto(e.target.value)}
@@ -619,6 +623,7 @@ export default function EntregasActas() {
         )}
         {filtrosActivos.has('mes') && (
           <Selector
+            data-analytics-id="entregas.mes"
             etiqueta="Mes de Facturación"
             value={filtroMes}
             onChange={(e) => setFiltroMes(e.target.value)}
@@ -630,6 +635,7 @@ export default function EntregasActas() {
         )}
         {filtrosActivos.has('estado') && (
           <Selector
+            data-analytics-id="entregas.estado"
             etiqueta="Estado"
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
@@ -641,6 +647,7 @@ export default function EntregasActas() {
         )}
         {filtrosActivos.has('ans') && (
           <Selector
+            data-analytics-id="entregas.ans"
             etiqueta="ANS"
             value={filtroAns}
             onChange={(e) => setFiltroAns(e.target.value)}
@@ -656,6 +663,7 @@ export default function EntregasActas() {
             <span className="etiqueta">F. Comprometida</span>
             <div className="flex items-center gap-1">
               <Campo
+                data-analytics-id="entregas.compromiso_desde"
                 type="date"
                 value={filtroFechaDesde}
                 onChange={(e) => setFiltroFechaDesde(e.target.value)}
@@ -663,6 +671,7 @@ export default function EntregasActas() {
               />
               <span className="text-xs text-slate-400">–</span>
               <Campo
+                data-analytics-id="entregas.compromiso_hasta"
                 type="date"
                 value={filtroFechaHasta}
                 onChange={(e) => setFiltroFechaHasta(e.target.value)}
@@ -676,6 +685,7 @@ export default function EntregasActas() {
             <span className="etiqueta">F. Real</span>
             <div className="flex items-center gap-1">
               <Campo
+                data-analytics-id="entregas.real_desde"
                 type="date"
                 value={filtroRealDesde}
                 onChange={(e) => setFiltroRealDesde(e.target.value)}
@@ -683,6 +693,7 @@ export default function EntregasActas() {
               />
               <span className="text-xs text-slate-400">–</span>
               <Campo
+                data-analytics-id="entregas.real_hasta"
                 type="date"
                 value={filtroRealHasta}
                 onChange={(e) => setFiltroRealHasta(e.target.value)}
@@ -693,6 +704,7 @@ export default function EntregasActas() {
         )}
         {filtrosActivos.has('reqEstado') && (
           <Selector
+            data-analytics-id="entregas.req_estado"
             etiqueta="Estado del requerimiento"
             value={filtroReqEstado}
             onChange={(e) => setFiltroReqEstado(e.target.value)}
@@ -704,6 +716,7 @@ export default function EntregasActas() {
         )}
         {filtrosActivos.has('squad') && (
           <Selector
+            data-analytics-id="entregas.squad"
             etiqueta="Squad"
             value={filtroSquad}
             onChange={(e) => setFiltroSquad(e.target.value)}
@@ -715,6 +728,7 @@ export default function EntregasActas() {
         )}
         {filtrosActivos.has('tipificacion') && (
           <Selector
+            data-analytics-id="entregas.tipificacion"
             etiqueta="Tipificación"
             value={filtroTipificacion}
             onChange={(e) => setFiltroTipificacion(e.target.value)}
@@ -726,6 +740,7 @@ export default function EntregasActas() {
         )}
         {filtrosActivos.has('garantia') && (
           <Selector
+            data-analytics-id="entregas.garantia"
             etiqueta="En garantía"
             value={filtroGarantia}
             onChange={(e) => setFiltroGarantia(e.target.value)}
@@ -738,6 +753,7 @@ export default function EntregasActas() {
         )}
         {(filtroTexto || filtroEstado || filtroAns || filtroMes || filtroFechaDesde || filtroFechaHasta || filtroRealDesde || filtroRealHasta || filtroReqEstado || filtroSquad || filtroTipificacion || filtroGarantia) && (
           <Boton
+            data-analytics-id="filtro.limpiar"
             variante="fantasma"
             tamano="sm"
             onClick={() => {

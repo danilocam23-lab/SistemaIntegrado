@@ -9,8 +9,9 @@ from app.documents.usuario import Usuario
 from app.schemas.rol import RolIn, RolOut, RolUpdate
 from app.security.deps import permiso
 from app.security.rbac import PERMISOS_CATALOGO, normalizar_permisos
+from app.services.auditoria import RutaAuditada
 
-router = APIRouter(prefix="/roles", tags=["roles"])
+router = APIRouter(prefix="/roles", tags=["roles"], route_class=RutaAuditada)
 
 
 def _out(rol: Rol) -> RolOut:

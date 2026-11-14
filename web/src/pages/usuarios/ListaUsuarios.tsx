@@ -53,22 +53,23 @@ export default function ListaUsuarios({
         <label className="grupo-filtro min-w-56">
           <span className="etiqueta">Buscar</span>
           <Campo
+            data-analytics-id="usuarios.buscar"
             value={busqueda}
             onChange={(e) => onCambiarBusqueda(e.target.value)}
             placeholder="Nombre o correo…"
             compacto
           />
         </label>
-        <Selector etiqueta="Rol" value={filtroRol} onChange={(e) => onCambiarFiltroRol(e.target.value)} compacto>
+        <Selector data-analytics-id="usuarios.filtro_rol" etiqueta="Rol" value={filtroRol} onChange={(e) => onCambiarFiltroRol(e.target.value)} compacto>
           <option value="">Todos los roles</option>
           {opcionesRol.map((o) => <option key={o.clave} value={o.clave}>{o.etiqueta}</option>)}
         </Selector>
-        <Selector etiqueta="Squad" value={filtroSquad} onChange={(e) => onCambiarFiltroSquad(e.target.value)} compacto>
+        <Selector data-analytics-id="usuarios.filtro_squad" etiqueta="Squad" value={filtroSquad} onChange={(e) => onCambiarFiltroSquad(e.target.value)} compacto>
           <option value="">Todos los squads</option>
           {opcionesSquad.map((o) => <option key={o.clave} value={o.clave}>{o.etiqueta}</option>)}
         </Selector>
         {puedeCrearUsuarios && (
-          <Boton variante="primario" className="ml-auto" onClick={onNuevoUsuario}>
+          <Boton data-analytics-id="usuarios.nuevo" variante="primario" className="ml-auto" onClick={onNuevoUsuario}>
             + Nuevo usuario
           </Boton>
         )}
@@ -110,19 +111,19 @@ export default function ListaUsuarios({
 
       {totalPaginas > 1 && (
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <Boton variante="secundario" tamano="sm" onClick={() => onCambiarPagina(1)} disabled={pagina <= 1}>
+          <Boton data-analytics-id="usuarios.primera" variante="secundario" tamano="sm" onClick={() => onCambiarPagina(1)} disabled={pagina <= 1}>
             «
           </Boton>
-          <Boton variante="secundario" tamano="sm" onClick={() => onCambiarPagina(pagina - 1)} disabled={pagina <= 1}>
+          <Boton data-analytics-id="usuarios.anterior" variante="secundario" tamano="sm" onClick={() => onCambiarPagina(pagina - 1)} disabled={pagina <= 1}>
             ‹ Anterior
           </Boton>
           <span className="text-sm font-medium text-slate-700">
             {pagina} / {totalPaginas} · {totalFiltrados} usuarios
           </span>
-          <Boton variante="secundario" tamano="sm" onClick={() => onCambiarPagina(pagina + 1)} disabled={pagina >= totalPaginas}>
+          <Boton data-analytics-id="usuarios.siguiente" variante="secundario" tamano="sm" onClick={() => onCambiarPagina(pagina + 1)} disabled={pagina >= totalPaginas}>
             Siguiente ›
           </Boton>
-          <Boton variante="secundario" tamano="sm" onClick={() => onCambiarPagina(totalPaginas)} disabled={pagina >= totalPaginas}>
+          <Boton data-analytics-id="usuarios.ultima" variante="secundario" tamano="sm" onClick={() => onCambiarPagina(totalPaginas)} disabled={pagina >= totalPaginas}>
             »
           </Boton>
         </div>

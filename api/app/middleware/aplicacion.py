@@ -8,7 +8,7 @@ Cada petición a recursos operativos debe traer la cabecera ``X-Aplicacion``:
 * un código de aplicación  -> modo operativo (lectura y escritura)
 * el centinela ``__todas__`` -> modo consolidado (solo lectura, roles admin)
 """
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 
 from app.documents.aplicacion import Aplicacion
 from app.documents.usuario import Usuario
@@ -62,6 +62,7 @@ async def _codigos_autorizados(usuario: Usuario) -> list[str]:
 
 
 async def contexto_aplicacion(
+    request: Request,
     x_aplicacion: str | None = Header(default=None, alias="X-Aplicacion"),
     usuario: Usuario = Depends(usuario_actual),
 ) -> ContextoAplicacion:
@@ -78,13 +79,17 @@ async def contexto_aplicacion(
             )
         if not autorizadas:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin aplicaciones autorizadas")
-        return ContextoAplicacion(autorizadas, modo_consolidado=True)
+        ctx = ContextoAplicacion(autorizadas, modo_consolidado=True)
+        request.state.contexto_aplicacion = ctx
+        return ctx
 
     if x_aplicacion not in autorizadas:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin acceso a esa aplicación")
     app = await Aplicacion.find_one(Aplicacion.codigo == x_aplicacion)
     nombre = app.nombre if app else None
-    return ContextoAplicacion([x_aplicacion], modo_consolidado=False, nombre_app=nombre)
+    ctx = ContextoAplicacion([x_aplicacion], modo_consolidado=False, nombre_app=nombre)
+    request.state.contexto_aplicacion = ctx
+    return ctx
 
 
 async def contexto_escritura(

@@ -41,6 +41,7 @@ export default function FilaUsuario({
       <div>
         <span className="etiqueta-sup sm:hidden">Rol</span>
         <Selector
+          data-analytics-id="usuarios.rol"
           value={u.rol_id ?? ''}
           onChange={(e) => onCambiarRol(e.target.value)}
           disabled={!puedeEditarUsuarios}
@@ -69,6 +70,7 @@ export default function FilaUsuario({
       <div className="flex items-center gap-2 sm:justify-center">
         <span className="etiqueta-sup sm:hidden">Activo</span>
         <Interruptor
+          data-analytics-id="usuarios.activar"
           activo={u.activo}
           etiquetaActivo="Desactivar usuario"
           etiquetaInactivo="Activar usuario"
@@ -79,13 +81,14 @@ export default function FilaUsuario({
 
       {/* Acciones */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-xs sm:pt-0">
-        <button onClick={onEditar} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs">
+        <button data-analytics-id="usuarios.editar" onClick={onEditar} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs">
           Editar
         </button>
-        <button onClick={onResetPassword} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs">
+        <button data-analytics-id="usuarios.password" onClick={onResetPassword} disabled={!puedeEditarUsuarios} className="enlace-accion text-xs">
           Resetear clave
         </button>
         <button
+          data-analytics-id="usuarios.eliminar"
           onClick={onEliminar}
           disabled={!puedeEditarUsuarios || esUsuarioActual}
           className="enlace-accion enlace-accion-peligro text-xs"

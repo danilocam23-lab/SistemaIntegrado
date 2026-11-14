@@ -32,13 +32,14 @@ export default function PanelRoles({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[18rem_1fr]">
         <div className="tarjeta tarjeta-pad space-y-3">
           {puedeCrearRoles && (
-            <Boton variante="primario" bloque onClick={onNuevoRol}>
+            <Boton data-analytics-id="roles.nuevo" variante="primario" bloque onClick={onNuevoRol}>
               + Nuevo rol
             </Boton>
           )}
           <div className="space-y-1">
             {roles.map((rol) => (
               <button
+                data-analytics-id="roles.seleccionar"
                 key={rol.id}
                 type="button"
                 onClick={() => onSeleccionarRol(rol)}

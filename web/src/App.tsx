@@ -38,12 +38,14 @@ import FacturacionValoresProyecto from './pages/FacturacionValoresProyecto'
 import SoporteSolicitudesFabrica from './pages/SoporteSolicitudesFabrica'
 import SoporteDetalleANS from './pages/SoporteDetalleANS'
 import SoporteGarantiasWO from './pages/SoporteGarantiasWO'
+import ObservadorNavegacion from './analitica/ObservadorNavegacion'
 
 export default function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
         <AplicacionProvider>
+          <ObservadorNavegacion />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route

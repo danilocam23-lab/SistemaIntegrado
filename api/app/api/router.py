@@ -9,6 +9,7 @@ from app.api import (
     actas,
     aplicaciones,
     asignaciones,
+    auditoria,
     auth,
     azdo,
     backlog_futuro,
@@ -41,6 +42,7 @@ from app.security.deps import calls_de_ruta, sincronizar_permisos_openapi
 
 _SUBROUTERS = (
     auth.router,
+    auditoria.router,
     aplicaciones.router,
     usuarios.router,
     roles.router,
@@ -104,6 +106,7 @@ for _router in _SUBROUTERS:
 api_router = APIRouter(prefix="/api")
 # Plataforma y seguridad
 api_router.include_router(auth.router)
+api_router.include_router(auditoria.router)
 api_router.include_router(aplicaciones.router)
 api_router.include_router(usuarios.router)
 api_router.include_router(roles.router)

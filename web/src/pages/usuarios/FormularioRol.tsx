@@ -40,7 +40,7 @@ export default function FormularioRol({
   const soloLectura = !puedeGuardar
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form data-analytics-form="rol" onSubmit={onSubmit} className="space-y-4">
       <h2 className="titulo-seccion">{modo === 'nuevo' ? 'Nuevo rol' : nombre || 'Editar rol'}</h2>
 
       {aviso && <Aviso tono="error">{aviso}</Aviso>}
@@ -76,6 +76,7 @@ export default function FormularioRol({
         {modo === 'editar' && (
           <label className="flex items-center gap-2 self-end pb-2 text-sm">
             <input
+              data-analytics-id="roles.activo"
               type="checkbox"
               checked={activo ?? true}
               onChange={(e) => onCambiarActivo?.(e.target.checked)}
@@ -92,9 +93,10 @@ export default function FormularioRol({
           const todosMarcados = marcados === grupo.permisos.length
           return (
             <details key={grupo.modulo} open className="rounded-lg border border-slate-200">
-              <summary className="flex cursor-pointer select-none items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <summary data-analytics-id="roles.desplegar_modulo" className="flex cursor-pointer select-none items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <span className="flex items-center gap-2">
                   <input
+                    data-analytics-id="roles.modulo"
                     type="checkbox"
                     checked={todosMarcados}
                     disabled={soloLectura}
@@ -111,6 +113,7 @@ export default function FormularioRol({
                   return (
                     <label key={permiso} className="flex cursor-pointer items-start gap-2 rounded border border-slate-100 p-2 text-xs hover:bg-slate-50">
                       <input
+                        data-analytics-id="roles.permiso"
                         type="checkbox"
                         checked={permisosSeleccionados.includes(permiso)}
                         onChange={() => onTogglePermiso(permiso)}
@@ -133,12 +136,12 @@ export default function FormularioRol({
 
       <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
         {modo === 'editar' && onEliminar && (
-          <Boton type="button" variante="peligro-suave" onClick={onEliminar} disabled={!puedeEliminar || esSistema}
+          <Boton data-analytics-id="roles.eliminar" type="button" variante="peligro-suave" onClick={onEliminar} disabled={!puedeEliminar || esSistema}
             title={esSistema ? 'Los roles del sistema no se pueden eliminar' : undefined}>
             Eliminar rol
           </Boton>
         )}
-        <Boton variante="primario" type="submit" disabled={soloLectura}>
+        <Boton data-analytics-id="roles.guardar" variante="primario" type="submit" disabled={soloLectura}>
           {modo === 'nuevo' ? 'Crear rol' : 'Guardar cambios'}
         </Boton>
       </div>

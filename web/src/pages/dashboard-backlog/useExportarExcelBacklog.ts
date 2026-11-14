@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import * as XLSX from 'xlsx'
+import { analitica } from '../../analitica'
 import type { FilaSquadAnalisis } from './tipos'
 
 const ETIQUETA_ESTADO = { exito: 'Cumple', alerta: 'En atención', error: 'Crítico' } as const
@@ -36,6 +37,7 @@ export function useExportarExcelBacklog(filas: FilaSquadAnalisis[]) {
     XLSX.utils.book_append_sheet(libro, hoja, 'Detalle por Squad')
     const fecha = new Date().toISOString().slice(0, 10)
     XLSX.writeFile(libro, `dashboard-backlog_${fecha}.xlsx`)
+    analitica.exportacion('backlog_excel')
   }
 
   return { exportarExcel }

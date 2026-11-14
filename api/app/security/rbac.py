@@ -8,6 +8,7 @@ PERM_CONSOLIDADO_VER = "consolidado.ver"
 PERM_PERSONAS_VER_VALORES = "personas.ver_valores"
 
 PERMISOS_CATALOGO: list[str] = [
+    "admin.auditoria.ver",
     "dashboard.ver",
     "dashboard.estados.ver",
     "dashboard.squad.ver",

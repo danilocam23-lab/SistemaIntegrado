@@ -16,8 +16,9 @@ from app.security.deps import (
     rol_actual,
 )
 from app.security.hashing import hash_password
+from app.services.auditoria import RutaAuditada
 
-router = APIRouter(prefix="/usuarios", tags=["usuarios"])
+router = APIRouter(prefix="/usuarios", tags=["usuarios"], route_class=RutaAuditada)
 
 
 async def _out(u: Usuario) -> UsuarioOut:
