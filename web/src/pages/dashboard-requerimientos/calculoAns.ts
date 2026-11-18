@@ -70,9 +70,10 @@ export function porcentajeCumple(r: ResultadoAns): number {
 export function calcularTendenciaAns<T extends ItemAns>(
   items: T[],
   fechaDe: (item: T) => string | null | undefined,
-  opciones: { atribuirEpm: boolean },
+  opciones: { atribuirEpm: boolean; hasta?: string },
 ): PuntoTendenciaAns[] {
-  const hoy = new Date().toISOString().substring(0, 10)
+  // El dashboard general inyecta su corte colombiano; otros consumidores conservan su comportamiento.
+  const hoy = opciones.hasta ?? new Date().toISOString().substring(0, 10)
   const porMes = new Map<string, T[]>()
   for (const it of items) {
     const fecha = fechaDe(it)

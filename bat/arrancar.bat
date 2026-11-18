@@ -9,7 +9,10 @@ echo   Sistema Integrado HITSS - Arranque en desarrollo
 echo  ============================================================
 echo.
 
-set "RAIZ=%~dp0"
+set "BAT_DIR=%~dp0"
+pushd "%~dp0.."
+set "RAIZ=%CD%\"
+popd
 set "API_DIR=%RAIZ%api"
 set "WEB_DIR=%RAIZ%web"
 set "PYTHON_VENV=%API_DIR%\.venv\Scripts\python.exe"
@@ -63,8 +66,8 @@ if not exist "%WEB_DIR%\node_modules" (
 
 REM -- 5. Verificar / instalar / arrancar MongoDB --------------------
 echo  [4/7] Verificando MongoDB...
-if exist "%RAIZ%iniciar-mongodb.bat" (
-    call "%RAIZ%iniciar-mongodb.bat" auto
+if exist "%BAT_DIR%iniciar-mongodb.bat" (
+    call "%BAT_DIR%iniciar-mongodb.bat" auto
 ) else (
     echo         [AVISO] iniciar-mongodb.bat no encontrado; verifica MongoDB manualmente.
 )

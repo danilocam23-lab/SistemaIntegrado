@@ -2,20 +2,20 @@
   "version": 1,
   "metodo": "AST TypeScript: callsites estáticos, sin inferencia DOM. Alcanzabilidad de imports relativos estáticos desde main; no garantiza acceso por permisos.",
   "totales": {
-    "controles": 797,
+    "controles": 799,
     "explicitos": 98,
-    "automaticos": 632,
+    "automaticos": 634,
     "compartidos": 43,
     "excluidos_seguridad": 10,
     "sin_handler": 10,
     "requiere_adaptador": 4,
     "id_no_registrado": 0,
-    "instrumentados_alcanzables": 701,
-    "formularios": 27,
+    "instrumentados_alcanzables": 703,
+    "formularios": 28,
     "formularios_confirmados": 6,
-    "peticiones": 179,
+    "peticiones": 181,
     "peticiones_catalogadas": 109,
-    "peticiones_por_verificar": 16
+    "peticiones_por_verificar": 17
   },
   "controles": [
     {
@@ -1186,7 +1186,7 @@
     },
     {
       "archivo": "src/pages/DashboardAnalistas.tsx",
-      "linea": 126,
+      "linea": 130,
       "componente": "Boton",
       "handler": "recargar",
       "id": "dashboard_analistas.recargar",
@@ -1197,7 +1197,7 @@
     },
     {
       "archivo": "src/pages/DashboardAnalistas.tsx",
-      "linea": 145,
+      "linea": 149,
       "componente": "Selector",
       "handler": "setAnoElegido",
       "id": "dashboard_analistas.ano",
@@ -1208,7 +1208,7 @@
     },
     {
       "archivo": "src/pages/DashboardAnalistas.tsx",
-      "linea": 153,
+      "linea": 157,
       "componente": "Selector",
       "handler": "setMes",
       "id": "dashboard_analistas.mes",
@@ -1219,7 +1219,7 @@
     },
     {
       "archivo": "src/pages/DashboardAnalistas.tsx",
-      "linea": 162,
+      "linea": 166,
       "componente": "Selector",
       "handler": "setAnalista",
       "id": "dashboard_analistas.analista",
@@ -1230,7 +1230,18 @@
     },
     {
       "archivo": "src/pages/DashboardAnalistas.tsx",
-      "linea": 213,
+      "linea": 251,
+      "componente": "Link",
+      "handler": "",
+      "id": "control.pages_dashboardanalistas.link.866fde0aabbf",
+      "accion": "navegar",
+      "tipo": "enlace",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/DashboardAnalistas.tsx",
+      "linea": 280,
       "componente": "summary",
       "handler": "",
       "id": "control.pages_dashboardanalistas.summary.b5d582277752",
@@ -1263,7 +1274,7 @@
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 411,
+      "linea": 160,
       "componente": "FiltroDesplegable",
       "handler": "",
       "id": null,
@@ -1274,7 +1285,7 @@
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 417,
+      "linea": 167,
       "componente": "FiltroDesplegable",
       "handler": "",
       "id": null,
@@ -1285,18 +1296,18 @@
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 425,
+      "linea": 174,
       "componente": "Boton",
-      "handler": "setAnosReq",
-      "id": "control.pages_dashboardrequerimientos.setanosreq.7c4a21ecf9b8",
-      "accion": "accion_setanosreq",
+      "handler": "restablecer",
+      "id": "control.pages_dashboardrequerimientos.restablecer.5156ac5a40fc",
+      "accion": "accion_restablecer",
       "tipo": "boton",
       "cobertura": "automatico",
       "alcanzable_desde_main": true
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 491,
+      "linea": 245,
       "componente": "Boton",
       "handler": "setDetalleAns",
       "id": "control.pages_dashboardrequerimientos.setdetalleans.6488a12321e5",
@@ -1307,7 +1318,7 @@
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 497,
+      "linea": 251,
       "componente": "Boton",
       "handler": "setDetalleAns",
       "id": "control.pages_dashboardrequerimientos.setdetalleans.e9daccc8f5c0",
@@ -1318,7 +1329,7 @@
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 524,
+      "linea": 280,
       "componente": "FiltroDesplegable",
       "handler": "",
       "id": null,
@@ -1329,7 +1340,7 @@
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 530,
+      "linea": 287,
       "componente": "FiltroDesplegable",
       "handler": "",
       "id": null,
@@ -1340,11 +1351,11 @@
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 538,
+      "linea": 294,
       "componente": "Boton",
-      "handler": "setAnosSop",
-      "id": "control.pages_dashboardrequerimientos.setanossop.bc0f6c4a97e8",
-      "accion": "accion_setanossop",
+      "handler": "restablecer",
+      "id": "control.pages_dashboardrequerimientos.restablecer.e0f5b6c47796",
+      "accion": "accion_restablecer",
       "tipo": "boton",
       "cobertura": "automatico",
       "alcanzable_desde_main": true
@@ -2165,7 +2176,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 109,
+      "linea": 113,
       "componente": "Link",
       "handler": "",
       "id": "control.pages_requerimientodetalle.link.b135594f52ff",
@@ -2176,7 +2187,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 120,
+      "linea": 124,
       "componente": "Selector",
       "handler": "transicion",
       "id": "control.pages_requerimientodetalle.transicion.c2000e7e6ba4",
@@ -2187,7 +2198,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 134,
+      "linea": 138,
       "componente": "Boton",
       "handler": "verHistorialRequerimiento",
       "id": "control.pages_requerimientodetalle.verhistorialrequer.15a72298e3b3",
@@ -2198,7 +2209,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 138,
+      "linea": 142,
       "componente": "Boton",
       "handler": "",
       "id": "control.pages_requerimientodetalle.boton.d502876ead71",
@@ -2209,7 +2220,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 192,
+      "linea": 199,
       "componente": "Campo",
       "handler": "actualizar",
       "id": "control.pages_requerimientodetalle.actualizar.0e8881f3157b",
@@ -2220,7 +2231,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 205,
+      "linea": 211,
       "componente": "Campo",
       "handler": "actualizar",
       "id": "control.pages_requerimientodetalle.actualizar.3fa7b1a4af82",
@@ -2231,7 +2242,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 216,
+      "linea": 221,
       "componente": "Campo",
       "handler": "actualizar",
       "id": "control.pages_requerimientodetalle.actualizar.36a941c89893",
@@ -2242,7 +2253,18 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 269,
+      "linea": 241,
+      "componente": "Boton",
+      "handler": "",
+      "id": "control.pages_requerimientodetalle.boton.d502876ead71",
+      "accion": "activar",
+      "tipo": "boton",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/RequerimientoDetalle.tsx",
+      "linea": 290,
       "componente": "Boton",
       "handler": "setBitacoraAbierta",
       "id": "control.pages_requerimientodetalle.setbitacoraabierta.9360a34ed6ff",
@@ -2253,7 +2275,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 278,
+      "linea": 299,
       "componente": "Modal",
       "handler": "",
       "id": null,
@@ -8830,6 +8852,13 @@
       "confirmacion_integrada": false
     },
     {
+      "archivo": "src/pages/RequerimientoDetalle.tsx",
+      "linea": 194,
+      "handler": "handler_compuesto",
+      "id": null,
+      "confirmacion_integrada": false
+    },
+    {
       "archivo": "src/pages/RequerimientoNuevo.tsx",
       "linea": 141,
       "handler": "crear",
@@ -9162,7 +9191,7 @@
     },
     {
       "archivo": "src/pages/DashboardRequerimientos.tsx",
-      "linea": 62,
+      "linea": 49,
       "metodo": "GET",
       "plantilla": "/soporte/solicitudes-fabrica/resumen",
       "instrumentada": false
@@ -10086,70 +10115,84 @@
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 113,
+      "linea": 121,
       "metodo": "GET",
       "plantilla": "/requerimientos/:param",
       "instrumentada": null
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 140,
+      "linea": 148,
       "metodo": "GET",
       "plantilla": "/requerimientos/:param/liquidacion",
       "instrumentada": null
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 141,
+      "linea": 149,
       "metodo": "GET",
       "plantilla": "/bitacora",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 187,
+      "linea": 209,
+      "metodo": "PATCH",
+      "plantilla": "/requerimientos/:param/horas-siguiente-anio",
+      "instrumentada": null
+    },
+    {
+      "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
+      "linea": 215,
+      "metodo": "GET",
+      "plantilla": "/bitacora",
+      "instrumentada": false
+    },
+    {
+      "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
+      "linea": 238,
       "metodo": "PUT",
       "plantilla": "/requerimientos/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 231,
+      "linea": 280,
       "metodo": "PATCH",
       "plantilla": "/requerimientos/detalle-ans",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 252,
+      "linea": 301,
       "metodo": "POST",
       "plantilla": "/requerimientos/:param/transicion",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 274,
+      "linea": 323,
       "metodo": "POST",
       "plantilla": "/requerimientos/:param/entregas",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 291,
+      "linea": 340,
       "metodo": "DELETE",
       "plantilla": "/requerimientos/:param/entregas/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 301,
+      "linea": 350,
       "metodo": "DELETE",
       "plantilla": "/bitacora/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 331,
+      "linea": 380,
       "metodo": "PATCH",
       "plantilla": "/requerimientos/detalle-ans",
       "instrumentada": true
@@ -11010,6 +11053,10 @@
       "accion_eliminarfila",
       "boton"
     ],
+    "control.pages_dashboardanalistas.link.866fde0aabbf": [
+      "navegar",
+      "enlace"
+    ],
     "control.pages_dashboardanalistas.summary.b5d582277752": [
       "alternar",
       "boton"
@@ -11022,8 +11069,8 @@
       "accion_setmetrica",
       "boton"
     ],
-    "control.pages_dashboardrequerimientos.setanosreq.7c4a21ecf9b8": [
-      "accion_setanosreq",
+    "control.pages_dashboardrequerimientos.restablecer.5156ac5a40fc": [
+      "accion_restablecer",
       "boton"
     ],
     "control.pages_dashboardrequerimientos.setdetalleans.6488a12321e5": [
@@ -11034,8 +11081,8 @@
       "accion_setdetalleans",
       "boton"
     ],
-    "control.pages_dashboardrequerimientos.setanossop.bc0f6c4a97e8": [
-      "accion_setanossop",
+    "control.pages_dashboardrequerimientos.restablecer.e0f5b6c47796": [
+      "accion_restablecer",
       "boton"
     ],
     "control.pages_dashboardsquad.restablecer.8bbba1f0421d": [

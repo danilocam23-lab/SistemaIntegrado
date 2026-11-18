@@ -57,8 +57,18 @@ if "!INSTALADO!"=="0" (
 )
 
 if "!INSTALADO!"=="0" (
+    echo         Sin winget ni Chocolatey: descargando el instalador oficial ^(MongoDB 7.0^)...
+    set "MSI=%TEMP%\mongodb-instalador.msi"
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol='Tls12'; $ProgressPreference='SilentlyContinue'; Invoke-WebRequest 'https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-7.0.14-signed.msi' -OutFile '!MSI!'"
+    if exist "!MSI!" (
+        msiexec /i "!MSI!" /qn /norestart ADDLOCAL=ServerServiceINSTALLLOCATION="C:\Program Files\MongoDB\Server\7.0\"
+        if !errorlevel! equ 0 set "INSTALADO=1"
+    )
+)
+
+if "!INSTALADO!"=="0" (
     echo.
-    echo  [ERROR] No se encontro winget ni Chocolatey para instalar MongoDB.
+    echo  [ERROR] No se pudo instalar MongoDB automaticamente.
     echo  Descarga MongoDB Community manualmente:
     echo    https://www.mongodb.com/try/download/community
     echo.

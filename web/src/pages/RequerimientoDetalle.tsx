@@ -31,6 +31,8 @@ export default function RequerimientoDetalle() {
   const puedeEditarTipificacion = puedeEditarReq || tienePermiso('requerimientos.tipificacion.editar')
   const puedeEditarIdAzure = puedeEditarReq || tienePermiso('requerimientos.id_azure_hitss.editar')
   const puedeEditarAnalista = puedeEditarReq || tienePermiso('requerimientos.analista.editar')
+  const puedeVerHorasSiguienteAnio = tienePermiso('requerimientos.horas_siguiente_anio.ver')
+  const puedeEditarHorasSiguienteAnio = puedeVerHorasSiguienteAnio && tienePermiso('requerimientos.horas_siguiente_anio.editar')
   const puedeEliminarBitacora = tienePermiso('admin.roles.editar')
   const { datos: personas } = useLista<Persona>('/personas')
   const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
@@ -40,6 +42,8 @@ export default function RequerimientoDetalle() {
     modoConsolidado,
     puedeEditarReq,
     puedeEditarTipificacion,
+    puedeVerHorasSiguienteAnio,
+    puedeEditarHorasSiguienteAnio,
   })
   const { req, liquidacion, eventos, aviso, ok, campos } = detalle
 
@@ -181,49 +185,66 @@ export default function RequerimientoDetalle() {
             cantidadEntregas={req.entregas.length}
           />
           <SeccionLiquidacion liquidacion={liquidacion} />
-          <Tarjeta>
-            <h2 className="etiqueta-sup mb-3">Horas para el siguiente año</h2>
-            <p className="mb-3 text-sm text-slate-500">
-              Información del requerimiento sin efecto en liquidación ni ANS.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-sm sm:col-span-2">
-                <span className="mb-1 block text-slate-600">Número de horas</span>
-                <Campo
-                  form={ID_FORMULARIO_DATOS_GENERALES}
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={campos.valores.horasSiguienteAnio}
-                  onChange={(e) => campos.actualizar('horasSiguienteAnio', e.target.value)}
-                  disabled={!puedeEditarReq}
-                  className="w-full"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-slate-600">Fecha de entrega comprometida</span>
-                <Campo
-                  form={ID_FORMULARIO_DATOS_GENERALES}
-                  type="datetime-local"
-                  value={campos.valores.fechaEntregaComprometidaSiguienteAnio}
-                  onChange={(e) => campos.actualizar('fechaEntregaComprometidaSiguienteAnio', e.target.value)}
-                  disabled={!puedeEditarReq}
-                  className="w-full"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-slate-600">Fecha real de entrega</span>
-                <Campo
-                  form={ID_FORMULARIO_DATOS_GENERALES}
-                  type="datetime-local"
-                  value={campos.valores.fechaRealEntregaSiguienteAnio}
-                  onChange={(e) => campos.actualizar('fechaRealEntregaSiguienteAnio', e.target.value)}
-                  disabled={!puedeEditarReq}
-                  className="w-full"
-                />
-              </label>
-            </div>
-          </Tarjeta>
+          {puedeVerHorasSiguienteAnio && (
+            <Tarjeta>
+              <h2 className="etiqueta-sup mb-3">Horas para el siguiente año</h2>
+              <p className="mb-3 text-sm text-slate-500">
+                Información del requerimiento sin efecto en liquidación ni ANS.
+              </p>
+              <form onSubmit={detalle.guardarHorasSiguienteAnio} aria-label="Horas para el siguiente año"
+                aria-busy={detalle.guardandoHorasSiguienteAnio}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="text-sm sm:col-span-2">
+                    <span className="mb-1 block text-slate-600">Número de horas</span>
+                    <Campo
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={campos.valores.horasSiguienteAnio}
+                      onChange={(e) => campos.actualizar('horasSiguienteAnio', e.target.value)}
+                      disabled={!puedeEditarHorasSiguienteAnio || detalle.guardandoHorasSiguienteAnio}
+                      className="w-full"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <span className="mb-1 block text-slate-600">Fecha de entrega comprometida</span>
+                    <Campo
+                      type="datetime-local"
+                      value={campos.valores.fechaEntregaComprometidaSiguienteAnio}
+                      onChange={(e) => campos.actualizar('fechaEntregaComprometidaSiguienteAnio', e.target.value)}
+                      disabled={!puedeEditarHorasSiguienteAnio || detalle.guardandoHorasSiguienteAnio}
+                      className="w-full"
+                    />
+                  </label>
+                  <label className="text-sm">
+                    <span className="mb-1 block text-slate-600">Fecha real de entrega</span>
+                    <Campo
+                      type="datetime-local"
+                      value={campos.valores.fechaRealEntregaSiguienteAnio}
+                      onChange={(e) => campos.actualizar('fechaRealEntregaSiguienteAnio', e.target.value)}
+                      disabled={!puedeEditarHorasSiguienteAnio || detalle.guardandoHorasSiguienteAnio}
+                      className="w-full"
+                    />
+                  </label>
+                </div>
+                {detalle.errorHorasSiguienteAnio && (
+                  <div role="alert" className="mt-3">
+                    <Aviso tono="error">{detalle.errorHorasSiguienteAnio}</Aviso>
+                  </div>
+                )}
+                {detalle.okHorasSiguienteAnio && (
+                  <div role="status" className="mt-3">
+                    <Aviso tono="exito">{detalle.okHorasSiguienteAnio}</Aviso>
+                  </div>
+                )}
+                {puedeEditarHorasSiguienteAnio && (
+                  <Boton type="submit" variante="secundario" className="mt-3" disabled={detalle.guardandoHorasSiguienteAnio}>
+                    {detalle.guardandoHorasSiguienteAnio ? 'Guardando…' : 'Guardar horas para el siguiente año'}
+                  </Boton>
+                )}
+              </form>
+            </Tarjeta>
+          )}
         </div>
 
         <div>

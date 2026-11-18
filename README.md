@@ -52,12 +52,30 @@ pruebas de aceptación (Fase 10) y la puesta en producción.
 ### Requisitos
 - Python 3.11+
 - Node.js 18+
-- MongoDB 7.x — `arrancar.bat` lo instala y arranca automáticamente si falta
+- MongoDB 7.x — `bat\arrancar.bat` lo instala y arranca automáticamente si falta
+
+### Instalación en máquina nueva
+
+Todos los `.bat` viven en `bat\`:
+
+| Script | Qué hace |
+|---|---|
+| `instalar-todo.bat` | Ejecuta los dos siguientes en orden |
+| `instalar-requisitos.bat` | Instala Python, Node.js, Git y MongoDB (winget/Chocolatey, pide admin) |
+| `instalar-aplicacion.bat` | venv + dependencias backend, `api\.env`, `npm install`, BD |
+| `arrancar.bat` | Levanta MongoDB, backend :8000 y frontend :5173 |
+| `iniciar-mongodb.bat` / `crear-bd.bat` | Solo MongoDB / solo la BD |
+| `publicar-iis.bat` | Publicación en IIS (producción) |
+| `backup-mongodb.bat` | Backup comprimido de la BD en `C:\Backups\SistemaIntegrado` (conserva 14 días) |
+| `restaurar-mongodb.bat` | Restaura un backup (el más reciente o el indicado) |
+
+Si `instalar-requisitos.bat` instala Python/Node por primera vez, abre una consola nueva
+antes de `instalar-aplicacion.bat`.
 
 ### Arranque rápido (recomendado)
 
 ```
-arrancar.bat
+bat\arrancar.bat
 ```
 
 La primera vez crea el entorno virtual, instala las dependencias de backend y frontend
@@ -66,7 +84,7 @@ Chocolatey) y arranca el servicio. Luego abre el backend y el frontend en ventan
 separadas.
 
 > El paso de MongoDB pide permisos de administrador (UAC). También puede ejecutarse
-> por separado con `iniciar-mongodb.bat`.
+> por separado con `bat\iniciar-mongodb.bat`.
 
 ### Backend (manual)
 ```bash
@@ -91,6 +109,8 @@ Frontend en `http://localhost:5173`.
 
 ## Despliegue en IIS
 
-Ejecuta `deploy\publicar-iis.bat` como Administrador. Compila el frontend, publica el
+Ejecuta `bat\publicar-iis.bat` como Administrador y elige destino: **PND** (configuración
+actual: sitio `IIS_PRD`, `E:\IIS_PRD\Sistema Integrado`) o **DLL** (`C:\inetpub\SistemaIntegrado`,
+sitio `Default Web Site`). También acepta el destino como argumento: `publicar-iis.bat DLL`. Compila el frontend, publica el
 backend, configura la sub-aplicación IIS `/SistemaIntegrado` con HttpPlatformHandler y
 ajusta permisos. Detalles y solución de problemas en [`deploy/README.md`](deploy/README.md).

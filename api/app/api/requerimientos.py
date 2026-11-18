@@ -23,6 +23,7 @@ from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, c
 from app.schemas.requerimiento import (
     AnsCalcularIn,
     EntregaIn,
+    HorasSiguienteAnioUpdate,
     RequerimientoIn,
     RequerimientoUpdate,
     TransicionIn,
@@ -37,6 +38,37 @@ from app.services.auditoria import RutaAuditada
 from app.services.liquidacion import LiquidacionService
 
 router = APIRouter(prefix="/requerimientos", tags=["requerimientos"], route_class=RutaAuditada)
+
+CAMPOS_SIGUIENTE_ANIO = frozenset({
+    "horas_siguiente_anio",
+    "fecha_entrega_comprometida_siguiente_anio",
+    "fecha_real_entrega_siguiente_anio",
+})
+PERM_VER_SIGUIENTE_ANIO = "requerimientos.horas_siguiente_anio.ver"
+PERM_EDITAR_SIGUIENTE_ANIO = "requerimientos.horas_siguiente_anio.editar"
+
+
+def _salida(req: Requerimiento, ver_siguiente_anio: bool) -> dict:
+    """Redacta solo la respuesta, conservando el alias JSON del identificador."""
+    return req.model_dump(
+        mode="json",
+        by_alias=True,
+        exclude=set() if ver_siguiente_anio else set(CAMPOS_SIGUIENTE_ANIO),
+    )
+
+
+async def _salida_autorizada(req: Requerimiento, usuario: Usuario) -> dict:
+    return _salida(req, await tiene_permiso(usuario, PERM_VER_SIGUIENTE_ANIO))
+
+
+async def _validar_edicion_siguiente_anio(datos: BaseModel, usuario: Usuario) -> None:
+    """Un campo explícito, incluso null, exige el permiso especial de edición."""
+    if datos.model_fields_set & CAMPOS_SIGUIENTE_ANIO and not await tiene_permiso(
+        usuario, PERM_EDITAR_SIGUIENTE_ANIO
+    ):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, f"Falta el permiso: {PERM_EDITAR_SIGUIENTE_ANIO}"
+        )
 
 
 async def _registrar_bitacora(
@@ -170,12 +202,15 @@ async def _buscar(ctx: ContextoAplicacion, codigo_req: str) -> Requerimiento:
 async def listar(
     estado: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
 ):
     """Lista requerimientos de la aplicación activa (o de todas en modo consolidado)."""
     consulta = ctx.filtro()
     if estado is not None:
         consulta["estado"] = estado
-    return await Requerimiento.find(consulta).sort("-creado_en").to_list()
+    ver_siguiente_anio = await tiene_permiso(usuario, PERM_VER_SIGUIENTE_ANIO)
+    requerimientos = await Requerimiento.find(consulta).sort("-creado_en").to_list()
+    return [_salida(req, ver_siguiente_anio) for req in requerimientos]
 
 
 @router.post("/ans/calcular")
@@ -195,8 +230,12 @@ async def calcular_ans(
 
 
 @router.get("/{codigo_req}", dependencies=[permiso("requerimientos.ver")])
-async def obtener(codigo_req: str, ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
-    return await _buscar(ctx, codigo_req)
+async def obtener(
+    codigo_req: str,
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
+):
+    return await _salida_autorizada(await _buscar(ctx, codigo_req), usuario)
 
 
 @router.post(
@@ -210,8 +249,9 @@ async def crear(
     usuario: Usuario = Depends(usuario_actual),
 ):
     """Crea un requerimiento con su solicitud embebida."""
+    await _validar_edicion_siguiente_anio(datos, usuario)
     existe = await Requerimiento.find_one({
-        "aplicacion_id": ctx.codigo,
+        **ctx.filtro(),
         "codigo_req": datos.codigo_req,
         "solicitud.squad_id": datos.solicitud.squad_id,
         "solicitud.codigo_sc": datos.solicitud.codigo_sc,
@@ -264,15 +304,19 @@ async def crear(
             status.HTTP_409_CONFLICT,
             "Ya existe un requerimiento con el mismo Código REQ, Squad y SC",
         ) from exc
+    descripcion = f"Requerimiento {req.codigo_req} creado"
+    campos_bloque = sorted(datos.model_fields_set & CAMPOS_SIGUIENTE_ANIO)
+    if campos_bloque:
+        descripcion += "; Horas para el siguiente año: campos enviados: " + ", ".join(campos_bloque)
     await _registrar_bitacora(
         ctx.codigo,
         str(req.id),
         "crear",
-        f"Requerimiento {req.codigo_req} creado",
+        descripcion,
         usuario,
         datos_despues={"estado": req.estado},
     )
-    return req
+    return await _salida_autorizada(req, usuario)
 
 
 @router.put(
@@ -289,13 +333,10 @@ async def actualizar(
     from app.documents.enums import AnsResultado
     from app.services.fecha_limite import calcular_fecha_limite
 
+    await _validar_edicion_siguiente_anio(datos, usuario)
     req = await _buscar(ctx, codigo_req)
     cambios = datos.model_dump(exclude_unset=True)
-    solo_siguiente_anio = bool(cambios) and cambios.keys() <= {
-        "horas_siguiente_anio",
-        "fecha_entrega_comprometida_siguiente_anio",
-        "fecha_real_entrega_siguiente_anio",
-    }
+    solo_siguiente_anio = bool(cambios) and cambios.keys() <= CAMPOS_SIGUIENTE_ANIO
     solicitud = cambios.pop("solicitud", None)
 
     # Registrar qué campos cambiaron para la bitácora
@@ -344,7 +385,11 @@ async def actualizar(
         texto_nuevo = str(valor) if valor is not None else ""
         if texto_viejo != texto_nuevo:
             label = etiquetas.get(campo, campo)
-            detalle_cambios.append(f"{label}: '{texto_viejo}' → '{texto_nuevo}'")
+            if campo in CAMPOS_SIGUIENTE_ANIO:
+                # La bitácora tiene lectura independiente: nunca copiar estos valores.
+                detalle_cambios.append(f"{label}: modificado")
+            else:
+                detalle_cambios.append(f"{label}: '{texto_viejo}' → '{texto_nuevo}'")
         setattr(req, campo, valor)
 
     # El bloque informativo no recalcula ANS; el resto conserva el comportamiento previo.
@@ -380,7 +425,38 @@ async def actualizar(
         datos_antes={"estado": estado_antes} if estado_antes is not None else None,
         datos_despues={"estado": estado_despues} if estado_despues is not None else None,
     )
-    return req
+    return await _salida_autorizada(req, usuario)
+
+
+@router.patch(
+    "/{codigo_req}/horas-siguiente-anio",
+    dependencies=[permiso("requerimientos.horas_siguiente_anio.editar")],
+)
+async def actualizar_horas_siguiente_anio(
+    codigo_req: str,
+    datos: HorasSiguienteAnioUpdate,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    usuario: Usuario = Depends(usuario_actual),
+):
+    """Guarda únicamente el bloque informativo, sin recalcular ANS ni liquidación."""
+    req = await _buscar(ctx, codigo_req)
+    cambios = datos.model_dump(exclude_unset=True)
+    modificados = [
+        campo for campo, valor in cambios.items() if getattr(req, campo) != valor
+    ]
+    if modificados:
+        for campo, valor in cambios.items():
+            setattr(req, campo, valor)
+        req.marcar_actualizado()
+        await req.save()
+        await _registrar_bitacora(
+            ctx.codigo,
+            str(req.id),
+            "actualizar",
+            "Horas para el siguiente año: campos modificados: " + ", ".join(modificados),
+            usuario,
+        )
+    return await _salida_autorizada(req, usuario)
 
 
 class AnalistaRequerimientosIn(BaseModel):
@@ -409,7 +485,7 @@ async def actualizar_analista_requerimientos(
     req = await _buscar(ctx, codigo_req)
     viejo = req.solicitud.analista_requerimientos_id
     if viejo == datos.analista_requerimientos_id:
-        return req  # sin cambios, no genera bitácora vacía
+        return await _salida_autorizada(req, usuario)  # sin bitácora vacía
 
     req.solicitud.analista_requerimientos_id = datos.analista_requerimientos_id
     req.marcar_actualizado()
@@ -421,7 +497,7 @@ async def actualizar_analista_requerimientos(
         f"Analista de requerimientos: '{viejo or ''}' → '{datos.analista_requerimientos_id or ''}'",
         usuario,
     )
-    return req
+    return await _salida_autorizada(req, usuario)
 
 
 class IdAzureHitssIn(BaseModel):
@@ -450,7 +526,7 @@ async def actualizar_id_azure_hitss(
     req = await _buscar(ctx, codigo_req)
     viejo = req.id_azure_hitss
     if viejo == datos.id_azure_hitss:
-        return req  # sin cambios, no genera bitácora vacía
+        return await _salida_autorizada(req, usuario)  # sin bitácora vacía
 
     req.id_azure_hitss = datos.id_azure_hitss
     req.marcar_actualizado()
@@ -462,7 +538,7 @@ async def actualizar_id_azure_hitss(
         f"ID de Azure (Hitss): '{viejo or ''}' → '{datos.id_azure_hitss or ''}'",
         usuario,
     )
-    return req
+    return await _salida_autorizada(req, usuario)
 
 
 @router.post(
@@ -490,7 +566,7 @@ async def transicion(
         datos_antes={"estado": anterior},
         datos_despues={"estado": datos.nuevo_estado},
     )
-    return req
+    return await _salida_autorizada(req, usuario)
 
 
 @router.post(
@@ -562,7 +638,7 @@ async def guardar_entrega(
         datos_antes=entrega_anterior.model_dump() if entrega_anterior is not None else None,
         datos_despues=nueva.model_dump(),
     )
-    return req
+    return await _salida_autorizada(req, usuario)
 
 
 @router.delete(
@@ -596,7 +672,7 @@ async def eliminar_entrega(
     await _registrar_bitacora(
         ctx.codigo, str(req.id), "entrega", f"Entrega {numero} eliminada", usuario
     )
-    return req
+    return await _salida_autorizada(req, usuario)
 
 
 @router.get(

@@ -157,6 +157,67 @@ Si el permiso es nuevo, hay que darlo de alta en `PERMISOS_CATALOGO`
 (`ROLES_BASE`: `admin_app`, `viewer`; `superadmin` ya tiene todo vía `"*"`) — y avisar
 para el espejo en el frontend (`RoleRoute permiso="..."` en `web/src/App.tsx`).
 
+## Bloque «Horas para el siguiente año» de requerimientos
+
+Permisos independientes publicados por `GET /api/roles/catalogo`:
+
+- `requerimientos.horas_siguiente_anio.ver`: permite recibir los tres campos del bloque.
+- `requerimientos.horas_siguiente_anio.editar`: permite escribirlos; no concede lectura.
+
+Inicialmente ambos se conceden solo a `admin_app` y al wildcard de `superadmin`.
+El bootstrap añade los dos permisos a `admin_app` existente únicamente si es un rol
+de sistema, de forma idempotente y sin quitar otras concesiones ni tocar roles
+personalizados. No concede `requerimientos.editar` general.
+
+`PATCH /api/requerimientos/{codigo_req}/horas-siguiente-anio` exige únicamente el
+permiso especial de edición y una aplicación concreta (`X-Aplicacion`); admite ID
+Mongo o código, con búsqueda restringida al tenant. Cuerpo parcial, sin campos extra:
+
+```json
+{
+  "horas_siguiente_anio": "12.75",
+  "fecha_entrega_comprometida_siguiente_anio": "2027-06-01T00:00:00",
+  "fecha_real_entrega_siguiente_anio": null
+}
+```
+
+Horas: Decimal finito mayor o igual a cero, nullable. Fechas: datetime nullable.
+Omitir conserva, `null` limpia y `{}` no cambia nada. Campos extra o valores inválidos
+devuelven 422; consolidado devuelve 409; recurso de otro tenant devuelve 404.
+No modifica ANS, fecha límite, horas estimadas, entregas ni liquidación.
+
+Devuelve 200 con el requerimiento completo **saneado**, manteniendo `_id` y la
+serialización JSON actuales: sin permiso especial de lectura se **omiten** los tres
+campos, incluso si quien escribe tiene permiso general de lectura o edición.
+La misma redacción se aplica al listado, detalle y mutaciones que devuelven el
+documento (incluidas analista, Azure, transición y entregas), sin modificar MongoDB
+para ocultar datos ni resolver permisos por cada documento del listado.
+
+POST y PUT conservan sus permisos generales y además exigen el especial de edición
+si incluyen explícitamente cualquiera de los tres campos, incluso `null` (403 si
+falta). Un PUT que omite el bloque lo conserva. El frontend debe enviar el bloque
+en formularios generales solo cuando tenga ambos permisos especiales; el editor
+sin lectura puede usar PATCH, pero no recibe esos valores en la respuesta.
+
+Los nuevos eventos de creación/edición registran nombres de campos modificados,
+no valores del bloque, porque `/api/bitacora` tiene lectura independiente.
+En `GET /api/bitacora`, sin el permiso especial de lectura, las descripciones de
+eventos de requerimientos que contienen cualquiera de los tres labels anteriores
+o nombres de campo en snake_case se sustituyen completas por
+«Detalle restringido de horas para el siguiente año». Con permiso se conserva el
+texto original. La comprobación se hace una vez por petición; solo cambia la
+descripción de respuesta, no la metadata ni los eventos ordinarios. No se borran,
+migran ni modifican registros históricos en MongoDB.
+Tampoco es posible impedir que un usuario copie manualmente valores en texto libre.
+
+Pruebas focales (PowerShell, desde `api/`; la infraestructura elimina la base):
+
+```powershell
+$env:MONGO_URL = 'mongodb://localhost:27017'
+$env:MONGO_DB = 'test_hist_horas_' + [guid]::NewGuid().ToString('N')
+pytest tests/test_requerimientos_horas_siguiente_anio.py tests/test_migracion_permisos_roles.py --no-cov
+```
+
 ## Endpoints administrativos
 
 - `GET /api/health`: disponibilidad de la API.

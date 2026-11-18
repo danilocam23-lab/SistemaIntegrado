@@ -73,25 +73,33 @@ interface Opciones {
   modoConsolidado: boolean
   puedeEditarReq: boolean
   puedeEditarTipificacion: boolean
+  puedeVerHorasSiguienteAnio?: boolean
+  puedeEditarHorasSiguienteAnio?: boolean
 }
 
 /**
  * Estado y escrituras del detalle del requerimiento: carga (`req`,
- * `liquidacion`, `eventos`), formulario de datos generales, las 7 escrituras
+ * `liquidacion`, `eventos`), formulario de datos generales, las 8 escrituras
  * async y la edición en línea de tipificación por entrega.
  */
 export function useRequerimientoDetalle(
   reqId: string | undefined,
-  { modoConsolidado, puedeEditarReq, puedeEditarTipificacion }: Opciones,
+  {
+    modoConsolidado, puedeEditarReq, puedeEditarTipificacion,
+    puedeVerHorasSiguienteAnio = false, puedeEditarHorasSiguienteAnio = false,
+  }: Opciones,
 ) {
   const [req, setReq] = useState<Requerimiento | null>(null)
   const [liquidacion, setLiquidacion] = useState<Liquidacion | null>(null)
   const [eventos, setEventos] = useState<EventoBitacora[]>([])
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
+  const [guardandoHorasSiguienteAnio, setGuardandoHorasSiguienteAnio] = useState(false)
+  const [errorHorasSiguienteAnio, setErrorHorasSiguienteAnio] = useState('')
+  const [okHorasSiguienteAnio, setOkHorasSiguienteAnio] = useState('')
 
   // Estado único de "Datos generales", "Seguimiento Hitss" y
-  // "Horas para el siguiente año", guardado por el formulario general.
+  // "Horas para el siguiente año"; el bloque de horas tiene guardado propio.
   const [valores, setValores] = useState<ValoresRequerimiento>(VALORES_VACIOS)
 
   const actualizar = useCallback(
@@ -172,6 +180,50 @@ export function useRequerimientoDetalle(
     return config
   }
 
+  function cuerpoHorasSiguienteAnio() {
+    return {
+      horas_siguiente_anio: convertirHorasSiguienteAnio(valores.horasSiguienteAnio),
+      fecha_entrega_comprometida_siguiente_anio: valores.fechaEntregaComprometidaSiguienteAnio || null,
+      fecha_real_entrega_siguiente_anio: valores.fechaRealEntregaSiguienteAnio || null,
+    }
+  }
+
+  async function guardarHorasSiguienteAnio(e: FormEvent): Promise<void> {
+    e.preventDefault()
+    if (guardandoHorasSiguienteAnio) return
+    setErrorHorasSiguienteAnio('')
+    setOkHorasSiguienteAnio('')
+    if (!puedeVerHorasSiguienteAnio || !puedeEditarHorasSiguienteAnio) {
+      setErrorHorasSiguienteAnio('No tienes permiso para ver y editar las horas para el siguiente año.')
+      return
+    }
+    if (!req) return
+    const config = writeConfig()
+    if (modoConsolidado && !('headers' in config)) {
+      setErrorHorasSiguienteAnio('No se pudo determinar la aplicación del requerimiento. Selecciona un squad concreto en el selector superior para guardar.')
+      return
+    }
+    setGuardandoHorasSiguienteAnio(true)
+    try {
+      const cuerpo = cuerpoHorasSiguienteAnio()
+      await client.patch(`/requerimientos/${reqId}/horas-siguiente-anio`, cuerpo, config)
+      // No recargar: reemplazar el formulario completo borraría otros borradores.
+      // Tampoco usar el req completo de la respuesta para pisar estado ajeno.
+      setReq((actual) => actual ? { ...actual, ...cuerpo } : actual)
+      setOkHorasSiguienteAnio('Horas para el siguiente año guardadas.')
+      try {
+        const { data } = await client.get<EventoBitacora[]>(`/bitacora?entidad_id=${req.id}`)
+        setEventos(data)
+      } catch (err) {
+        setErrorHorasSiguienteAnio(`Los datos se guardaron, pero no se pudo actualizar la bitácora: ${mensajeError(err)}`)
+      }
+    } catch (err) {
+      setErrorHorasSiguienteAnio(mensajeError(err))
+    } finally {
+      setGuardandoHorasSiguienteAnio(false)
+    }
+  }
+
   async function guardar(e: FormEvent): Promise<void> {
     e.preventDefault()
     const confirmarFormulario = analitica.prepararEnvioFormulario('requerimiento_general')
@@ -183,7 +235,6 @@ export function useRequerimientoDetalle(
     }
     if (!req) return
     try {
-      const horasSiguienteAnio = convertirHorasSiguienteAnio(valores.horasSiguienteAnio)
       await client.put(`/requerimientos/${reqId}`, {
         nombre: valores.nombreActa || null,
         solicitud: {
@@ -197,9 +248,7 @@ export function useRequerimientoDetalle(
           analista_requerimientos_id: valores.analistaId || null,
         },
         total_horas_estimadas: valores.horas ? Number(valores.horas) : null,
-        horas_siguiente_anio: horasSiguienteAnio,
-        fecha_entrega_comprometida_siguiente_anio: valores.fechaEntregaComprometidaSiguienteAnio || null,
-        fecha_real_entrega_siguiente_anio: valores.fechaRealEntregaSiguienteAnio || null,
+        ...(puedeVerHorasSiguienteAnio && puedeEditarHorasSiguienteAnio ? cuerpoHorasSiguienteAnio() : {}),
         fecha_solicitud_acta: valores.fechaSolicitudActa || null,
         fecha_real_entrega_estimacion: valores.fechaRealEntregaEst || null,
         seguimiento: valores.seguimiento || null,
@@ -354,6 +403,10 @@ export function useRequerimientoDetalle(
     campos: { valores, actualizar } as CamposRequerimiento,
     recargar,
     guardar,
+    guardarHorasSiguienteAnio,
+    guardandoHorasSiguienteAnio,
+    errorHorasSiguienteAnio,
+    okHorasSiguienteAnio,
     guardarTipificacionReq,
     transicion,
     agregarEntrega,

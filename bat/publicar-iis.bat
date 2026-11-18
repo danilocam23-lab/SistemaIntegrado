@@ -8,16 +8,59 @@ echo   Sistema Integrado HITSS - Publicacion en IIS
 echo  ============================================================
 echo.
 
-REM -- Configuracion --------------------------------------------------
+REM -- Permisos de administrador (IIS, icacls y appcmd lo requieren) -----
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo  [ERROR] Ejecuta este script como Administrador.
+    pause & exit /b 1
+)
+
+REM -- Destino: PND o DLL ---------------------------------------------
+REM  Uso:  publicar-iis.bat          (muestra el menu)
+REM        publicar-iis.bat PND      (configuracion actual)
+REM        publicar-iis.bat DLL      (C:\inetpub\SistemaIntegrado)
+set "DESTINO=%~1"
+if /i "%DESTINO%"=="PND" goto :CFG_PND
+if /i "%DESTINO%"=="DLL" goto :CFG_DLL
+echo   Elige el destino de publicacion:
+echo.
+echo     [1] PND - configuracion actual
+echo               Sitio IIS_PRD, carpeta E:\IIS_PRD\Sistema Integrado
+echo     [2] DLL - C:\inetpub\SistemaIntegrado
+echo               Sitio Default Web Site
+echo.
+choice /c 12 /n /m "  Opcion (1/2): "
+if errorlevel 2 goto :CFG_DLL
+goto :CFG_PND
+
+:CFG_PND
+set "DESTINO=PND"
 set "SITE_NAME=IIS_PRD"
-set "APP_NAME=SistemaIntegrado"
 set "APP_POOL=IIS_PRD"
 set "PUBLISH_DIR=E:\IIS_PRD\Sistema Integrado"
+REM Python base accesible por IIS (fuera de carpetas de usuario)
+set "IIS_PYTHON_BASE=E:\Python313"
+goto :CFG_COMUN
+
+:CFG_DLL
+set "DESTINO=DLL"
+set "SITE_NAME=Default Web Site"
+set "APP_POOL=SistemaIntegrado"
+set "PUBLISH_DIR=C:\inetpub\SistemaIntegrado"
+REM Si C:\Python313 no existe, se usa el Python del PATH (instalado para todos los usuarios)
+set "IIS_PYTHON_BASE=C:\Python313"
+goto :CFG_COMUN
+
+:CFG_COMUN
+set "APP_NAME=SistemaIntegrado"
 set "SOURCE_DIR=%~dp0.."
 set "APPCMD=%windir%\system32\inetsrv\appcmd.exe"
 set "PYTHON_EXE=%PUBLISH_DIR%\api\.venv\Scripts\python.exe"
-REM Python base accesible por IIS (fuera de carpetas de usuario)
-set "IIS_PYTHON_BASE=E:\Python313"
+echo.
+echo  Destino : %DESTINO%
+echo  Sitio   : %SITE_NAME%
+echo  Carpeta : %PUBLISH_DIR%
+echo.
 
 REM -- 1. Verificar Python --------------------------------------------
 echo  [1/8] Verificando Python...
@@ -33,7 +76,7 @@ if exist "%IIS_PYTHON_BASE%\python.exe" (
         echo  [ERROR] Python no encontrado. Instala Python 3.11+ en %IIS_PYTHON_BASE%.
         pause & exit /b 1
     )
-    echo  [AVISO] Python en: !BASE_PYTHON!  (si esta en C:\Users IIS no tendra acceso)
+    echo  [AVISO] Python en: !BASE_PYTHON!  ^(si esta en C:\Users IIS no tendra acceso^)
 )
 
 REM -- 2. Verificar Node, IIS y HttpPlatformHandler -------------------
@@ -42,8 +85,21 @@ where npm >nul 2>&1 || (echo  [ERROR] Node.js/npm no encontrado. & pause & exit 
 if not exist "%APPCMD%" (echo  [ERROR] IIS no detectado. & pause & exit /b 1)
 "%APPCMD%" list modules /name:httpPlatformHandler >nul 2>&1
 if %errorlevel% neq 0 (
-    echo  [AVISO] HttpPlatformHandler no detectado. Instalalo con:
-    echo          choco install httpplatformhandler --yes  ^&  iisreset
+    where choco >nul 2>&1
+    if !errorlevel! equ 0 (
+        echo         HttpPlatformHandler no esta instalado. Instalando con Chocolatey...
+        choco install httpplatformhandler --yes
+        iisreset >nul 2>&1
+        "%APPCMD%" list modules /name:httpPlatformHandler >nul 2>&1
+    )
+)
+if %errorlevel% neq 0 (
+    echo  [ERROR] El modulo HttpPlatformHandler NO esta instalado en IIS.
+    echo          Sin el, IIS responde "HTTP 500.19" al leer web.config.
+    echo          Instalalo ^(choco install httpplatformhandler --yes^) o desde
+    echo          https://www.iis.net/downloads/microsoft/httpplatformhandler
+    echo          y ejecuta "iisreset"; luego vuelve a publicar.
+    pause & exit /b 1
 )
 echo         OK
 
@@ -127,51 +183,10 @@ if %errorlevel% neq 0 (
 popd
 echo         [OK] Aplicacion verificada
 
-REM -- 6. Generar web.config -----------------------------------------
+REM -- 6. Generar web.config (desde deploy\web.config) ----------------
 echo  [6/8] Generando web.config...
-(
-echo ^<?xml version="1.0" encoding="utf-8"?^>
-echo ^<configuration^>
-echo   ^<system.webServer^>
-echo     ^<handlers^>
-echo       ^<add name="httpPlatformHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified" /^>
-echo     ^</handlers^>
-echo     ^<httpPlatform processPath="%PUBLISH_DIR%\api\.venv\Scripts\python.exe"
-echo                   arguments="-m uvicorn app.main:app --host 127.0.0.1 --port %%HTTP_PLATFORM_PORT%%"
-echo                   stdoutLogEnabled="true"
-echo                   stdoutLogFile="%PUBLISH_DIR%\logs\stdout"
-echo                   startupTimeLimit="120" startupRetryCount="3" processesPerApplication="1"^>
-echo       ^<environmentVariables^>
-echo         ^<environmentVariable name="APP_ROOT_PATH" value="/%APP_NAME%" /^>
-echo         ^<environmentVariable name="PYTHONPATH" value="%PUBLISH_DIR%\api" /^>
-echo         ^<environmentVariable name="PYTHONUNBUFFERED" value="1" /^>
-echo       ^</environmentVariables^>
-echo     ^</httpPlatform^>
-echo     ^<security^>
-echo       ^<requestFiltering^>
-echo         ^<requestLimits maxAllowedContentLength="52428800" /^>
-echo         ^<hiddenSegments^>
-echo           ^<add segment=".venv" /^>
-echo           ^<add segment="logs" /^>
-echo           ^<add segment=".git" /^>
-echo         ^</hiddenSegments^>
-echo         ^<fileExtensions allowUnlisted="true"^>
-echo           ^<add fileExtension=".env" allowed="false" /^>
-echo           ^<add fileExtension=".py" allowed="false" /^>
-echo           ^<add fileExtension=".bat" allowed="false" /^>
-echo           ^<add fileExtension=".toml" allowed="false" /^>
-echo         ^</fileExtensions^>
-echo       ^</requestFiltering^>
-echo     ^</security^>
-echo     ^<directoryBrowse enabled="false" /^>
-echo     ^<httpProtocol^>
-echo       ^<customHeaders^>
-echo         ^<remove name="X-Powered-By" /^>
-echo       ^</customHeaders^>
-echo     ^</httpProtocol^>
-echo   ^</system.webServer^>
-echo ^</configuration^>
-) > "%PUBLISH_DIR%\web.config"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SOURCE_DIR%\deploy\generar-webconfig.ps1" -Plantilla "%SOURCE_DIR%\deploy\web.config" -Destino "%PUBLISH_DIR%\web.config" -PublishDir "%PUBLISH_DIR%" -AppName "%APP_NAME%"
+if %errorlevel% neq 0 (echo  [ERROR] No se pudo generar web.config. & pause & exit /b 1)
 echo         [OK] web.config generado
 
 REM -- 7. Configurar IIS ---------------------------------------------
@@ -201,6 +216,18 @@ for /f "tokens=2 delims== " %%v in ('findstr /i "^home" "%PUBLISH_DIR%\api\.venv
     icacls "%%v" /grant "IIS AppPool\%APP_POOL%:(OI)(CI)RX" /T /Q >nul 2>&1
 )
 echo         [OK] IIS configurado
+
+REM -- Puerto 80 (solo destino DLL): asegurar un binding HTTP :80 ------
+if /i "%DESTINO%"=="DLL" (
+    "%APPCMD%" list site /name:"%SITE_NAME%" /text:bindings | findstr /c:":80:" >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo         Agregando binding http :80 al sitio "%SITE_NAME%"...
+        "%APPCMD%" set site /site.name:"%SITE_NAME%" /+bindings.[protocol='http',bindingInformation='*:80:']
+        if !errorlevel! neq 0 echo  [AVISO] No se pudo agregar el binding :80. Puede estar en uso por otro sitio.
+    ) else (
+        echo         Binding http :80 ya existe
+    )
+)
 
 "%APPCMD%" recycle apppool "%APP_POOL%" >nul 2>&1
 "%APPCMD%" start site "%SITE_NAME%" >nul 2>&1

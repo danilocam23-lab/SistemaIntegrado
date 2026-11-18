@@ -12,7 +12,8 @@ Monorepo sin `package.json` en la raíz. Cada sub-proyecto se maneja por separad
 api/        Backend FastAPI + Beanie (MongoDB)
 web/        Frontend React + TypeScript + Vite
 scripts/    Migración y utilidades de datos (SQLite -> MongoDB, fixes puntuales)
-deploy/     Publicación en IIS (web.config + publicar-iis.bat)
+bat/        Todos los .bat: instalación, arranque, MongoDB, BD y publicación IIS
+deploy/     Publicación en IIS (web.config; el publicar-iis.bat vive en bat/)
 docs/       Documentos HTML generados (arquitectura, modelo de datos, grafos)
 ```
 
@@ -89,7 +90,10 @@ falla ante imports o variables sin usar.
 
 ### Arranque completo (Windows)
 
-`arrancar.bat` en la raíz: crea el venv, instala backend y frontend, genera
+Máquina nueva: `bat\instalar-todo.bat` (requisitos: Python, Node, Git, MongoDB; luego
+`instalar-aplicacion.bat`: venv, dependencias, `.env`, BD). Se pueden ejecutar por separado.
+
+`bat\arrancar.bat`: crea el venv, instala backend y frontend, genera
 `api\.env`, verifica/instala/arranca MongoDB y abre backend y frontend en ventanas
 separadas. `iniciar-mongodb.bat` hace solo el paso de MongoDB.
 
@@ -194,7 +198,7 @@ un responsable que se desactiva o cambia de rol sigue viéndose). Ejemplos vigen
 
 ## Deploy
 
-IIS con HttpPlatformHandler. Ejecutar `deploy\publicar-iis.bat` como
+IIS con HttpPlatformHandler. Ejecutar `bat\publicar-iis.bat` como
 Administrador: compila el frontend, publica el backend, configura la
 sub-aplicación IIS `/SistemaIntegrado` y ajusta permisos. En producción,
 `VITE_APP_BASE` define el sub-path y `main.py` sirve `web/dist` como SPA.

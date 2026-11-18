@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, LabelList, Tooltip, XAxis, YAxis } from 'recharts'
 import { useLista } from '../api/hooks'
+import { useAuth } from '../context/AuthContext'
 import type { Persona, Requerimiento } from '../types'
 import {
-  Aviso, BarraFiltros, Boton, EncabezadoPagina, Icono, Selector, TablaScroll, Tarjeta,
+  Aviso, BarraFiltros, Boton, Chip, EncabezadoPagina, Icono, Selector, TablaScroll, Tarjeta,
 } from '../components/ui'
 import {
   COLOR_GRAFICA, ContenedorGrafica, TooltipGrafica, ejeCategoria, ejeValor, etiquetaBarra, rejilla,
@@ -89,6 +91,8 @@ function GraficaIncumplimientos({
 }
 
 export default function DashboardAnalistas() {
+  const { tienePermiso } = useAuth()
+  const puedeVerRequerimientos = tienePermiso('requerimientos.ver')
   const requerimientos = useLista<Requerimiento>('/requerimientos')
   const personas = useLista<Persona>('/personas')
   const [anoElegido, setAnoElegido] = useState('')
@@ -207,6 +211,69 @@ export default function DashboardAnalistas() {
               <GraficaIncumplimientos titulo="Entregas · real" filas={resumen.filas} metrica="entregasReal" periodo={periodo} />
               <GraficaIncumplimientos titulo="Entregas · HITSS" filas={resumen.filas} metrica="entregasHitss" periodo={periodo} />
             </div>
+            <Tarjeta className="min-w-0 space-y-3">
+              <h2 className="titulo-seccion">Detalle de incumplimientos ANS</h2>
+              <p className="text-sm text-slate-600">
+                {periodo} · {opciones.find(opcion => opcion.id === analista)?.nombre
+                  ?? (analista ? 'Analista fuera de los datos actuales' : 'Todos los analistas')}.
+                {' '}{resumen.detalles.length} incumplimientos reales, una fila por requerimiento o entrega.
+                Acta corresponde al acta de trabajo del requerimiento (o su nombre si no tiene identificador),
+                no al acta de entrega.
+              </p>
+              {resumen.detalles.length === 0 ? (
+                <Aviso>No hay incumplimientos ANS con los filtros de año, mes y analista seleccionados.</Aviso>
+              ) : (
+                <div
+                  className="max-h-[560px] overflow-y-auto rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-marca-500"
+                  role="region" aria-label="Detalle de incumplimientos ANS, tabla desplazable" tabIndex={0}
+                >
+                  <TablaScroll>
+                    <table className="tabla">
+                      <caption className="sr-only">
+                        Detalle de incumplimientos ANS · {periodo}. HITSS cuenta como cumple los atribuidos a EPM.
+                      </caption>
+                      <thead><tr>
+                        <th scope="col">Analista</th>
+                        <th scope="col">Requerimiento</th>
+                        <th scope="col">SC</th>
+                        <th scope="col">Acta</th>
+                        <th scope="col">Tipo</th>
+                        <th scope="col">Fecha de referencia</th>
+                        <th scope="col">ANS real</th>
+                        <th scope="col">ANS HITSS</th>
+                        <th scope="col">Tipificación</th>
+                      </tr></thead>
+                      <tbody>{resumen.detalles.map(detalle => (
+                        <tr key={detalle.clave}>
+                          <td className="whitespace-normal break-words">{detalle.nombreAnalista}</td>
+                          <th scope="row" className="whitespace-normal break-words">
+                            {detalle.requerimientoId && puedeVerRequerimientos ? (
+                              <Link
+                                to={`/requerimientos/${encodeURIComponent(detalle.requerimientoId)}`}
+                                className="font-medium text-marca hover:underline"
+                              >
+                                {detalle.codigoReq}
+                              </Link>
+                            ) : detalle.codigoReq}
+                          </th>
+                          <td className="whitespace-normal break-words">{detalle.codigoSc || '—'}</td>
+                          <td className="whitespace-normal break-words">{detalle.acta}</td>
+                          <td>{detalle.tipo === 'requerimiento' ? 'Requerimiento'
+                            : `Entrega ${detalle.numeroEntrega ?? '—'}`}</td>
+                          <td>{detalle.fechaReferencia
+                            ? detalle.fechaReferencia.split('-').reverse().join('/') : '—'}</td>
+                          <td><Chip tono="error">NO CUMPLE</Chip></td>
+                          <td>{detalle.noCumpleHitss
+                            ? <Chip tono="error">NO CUMPLE</Chip>
+                            : <Chip tono="exito">CUMPLE por atribución EPM</Chip>}</td>
+                          <td>{detalle.tipificacion || '—'}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </TablaScroll>
+                </div>
+              )}
+            </Tarjeta>
             {resumen.filas.length > 0 && (
               <Tarjeta>
                 <details>

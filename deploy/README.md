@@ -20,11 +20,11 @@ Sistema Liquidador).
    - `MONGO_URL`, `MONGO_DB`
    - `JWT_SECRET` (clave larga y única)
    - `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` (credenciales iniciales)
-2. Revisa las variables al inicio de `publicar-iis.bat` si tu entorno difiere:
+2. Revisa las variables al inicio de `bat\publicar-iis.bat` si tu entorno difiere:
    `SITE_NAME`, `APP_POOL`, `PUBLISH_DIR`, `IIS_PYTHON_BASE`.
 3. Ejecuta **como Administrador**:
    ```
-   deploy\publicar-iis.bat
+   bat\publicar-iis.bat
    ```
 
 El script: compila el frontend, copia `api/` y `web/dist/` a `PUBLISH_DIR`, crea el

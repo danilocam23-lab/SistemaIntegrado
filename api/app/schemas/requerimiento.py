@@ -5,7 +5,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.documents.enums import (
     AnsResultado,
@@ -87,6 +87,16 @@ class RequerimientoUpdate(BaseModel):
     developers_asignados: list[str] | None = None
     fecha_inicio: datetime | None = None
     fecha_fin: datetime | None = None
+
+
+class HorasSiguienteAnioUpdate(BaseModel):
+    """Edición independiente del bloque informativo; rechaza campos ajenos."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    horas_siguiente_anio: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
+    fecha_entrega_comprometida_siguiente_anio: datetime | None = None
+    fecha_real_entrega_siguiente_anio: datetime | None = None
 
 
 class FacturacionIn(BaseModel):

@@ -13,10 +13,30 @@ import type { ItemAns } from './calculoAns'
 
 export const SIN_ANALISTA = 'sin_analista'
 
+interface IdentificacionRegistroAnalista {
+  clave: string
+  requerimientoId: string
+  codigoReq: string
+  codigoSc?: string
+  acta: string
+  numeroEntrega: number | null
+  fechaReferencia: string | null
+}
+
 export interface RegistroAnalista extends ItemAns {
   analista: string
   tipo: 'requerimiento' | 'entrega'
   mes: string | null
+  identificacion?: IdentificacionRegistroAnalista
+}
+
+export interface DetalleIncumplimientoAnalista extends IdentificacionRegistroAnalista {
+  analista: string
+  nombreAnalista: string
+  tipo: RegistroAnalista['tipo']
+  tipificacion: ItemAns['tipificacion']
+  noCumpleReal: boolean
+  noCumpleHitss: boolean
 }
 
 export interface FilaAnalista {
@@ -45,12 +65,31 @@ function claveAnalista(r: Requerimiento): string {
   return id?.trim() ? `persona:${id}` : SIN_ANALISTA
 }
 
+function identificarRegistro(
+  r: Requerimiento,
+  e?: Entrega,
+  indice?: number,
+): IdentificacionRegistroAnalista {
+  return {
+    clave: JSON.stringify([r.id, e ? 'entrega' : 'requerimiento', e?.numero ?? null, indice ?? null]),
+    requerimientoId: r.id,
+    codigoReq: r.codigo_req?.trim() || '—',
+    codigoSc: r.solicitud?.codigo_sc?.trim() || '—',
+    acta: r.acta_trabajo?.trim() || r.nombre?.trim() || 'Sin acta',
+    numeroEntrega: e?.numero ?? null,
+    fechaReferencia: (e ? e.fecha_recepcion ?? e.fecha_comprometida : r.fecha_solicitud_acta)
+      ?.slice(0, 10) ?? null,
+  }
+}
+
 /** Mismo universo y clasificación ANS que el dashboard, conservando el padre de cada entrega. */
 export function prepararRegistrosAnalistas(reqs: Requerimiento[]): RegistroAnalista[] {
   const activos = reqs.filter(r => !estaCanceladoOReemplazado(r.estado))
-  const porEntrega = new Map<Entrega, string>()
+  const porEntrega = new Map<Entrega, { padre: Requerimiento; indice: number }>()
   for (const r of activos) {
-    for (const entrega of r.entregas ?? []) porEntrega.set(entrega, claveAnalista(r))
+    for (const [indice, entrega] of (r.entregas ?? []).entries()) {
+      porEntrega.set(entrega, { padre: r, indice })
+    }
   }
   const registros: RegistroAnalista[] = [
     ...itemsAnsReq(activos).map(({ r, ans, tipificacion }): RegistroAnalista => ({
@@ -59,14 +98,19 @@ export function prepararRegistrosAnalistas(reqs: Requerimiento[]): RegistroAnali
       mes: mesCalendario(r.fecha_solicitud_acta),
       ans,
       tipificacion,
+      identificacion: identificarRegistro(r),
     })),
-    ...itemsAnsEntrega(activos).map(({ e, ans, tipificacion }): RegistroAnalista => ({
-      analista: porEntrega.get(e) ?? SIN_ANALISTA,
-      tipo: 'entrega',
-      mes: mesCalendario(e.fecha_recepcion ?? e.fecha_comprometida),
-      ans,
-      tipificacion,
-    })),
+    ...itemsAnsEntrega(activos).map(({ e, ans, tipificacion }): RegistroAnalista => {
+      const origen = porEntrega.get(e)
+      return {
+        analista: origen ? claveAnalista(origen.padre) : SIN_ANALISTA,
+        tipo: 'entrega',
+        mes: mesCalendario(e.fecha_recepcion ?? e.fecha_comprometida),
+        ans,
+        tipificacion,
+        identificacion: origen ? identificarRegistro(origen.padre, e, origen.indice) : undefined,
+      }
+    }),
   ]
   return registros.filter(r => ['cumple', 'no_cumple'].includes(normalizarAns(r.ans)))
 }
@@ -101,11 +145,12 @@ export function resumirAnalistas(
   filtro: { ano: string; mes: string; analista: string },
 ) {
   const porAnalista = new Map<string, FilaAnalista>()
+  const detalles: DetalleIncumplimientoAnalista[] = []
   const nombres = new Map(opciones.map(opcion => [opcion.id, opcion.nombre]))
   let registrosPeriodo = 0
   let requerimientosSinFecha = 0
   let entregasSinFecha = 0
-  for (const registro of registros) {
+  for (const [indice, registro] of registros.entries()) {
     if (filtro.analista && registro.analista !== filtro.analista) continue
     if (!registro.mes) {
       if (normalizarAns(registro.ans) === 'no_cumple') {
@@ -136,9 +181,25 @@ export function resumirAnalistas(
       fila.entregasHitss += hitss
     }
     porAnalista.set(fila.id, fila)
+    detalles.push({
+      clave: `registro:${indice}`,
+      requerimientoId: '',
+      codigoReq: '—',
+      codigoSc: '—',
+      acta: 'Sin acta',
+      numeroEntrega: null,
+      fechaReferencia: null,
+      ...registro.identificacion,
+      analista: fila.id,
+      nombreAnalista: fila.nombre,
+      tipo: registro.tipo,
+      tipificacion: registro.tipificacion,
+      noCumpleReal: real > 0,
+      noCumpleHitss: hitss > 0,
+    })
   }
   const filas = [...porAnalista.values()].sort((a, b) =>
     (b.requerimientosReal + b.entregasReal) - (a.requerimientosReal + a.entregasReal)
     || a.nombre.localeCompare(b.nombre, 'es') || a.id.localeCompare(b.id))
-  return { filas, registrosPeriodo, requerimientosSinFecha, entregasSinFecha }
+  return { filas, detalles, registrosPeriodo, requerimientosSinFecha, entregasSinFecha }
 }

@@ -13,11 +13,21 @@ from bson.decimal128 import Decimal128
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.documents.bitacora import Bitacora
+from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
-from app.security.deps import permiso
+from app.security.deps import permiso, tiene_permiso, usuario_actual
 
 router = APIRouter(prefix="/bitacora", tags=["bitacora"])
 logger = logging.getLogger(__name__)
+
+_NOMBRES_HORAS_SIGUIENTE_ANIO = (
+    "horas para el siguiente año",
+    "fecha entrega comprometida siguiente año",
+    "fecha real entrega siguiente año",
+    "horas_siguiente_anio",
+    "fecha_entrega_comprometida_siguiente_anio",
+    "fecha_real_entrega_siguiente_anio",
+)
 
 
 def _iso(valor: object) -> str | None:
@@ -40,16 +50,25 @@ def _json_safe(valor: object) -> object:
     return str(valor)
 
 
-def _serializar_evento(doc: dict) -> dict:
+def _serializar_evento(doc: dict, puede_ver_horas_siguiente_anio: bool = True) -> dict:
     # Devolvemos un payload estable y plano para evitar errores de serialización
     # por datos históricos con estructura/tipos no compatibles.
+    descripcion = _json_safe(doc.get("descripcion", ""))
+    descripcion_normalizada = descripcion.casefold() if isinstance(descripcion, str) else ""
+    if (
+        not puede_ver_horas_siguiente_anio
+        and doc.get("entidad_tipo") == "requerimiento"
+        and any(nombre in descripcion_normalizada for nombre in _NOMBRES_HORAS_SIGUIENTE_ANIO)
+    ):
+        # Solo se oculta la respuesta; el documento histórico permanece intacto.
+        descripcion = "Detalle restringido de horas para el siguiente año"
     return {
         "id": str(doc.get("_id")),
         "aplicacion_id": _json_safe(doc.get("aplicacion_id")),
         "entidad_tipo": _json_safe(doc.get("entidad_tipo")),
         "entidad_id": _json_safe(doc.get("entidad_id")),
         "accion": _json_safe(doc.get("accion")),
-        "descripcion": _json_safe(doc.get("descripcion", "")),
+        "descripcion": descripcion,
         "autor": _json_safe(doc.get("autor")),
         "creado_en": _iso(doc.get("creado_en")) or str(_json_safe(doc.get("creado_en"))),
         "actualizado_en": _iso(doc.get("actualizado_en")),
@@ -61,8 +80,10 @@ async def listar(
     entidad_id: str | None = None,
     entidad_tipo: str | None = None,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+    usuario: Usuario = Depends(usuario_actual),
 ):
     """Lista eventos de bitácora; filtra opcionalmente por entidad."""
+    puede_ver_horas = await tiene_permiso(usuario, "requerimientos.horas_siguiente_anio.ver")
     consulta = ctx.filtro()
     if entidad_id:
         consulta["entidad_id"] = entidad_id
@@ -72,7 +93,7 @@ async def listar(
     try:
         col = Bitacora.get_pymongo_collection()
         docs = await col.find(consulta).sort("creado_en", -1).limit(200).to_list(None)
-        return [_serializar_evento(d) for d in docs]
+        return [_serializar_evento(d, puede_ver_horas) for d in docs]
     except Exception as exc:  # noqa: BLE001 - error de capa DB
         logger.exception("Error consultando bitácora")
         raise HTTPException(
