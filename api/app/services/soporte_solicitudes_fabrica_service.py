@@ -923,34 +923,74 @@ class SoporteSolicitudesFabricaService:
             raise
 
     @staticmethod
+    async def localizar_archivo_carga_automatica() -> tuple[Path | None, str | None]:
+        """Localiza el Excel de la carga automática en la carpeta configurada.
+
+        Devuelve ``(ruta_archivo, None)`` si lo encontró, o ``(None, motivo)`` con
+        un mensaje específico: sin ruta configurada, carpeta inexistente/sin acceso
+        (la ruta la resuelve el servidor, no el PC del usuario) o archivo ausente
+        (listando los ``.xls*`` presentes).
+        """
+        cfg = await Configuracion.find_one(Configuracion.clave == CLAVE_RUTA_CARGA_LOCAL)
+        ruta = (cfg.valor or "").strip() if cfg else ""
+        if not ruta:
+            return None, (
+                "No hay una ruta de carga configurada. Defínala en "
+                "Configuración > Carga de Excel."
+            )
+
+        carpeta = Path(ruta)
+        try:
+            carpeta_ok = carpeta.is_dir()
+        except OSError:
+            carpeta_ok = False
+        if not carpeta_ok:
+            return None, (
+                f"La carpeta '{ruta}' no existe o el servidor no tiene acceso a ella. "
+                "La ruta la resuelve el servidor (IIS), no el PC del usuario: debe ser "
+                "una ruta visible y con permisos de lectura desde el servidor."
+            )
+
+        candidatos_lower = {n.lower() for n in DEFAULT_ARCHIVO_CANDIDATOS}
+        try:
+            presentes = sorted(
+                p.name
+                for p in carpeta.iterdir()
+                if p.is_file() and p.suffix.lower().startswith(".xls")
+            )
+        except OSError:
+            return None, (
+                f"El servidor no pudo leer el contenido de la carpeta '{ruta}'. "
+                "Verifique los permisos de lectura."
+            )
+        for nombre in presentes:
+            if nombre.lower() in candidatos_lower:
+                return carpeta / nombre, None
+
+        esperados = " / ".join(DEFAULT_ARCHIVO_CANDIDATOS)
+        listado = ", ".join(presentes) if presentes else "ninguno"
+        return None, (
+            f"No se encontró '{esperados}' en '{ruta}'. "
+            f"Archivos Excel presentes en la carpeta: {listado}."
+        )
+
+    @staticmethod
     async def sincronizar_automatico() -> dict | None:
-        """Ejecutada por el scheduler (3 veces al día): busca el Excel en la
+        """Ejecutada por el scheduler (cada hora en punto): busca el Excel en la
         carpeta configurada en Configuración > Carga de Excel y lo sincroniza
         sin pedir confirmación. Los registros con error simplemente se omiten
         (igual que `sincronizar`); quedan registrados en el log para que la
         persona los revise y haga una carga manual si hace falta.
 
         Devuelve None si no hay ruta configurada o no se encontró el archivo
-        (no se considera un error: simplemente no había nada que cargar).
+        (no se considera un error: simplemente no había nada que cargar). Para
+        conocer el motivo, ver ``localizar_archivo_carga_automatica``.
         """
-        cfg = await Configuracion.find_one(Configuracion.clave == CLAVE_RUTA_CARGA_LOCAL)
-        ruta = (cfg.valor or "").strip() if cfg else ""
-        if not ruta:
-            return None
-
-        carpeta = Path(ruta)
-        archivo_encontrado: Path | None = None
-        for nombre in DEFAULT_ARCHIVO_CANDIDATOS:
-            candidato = carpeta / nombre
-            if candidato.exists():
-                archivo_encontrado = candidato
-                break
+        archivo_encontrado, motivo = (
+            await SoporteSolicitudesFabricaService.localizar_archivo_carga_automatica()
+        )
         if archivo_encontrado is None:
-            logger.warning(
-                "Carga automática de Solicitudes Fábrica: no se encontró '%s' en %s",
-                DEFAULT_ARCHIVO_CANDIDATOS[0],
-                ruta,
-            )
+            logger.info("Carga automática de Solicitudes Fábrica: %s", motivo)
             return None
 
         contenido = archivo_encontrado.read_bytes()

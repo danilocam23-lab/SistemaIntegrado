@@ -2,19 +2,19 @@
   "version": 1,
   "metodo": "AST TypeScript: callsites estáticos, sin inferencia DOM. Alcanzabilidad de imports relativos estáticos desde main; no garantiza acceso por permisos.",
   "totales": {
-    "controles": 785,
-    "explicitos": 90,
-    "automaticos": 628,
+    "controles": 797,
+    "explicitos": 98,
+    "automaticos": 632,
     "compartidos": 43,
     "excluidos_seguridad": 10,
     "sin_handler": 10,
     "requiere_adaptador": 4,
     "id_no_registrado": 0,
-    "instrumentados_alcanzables": 689,
+    "instrumentados_alcanzables": 701,
     "formularios": 27,
     "formularios_confirmados": 6,
     "peticiones": 179,
-    "peticiones_catalogadas": 110,
+    "peticiones_catalogadas": 109,
     "peticiones_por_verificar": 16
   },
   "controles": [
@@ -119,7 +119,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 172,
+      "linea": 174,
       "componente": "div",
       "handler": "onCerrar",
       "id": "menu.cerrar",
@@ -130,7 +130,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 206,
+      "linea": 208,
       "componente": "button",
       "handler": "setColapsado",
       "id": "menu.colapsar",
@@ -141,7 +141,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 218,
+      "linea": 220,
       "componente": "button",
       "handler": "onCerrar",
       "id": "menu.cerrar",
@@ -152,7 +152,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 241,
+      "linea": 243,
       "componente": "button",
       "handler": "setGruposCerrados",
       "id": "menu.grupo",
@@ -163,7 +163,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 267,
+      "linea": 269,
       "componente": "button",
       "handler": "alternarGrupo",
       "id": "menu.grupo",
@@ -174,7 +174,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 287,
+      "linea": 289,
       "componente": "NavLink",
       "handler": "",
       "id": "menu.navegar",
@@ -185,7 +185,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 331,
+      "linea": 333,
       "componente": "button",
       "handler": "logout",
       "id": "menu.salir",
@@ -199,7 +199,7 @@
       "linea": 28,
       "componente": "Selector",
       "handler": "onCambiar",
-      "id": "control.components_azure_selectorpersonaazure.oncambiar.cb4e8a8b310d",
+      "id": "control.omponents_azure_selectorpersonaazure.oncambiar.cb4e8a8b310d",
       "accion": "accion_oncambiar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -529,7 +529,7 @@
       "linea": 264,
       "componente": "AreaTexto",
       "handler": "setIteracionesEdicion",
-      "id": "control.pages_adminaplicaciones.setiteracionesedicio.d74473ef8142",
+      "id": "control.pages_adminaplicaciones.setiteracionesedic.d74473ef8142",
       "accion": "accion_setiteracionesedicion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -1185,6 +1185,61 @@
       "alcanzable_desde_main": true
     },
     {
+      "archivo": "src/pages/DashboardAnalistas.tsx",
+      "linea": 126,
+      "componente": "Boton",
+      "handler": "recargar",
+      "id": "dashboard_analistas.recargar",
+      "accion": "accion_recargar",
+      "tipo": "boton",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/DashboardAnalistas.tsx",
+      "linea": 145,
+      "componente": "Selector",
+      "handler": "setAnoElegido",
+      "id": "dashboard_analistas.ano",
+      "accion": "accion_setanoelegido",
+      "tipo": "filtro",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/DashboardAnalistas.tsx",
+      "linea": 153,
+      "componente": "Selector",
+      "handler": "setMes",
+      "id": "dashboard_analistas.mes",
+      "accion": "accion_setmes",
+      "tipo": "filtro",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/DashboardAnalistas.tsx",
+      "linea": 162,
+      "componente": "Selector",
+      "handler": "setAnalista",
+      "id": "dashboard_analistas.analista",
+      "accion": "accion_setanalista",
+      "tipo": "filtro",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/DashboardAnalistas.tsx",
+      "linea": 213,
+      "componente": "summary",
+      "handler": "",
+      "id": "control.pages_dashboardanalistas.summary.b5d582277752",
+      "accion": "alternar",
+      "tipo": "boton",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
       "archivo": "src/pages/DashboardEstados.tsx",
       "linea": 82,
       "componente": "Boton",
@@ -1351,7 +1406,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 599,
+      "linea": 598,
       "componente": "Boton",
       "handler": "exportarExcel",
       "id": "entregas.exportar",
@@ -1362,7 +1417,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 615,
+      "linea": 614,
       "componente": "Campo",
       "handler": "setFiltroTexto",
       "id": "entregas.buscar",
@@ -1373,7 +1428,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 625,
+      "linea": 624,
       "componente": "Selector",
       "handler": "setFiltroMes",
       "id": "entregas.mes",
@@ -1384,7 +1439,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 637,
+      "linea": 636,
       "componente": "Selector",
       "handler": "setFiltroEstado",
       "id": "entregas.estado",
@@ -1395,7 +1450,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 649,
+      "linea": 648,
       "componente": "Selector",
       "handler": "setFiltroAns",
       "id": "entregas.ans",
@@ -1406,7 +1461,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 665,
+      "linea": 664,
       "componente": "Campo",
       "handler": "setFiltroFechaDesde",
       "id": "entregas.compromiso_desde",
@@ -1417,7 +1472,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 673,
+      "linea": 672,
       "componente": "Campo",
       "handler": "setFiltroFechaHasta",
       "id": "entregas.compromiso_hasta",
@@ -1428,7 +1483,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 687,
+      "linea": 686,
       "componente": "Campo",
       "handler": "setFiltroRealDesde",
       "id": "entregas.real_desde",
@@ -1439,7 +1494,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 695,
+      "linea": 694,
       "componente": "Campo",
       "handler": "setFiltroRealHasta",
       "id": "entregas.real_hasta",
@@ -1450,7 +1505,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 706,
+      "linea": 705,
       "componente": "Selector",
       "handler": "setFiltroReqEstado",
       "id": "entregas.req_estado",
@@ -1461,7 +1516,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 718,
+      "linea": 717,
       "componente": "Selector",
       "handler": "setFiltroSquad",
       "id": "entregas.squad",
@@ -1472,7 +1527,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 730,
+      "linea": 729,
       "componente": "Selector",
       "handler": "setFiltroTipificacion",
       "id": "entregas.tipificacion",
@@ -1483,7 +1538,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 742,
+      "linea": 741,
       "componente": "Selector",
       "handler": "setFiltroGarantia",
       "id": "entregas.garantia",
@@ -1494,7 +1549,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 755,
+      "linea": 754,
       "componente": "Boton",
       "handler": "setFiltroTexto",
       "id": "filtro.limpiar",
@@ -1846,7 +1901,7 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 190,
+      "linea": 193,
       "componente": "Boton",
       "handler": "exportarPlantilla",
       "id": "control.pages_importacion.exportarplantilla.1d14144431b9",
@@ -1857,7 +1912,7 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 197,
+      "linea": 200,
       "componente": "Campo",
       "handler": "elegir",
       "id": "control.pages_importacion.elegir.adba371664d5",
@@ -1868,10 +1923,10 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 198,
+      "linea": 201,
       "componente": "Boton",
       "handler": "previsualizarImportacion",
-      "id": "control.pages_importacion.previsualizarimporta.d4cbb568ec86",
+      "id": "control.pages_importacion.previsualizarimpor.d4cbb568ec86",
       "accion": "accion_previsualizarimportacion",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -1879,7 +1934,7 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 239,
+      "linea": 242,
       "componente": "Modal",
       "handler": "",
       "id": null,
@@ -1890,7 +1945,7 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 276,
+      "linea": 279,
       "componente": "summary",
       "handler": "",
       "id": "control.pages_importacion.summary.b5b05aa6e480",
@@ -1901,7 +1956,7 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 301,
+      "linea": 304,
       "componente": "summary",
       "handler": "",
       "id": "control.pages_importacion.summary.b5b05aa6e480",
@@ -1912,10 +1967,10 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 318,
+      "linea": 321,
       "componente": "Boton",
       "handler": "setConfirmacionAbierta",
-      "id": "control.pages_importacion.setconfirmacionabier.f598f53c302a",
+      "id": "control.pages_importacion.setconfirmacionabi.f598f53c302a",
       "accion": "accion_setconfirmacionabierta",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -1923,10 +1978,10 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 326,
+      "linea": 329,
       "componente": "Boton",
       "handler": "confirmarImportacion",
-      "id": "control.pages_importacion.confirmarimportacion.37033bcd5c20",
+      "id": "control.pages_importacion.confirmarimportaci.37033bcd5c20",
       "accion": "accion_confirmarimportacion",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -1970,7 +2025,7 @@
       "linea": 167,
       "componente": "Boton",
       "handler": "exportarPersonasExcel",
-      "id": "control.pages_personas.exportarpersonasexce.d51b47aa3c2a",
+      "id": "control.pages_personas.exportarpersonasex.d51b47aa3c2a",
       "accion": "accion_exportarpersonasexcel",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2135,7 +2190,7 @@
       "linea": 134,
       "componente": "Boton",
       "handler": "verHistorialRequerimiento",
-      "id": "control.pages_requerimientodetalle.verhistorialrequerim.15a72298e3b3",
+      "id": "control.pages_requerimientodetalle.verhistorialrequer.15a72298e3b3",
       "accion": "accion_verhistorialrequerimiento",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2154,7 +2209,40 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 226,
+      "linea": 192,
+      "componente": "Campo",
+      "handler": "actualizar",
+      "id": "control.pages_requerimientodetalle.actualizar.0e8881f3157b",
+      "accion": "accion_actualizar",
+      "tipo": "filtro",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/RequerimientoDetalle.tsx",
+      "linea": 205,
+      "componente": "Campo",
+      "handler": "actualizar",
+      "id": "control.pages_requerimientodetalle.actualizar.3fa7b1a4af82",
+      "accion": "accion_actualizar",
+      "tipo": "filtro",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/RequerimientoDetalle.tsx",
+      "linea": 216,
+      "componente": "Campo",
+      "handler": "actualizar",
+      "id": "control.pages_requerimientodetalle.actualizar.36a941c89893",
+      "accion": "accion_actualizar",
+      "tipo": "filtro",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/RequerimientoDetalle.tsx",
+      "linea": 269,
       "componente": "Boton",
       "handler": "setBitacoraAbierta",
       "id": "control.pages_requerimientodetalle.setbitacoraabierta.9360a34ed6ff",
@@ -2165,7 +2253,7 @@
     },
     {
       "archivo": "src/pages/RequerimientoDetalle.tsx",
-      "linea": 235,
+      "linea": 278,
       "componente": "Modal",
       "handler": "",
       "id": null,
@@ -2399,7 +2487,7 @@
       "linea": 345,
       "componente": "button",
       "handler": "setMostrarRequerimientos",
-      "id": "control.pages_requerimientosdetalleans.setmostrarrequerimie.425fa4f7807d",
+      "id": "control.pages_requerimientosdetalleans.setmostrarrequerim.425fa4f7807d",
       "accion": "accion_setmostrarrequerimientos",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2498,7 +2586,7 @@
       "linea": 244,
       "componente": "Selector",
       "handler": "setFiltroAssignedTo",
-      "id": "control.pages_soportedetalleans.setfiltroassignedto.95a88d7cdd3d",
+      "id": "control.pages_soportedetalleans.setfiltroassignedt.95a88d7cdd3d",
       "accion": "accion_setfiltroassignedto",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -2674,7 +2762,7 @@
       "linea": 287,
       "componente": "Boton",
       "handler": "guardarObservaciones",
-      "id": "control.pages_soportegarantiaswo.guardarobservaciones.913c826fceb5",
+      "id": "control.pages_soportegarantiaswo.guardarobservacion.913c826fceb5",
       "accion": "accion_guardarobservaciones",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2729,7 +2817,7 @@
       "linea": 252,
       "componente": "input",
       "handler": "onArchivoSeleccionado",
-      "id": "control.pages_soportesolicitudesfabrica.onarchivoseleccionad.7953784fe971",
+      "id": "control.pages_soportesolicitudesfabrica.onarchivoseleccion.7953784fe971",
       "accion": "accion_onarchivoseleccionado",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -2740,7 +2828,7 @@
       "linea": 259,
       "componente": "Boton",
       "handler": "abrirSelectorArchivo",
-      "id": "control.pages_soportesolicitudesfabrica.abrirselectorarchivo.77cd497d3085",
+      "id": "control.pages_soportesolicitudesfabrica.abrirselectorarchi.77cd497d3085",
       "accion": "accion_abrirselectorarchivo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2751,7 +2839,7 @@
       "linea": 279,
       "componente": "button",
       "handler": "setMostrarErroresUltimaSync",
-      "id": "control.pages_soportesolicitudesfabrica.setmostrarerroresult.3578ccbaf1b4",
+      "id": "control.pages_soportesolicitudesfabrica.setmostrarerroresu.3578ccbaf1b4",
       "accion": "accion_setmostrarerroresultimasync",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2762,7 +2850,7 @@
       "linea": 313,
       "componente": "Boton",
       "handler": "descargarErroresCsv",
-      "id": "control.pages_soportesolicitudesfabrica.descargarerrorescsv.4010e75e4dd6",
+      "id": "control.pages_soportesolicitudesfabrica.descargarerrorescs.4010e75e4dd6",
       "accion": "accion_descargarerrorescsv",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2784,7 +2872,7 @@
       "linea": 335,
       "componente": "Boton",
       "handler": "setFiltroWorkOrderID",
-      "id": "control.pages_soportesolicitudesfabrica.setfiltroworkorderid.b90d0d756477",
+      "id": "control.pages_soportesolicitudesfabrica.setfiltroworkorder.b90d0d756477",
       "accion": "accion_setfiltroworkorderid",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2861,7 +2949,7 @@
       "linea": 460,
       "componente": "Boton",
       "handler": "confirmarSincronizacion",
-      "id": "control.pages_soportesolicitudesfabrica.confirmarsincronizac.9f9de12c1f06",
+      "id": "control.pages_soportesolicitudesfabrica.confirmarsincroniz.9f9de12c1f06",
       "accion": "accion_confirmarsincronizacion",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2883,7 +2971,7 @@
       "linea": 483,
       "componente": "Boton",
       "handler": "setDescripcionSeleccionada",
-      "id": "control.pages_soportesolicitudesfabrica.setdescripcionselecc.a3081ec0d865",
+      "id": "control.pages_soportesolicitudesfabrica.setdescripcionsele.a3081ec0d865",
       "accion": "accion_setdescripcionseleccionada",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -2905,7 +2993,7 @@
       "linea": 509,
       "componente": "Boton",
       "handler": "setTaskSeleccionada",
-      "id": "control.pages_soportesolicitudesfabrica.settaskseleccionada.c38615d1f118",
+      "id": "control.pages_soportesolicitudesfabrica.settaskseleccionad.c38615d1f118",
       "accion": "accion_settaskseleccionada",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3048,7 +3136,7 @@
       "linea": 245,
       "componente": "Selector",
       "handler": "setEditRamificacion",
-      "id": "control.pages_tarifas.seteditramificacion.a2c2a1b69631",
+      "id": "control.pages_tarifas.seteditramificacio.a2c2a1b69631",
       "accion": "accion_seteditramificacion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3077,6 +3165,50 @@
       "alcanzable_desde_main": false
     },
     {
+      "archivo": "src/pages/UsoPersonas.tsx",
+      "linea": 93,
+      "componente": "Campo",
+      "handler": "setDesde",
+      "id": "uso.desde",
+      "accion": "accion_setdesde",
+      "tipo": "filtro",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/UsoPersonas.tsx",
+      "linea": 101,
+      "componente": "Campo",
+      "handler": "setHasta",
+      "id": "uso.hasta",
+      "accion": "accion_sethasta",
+      "tipo": "filtro",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/UsoPersonas.tsx",
+      "linea": 109,
+      "componente": "Boton",
+      "handler": "setConsulta",
+      "id": "uso.consultar",
+      "accion": "accion_setconsulta",
+      "tipo": "boton",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/UsoPersonas.tsx",
+      "linea": 172,
+      "componente": "Boton",
+      "handler": "alternar",
+      "id": "uso.detalle",
+      "accion": "accion_alternar",
+      "tipo": "boton",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
       "archivo": "src/pages/Usuarios.tsx",
       "linea": 434,
       "componente": "button",
@@ -3103,7 +3235,7 @@
       "linea": 21,
       "componente": "Campo",
       "handler": "setIdentificador",
-      "id": "control.ages_admin_endpoints_formulariodiagnostico.setidentificador.dbec829945c5",
+      "id": "control.dmin_endpoints_formulariodiagnostico.setidentificador.dbec829945c5",
       "accion": "accion_setidentificador",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3114,7 +3246,7 @@
       "linea": 29,
       "componente": "Boton",
       "handler": "",
-      "id": "control.ages_admin_endpoints_formulariodiagnostico.boton.ec8b693c37f0",
+      "id": "control.dmin_endpoints_formulariodiagnostico.boton.ec8b693c37f0",
       "accion": "activar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3125,7 +3257,7 @@
       "linea": 28,
       "componente": "Selector",
       "handler": "onChange",
-      "id": "control.pages_admin_endpoints_formularioinvocacion.onchange.3741a139d654",
+      "id": "control.admin_endpoints_formularioinvocacion.onchange.3741a139d654",
       "accion": "accion_onchange",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3136,7 +3268,7 @@
       "linea": 40,
       "componente": "Selector",
       "handler": "onChange",
-      "id": "control.pages_admin_endpoints_formularioinvocacion.onchange.3741a139d654",
+      "id": "control.admin_endpoints_formularioinvocacion.onchange.3741a139d654",
       "accion": "accion_onchange",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3158,7 +3290,7 @@
       "linea": 86,
       "componente": "Campo",
       "handler": "actualizarPath",
-      "id": "control.pages_admin_endpoints_formularioinvocacion.actualizarpath.ef3735160da7",
+      "id": "control.admin_endpoints_formularioinvocacion.actualizarpath.ef3735160da7",
       "accion": "accion_actualizarpath",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3191,7 +3323,7 @@
       "linea": 141,
       "componente": "AreaTexto",
       "handler": "setCuerpoTexto",
-      "id": "control.pages_admin_endpoints_formularioinvocacion.setcuerpotexto.08726d592e16",
+      "id": "control.admin_endpoints_formularioinvocacion.setcuerpotexto.08726d592e16",
       "accion": "accion_setcuerpotexto",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3213,7 +3345,7 @@
       "linea": 65,
       "componente": "Selector",
       "handler": "onAplicacionChange",
-      "id": "control.dmin_endpoints_formularioprobarintegracion.onaplicacionchange.6cf846adecc5",
+      "id": "control.ndpoints_formularioprobarintegracion.onaplicacionchange.6cf846adecc5",
       "accion": "accion_onaplicacionchange",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3224,7 +3356,7 @@
       "linea": 79,
       "componente": "Boton",
       "handler": "",
-      "id": "control.dmin_endpoints_formularioprobarintegracion.boton.9f9303879623",
+      "id": "control.ndpoints_formularioprobarintegracion.boton.9f9303879623",
       "accion": "activar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3235,7 +3367,7 @@
       "linea": 23,
       "componente": "Selector",
       "handler": "setNuevaAplicacion",
-      "id": "control.ges_admin_endpoints_formularioreasignacion.setnuevaaplicacion.a3f1340c64b6",
+      "id": "control.min_endpoints_formularioreasignacion.setnuevaaplicacion.a3f1340c64b6",
       "accion": "accion_setnuevaaplicacion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3246,7 +3378,7 @@
       "linea": 37,
       "componente": "Boton",
       "handler": "",
-      "id": "control.ges_admin_endpoints_formularioreasignacion.boton.b640fa9458db",
+      "id": "control.min_endpoints_formularioreasignacion.boton.b640fa9458db",
       "accion": "activar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3290,7 +3422,7 @@
       "linea": 60,
       "componente": "Boton",
       "handler": "intentarEjecutar",
-      "id": "control.pages_admin_endpoints_probadorendpoint.intentarejecutar.068e53cd6817",
+      "id": "control.ges_admin_endpoints_probadorendpoint.intentarejecutar.068e53cd6817",
       "accion": "accion_intentarejecutar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3312,7 +3444,7 @@
       "linea": 108,
       "componente": "Campo",
       "handler": "setRutaConfirmacion",
-      "id": "control.pages_admin_endpoints_probadorendpoint.setrutaconfirmacion.f7d5e6033dc6",
+      "id": "control.ges_admin_endpoints_probadorendpoint.setrutaconfirmacio.f7d5e6033dc6",
       "accion": "accion_setrutaconfirmacion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3323,7 +3455,7 @@
       "linea": 117,
       "componente": "Boton",
       "handler": "cancelarConfirmacion",
-      "id": "control.pages_admin_endpoints_probadorendpoint.cancelarconfirmacion.ac85e6351db1",
+      "id": "control.ges_admin_endpoints_probadorendpoint.cancelarconfirmaci.ac85e6351db1",
       "accion": "accion_cancelarconfirmacion",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3334,7 +3466,7 @@
       "linea": 120,
       "componente": "Boton",
       "handler": "confirmar",
-      "id": "control.pages_admin_endpoints_probadorendpoint.confirmar.a12270e5baa0",
+      "id": "control.ges_admin_endpoints_probadorendpoint.confirmar.a12270e5baa0",
       "accion": "accion_confirmar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3345,7 +3477,7 @@
       "linea": 41,
       "componente": "Campo",
       "handler": "setNuevoModulo",
-      "id": "control.s_admin_endpoints_seccioncatalogoendpoints.setnuevomodulo.b3629e4fa38d",
+      "id": "control.n_endpoints_seccioncatalogoendpoints.setnuevomodulo.b3629e4fa38d",
       "accion": "accion_setnuevomodulo",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3356,7 +3488,7 @@
       "linea": 51,
       "componente": "Selector",
       "handler": "setNuevoMetodo",
-      "id": "control.s_admin_endpoints_seccioncatalogoendpoints.setnuevometodo.6cf3f4802fb2",
+      "id": "control.n_endpoints_seccioncatalogoendpoints.setnuevometodo.6cf3f4802fb2",
       "accion": "accion_setnuevometodo",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3367,7 +3499,7 @@
       "linea": 62,
       "componente": "Campo",
       "handler": "setNuevaRuta",
-      "id": "control.s_admin_endpoints_seccioncatalogoendpoints.setnuevaruta.59263c12b1f0",
+      "id": "control.n_endpoints_seccioncatalogoendpoints.setnuevaruta.59263c12b1f0",
       "accion": "accion_setnuevaruta",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3378,7 +3510,7 @@
       "linea": 72,
       "componente": "Campo",
       "handler": "setNuevaDescripcion",
-      "id": "control.s_admin_endpoints_seccioncatalogoendpoints.setnuevadescripcion.e3b6323512b8",
+      "id": "control.n_endpoints_seccioncatalogoendpoints.setnuevadescripcio.e3b6323512b8",
       "accion": "accion_setnuevadescripcion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3389,7 +3521,7 @@
       "linea": 79,
       "componente": "Boton",
       "handler": "",
-      "id": "control.s_admin_endpoints_seccioncatalogoendpoints.boton.39db738c04c5",
+      "id": "control.n_endpoints_seccioncatalogoendpoints.boton.39db738c04c5",
       "accion": "activar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3400,7 +3532,7 @@
       "linea": 117,
       "componente": "button",
       "handler": "eliminarEndpointAdmin",
-      "id": "control.s_admin_endpoints_seccioncatalogoendpoints.eliminarendpointadmi.41a7024c05b3",
+      "id": "control.n_endpoints_seccioncatalogoendpoints.eliminarendpointad.41a7024c05b3",
       "accion": "accion_eliminarendpointadmin",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3411,7 +3543,7 @@
       "linea": 49,
       "componente": "Selector",
       "handler": "setModulo",
-      "id": "control.pages_admin_endpoints_secciondocumentacion.setmodulo.2bae7fc8ae48",
+      "id": "control.admin_endpoints_secciondocumentacion.setmodulo.2bae7fc8ae48",
       "accion": "accion_setmodulo",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3422,7 +3554,7 @@
       "linea": 56,
       "componente": "Campo",
       "handler": "setFiltro",
-      "id": "control.pages_admin_endpoints_secciondocumentacion.setfiltro.816b20a4c370",
+      "id": "control.admin_endpoints_secciondocumentacion.setfiltro.816b20a4c370",
       "accion": "accion_setfiltro",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3433,7 +3565,7 @@
       "linea": 103,
       "componente": "button",
       "handler": "setSeleccionado",
-      "id": "control.pages_admin_endpoints_secciondocumentacion.setseleccionado.6dad25fa3d7e",
+      "id": "control.admin_endpoints_secciondocumentacion.setseleccionado.6dad25fa3d7e",
       "accion": "accion_setseleccionado",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3444,7 +3576,7 @@
       "linea": 76,
       "componente": "Campo",
       "handler": "setEstadoRequerimientosIntegracion",
-      "id": "control._admin_endpoints_seccionpruebasintegracion.setestadorequerimien.3c4a3b64f778",
+      "id": "control._endpoints_seccionpruebasintegracion.setestadorequerimi.3c4a3b64f778",
       "accion": "accion_setestadorequerimientosintegracion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3477,7 +3609,7 @@
       "linea": 61,
       "componente": "Boton",
       "handler": "setAbiertoMovil",
-      "id": "control.ages_asignaciones_barrafiltrosasignaciones.setabiertomovil.37fbc4aa3053",
+      "id": "control.signaciones_barrafiltrosasignaciones.setabiertomovil.37fbc4aa3053",
       "accion": "accion_setabiertomovil",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3488,7 +3620,7 @@
       "linea": 70,
       "componente": "button",
       "handler": "onLimpiar",
-      "id": "control.ages_asignaciones_barrafiltrosasignaciones.onlimpiar.d62d85533ef0",
+      "id": "control.signaciones_barrafiltrosasignaciones.onlimpiar.d62d85533ef0",
       "accion": "accion_onlimpiar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3499,7 +3631,7 @@
       "linea": 78,
       "componente": "Selector",
       "handler": "onCambio",
-      "id": "control.ages_asignaciones_barrafiltrosasignaciones.oncambio.4b87d10d5059",
+      "id": "control.signaciones_barrafiltrosasignaciones.oncambio.4b87d10d5059",
       "accion": "accion_oncambio",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3510,7 +3642,7 @@
       "linea": 91,
       "componente": "Campo",
       "handler": "setTextoReq",
-      "id": "control.ages_asignaciones_barrafiltrosasignaciones.settextoreq.af4e9675247a",
+      "id": "control.signaciones_barrafiltrosasignaciones.settextoreq.af4e9675247a",
       "accion": "accion_settextoreq",
       "tipo": "busqueda",
       "cobertura": "automatico",
@@ -3521,7 +3653,7 @@
       "linea": 116,
       "componente": "Boton",
       "handler": "onCambio",
-      "id": "control.ages_asignaciones_barrafiltrosasignaciones.oncambio.a7564da96633",
+      "id": "control.signaciones_barrafiltrosasignaciones.oncambio.a7564da96633",
       "accion": "accion_oncambio",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3532,7 +3664,7 @@
       "linea": 131,
       "componente": "button",
       "handler": "onLimpiar",
-      "id": "control.ages_asignaciones_barrafiltrosasignaciones.onlimpiar.d62d85533ef0",
+      "id": "control.signaciones_barrafiltrosasignaciones.onlimpiar.d62d85533ef0",
       "accion": "accion_onlimpiar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3631,7 +3763,7 @@
       "linea": 84,
       "componente": "Boton",
       "handler": "onAsignarSintetica",
-      "id": "control.pages_asignaciones_filaasignacionmovil.onasignarsintetica.91418388ab65",
+      "id": "control.ges_asignaciones_filaasignacionmovil.onasignarsintetica.91418388ab65",
       "accion": "accion_onasignarsintetica",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3642,7 +3774,7 @@
       "linea": 95,
       "componente": "button",
       "handler": "onEditar",
-      "id": "control.pages_asignaciones_filaasignacionmovil.oneditar.bf57d3cb7d8c",
+      "id": "control.ges_asignaciones_filaasignacionmovil.oneditar.bf57d3cb7d8c",
       "accion": "accion_oneditar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3653,7 +3785,7 @@
       "linea": 96,
       "componente": "button",
       "handler": "onEliminar",
-      "id": "control.pages_asignaciones_filaasignacionmovil.oneliminar.3c05de3800e0",
+      "id": "control.ges_asignaciones_filaasignacionmovil.oneliminar.3c05de3800e0",
       "accion": "accion_oneliminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3664,7 +3796,7 @@
       "linea": 112,
       "componente": "button",
       "handler": "onCerrarError",
-      "id": "control.pages_asignaciones_filaasignacionmovil.oncerrarerror.8e4cd233decb",
+      "id": "control.ges_asignaciones_filaasignacionmovil.oncerrarerror.8e4cd233decb",
       "accion": "accion_oncerrarerror",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -3697,7 +3829,7 @@
       "linea": 79,
       "componente": "button",
       "handler": "onToggle",
-      "id": "control.pages_asignaciones_gruporequerimiento.ontoggle.028c87f8d6df",
+      "id": "control.ages_asignaciones_gruporequerimiento.ontoggle.028c87f8d6df",
       "accion": "accion_ontoggle",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3708,7 +3840,7 @@
       "linea": 140,
       "componente": "Link",
       "handler": "",
-      "id": "control.pages_asignaciones_gruporequerimiento.link.966b0200763b",
+      "id": "control.ages_asignaciones_gruporequerimiento.link.966b0200763b",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -3719,7 +3851,7 @@
       "linea": 145,
       "componente": "button",
       "handler": "setMostrarDetalle",
-      "id": "control.pages_asignaciones_gruporequerimiento.setmostrardetalle.5f6950a5f999",
+      "id": "control.ages_asignaciones_gruporequerimiento.setmostrardetalle.5f6950a5f999",
       "accion": "accion_setmostrardetalle",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3730,7 +3862,7 @@
       "linea": 154,
       "componente": "Boton",
       "handler": "onAsignar",
-      "id": "control.pages_asignaciones_gruporequerimiento.onasignar.dadd9ee95462",
+      "id": "control.ages_asignaciones_gruporequerimiento.onasignar.dadd9ee95462",
       "accion": "accion_onasignar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -3774,7 +3906,7 @@
       "linea": 95,
       "componente": "button",
       "handler": "onCerrar",
-      "id": "control.pages_asignaciones_modaldetallehorasazure.oncerrar.cb792a02dc1b",
+      "id": "control._asignaciones_modaldetallehorasazure.oncerrar.cb792a02dc1b",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -3785,7 +3917,7 @@
       "linea": 121,
       "componente": "Boton",
       "handler": "onCerrar",
-      "id": "control.pages_asignaciones_modaldetallehorasazure.oncerrar.39e41369f1d2",
+      "id": "control._asignaciones_modaldetallehorasazure.oncerrar.39e41369f1d2",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -3994,7 +4126,7 @@
       "linea": 27,
       "componente": "Campo",
       "handler": "setEdicionInlineValor",
-      "id": "control.pages_asignaciones_porcentajeeditable.setedicioninlinevalo.85848d3381e7",
+      "id": "control.ages_asignaciones_porcentajeeditable.setedicioninlineva.85848d3381e7",
       "accion": "accion_setedicioninlinevalor",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4005,7 +4137,7 @@
       "linea": 59,
       "componente": "button",
       "handler": "iniciarEdicionInline",
-      "id": "control.pages_asignaciones_porcentajeeditable.iniciaredicioninline.66af8447d2dc",
+      "id": "control.ages_asignaciones_porcentajeeditable.iniciaredicioninli.66af8447d2dc",
       "accion": "accion_iniciaredicioninline",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4016,7 +4148,7 @@
       "linea": 30,
       "componente": "summary",
       "handler": "",
-      "id": "control.pages_asignaciones_tablabacklogpersona.summary.c21eb3803523",
+      "id": "control.ges_asignaciones_tablabacklogpersona.summary.c21eb3803523",
       "accion": "alternar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4148,7 +4280,7 @@
       "linea": 43,
       "componente": "Campo",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.74056215e453",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.74056215e453",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4159,7 +4291,7 @@
       "linea": 51,
       "componente": "Campo",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.1ceead13e0fb",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.1ceead13e0fb",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4170,7 +4302,7 @@
       "linea": 58,
       "componente": "Selector",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.cc6228a16937",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.cc6228a16937",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4181,7 +4313,7 @@
       "linea": 71,
       "componente": "Selector",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.7df27c62dd5c",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.7df27c62dd5c",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4192,7 +4324,7 @@
       "linea": 83,
       "componente": "Campo",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.fcb2d66fe8d4",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.fcb2d66fe8d4",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4203,7 +4335,7 @@
       "linea": 93,
       "componente": "Campo",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.c0fddd7b7a18",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.c0fddd7b7a18",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4214,7 +4346,7 @@
       "linea": 101,
       "componente": "Selector",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.02d1652bd620",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.02d1652bd620",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4225,7 +4357,7 @@
       "linea": 112,
       "componente": "Selector",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.b9c57c906df9",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.b9c57c906df9",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4236,7 +4368,7 @@
       "linea": 123,
       "componente": "Selector",
       "handler": "setForm",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.setform.8e388b0319e6",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.setform.8e388b0319e6",
       "accion": "accion_setform",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4247,7 +4379,7 @@
       "linea": 140,
       "componente": "Boton",
       "handler": "onCerrar",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.oncerrar.a07299ca3de1",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.oncerrar.a07299ca3de1",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -4258,7 +4390,7 @@
       "linea": 143,
       "componente": "Boton",
       "handler": "",
-      "id": "control.pages_backlog_futuro_modalbacklogfuturo.boton.19ffc09313cb",
+      "id": "control.es_backlog_futuro_modalbacklogfuturo.boton.19ffc09313cb",
       "accion": "activar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4302,7 +4434,7 @@
       "linea": 33,
       "componente": "Boton",
       "handler": "onAnio",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onanio.40c203040d79",
+      "id": "control._capacidades_barrafiltroscapacidades.onanio.40c203040d79",
       "accion": "accion_onanio",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4313,7 +4445,7 @@
       "linea": 35,
       "componente": "Boton",
       "handler": "onAnio",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onanio.7284fdb2f250",
+      "id": "control._capacidades_barrafiltroscapacidades.onanio.7284fdb2f250",
       "accion": "accion_onanio",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4324,7 +4456,7 @@
       "linea": 45,
       "componente": "Boton",
       "handler": "onAnio",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onanio.9728f4bf17c9",
+      "id": "control._capacidades_barrafiltroscapacidades.onanio.9728f4bf17c9",
       "accion": "accion_onanio",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4335,7 +4467,7 @@
       "linea": 52,
       "componente": "Boton",
       "handler": "onVista",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onvista.37c142eb0aa6",
+      "id": "control._capacidades_barrafiltroscapacidades.onvista.37c142eb0aa6",
       "accion": "accion_onvista",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4346,7 +4478,7 @@
       "linea": 54,
       "componente": "Boton",
       "handler": "onVista",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onvista.bd46a8f1ae2e",
+      "id": "control._capacidades_barrafiltroscapacidades.onvista.bd46a8f1ae2e",
       "accion": "accion_onvista",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4357,7 +4489,7 @@
       "linea": 62,
       "componente": "Boton",
       "handler": "onModo",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onmodo.3a7730c9c49c",
+      "id": "control._capacidades_barrafiltroscapacidades.onmodo.3a7730c9c49c",
       "accion": "accion_onmodo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4368,7 +4500,7 @@
       "linea": 64,
       "componente": "Boton",
       "handler": "onModo",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onmodo.d94c700bdcf1",
+      "id": "control._capacidades_barrafiltroscapacidades.onmodo.d94c700bdcf1",
       "accion": "accion_onmodo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4379,7 +4511,7 @@
       "linea": 69,
       "componente": "Campo",
       "handler": "onFiltros",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onfiltros.75c5a370ce82",
+      "id": "control._capacidades_barrafiltroscapacidades.onfiltros.75c5a370ce82",
       "accion": "accion_onfiltros",
       "tipo": "busqueda",
       "cobertura": "automatico",
@@ -4390,7 +4522,7 @@
       "linea": 80,
       "componente": "Selector",
       "handler": "onFiltros",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onfiltros.cb8128cd83f2",
+      "id": "control._capacidades_barrafiltroscapacidades.onfiltros.cb8128cd83f2",
       "accion": "accion_onfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4401,7 +4533,7 @@
       "linea": 92,
       "componente": "Boton",
       "handler": "onFiltros",
-      "id": "control.pages_capacidades_barrafiltroscapacidades.onfiltros.49fcced1ffd5",
+      "id": "control._capacidades_barrafiltroscapacidades.onfiltros.49fcced1ffd5",
       "accion": "accion_onfiltros",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4764,7 +4896,7 @@
       "linea": 33,
       "componente": "Campo",
       "handler": "setEditClave",
-      "id": "control.pages_configuracion_modaleditarparametro.seteditclave.610b795516ac",
+      "id": "control.s_configuracion_modaleditarparametro.seteditclave.610b795516ac",
       "accion": "accion_seteditclave",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4775,7 +4907,7 @@
       "linea": 39,
       "componente": "Campo",
       "handler": "setEditGrupo",
-      "id": "control.pages_configuracion_modaleditarparametro.seteditgrupo.10484f5aa48c",
+      "id": "control.s_configuracion_modaleditarparametro.seteditgrupo.10484f5aa48c",
       "accion": "accion_seteditgrupo",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4786,7 +4918,7 @@
       "linea": 45,
       "componente": "AreaTexto",
       "handler": "setEditValor",
-      "id": "control.pages_configuracion_modaleditarparametro.seteditvalor.cd9f4bdb84df",
+      "id": "control.s_configuracion_modaleditarparametro.seteditvalor.cd9f4bdb84df",
       "accion": "accion_seteditvalor",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4797,7 +4929,7 @@
       "linea": 53,
       "componente": "Boton",
       "handler": "setEditItem",
-      "id": "control.pages_configuracion_modaleditarparametro.setedititem.942221d82612",
+      "id": "control.s_configuracion_modaleditarparametro.setedititem.942221d82612",
       "accion": "accion_setedititem",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4808,7 +4940,7 @@
       "linea": 56,
       "componente": "Boton",
       "handler": "guardarEdicion",
-      "id": "control.pages_configuracion_modaleditarparametro.guardaredicion.af181ca8f5a6",
+      "id": "control.s_configuracion_modaleditarparametro.guardaredicion.af181ca8f5a6",
       "accion": "accion_guardaredicion",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4830,7 +4962,7 @@
       "linea": 34,
       "componente": "Campo",
       "handler": "setTEditAnio",
-      "id": "control.pages_configuracion_modaleditartarifa.setteditanio.07bf006e979e",
+      "id": "control.ages_configuracion_modaleditartarifa.setteditanio.07bf006e979e",
       "accion": "accion_setteditanio",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4841,7 +4973,7 @@
       "linea": 41,
       "componente": "Campo",
       "handler": "setTEditValorHora",
-      "id": "control.pages_configuracion_modaleditartarifa.setteditvalorhora.de3d15c6ad02",
+      "id": "control.ages_configuracion_modaleditartarifa.setteditvalorhora.de3d15c6ad02",
       "accion": "accion_setteditvalorhora",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4852,7 +4984,7 @@
       "linea": 48,
       "componente": "Selector",
       "handler": "setTEditRamificacion",
-      "id": "control.pages_configuracion_modaleditartarifa.setteditramificacion.0f139252fe8a",
+      "id": "control.ages_configuracion_modaleditartarifa.setteditramificaci.0f139252fe8a",
       "accion": "accion_setteditramificacion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4863,7 +4995,7 @@
       "linea": 57,
       "componente": "Boton",
       "handler": "setTEditItem",
-      "id": "control.pages_configuracion_modaleditartarifa.settedititem.073ccd932a47",
+      "id": "control.ages_configuracion_modaleditartarifa.settedititem.073ccd932a47",
       "accion": "accion_settedititem",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4874,7 +5006,7 @@
       "linea": 60,
       "componente": "Boton",
       "handler": "guardarPopupTarifa",
-      "id": "control.pages_configuracion_modaleditartarifa.guardarpopuptarifa.6657c8b247bc",
+      "id": "control.ages_configuracion_modaleditartarifa.guardarpopuptarifa.6657c8b247bc",
       "accion": "accion_guardarpopuptarifa",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4885,7 +5017,7 @@
       "linea": 144,
       "componente": "Interruptor",
       "handler": "alternarTipo",
-      "id": "control.pages_configuracion_seccionazuredevops.alternartipo.a7db0d19f2f3",
+      "id": "control.ges_configuracion_seccionazuredevops.alternartipo.a7db0d19f2f3",
       "accion": "accion_alternartipo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4896,7 +5028,7 @@
       "linea": 158,
       "componente": "Boton",
       "handler": "guardar",
-      "id": "control.pages_configuracion_seccionazuredevops.guardar.56e97cb687b8",
+      "id": "control.ges_configuracion_seccionazuredevops.guardar.56e97cb687b8",
       "accion": "accion_guardar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4907,7 +5039,7 @@
       "linea": 48,
       "componente": "input",
       "handler": "alternarColumna",
-      "id": "control.s_configuracion_seccioncamposconfigurables.alternarcolumna.311cf82f2813",
+      "id": "control.iguracion_seccioncamposconfigurables.alternarcolumna.311cf82f2813",
       "accion": "accion_alternarcolumna",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4918,7 +5050,7 @@
       "linea": 70,
       "componente": "input",
       "handler": "alternarFiltro",
-      "id": "control.s_configuracion_seccioncamposconfigurables.alternarfiltro.446103f0e02e",
+      "id": "control.iguracion_seccioncamposconfigurables.alternarfiltro.446103f0e02e",
       "accion": "accion_alternarfiltro",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4929,7 +5061,7 @@
       "linea": 93,
       "componente": "input",
       "handler": "alternarExport",
-      "id": "control.s_configuracion_seccioncamposconfigurables.alternarexport.9fe631ac6b3a",
+      "id": "control.iguracion_seccioncamposconfigurables.alternarexport.9fe631ac6b3a",
       "accion": "accion_alternarexport",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4940,7 +5072,7 @@
       "linea": 36,
       "componente": "Campo",
       "handler": "setRutaCargaExcel",
-      "id": "control.pages_configuracion_seccioncargaexcel.setrutacargaexcel.ce40c8db3534",
+      "id": "control.ages_configuracion_seccioncargaexcel.setrutacargaexcel.ce40c8db3534",
       "accion": "accion_setrutacargaexcel",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4951,7 +5083,7 @@
       "linea": 44,
       "componente": "Boton",
       "handler": "",
-      "id": "control.pages_configuracion_seccioncargaexcel.boton.e22e8186bfd9",
+      "id": "control.ages_configuracion_seccioncargaexcel.boton.e22e8186bfd9",
       "accion": "activar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4962,7 +5094,7 @@
       "linea": 53,
       "componente": "Boton",
       "handler": "consultarUltimaEjecucionAuto",
-      "id": "control.pages_configuracion_seccioncargaexcel.consultarultimaejecu.a28adec2654a",
+      "id": "control.ages_configuracion_seccioncargaexcel.consultarultimaeje.a28adec2654a",
       "accion": "accion_consultarultimaejecucionauto",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4973,7 +5105,7 @@
       "linea": 111,
       "componente": "Boton",
       "handler": "probarCargaAutomatica",
-      "id": "control.pages_configuracion_seccioncargaexcel.probarcargaautomatic.592e1f839bc8",
+      "id": "control.ages_configuracion_seccioncargaexcel.probarcargaautomat.592e1f839bc8",
       "accion": "accion_probarcargaautomatica",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4984,7 +5116,7 @@
       "linea": 32,
       "componente": "Campo",
       "handler": "setCNombre",
-      "id": "control.pages_configuracion_seccioncategorias.setcnombre.c62a16eefd33",
+      "id": "control.ages_configuracion_seccioncategorias.setcnombre.c62a16eefd33",
       "accion": "accion_setcnombre",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4995,7 +5127,7 @@
       "linea": 38,
       "componente": "Campo",
       "handler": "setCColor",
-      "id": "control.pages_configuracion_seccioncategorias.setccolor.205749c530b7",
+      "id": "control.ages_configuracion_seccioncategorias.setccolor.205749c530b7",
       "accion": "accion_setccolor",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5006,7 +5138,7 @@
       "linea": 45,
       "componente": "Boton",
       "handler": "",
-      "id": "control.pages_configuracion_seccioncategorias.boton.4fe581a641be",
+      "id": "control.ages_configuracion_seccioncategorias.boton.4fe581a641be",
       "accion": "activar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5017,7 +5149,7 @@
       "linea": 66,
       "componente": "Campo",
       "handler": "setCEditValue",
-      "id": "control.pages_configuracion_seccioncategorias.setceditvalue.a86ae5f313b8",
+      "id": "control.ages_configuracion_seccioncategorias.setceditvalue.a86ae5f313b8",
       "accion": "accion_setceditvalue",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5028,7 +5160,7 @@
       "linea": 78,
       "componente": "Campo",
       "handler": "setCEditValue",
-      "id": "control.pages_configuracion_seccioncategorias.setceditvalue.a86ae5f313b8",
+      "id": "control.ages_configuracion_seccioncategorias.setceditvalue.a86ae5f313b8",
       "accion": "accion_setceditvalue",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5039,7 +5171,7 @@
       "linea": 89,
       "componente": "Campo",
       "handler": "setCEditValue",
-      "id": "control.pages_configuracion_seccioncategorias.setceditvalue.a86ae5f313b8",
+      "id": "control.ages_configuracion_seccioncategorias.setceditvalue.a86ae5f313b8",
       "accion": "accion_setceditvalue",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5050,7 +5182,7 @@
       "linea": 102,
       "componente": "button",
       "handler": "cEliminar",
-      "id": "control.pages_configuracion_seccioncategorias.celiminar.a1228d3008dd",
+      "id": "control.ages_configuracion_seccioncategorias.celiminar.a1228d3008dd",
       "accion": "accion_celiminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5160,7 +5292,7 @@
       "linea": 32,
       "componente": "button",
       "handler": "quitar",
-      "id": "control.pages_configuracion_seccionlistachips.quitar.8722a1b6cba7",
+      "id": "control.ages_configuracion_seccionlistachips.quitar.8722a1b6cba7",
       "accion": "accion_quitar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5171,7 +5303,7 @@
       "linea": 38,
       "componente": "Campo",
       "handler": "setNuevo",
-      "id": "control.pages_configuracion_seccionlistachips.setnuevo.219547430c06",
+      "id": "control.ages_configuracion_seccionlistachips.setnuevo.219547430c06",
       "accion": "accion_setnuevo",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5182,7 +5314,7 @@
       "linea": 41,
       "componente": "Boton",
       "handler": "agregar",
-      "id": "control.pages_configuracion_seccionlistachips.agregar.e92b3ba1a0b0",
+      "id": "control.ages_configuracion_seccionlistachips.agregar.e92b3ba1a0b0",
       "accion": "accion_agregar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5193,7 +5325,7 @@
       "linea": 53,
       "componente": "Campo",
       "handler": "setNuevaClave",
-      "id": "control.pages_configuracion_seccionparametros.setnuevaclave.b3564422ff80",
+      "id": "control.ages_configuracion_seccionparametros.setnuevaclave.b3564422ff80",
       "accion": "accion_setnuevaclave",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5204,7 +5336,7 @@
       "linea": 59,
       "componente": "Campo",
       "handler": "setNuevoValor",
-      "id": "control.pages_configuracion_seccionparametros.setnuevovalor.26caa10fcd0d",
+      "id": "control.ages_configuracion_seccionparametros.setnuevovalor.26caa10fcd0d",
       "accion": "accion_setnuevovalor",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5215,7 +5347,7 @@
       "linea": 64,
       "componente": "Campo",
       "handler": "setGrupo",
-      "id": "control.pages_configuracion_seccionparametros.setgrupo.bcc64c7894ae",
+      "id": "control.ages_configuracion_seccionparametros.setgrupo.bcc64c7894ae",
       "accion": "accion_setgrupo",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5226,7 +5358,7 @@
       "linea": 69,
       "componente": "Boton",
       "handler": "",
-      "id": "control.pages_configuracion_seccionparametros.boton.f7873e23978b",
+      "id": "control.ages_configuracion_seccionparametros.boton.f7873e23978b",
       "accion": "activar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5237,7 +5369,7 @@
       "linea": 91,
       "componente": "Campo",
       "handler": "setValores",
-      "id": "control.pages_configuracion_seccionparametros.setvalores.bf4e39e61cac",
+      "id": "control.ages_configuracion_seccionparametros.setvalores.bf4e39e61cac",
       "accion": "accion_setvalores",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5248,7 +5380,7 @@
       "linea": 100,
       "componente": "button",
       "handler": "guardar",
-      "id": "control.pages_configuracion_seccionparametros.guardar.4fa8a0fb4579",
+      "id": "control.ages_configuracion_seccionparametros.guardar.4fa8a0fb4579",
       "accion": "accion_guardar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5259,7 +5391,7 @@
       "linea": 101,
       "componente": "button",
       "handler": "abrirEdicion",
-      "id": "control.pages_configuracion_seccionparametros.abriredicion.f3c57a941da8",
+      "id": "control.ages_configuracion_seccionparametros.abriredicion.f3c57a941da8",
       "accion": "accion_abriredicion",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5270,7 +5402,7 @@
       "linea": 102,
       "componente": "button",
       "handler": "eliminarParametro",
-      "id": "control.pages_configuracion_seccionparametros.eliminarparametro.5c0dde9a9b25",
+      "id": "control.ages_configuracion_seccionparametros.eliminarparametro.5c0dde9a9b25",
       "accion": "accion_eliminarparametro",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5347,7 +5479,7 @@
       "linea": 24,
       "componente": "Boton",
       "handler": "onSeleccionar",
-      "id": "control.pages_dashboard_backlog_filtrorangorapido.onseleccionar.6d0aa4537268",
+      "id": "control._dashboard_backlog_filtrorangorapido.onseleccionar.6d0aa4537268",
       "accion": "accion_onseleccionar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5358,7 +5490,7 @@
       "linea": 41,
       "componente": "Boton",
       "handler": "onVerDetalle",
-      "id": "control.es_dashboard_backlog_graficacapacidadsquad.onverdetalle.ee803675867b",
+      "id": "control.hboard_backlog_graficacapacidadsquad.onverdetalle.ee803675867b",
       "accion": "accion_onverdetalle",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5369,7 +5501,7 @@
       "linea": 34,
       "componente": "Boton",
       "handler": "onVerDetalle",
-      "id": "control.pages_dashboard_backlog_graficawopormes.onverdetalle.9f20d19e0bb9",
+      "id": "control.es_dashboard_backlog_graficawopormes.onverdetalle.9f20d19e0bb9",
       "accion": "accion_onverdetalle",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5380,7 +5512,7 @@
       "linea": 27,
       "componente": "button",
       "handler": "onCerrar",
-      "id": "control.dashboard_backlog_modaldetalleaplicaciones.oncerrar.8d4623bbb575",
+      "id": "control.ard_backlog_modaldetalleaplicaciones.oncerrar.8d4623bbb575",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -5391,7 +5523,7 @@
       "linea": 38,
       "componente": "Campo",
       "handler": "onBusqueda",
-      "id": "control.dashboard_backlog_modaldetalleaplicaciones.onbusqueda.5cc27892f4db",
+      "id": "control.ard_backlog_modaldetalleaplicaciones.onbusqueda.5cc27892f4db",
       "accion": "accion_onbusqueda",
       "tipo": "busqueda",
       "cobertura": "automatico",
@@ -5402,7 +5534,7 @@
       "linea": 26,
       "componente": "button",
       "handler": "onCerrar",
-      "id": "control.ges_dashboard_backlog_modaldetalleentregas.oncerrar.cc63c1fbc4f5",
+      "id": "control.shboard_backlog_modaldetalleentregas.oncerrar.cc63c1fbc4f5",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -5413,7 +5545,7 @@
       "linea": 37,
       "componente": "Campo",
       "handler": "onBusqueda",
-      "id": "control.ges_dashboard_backlog_modaldetalleentregas.onbusqueda.525695c7e05a",
+      "id": "control.shboard_backlog_modaldetalleentregas.onbusqueda.525695c7e05a",
       "accion": "accion_onbusqueda",
       "tipo": "busqueda",
       "cobertura": "automatico",
@@ -5424,7 +5556,7 @@
       "linea": 63,
       "componente": "Link",
       "handler": "",
-      "id": "control.ges_dashboard_backlog_modaldetalleentregas.link.c9ffc7f27ab7",
+      "id": "control.shboard_backlog_modaldetalleentregas.link.c9ffc7f27ab7",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -5435,7 +5567,7 @@
       "linea": 31,
       "componente": "button",
       "handler": "onCerrar",
-      "id": "control.ges_dashboard_backlog_modaldetallepersonas.oncerrar.c45313fb0f9d",
+      "id": "control.shboard_backlog_modaldetallepersonas.oncerrar.c45313fb0f9d",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -5446,7 +5578,7 @@
       "linea": 42,
       "componente": "Campo",
       "handler": "onBusqueda",
-      "id": "control.ges_dashboard_backlog_modaldetallepersonas.onbusqueda.0703783b3139",
+      "id": "control.shboard_backlog_modaldetallepersonas.onbusqueda.0703783b3139",
       "accion": "accion_onbusqueda",
       "tipo": "busqueda",
       "cobertura": "automatico",
@@ -5457,7 +5589,7 @@
       "linea": 31,
       "componente": "button",
       "handler": "onCerrar",
-      "id": "control.pages_dashboard_backlog_modaldetallewo.oncerrar.eec535a0afb1",
+      "id": "control.ges_dashboard_backlog_modaldetallewo.oncerrar.eec535a0afb1",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -5468,7 +5600,7 @@
       "linea": 42,
       "componente": "Campo",
       "handler": "onBusqueda",
-      "id": "control.pages_dashboard_backlog_modaldetallewo.onbusqueda.95e02a6f183f",
+      "id": "control.ges_dashboard_backlog_modaldetallewo.onbusqueda.95e02a6f183f",
       "accion": "accion_onbusqueda",
       "tipo": "busqueda",
       "cobertura": "automatico",
@@ -5479,7 +5611,7 @@
       "linea": 35,
       "componente": "button",
       "handler": "onCerrar",
-      "id": "control.pages_dashboard_backlog_modalreglaswo.oncerrar.a2d3e9017473",
+      "id": "control.ages_dashboard_backlog_modalreglaswo.oncerrar.a2d3e9017473",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -5490,7 +5622,7 @@
       "linea": 57,
       "componente": "Boton",
       "handler": "onCerrar",
-      "id": "control.pages_dashboard_backlog_modalreglaswo.oncerrar.d9b51790166b",
+      "id": "control.ages_dashboard_backlog_modalreglaswo.oncerrar.d9b51790166b",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -5501,7 +5633,7 @@
       "linea": 120,
       "componente": "button",
       "handler": "onVerReglasWo",
-      "id": "control.pages_dashboard_backlog_tabladetallesquad.onverreglaswo.6bd4a90d5310",
+      "id": "control._dashboard_backlog_tabladetallesquad.onverreglaswo.6bd4a90d5310",
       "accion": "accion_onverreglaswo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5512,7 +5644,7 @@
       "linea": 160,
       "componente": "button",
       "handler": "onVerPersonas",
-      "id": "control.pages_dashboard_backlog_tabladetallesquad.onverpersonas.078ff934e17f",
+      "id": "control._dashboard_backlog_tabladetallesquad.onverpersonas.078ff934e17f",
       "accion": "accion_onverpersonas",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5523,7 +5655,7 @@
       "linea": 177,
       "componente": "button",
       "handler": "onVerWo",
-      "id": "control.pages_dashboard_backlog_tabladetallesquad.onverwo.46cfa3c3324b",
+      "id": "control._dashboard_backlog_tabladetallesquad.onverwo.46cfa3c3324b",
       "accion": "accion_onverwo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5534,7 +5666,7 @@
       "linea": 191,
       "componente": "button",
       "handler": "onVerEntregas",
-      "id": "control.pages_dashboard_backlog_tabladetallesquad.onverentregas.917e91b1ade8",
+      "id": "control._dashboard_backlog_tabladetallesquad.onverentregas.917e91b1ade8",
       "accion": "accion_onverentregas",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5545,7 +5677,7 @@
       "linea": 210,
       "componente": "button",
       "handler": "onVerAplicaciones",
-      "id": "control.pages_dashboard_backlog_tabladetallesquad.onveraplicaciones.41bb4ed4461e",
+      "id": "control._dashboard_backlog_tabladetallesquad.onveraplicaciones.41bb4ed4461e",
       "accion": "accion_onveraplicaciones",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5578,7 +5710,7 @@
       "linea": 13,
       "componente": "button",
       "handler": "onClick",
-      "id": "control.pages_dashboard_estados_modalgarantias.onclick.bec104498145",
+      "id": "control.ges_dashboard_estados_modalgarantias.onclick.bec104498145",
       "accion": "accion_onclick",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5589,7 +5721,7 @@
       "linea": 41,
       "componente": "button",
       "handler": "onCerrar",
-      "id": "control.pages_dashboard_estados_modalgarantias.oncerrar.a63cbf9919ce",
+      "id": "control.ges_dashboard_estados_modalgarantias.oncerrar.a63cbf9919ce",
       "accion": "accion_oncerrar",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -5611,7 +5743,7 @@
       "linea": 114,
       "componente": "button",
       "handler": "cambiarCategoria",
-      "id": "control.hboard_requerimientos_modaldetalleanshitss.cambiarcategoria.de6fd145fbcf",
+      "id": "control._requerimientos_modaldetalleanshitss.cambiarcategoria.de6fd145fbcf",
       "accion": "accion_cambiarcategoria",
       "tipo": "tab",
       "cobertura": "automatico",
@@ -5622,7 +5754,7 @@
       "linea": 148,
       "componente": "Link",
       "handler": "",
-      "id": "control.hboard_requerimientos_modaldetalleanshitss.link.beb01e1d3ae4",
+      "id": "control._requerimientos_modaldetalleanshitss.link.beb01e1d3ae4",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -5655,7 +5787,7 @@
       "linea": 140,
       "componente": "Selector",
       "handler": "onCambiarTipificacion",
-      "id": "control.pages_detalle_ans_filaans.oncambiartipificacio.5a766bdb6826",
+      "id": "control.pages_detalle_ans_filaans.oncambiartipificac.5a766bdb6826",
       "accion": "accion_oncambiartipificacion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5699,7 +5831,7 @@
       "linea": 70,
       "componente": "Link",
       "handler": "",
-      "id": "control.pages_detalle_ans_listarequerimientosans.link.9f26c4613513",
+      "id": "control.s_detalle_ans_listarequerimientosans.link.9f26c4613513",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -5754,7 +5886,7 @@
       "linea": 50,
       "componente": "button",
       "handler": "onAlternar",
-      "id": "control.pages_esquema_azure_arbolesquemaazure.onalternar.a8d70d3b15ef",
+      "id": "control.ages_esquema_azure_arbolesquemaazure.onalternar.a8d70d3b15ef",
       "accion": "accion_onalternar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5765,7 +5897,7 @@
       "linea": 74,
       "componente": "a",
       "handler": "",
-      "id": "control.pages_esquema_azure_arbolesquemaazure.a.c51dfbea846b",
+      "id": "control.ages_esquema_azure_arbolesquemaazure.a.c51dfbea846b",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -5776,7 +5908,7 @@
       "linea": 148,
       "componente": "Boton",
       "handler": "onExpandirTodo",
-      "id": "control.pages_esquema_azure_arbolesquemaazure.onexpandirtodo.d6cf9ed4da2f",
+      "id": "control.ages_esquema_azure_arbolesquemaazure.onexpandirtodo.d6cf9ed4da2f",
       "accion": "accion_onexpandirtodo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5787,7 +5919,7 @@
       "linea": 149,
       "componente": "Boton",
       "handler": "onColapsarTodo",
-      "id": "control.pages_esquema_azure_arbolesquemaazure.oncolapsartodo.f4f5d70d6f26",
+      "id": "control.ages_esquema_azure_arbolesquemaazure.oncolapsartodo.f4f5d70d6f26",
       "accion": "accion_oncolapsartodo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5798,7 +5930,7 @@
       "linea": 51,
       "componente": "Selector",
       "handler": "onProyecto",
-      "id": "control.pages_esquema_azure_filtrosesquemaazure.onproyecto.d07ed1fe71df",
+      "id": "control.es_esquema_azure_filtrosesquemaazure.onproyecto.d07ed1fe71df",
       "accion": "accion_onproyecto",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5809,7 +5941,7 @@
       "linea": 65,
       "componente": "Selector",
       "handler": "cambiarTipos",
-      "id": "control.pages_esquema_azure_filtrosesquemaazure.cambiartipos.f942d5b52201",
+      "id": "control.es_esquema_azure_filtrosesquemaazure.cambiartipos.f942d5b52201",
       "accion": "accion_cambiartipos",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5820,7 +5952,7 @@
       "linea": 84,
       "componente": "Selector",
       "handler": "onIteracionPath",
-      "id": "control.pages_esquema_azure_filtrosesquemaazure.oniteracionpath.da7841c49c5a",
+      "id": "control.es_esquema_azure_filtrosesquemaazure.oniteracionpath.da7841c49c5a",
       "accion": "accion_oniteracionpath",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -5831,7 +5963,7 @@
       "linea": 103,
       "componente": "Campo",
       "handler": "onBusqueda",
-      "id": "control.pages_esquema_azure_filtrosesquemaazure.onbusqueda.54b377c43aca",
+      "id": "control.es_esquema_azure_filtrosesquemaazure.onbusqueda.54b377c43aca",
       "accion": "accion_onbusqueda",
       "tipo": "busqueda",
       "cobertura": "automatico",
@@ -5842,7 +5974,7 @@
       "linea": 112,
       "componente": "Boton",
       "handler": "onRecargar",
-      "id": "control.pages_esquema_azure_filtrosesquemaazure.onrecargar.ada87cb2aaa7",
+      "id": "control.es_esquema_azure_filtrosesquemaazure.onrecargar.ada87cb2aaa7",
       "accion": "accion_onrecargar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5853,7 +5985,7 @@
       "linea": 173,
       "componente": "Boton",
       "handler": "sincronizar",
-      "id": "control.pages_esquema_azure_zonasincronizacion.sincronizar.2b98e466cab1",
+      "id": "control.ges_esquema_azure_zonasincronizacion.sincronizar.2b98e466cab1",
       "accion": "accion_sincronizar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -6381,7 +6513,7 @@
       "linea": 184,
       "componente": "Selector",
       "handler": "setAplicacionManual",
-      "id": "control.pages_personas_panelpersona.setaplicacionmanual.fe9f150ccf61",
+      "id": "control.pages_personas_panelpersona.setaplicacionmanua.fe9f150ccf61",
       "accion": "accion_setaplicacionmanual",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6403,7 +6535,7 @@
       "linea": 231,
       "componente": "Campo",
       "handler": "setValorPerifericos",
-      "id": "control.pages_personas_panelpersona.setvalorperifericos.3a49d91aa1cc",
+      "id": "control.pages_personas_panelpersona.setvalorperiferico.3a49d91aa1cc",
       "accion": "accion_setvalorperifericos",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6568,7 +6700,7 @@
       "linea": 35,
       "componente": "Boton",
       "handler": "alCambiarVista",
-      "id": "control.pages_planes_accion_barrafiltrosplanes.alcambiarvista.019f5aa497f2",
+      "id": "control.ges_planes_accion_barrafiltrosplanes.alcambiarvista.019f5aa497f2",
       "accion": "accion_alcambiarvista",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -6579,7 +6711,7 @@
       "linea": 51,
       "componente": "Boton",
       "handler": "alCambiar",
-      "id": "control.pages_planes_accion_barrafiltrosplanes.alcambiar.0622e66849ba",
+      "id": "control.ges_planes_accion_barrafiltrosplanes.alcambiar.0622e66849ba",
       "accion": "accion_alcambiar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -6590,7 +6722,7 @@
       "linea": 60,
       "componente": "Boton",
       "handler": "alCambiar",
-      "id": "control.pages_planes_accion_barrafiltrosplanes.alcambiar.cabfd7497984",
+      "id": "control.ges_planes_accion_barrafiltrosplanes.alcambiar.cabfd7497984",
       "accion": "accion_alcambiar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -6601,7 +6733,7 @@
       "linea": 77,
       "componente": "Boton",
       "handler": "alCambiar",
-      "id": "control.pages_planes_accion_barrafiltrosplanes.alcambiar.02c6554650df",
+      "id": "control.ges_planes_accion_barrafiltrosplanes.alcambiar.02c6554650df",
       "accion": "accion_alcambiar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -6612,7 +6744,7 @@
       "linea": 90,
       "componente": "Selector",
       "handler": "alCambiar",
-      "id": "control.pages_planes_accion_barrafiltrosplanes.alcambiar.a46ae52b67f6",
+      "id": "control.ges_planes_accion_barrafiltrosplanes.alcambiar.a46ae52b67f6",
       "accion": "accion_alcambiar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6623,7 +6755,7 @@
       "linea": 102,
       "componente": "Selector",
       "handler": "alCambiar",
-      "id": "control.pages_planes_accion_barrafiltrosplanes.alcambiar.251e2460f065",
+      "id": "control.ges_planes_accion_barrafiltrosplanes.alcambiar.251e2460f065",
       "accion": "accion_alcambiar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6634,7 +6766,7 @@
       "linea": 111,
       "componente": "Campo",
       "handler": "alCambiar",
-      "id": "control.pages_planes_accion_barrafiltrosplanes.alcambiar.c1a9f942676c",
+      "id": "control.ges_planes_accion_barrafiltrosplanes.alcambiar.c1a9f942676c",
       "accion": "accion_alcambiar",
       "tipo": "busqueda",
       "cobertura": "automatico",
@@ -6865,7 +6997,7 @@
       "linea": 37,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.es_requerimiento_detalle_formularioentrega.actualizar.8b55f3dadfc7",
+      "id": "control.uerimiento_detalle_formularioentrega.actualizar.8b55f3dadfc7",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6876,7 +7008,7 @@
       "linea": 43,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.es_requerimiento_detalle_formularioentrega.actualizar.0d6eb702f228",
+      "id": "control.uerimiento_detalle_formularioentrega.actualizar.0d6eb702f228",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6887,7 +7019,7 @@
       "linea": 53,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.es_requerimiento_detalle_formularioentrega.actualizar.b845cc91679c",
+      "id": "control.uerimiento_detalle_formularioentrega.actualizar.b845cc91679c",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6898,7 +7030,7 @@
       "linea": 62,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.es_requerimiento_detalle_formularioentrega.actualizar.4f230dbf4b78",
+      "id": "control.uerimiento_detalle_formularioentrega.actualizar.4f230dbf4b78",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6931,7 +7063,7 @@
       "linea": 85,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.es_requerimiento_detalle_formularioentrega.actualizar.7895a07480c8",
+      "id": "control.uerimiento_detalle_formularioentrega.actualizar.7895a07480c8",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6942,7 +7074,7 @@
       "linea": 94,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.es_requerimiento_detalle_formularioentrega.actualizar.f6f48e233103",
+      "id": "control.uerimiento_detalle_formularioentrega.actualizar.f6f48e233103",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -6975,7 +7107,7 @@
       "linea": 119,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.es_requerimiento_detalle_formularioentrega.actualizar.69b560a5b5d3",
+      "id": "control.uerimiento_detalle_formularioentrega.actualizar.69b560a5b5d3",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7030,7 +7162,7 @@
       "linea": 48,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.s_requerimiento_detalle_modaleditarentrega.actualizar.01e28871706a",
+      "id": "control.erimiento_detalle_modaleditarentrega.actualizar.01e28871706a",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7041,7 +7173,7 @@
       "linea": 61,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.s_requerimiento_detalle_modaleditarentrega.actualizar.da9c3e21c15b",
+      "id": "control.erimiento_detalle_modaleditarentrega.actualizar.da9c3e21c15b",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7052,7 +7184,7 @@
       "linea": 70,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.s_requerimiento_detalle_modaleditarentrega.actualizar.cd590e99a818",
+      "id": "control.erimiento_detalle_modaleditarentrega.actualizar.cd590e99a818",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7085,7 +7217,7 @@
       "linea": 93,
       "componente": "AreaTexto",
       "handler": "actualizar",
-      "id": "control.s_requerimiento_detalle_modaleditarentrega.actualizar.9967081601da",
+      "id": "control.erimiento_detalle_modaleditarentrega.actualizar.9967081601da",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7096,7 +7228,7 @@
       "linea": 103,
       "componente": "AreaTexto",
       "handler": "actualizar",
-      "id": "control.s_requerimiento_detalle_modaleditarentrega.actualizar.3cdb3ad6089e",
+      "id": "control.erimiento_detalle_modaleditarentrega.actualizar.3cdb3ad6089e",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7129,7 +7261,7 @@
       "linea": 129,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.s_requerimiento_detalle_modaleditarentrega.actualizar.7643164ebecb",
+      "id": "control.erimiento_detalle_modaleditarentrega.actualizar.7643164ebecb",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7173,7 +7305,7 @@
       "linea": 46,
       "componente": "button",
       "handler": "onEliminar",
-      "id": "control.ages_requerimiento_detalle_seccionbitacora.oneliminar.8dab4399a7b0",
+      "id": "control.equerimiento_detalle_seccionbitacora.oneliminar.8dab4399a7b0",
       "accion": "accion_oneliminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7184,7 +7316,7 @@
       "linea": 60,
       "componente": "Boton",
       "handler": "setMostrarTodo",
-      "id": "control.ages_requerimiento_detalle_seccionbitacora.setmostrartodo.f5316c57b7e3",
+      "id": "control.equerimiento_detalle_seccionbitacora.setmostrartodo.f5316c57b7e3",
       "accion": "accion_setmostrartodo",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7206,7 +7338,7 @@
       "linea": 74,
       "componente": "Campo",
       "handler": "setValor",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.setvalor.3eaac9758755",
+      "id": "control.miento_detalle_secciondatosgenerales.setvalor.3eaac9758755",
       "accion": "accion_setvalor",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7272,7 +7404,7 @@
       "linea": 266,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.actualizar.74c4d62e46e2",
+      "id": "control.miento_detalle_secciondatosgenerales.actualizar.74c4d62e46e2",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7283,7 +7415,7 @@
       "linea": 271,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.actualizar.72a2b9aab60a",
+      "id": "control.miento_detalle_secciondatosgenerales.actualizar.72a2b9aab60a",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7349,7 +7481,7 @@
       "linea": 350,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.actualizar.7c60fbd58abb",
+      "id": "control.miento_detalle_secciondatosgenerales.actualizar.7c60fbd58abb",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7360,7 +7492,7 @@
       "linea": 355,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.actualizar.4d1bd8bd7e63",
+      "id": "control.miento_detalle_secciondatosgenerales.actualizar.4d1bd8bd7e63",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7382,7 +7514,7 @@
       "linea": 367,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.actualizar.68bb9cdb4e67",
+      "id": "control.miento_detalle_secciondatosgenerales.actualizar.68bb9cdb4e67",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7393,7 +7525,7 @@
       "linea": 374,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.actualizar.b898a01f7d58",
+      "id": "control.miento_detalle_secciondatosgenerales.actualizar.b898a01f7d58",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7404,7 +7536,7 @@
       "linea": 389,
       "componente": "AreaTexto",
       "handler": "actualizar",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.actualizar.03afea7f4e85",
+      "id": "control.miento_detalle_secciondatosgenerales.actualizar.03afea7f4e85",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7415,7 +7547,7 @@
       "linea": 395,
       "componente": "Campo",
       "handler": "actualizar",
-      "id": "control.equerimiento_detalle_secciondatosgenerales.actualizar.f61255f0fd1f",
+      "id": "control.miento_detalle_secciondatosgenerales.actualizar.f61255f0fd1f",
       "accion": "accion_actualizar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7426,7 +7558,7 @@
       "linea": 148,
       "componente": "Campo",
       "handler": "onCambiarTipif",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.oncambiartipif.01eeb0b19e22",
+      "id": "control.equerimiento_detalle_seccionentregas.oncambiartipif.01eeb0b19e22",
       "accion": "accion_oncambiartipif",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7437,7 +7569,7 @@
       "linea": 158,
       "componente": "Selector",
       "handler": "onCambiarTipif",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.oncambiartipif.7a6673ccfded",
+      "id": "control.equerimiento_detalle_seccionentregas.oncambiartipif.7a6673ccfded",
       "accion": "accion_oncambiartipif",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7448,7 +7580,7 @@
       "linea": 182,
       "componente": "button",
       "handler": "setExpandido",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.setexpandido.ed21158fce80",
+      "id": "control.equerimiento_detalle_seccionentregas.setexpandido.ed21158fce80",
       "accion": "accion_setexpandido",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7459,7 +7591,7 @@
       "linea": 191,
       "componente": "button",
       "handler": "onVerHistorialEntrega",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.onverhistorialentreg.138dff653c3c",
+      "id": "control.equerimiento_detalle_seccionentregas.onverhistorialentr.138dff653c3c",
       "accion": "accion_onverhistorialentrega",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7470,7 +7602,7 @@
       "linea": 200,
       "componente": "button",
       "handler": "onEditarEntrega",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.oneditarentrega.eac5f03a2ee3",
+      "id": "control.equerimiento_detalle_seccionentregas.oneditarentrega.eac5f03a2ee3",
       "accion": "accion_oneditarentrega",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7481,7 +7613,7 @@
       "linea": 207,
       "componente": "button",
       "handler": "onEliminarEntrega",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.oneliminarentrega.69b58c5bb80a",
+      "id": "control.equerimiento_detalle_seccionentregas.oneliminarentrega.69b58c5bb80a",
       "accion": "accion_oneliminarentrega",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7492,7 +7624,7 @@
       "linea": 220,
       "componente": "button",
       "handler": "onGuardarTipif",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.onguardartipif.c928e09fa8e7",
+      "id": "control.equerimiento_detalle_seccionentregas.onguardartipif.c928e09fa8e7",
       "accion": "accion_onguardartipif",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7503,7 +7635,7 @@
       "linea": 228,
       "componente": "button",
       "handler": "onCancelarTipif",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.oncancelartipif.67df675450be",
+      "id": "control.equerimiento_detalle_seccionentregas.oncancelartipif.67df675450be",
       "accion": "accion_oncancelartipif",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7514,7 +7646,7 @@
       "linea": 237,
       "componente": "button",
       "handler": "onIniciarEdicionTipif",
-      "id": "control.ages_requerimiento_detalle_seccionentregas.oniniciarediciontipi.8a4370d4c28e",
+      "id": "control.equerimiento_detalle_seccionentregas.oniniciaredicionti.8a4370d4c28e",
       "accion": "accion_oniniciarediciontipif",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7525,7 +7657,7 @@
       "linea": 80,
       "componente": "Boton",
       "handler": "setEditando",
-      "id": "control.uerimiento_detalle_seccionseguimientohitss.seteditando.122d3ce08669",
+      "id": "control.ento_detalle_seccionseguimientohitss.seteditando.122d3ce08669",
       "accion": "accion_seteditando",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7536,7 +7668,7 @@
       "linea": 89,
       "componente": "AreaTexto",
       "handler": "onCambiar",
-      "id": "control.uerimiento_detalle_seccionseguimientohitss.oncambiar.440e77b2e1e9",
+      "id": "control.ento_detalle_seccionseguimientohitss.oncambiar.440e77b2e1e9",
       "accion": "accion_oncambiar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7547,7 +7679,7 @@
       "linea": 113,
       "componente": "Selector",
       "handler": "onCambiar",
-      "id": "control.uerimiento_detalle_seccionseguimientohitss.oncambiar.0d878fcb9ce9",
+      "id": "control.ento_detalle_seccionseguimientohitss.oncambiar.0d878fcb9ce9",
       "accion": "accion_oncambiar",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7558,7 +7690,7 @@
       "linea": 122,
       "componente": "Boton",
       "handler": "guardar",
-      "id": "control.uerimiento_detalle_seccionseguimientohitss.guardar.91dcd0cc8c5d",
+      "id": "control.ento_detalle_seccionseguimientohitss.guardar.91dcd0cc8c5d",
       "accion": "accion_guardar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7569,7 +7701,7 @@
       "linea": 36,
       "componente": "Link",
       "handler": "",
-      "id": "control.requerimientos_barraaccionesrequerimientos.link.f83ca2ce034d",
+      "id": "control.imientos_barraaccionesrequerimientos.link.f83ca2ce034d",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -7580,7 +7712,7 @@
       "linea": 40,
       "componente": "Boton",
       "handler": "setMostrarFiltros",
-      "id": "control.requerimientos_barraaccionesrequerimientos.setmostrarfiltros.90fd76bf6543",
+      "id": "control.imientos_barraaccionesrequerimientos.setmostrarfiltros.90fd76bf6543",
       "accion": "accion_setmostrarfiltros",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7591,7 +7723,7 @@
       "linea": 48,
       "componente": "Boton",
       "handler": "onExportar",
-      "id": "control.requerimientos_barraaccionesrequerimientos.onexportar.2aed035fdff5",
+      "id": "control.imientos_barraaccionesrequerimientos.onexportar.2aed035fdff5",
       "accion": "accion_onexportar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7635,7 +7767,7 @@
       "linea": 51,
       "componente": "button",
       "handler": "toggleExpandReq",
-      "id": "control.pages_requerimientos_filarequerimiento.toggleexpandreq.f72c7ae6c321",
+      "id": "control.ges_requerimientos_filarequerimiento.toggleexpandreq.f72c7ae6c321",
       "accion": "accion_toggleexpandreq",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7646,7 +7778,7 @@
       "linea": 62,
       "componente": "Link",
       "handler": "",
-      "id": "control.pages_requerimientos_filarequerimiento.link.383054c30141",
+      "id": "control.ges_requerimientos_filarequerimiento.link.383054c30141",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -7657,7 +7789,7 @@
       "linea": 143,
       "componente": "Boton",
       "handler": "setExpandedEntregas",
-      "id": "control.pages_requerimientos_filarequerimiento.setexpandedentregas.486fa0c6b293",
+      "id": "control.ges_requerimientos_filarequerimiento.setexpandedentrega.486fa0c6b293",
       "accion": "accion_setexpandedentregas",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7668,7 +7800,7 @@
       "linea": 163,
       "componente": "button",
       "handler": "openEstimationModal",
-      "id": "control.pages_requerimientos_filarequerimiento.openestimationmodal.b0c2ddf0a5de",
+      "id": "control.ges_requerimientos_filarequerimiento.openestimationmoda.b0c2ddf0a5de",
       "accion": "accion_openestimationmodal",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -7679,7 +7811,7 @@
       "linea": 170,
       "componente": "button",
       "handler": "handleUploadClick",
-      "id": "control.pages_requerimientos_filarequerimiento.handleuploadclick.8e0d697f8006",
+      "id": "control.ges_requerimientos_filarequerimiento.handleuploadclick.8e0d697f8006",
       "accion": "accion_handleuploadclick",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7690,7 +7822,7 @@
       "linea": 190,
       "componente": "Link",
       "handler": "",
-      "id": "control.pages_requerimientos_filarequerimiento.link.383054c30141",
+      "id": "control.ges_requerimientos_filarequerimiento.link.383054c30141",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -7701,7 +7833,7 @@
       "linea": 195,
       "componente": "button",
       "handler": "eliminar",
-      "id": "control.pages_requerimientos_filarequerimiento.eliminar.4af5d51c005e",
+      "id": "control.ges_requerimientos_filarequerimiento.eliminar.4af5d51c005e",
       "accion": "accion_eliminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7767,7 +7899,7 @@
       "linea": 35,
       "componente": "button",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.52e69dc16e79",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.52e69dc16e79",
       "accion": "accion_setfiltros",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7778,7 +7910,7 @@
       "linea": 40,
       "componente": "Campo",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.4614b81e97bf",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.4614b81e97bf",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7789,7 +7921,7 @@
       "linea": 50,
       "componente": "Campo",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.68eea1c6f3ae",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.68eea1c6f3ae",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7800,7 +7932,7 @@
       "linea": 60,
       "componente": "Selector",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.53f587a4fe49",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.53f587a4fe49",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7811,7 +7943,7 @@
       "linea": 71,
       "componente": "Selector",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.31c9e6b9ab12",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.31c9e6b9ab12",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7822,7 +7954,7 @@
       "linea": 82,
       "componente": "Selector",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.890fc346dff8",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.890fc346dff8",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7833,7 +7965,7 @@
       "linea": 93,
       "componente": "Selector",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.e583c730c07d",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.e583c730c07d",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7844,7 +7976,7 @@
       "linea": 104,
       "componente": "Selector",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.f920b37f158f",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.f920b37f158f",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7855,7 +7987,7 @@
       "linea": 116,
       "componente": "Selector",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.3f7b8f4f71c6",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.3f7b8f4f71c6",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7866,7 +7998,7 @@
       "linea": 127,
       "componente": "Selector",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.92478a4db387",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.92478a4db387",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7877,7 +8009,7 @@
       "linea": 138,
       "componente": "Selector",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.68457c93c883",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.68457c93c883",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7888,7 +8020,7 @@
       "linea": 152,
       "componente": "Campo",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.a878d4b56eb0",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.a878d4b56eb0",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7899,7 +8031,7 @@
       "linea": 159,
       "componente": "Campo",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.68dda56ad8f5",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.68dda56ad8f5",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7910,7 +8042,7 @@
       "linea": 172,
       "componente": "Campo",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.73f35a15b32d",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.73f35a15b32d",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7921,7 +8053,7 @@
       "linea": 179,
       "componente": "Campo",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.3bb01809872c",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.3bb01809872c",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7932,7 +8064,7 @@
       "linea": 192,
       "componente": "Campo",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.34b5528964fa",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.34b5528964fa",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7943,7 +8075,7 @@
       "linea": 199,
       "componente": "Campo",
       "handler": "setFiltros",
-      "id": "control._requerimientos_panelfiltrosrequerimientos.setfiltros.52e5cab1e662",
+      "id": "control.rimientos_panelfiltrosrequerimientos.setfiltros.52e5cab1e662",
       "accion": "accion_setfiltros",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -7954,7 +8086,7 @@
       "linea": 31,
       "componente": "button",
       "handler": "onToggle",
-      "id": "control.es_requerimientos_seccionresumencolapsable.ontoggle.a226e88e88db",
+      "id": "control.uerimientos_seccionresumencolapsable.ontoggle.a226e88e88db",
       "accion": "accion_ontoggle",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7976,7 +8108,7 @@
       "linea": 70,
       "componente": "button",
       "handler": "toggleExpandReq",
-      "id": "control.pages_requerimientos_tarjetarequerimiento.toggleexpandreq.ff0119a871c9",
+      "id": "control._requerimientos_tarjetarequerimiento.toggleexpandreq.ff0119a871c9",
       "accion": "accion_toggleexpandreq",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7987,7 +8119,7 @@
       "linea": 79,
       "componente": "Link",
       "handler": "",
-      "id": "control.pages_requerimientos_tarjetarequerimiento.link.59a0af5a1c56",
+      "id": "control._requerimientos_tarjetarequerimiento.link.59a0af5a1c56",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -7998,7 +8130,7 @@
       "linea": 164,
       "componente": "Boton",
       "handler": "setExpandedEntregas",
-      "id": "control.pages_requerimientos_tarjetarequerimiento.setexpandedentregas.c24ad030eee1",
+      "id": "control._requerimientos_tarjetarequerimiento.setexpandedentrega.c24ad030eee1",
       "accion": "accion_setexpandedentregas",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8009,7 +8141,7 @@
       "linea": 184,
       "componente": "button",
       "handler": "openEstimationModal",
-      "id": "control.pages_requerimientos_tarjetarequerimiento.openestimationmodal.8dfad270caa4",
+      "id": "control._requerimientos_tarjetarequerimiento.openestimationmoda.8dfad270caa4",
       "accion": "accion_openestimationmodal",
       "tipo": "modal",
       "cobertura": "automatico",
@@ -8020,7 +8152,7 @@
       "linea": 191,
       "componente": "button",
       "handler": "handleUploadClick",
-      "id": "control.pages_requerimientos_tarjetarequerimiento.handleuploadclick.14e8e98845ed",
+      "id": "control._requerimientos_tarjetarequerimiento.handleuploadclick.14e8e98845ed",
       "accion": "accion_handleuploadclick",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8031,7 +8163,7 @@
       "linea": 212,
       "componente": "Link",
       "handler": "",
-      "id": "control.pages_requerimientos_tarjetarequerimiento.link.59a0af5a1c56",
+      "id": "control._requerimientos_tarjetarequerimiento.link.59a0af5a1c56",
       "accion": "navegar",
       "tipo": "enlace",
       "cobertura": "automatico",
@@ -8042,7 +8174,7 @@
       "linea": 217,
       "componente": "button",
       "handler": "eliminar",
-      "id": "control.pages_requerimientos_tarjetarequerimiento.eliminar.203dcea3cfc0",
+      "id": "control._requerimientos_tarjetarequerimiento.eliminar.203dcea3cfc0",
       "accion": "accion_eliminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8196,7 +8328,7 @@
       "linea": 73,
       "componente": "button",
       "handler": "onSeleccionarVencido",
-      "id": "control.pages_roadmap_resumenroadmap.onseleccionarvencido.a618940c0624",
+      "id": "control.pages_roadmap_resumenroadmap.onseleccionarvenci.a618940c0624",
       "accion": "accion_onseleccionarvencido",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8229,7 +8361,7 @@
       "linea": 27,
       "componente": "Boton",
       "handler": "onVerDescripcion",
-      "id": "control.pages_solicitudes_fabrica_filaregistro.onverdescripcion.79b86f897cfa",
+      "id": "control.ges_solicitudes_fabrica_filaregistro.onverdescripcion.79b86f897cfa",
       "accion": "accion_onverdescripcion",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8240,7 +8372,7 @@
       "linea": 44,
       "componente": "Boton",
       "handler": "onVerTask",
-      "id": "control.pages_solicitudes_fabrica_filaregistro.onvertask.cfb7a48973f6",
+      "id": "control.ges_solicitudes_fabrica_filaregistro.onvertask.cfb7a48973f6",
       "accion": "accion_onvertask",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8251,7 +8383,7 @@
       "linea": 57,
       "componente": "Boton",
       "handler": "onVerTask",
-      "id": "control.pages_solicitudes_fabrica_filaregistro.onvertask.5ad7999d2c48",
+      "id": "control.ges_solicitudes_fabrica_filaregistro.onvertask.5ad7999d2c48",
       "accion": "accion_onvertask",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8262,7 +8394,7 @@
       "linea": 70,
       "componente": "Boton",
       "handler": "onVerTask",
-      "id": "control.pages_solicitudes_fabrica_filaregistro.onvertask.f40eef586e1e",
+      "id": "control.ges_solicitudes_fabrica_filaregistro.onvertask.f40eef586e1e",
       "accion": "accion_onvertask",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8350,7 +8482,7 @@
       "linea": 70,
       "componente": "Campo",
       "handler": "onCambiarDescripcion",
-      "id": "control.pages_usuarios_formulariorol.oncambiardescripcion.049eb850978e",
+      "id": "control.pages_usuarios_formulariorol.oncambiardescripci.049eb850978e",
       "accion": "accion_oncambiardescripcion",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -8862,7 +8994,7 @@
     },
     {
       "archivo": "src/context/AplicacionContext.tsx",
-      "linea": 31,
+      "linea": 34,
       "metodo": "GET",
       "plantilla": "/aplicaciones",
       "instrumentada": false
@@ -8876,10 +9008,10 @@
     },
     {
       "archivo": "src/context/AuthContext.tsx",
-      "linea": 56,
+      "linea": 60,
       "metodo": "POST",
       "plantilla": "/auth/login",
-      "instrumentada": true
+      "instrumentada": false
     },
     {
       "archivo": "src/pages/Actas.tsx",
@@ -9128,21 +9260,21 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 103,
+      "linea": 104,
       "metodo": "POST",
       "plantilla": "/importacion/excel/previsualizar",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 120,
+      "linea": 121,
       "metodo": "POST",
       "plantilla": "/importacion/excel",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 134,
+      "linea": 135,
       "metodo": "GET",
       "plantilla": "/importacion/excel/plantilla",
       "instrumentada": false
@@ -9954,70 +10086,70 @@
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 106,
+      "linea": 113,
       "metodo": "GET",
       "plantilla": "/requerimientos/:param",
       "instrumentada": null
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 130,
+      "linea": 140,
       "metodo": "GET",
       "plantilla": "/requerimientos/:param/liquidacion",
       "instrumentada": null
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 131,
+      "linea": 141,
       "metodo": "GET",
       "plantilla": "/bitacora",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 176,
+      "linea": 187,
       "metodo": "PUT",
       "plantilla": "/requerimientos/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 217,
+      "linea": 231,
       "metodo": "PATCH",
       "plantilla": "/requerimientos/detalle-ans",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 238,
+      "linea": 252,
       "metodo": "POST",
       "plantilla": "/requerimientos/:param/transicion",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 260,
+      "linea": 274,
       "metodo": "POST",
       "plantilla": "/requerimientos/:param/entregas",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 277,
+      "linea": 291,
       "metodo": "DELETE",
       "plantilla": "/requerimientos/:param/entregas/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 287,
+      "linea": 301,
       "metodo": "DELETE",
       "plantilla": "/bitacora/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/requerimiento-detalle/useRequerimientoDetalle.ts",
-      "linea": 317,
+      "linea": 331,
       "metodo": "PATCH",
       "plantilla": "/requerimientos/detalle-ans",
       "instrumentada": true
@@ -10109,7 +10241,7 @@
     },
     {
       "archivo": "src/pages/Importacion.tsx",
-      "linea": 140,
+      "linea": 141,
       "mecanismo": "blob_descarga"
     },
     {
@@ -10140,8 +10272,38 @@
       "modulo": "sesion"
     },
     {
+      "plantilla": "/",
+      "pantalla": "inicio_redireccion",
+      "modulo": "sistema"
+    },
+    {
+      "plantilla": "/dashboard-squad",
+      "pantalla": "dashboard_squad_redireccion",
+      "modulo": "dashboard"
+    },
+    {
+      "plantilla": "/tarifas",
+      "pantalla": "tarifas_redireccion",
+      "modulo": "configuracion"
+    },
+    {
+      "plantilla": "/categorias",
+      "pantalla": "categorias_redireccion",
+      "modulo": "configuracion"
+    },
+    {
+      "plantilla": "/*",
+      "pantalla": "no_encontrada",
+      "modulo": "sistema"
+    },
+    {
       "plantilla": "/dashboard",
       "pantalla": "dashboard",
+      "modulo": "dashboard"
+    },
+    {
+      "plantilla": "/dashboard-analistas",
+      "pantalla": "dashboard_analistas",
       "modulo": "dashboard"
     },
     {
@@ -10245,6 +10407,11 @@
       "modulo": "administracion"
     },
     {
+      "plantilla": "/admin/uso-personas",
+      "pantalla": "admin_uso_personas",
+      "modulo": "administracion"
+    },
+    {
       "plantilla": "/admin/endpoints",
       "pantalla": "admin_endpoints",
       "modulo": "administracion"
@@ -10291,6 +10458,22 @@
     }
   ],
   "catalogo_controles": {
+    "dashboard_analistas.ano": [
+      "filtrar_ano",
+      "filtro"
+    ],
+    "dashboard_analistas.mes": [
+      "filtrar_mes",
+      "filtro"
+    ],
+    "dashboard_analistas.analista": [
+      "filtrar_analista",
+      "filtro"
+    ],
+    "dashboard_analistas.recargar": [
+      "recargar",
+      "boton"
+    ],
     "requerimiento.volver": [
       "volver",
       "enlace"
@@ -10579,6 +10762,22 @@
       "filtrar_real_hasta",
       "filtro"
     ],
+    "uso.desde": [
+      "filtrar_desde",
+      "filtro"
+    ],
+    "uso.hasta": [
+      "filtrar_hasta",
+      "filtro"
+    ],
+    "uso.consultar": [
+      "consultar",
+      "boton"
+    ],
+    "uso.detalle": [
+      "alternar_detalle",
+      "boton"
+    ],
     "control.components_layout.setmenuabierto.5e182c09facd": [
       "accion_setmenuabierto",
       "boton"
@@ -10587,7 +10786,7 @@
       "accion_cambiar",
       "filtro"
     ],
-    "control.components_azure_selectorpersonaazure.oncambiar.cb4e8a8b310d": [
+    "control.omponents_azure_selectorpersonaazure.oncambiar.cb4e8a8b310d": [
       "accion_oncambiar",
       "filtro"
     ],
@@ -10627,7 +10826,7 @@
       "accion_setnombreedicion",
       "filtro"
     ],
-    "control.pages_adminaplicaciones.setiteracionesedicio.d74473ef8142": [
+    "control.pages_adminaplicaciones.setiteracionesedic.d74473ef8142": [
       "accion_setiteracionesedicion",
       "filtro"
     ],
@@ -10811,6 +11010,10 @@
       "accion_eliminarfila",
       "boton"
     ],
+    "control.pages_dashboardanalistas.summary.b5d582277752": [
+      "alternar",
+      "boton"
+    ],
     "control.pages_dashboardestados.setfase.742eac62b631": [
       "accion_setfase",
       "boton"
@@ -10951,7 +11154,7 @@
       "accion_elegir",
       "filtro"
     ],
-    "control.pages_importacion.previsualizarimporta.d4cbb568ec86": [
+    "control.pages_importacion.previsualizarimpor.d4cbb568ec86": [
       "accion_previsualizarimportacion",
       "boton"
     ],
@@ -10959,11 +11162,11 @@
       "alternar",
       "boton"
     ],
-    "control.pages_importacion.setconfirmacionabier.f598f53c302a": [
+    "control.pages_importacion.setconfirmacionabi.f598f53c302a": [
       "accion_setconfirmacionabierta",
       "boton"
     ],
-    "control.pages_importacion.confirmarimportacion.37033bcd5c20": [
+    "control.pages_importacion.confirmarimportaci.37033bcd5c20": [
       "accion_confirmarimportacion",
       "boton"
     ],
@@ -10975,7 +11178,7 @@
       "activar",
       "boton"
     ],
-    "control.pages_personas.exportarpersonasexce.d51b47aa3c2a": [
+    "control.pages_personas.exportarpersonasex.d51b47aa3c2a": [
       "accion_exportarpersonasexcel",
       "boton"
     ],
@@ -11023,13 +11226,25 @@
       "accion_transicion",
       "filtro"
     ],
-    "control.pages_requerimientodetalle.verhistorialrequerim.15a72298e3b3": [
+    "control.pages_requerimientodetalle.verhistorialrequer.15a72298e3b3": [
       "accion_verhistorialrequerimiento",
       "boton"
     ],
     "control.pages_requerimientodetalle.boton.d502876ead71": [
       "activar",
       "boton"
+    ],
+    "control.pages_requerimientodetalle.actualizar.0e8881f3157b": [
+      "accion_actualizar",
+      "filtro"
+    ],
+    "control.pages_requerimientodetalle.actualizar.3fa7b1a4af82": [
+      "accion_actualizar",
+      "filtro"
+    ],
+    "control.pages_requerimientodetalle.actualizar.36a941c89893": [
+      "accion_actualizar",
+      "filtro"
     ],
     "control.pages_requerimientodetalle.setbitacoraabierta.9360a34ed6ff": [
       "accion_setbitacoraabierta",
@@ -11075,7 +11290,7 @@
       "accion_setfiltrotexto",
       "boton"
     ],
-    "control.pages_requerimientosdetalleans.setmostrarrequerimie.425fa4f7807d": [
+    "control.pages_requerimientosdetalleans.setmostrarrequerim.425fa4f7807d": [
       "accion_setmostrarrequerimientos",
       "boton"
     ],
@@ -11111,7 +11326,7 @@
       "accion_setfiltrowo",
       "filtro"
     ],
-    "control.pages_soportedetalleans.setfiltroassignedto.95a88d7cdd3d": [
+    "control.pages_soportedetalleans.setfiltroassignedt.95a88d7cdd3d": [
       "accion_setfiltroassignedto",
       "filtro"
     ],
@@ -11167,7 +11382,7 @@
       "accion_seteditandoobs",
       "filtro"
     ],
-    "control.pages_soportegarantiaswo.guardarobservaciones.913c826fceb5": [
+    "control.pages_soportegarantiaswo.guardarobservacion.913c826fceb5": [
       "accion_guardarobservaciones",
       "boton"
     ],
@@ -11183,19 +11398,19 @@
       "accion_eliminar",
       "boton"
     ],
-    "control.pages_soportesolicitudesfabrica.onarchivoseleccionad.7953784fe971": [
+    "control.pages_soportesolicitudesfabrica.onarchivoseleccion.7953784fe971": [
       "accion_onarchivoseleccionado",
       "filtro"
     ],
-    "control.pages_soportesolicitudesfabrica.abrirselectorarchivo.77cd497d3085": [
+    "control.pages_soportesolicitudesfabrica.abrirselectorarchi.77cd497d3085": [
       "accion_abrirselectorarchivo",
       "boton"
     ],
-    "control.pages_soportesolicitudesfabrica.setmostrarerroresult.3578ccbaf1b4": [
+    "control.pages_soportesolicitudesfabrica.setmostrarerroresu.3578ccbaf1b4": [
       "accion_setmostrarerroresultimasync",
       "boton"
     ],
-    "control.pages_soportesolicitudesfabrica.descargarerrorescsv.4010e75e4dd6": [
+    "control.pages_soportesolicitudesfabrica.descargarerrorescs.4010e75e4dd6": [
       "accion_descargarerrorescsv",
       "boton"
     ],
@@ -11203,7 +11418,7 @@
       "accion_onfiltrochange",
       "filtro"
     ],
-    "control.pages_soportesolicitudesfabrica.setfiltroworkorderid.b90d0d756477": [
+    "control.pages_soportesolicitudesfabrica.setfiltroworkorder.b90d0d756477": [
       "accion_setfiltroworkorderid",
       "boton"
     ],
@@ -11227,51 +11442,51 @@
       "accion_setmodalabierto",
       "modal"
     ],
-    "control.pages_soportesolicitudesfabrica.confirmarsincronizac.9f9de12c1f06": [
+    "control.pages_soportesolicitudesfabrica.confirmarsincroniz.9f9de12c1f06": [
       "accion_confirmarsincronizacion",
       "boton"
     ],
-    "control.pages_soportesolicitudesfabrica.setdescripcionselecc.a3081ec0d865": [
+    "control.pages_soportesolicitudesfabrica.setdescripcionsele.a3081ec0d865": [
       "accion_setdescripcionseleccionada",
       "boton"
     ],
-    "control.pages_soportesolicitudesfabrica.settaskseleccionada.c38615d1f118": [
+    "control.pages_soportesolicitudesfabrica.settaskseleccionad.c38615d1f118": [
       "accion_settaskseleccionada",
       "boton"
     ],
-    "control.ages_admin_endpoints_formulariodiagnostico.setidentificador.dbec829945c5": [
+    "control.dmin_endpoints_formulariodiagnostico.setidentificador.dbec829945c5": [
       "accion_setidentificador",
       "filtro"
     ],
-    "control.ages_admin_endpoints_formulariodiagnostico.boton.ec8b693c37f0": [
+    "control.dmin_endpoints_formulariodiagnostico.boton.ec8b693c37f0": [
       "activar",
       "boton"
     ],
-    "control.pages_admin_endpoints_formularioinvocacion.onchange.3741a139d654": [
+    "control.admin_endpoints_formularioinvocacion.onchange.3741a139d654": [
       "accion_onchange",
       "filtro"
     ],
-    "control.pages_admin_endpoints_formularioinvocacion.actualizarpath.ef3735160da7": [
+    "control.admin_endpoints_formularioinvocacion.actualizarpath.ef3735160da7": [
       "accion_actualizarpath",
       "filtro"
     ],
-    "control.pages_admin_endpoints_formularioinvocacion.setcuerpotexto.08726d592e16": [
+    "control.admin_endpoints_formularioinvocacion.setcuerpotexto.08726d592e16": [
       "accion_setcuerpotexto",
       "filtro"
     ],
-    "control.dmin_endpoints_formularioprobarintegracion.onaplicacionchange.6cf846adecc5": [
+    "control.ndpoints_formularioprobarintegracion.onaplicacionchange.6cf846adecc5": [
       "accion_onaplicacionchange",
       "filtro"
     ],
-    "control.dmin_endpoints_formularioprobarintegracion.boton.9f9303879623": [
+    "control.ndpoints_formularioprobarintegracion.boton.9f9303879623": [
       "activar",
       "boton"
     ],
-    "control.ges_admin_endpoints_formularioreasignacion.setnuevaaplicacion.a3f1340c64b6": [
+    "control.min_endpoints_formularioreasignacion.setnuevaaplicacion.a3f1340c64b6": [
       "accion_setnuevaaplicacion",
       "filtro"
     ],
-    "control.ges_admin_endpoints_formularioreasignacion.boton.b640fa9458db": [
+    "control.min_endpoints_formularioreasignacion.boton.b640fa9458db": [
       "activar",
       "boton"
     ],
@@ -11283,59 +11498,59 @@
       "navegar",
       "enlace"
     ],
-    "control.pages_admin_endpoints_probadorendpoint.intentarejecutar.068e53cd6817": [
+    "control.ges_admin_endpoints_probadorendpoint.intentarejecutar.068e53cd6817": [
       "accion_intentarejecutar",
       "boton"
     ],
-    "control.pages_admin_endpoints_probadorendpoint.setrutaconfirmacion.f7d5e6033dc6": [
+    "control.ges_admin_endpoints_probadorendpoint.setrutaconfirmacio.f7d5e6033dc6": [
       "accion_setrutaconfirmacion",
       "filtro"
     ],
-    "control.pages_admin_endpoints_probadorendpoint.cancelarconfirmacion.ac85e6351db1": [
+    "control.ges_admin_endpoints_probadorendpoint.cancelarconfirmaci.ac85e6351db1": [
       "accion_cancelarconfirmacion",
       "boton"
     ],
-    "control.pages_admin_endpoints_probadorendpoint.confirmar.a12270e5baa0": [
+    "control.ges_admin_endpoints_probadorendpoint.confirmar.a12270e5baa0": [
       "accion_confirmar",
       "boton"
     ],
-    "control.s_admin_endpoints_seccioncatalogoendpoints.setnuevomodulo.b3629e4fa38d": [
+    "control.n_endpoints_seccioncatalogoendpoints.setnuevomodulo.b3629e4fa38d": [
       "accion_setnuevomodulo",
       "filtro"
     ],
-    "control.s_admin_endpoints_seccioncatalogoendpoints.setnuevometodo.6cf3f4802fb2": [
+    "control.n_endpoints_seccioncatalogoendpoints.setnuevometodo.6cf3f4802fb2": [
       "accion_setnuevometodo",
       "filtro"
     ],
-    "control.s_admin_endpoints_seccioncatalogoendpoints.setnuevaruta.59263c12b1f0": [
+    "control.n_endpoints_seccioncatalogoendpoints.setnuevaruta.59263c12b1f0": [
       "accion_setnuevaruta",
       "filtro"
     ],
-    "control.s_admin_endpoints_seccioncatalogoendpoints.setnuevadescripcion.e3b6323512b8": [
+    "control.n_endpoints_seccioncatalogoendpoints.setnuevadescripcio.e3b6323512b8": [
       "accion_setnuevadescripcion",
       "filtro"
     ],
-    "control.s_admin_endpoints_seccioncatalogoendpoints.boton.39db738c04c5": [
+    "control.n_endpoints_seccioncatalogoendpoints.boton.39db738c04c5": [
       "activar",
       "boton"
     ],
-    "control.s_admin_endpoints_seccioncatalogoendpoints.eliminarendpointadmi.41a7024c05b3": [
+    "control.n_endpoints_seccioncatalogoendpoints.eliminarendpointad.41a7024c05b3": [
       "accion_eliminarendpointadmin",
       "boton"
     ],
-    "control.pages_admin_endpoints_secciondocumentacion.setmodulo.2bae7fc8ae48": [
+    "control.admin_endpoints_secciondocumentacion.setmodulo.2bae7fc8ae48": [
       "accion_setmodulo",
       "filtro"
     ],
-    "control.pages_admin_endpoints_secciondocumentacion.setfiltro.816b20a4c370": [
+    "control.admin_endpoints_secciondocumentacion.setfiltro.816b20a4c370": [
       "accion_setfiltro",
       "filtro"
     ],
-    "control.pages_admin_endpoints_secciondocumentacion.setseleccionado.6dad25fa3d7e": [
+    "control.admin_endpoints_secciondocumentacion.setseleccionado.6dad25fa3d7e": [
       "accion_setseleccionado",
       "boton"
     ],
-    "control._admin_endpoints_seccionpruebasintegracion.setestadorequerimien.3c4a3b64f778": [
+    "control._endpoints_seccionpruebasintegracion.setestadorequerimi.3c4a3b64f778": [
       "accion_setestadorequerimientosintegracion",
       "filtro"
     ],
@@ -11347,23 +11562,23 @@
       "accion_onrevisarreparto",
       "boton"
     ],
-    "control.ages_asignaciones_barrafiltrosasignaciones.setabiertomovil.37fbc4aa3053": [
+    "control.signaciones_barrafiltrosasignaciones.setabiertomovil.37fbc4aa3053": [
       "accion_setabiertomovil",
       "boton"
     ],
-    "control.ages_asignaciones_barrafiltrosasignaciones.onlimpiar.d62d85533ef0": [
+    "control.signaciones_barrafiltrosasignaciones.onlimpiar.d62d85533ef0": [
       "accion_onlimpiar",
       "boton"
     ],
-    "control.ages_asignaciones_barrafiltrosasignaciones.oncambio.4b87d10d5059": [
+    "control.signaciones_barrafiltrosasignaciones.oncambio.4b87d10d5059": [
       "accion_oncambio",
       "filtro"
     ],
-    "control.ages_asignaciones_barrafiltrosasignaciones.settextoreq.af4e9675247a": [
+    "control.signaciones_barrafiltrosasignaciones.settextoreq.af4e9675247a": [
       "accion_settextoreq",
       "busqueda"
     ],
-    "control.ages_asignaciones_barrafiltrosasignaciones.oncambio.a7564da96633": [
+    "control.signaciones_barrafiltrosasignaciones.oncambio.a7564da96633": [
       "accion_oncambio",
       "boton"
     ],
@@ -11399,19 +11614,19 @@
       "accion_oncerrarerror",
       "modal"
     ],
-    "control.pages_asignaciones_filaasignacionmovil.onasignarsintetica.91418388ab65": [
+    "control.ges_asignaciones_filaasignacionmovil.onasignarsintetica.91418388ab65": [
       "accion_onasignarsintetica",
       "boton"
     ],
-    "control.pages_asignaciones_filaasignacionmovil.oneditar.bf57d3cb7d8c": [
+    "control.ges_asignaciones_filaasignacionmovil.oneditar.bf57d3cb7d8c": [
       "accion_oneditar",
       "boton"
     ],
-    "control.pages_asignaciones_filaasignacionmovil.oneliminar.3c05de3800e0": [
+    "control.ges_asignaciones_filaasignacionmovil.oneliminar.3c05de3800e0": [
       "accion_oneliminar",
       "boton"
     ],
-    "control.pages_asignaciones_filaasignacionmovil.oncerrarerror.8e4cd233decb": [
+    "control.ges_asignaciones_filaasignacionmovil.oncerrarerror.8e4cd233decb": [
       "accion_oncerrarerror",
       "modal"
     ],
@@ -11423,19 +11638,19 @@
       "accion_setvertodos",
       "boton"
     ],
-    "control.pages_asignaciones_gruporequerimiento.ontoggle.028c87f8d6df": [
+    "control.ages_asignaciones_gruporequerimiento.ontoggle.028c87f8d6df": [
       "accion_ontoggle",
       "boton"
     ],
-    "control.pages_asignaciones_gruporequerimiento.link.966b0200763b": [
+    "control.ages_asignaciones_gruporequerimiento.link.966b0200763b": [
       "navegar",
       "enlace"
     ],
-    "control.pages_asignaciones_gruporequerimiento.setmostrardetalle.5f6950a5f999": [
+    "control.ages_asignaciones_gruporequerimiento.setmostrardetalle.5f6950a5f999": [
       "accion_setmostrardetalle",
       "boton"
     ],
-    "control.pages_asignaciones_gruporequerimiento.onasignar.dadd9ee95462": [
+    "control.ages_asignaciones_gruporequerimiento.onasignar.dadd9ee95462": [
       "accion_onasignar",
       "boton"
     ],
@@ -11451,11 +11666,11 @@
       "accion_onirapersona",
       "boton"
     ],
-    "control.pages_asignaciones_modaldetallehorasazure.oncerrar.cb792a02dc1b": [
+    "control._asignaciones_modaldetallehorasazure.oncerrar.cb792a02dc1b": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_asignaciones_modaldetallehorasazure.oncerrar.39e41369f1d2": [
+    "control._asignaciones_modaldetallehorasazure.oncerrar.39e41369f1d2": [
       "accion_oncerrar",
       "modal"
     ],
@@ -11523,15 +11738,15 @@
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_asignaciones_porcentajeeditable.setedicioninlinevalo.85848d3381e7": [
+    "control.ages_asignaciones_porcentajeeditable.setedicioninlineva.85848d3381e7": [
       "accion_setedicioninlinevalor",
       "filtro"
     ],
-    "control.pages_asignaciones_porcentajeeditable.iniciaredicioninline.66af8447d2dc": [
+    "control.ages_asignaciones_porcentajeeditable.iniciaredicioninli.66af8447d2dc": [
       "accion_iniciaredicioninline",
       "boton"
     ],
-    "control.pages_asignaciones_tablabacklogpersona.summary.c21eb3803523": [
+    "control.ges_asignaciones_tablabacklogpersona.summary.c21eb3803523": [
       "alternar",
       "boton"
     ],
@@ -11575,47 +11790,47 @@
       "accion_onrepartir",
       "boton"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.74056215e453": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.74056215e453": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.1ceead13e0fb": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.1ceead13e0fb": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.cc6228a16937": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.cc6228a16937": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.7df27c62dd5c": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.7df27c62dd5c": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.fcb2d66fe8d4": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.fcb2d66fe8d4": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.c0fddd7b7a18": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.c0fddd7b7a18": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.02d1652bd620": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.02d1652bd620": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.b9c57c906df9": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.b9c57c906df9": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.setform.8e388b0319e6": [
+    "control.es_backlog_futuro_modalbacklogfuturo.setform.8e388b0319e6": [
       "accion_setform",
       "filtro"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.oncerrar.a07299ca3de1": [
+    "control.es_backlog_futuro_modalbacklogfuturo.oncerrar.a07299ca3de1": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_backlog_futuro_modalbacklogfuturo.boton.19ffc09313cb": [
+    "control.es_backlog_futuro_modalbacklogfuturo.boton.19ffc09313cb": [
       "activar",
       "boton"
     ],
@@ -11631,43 +11846,43 @@
       "accion_oneliminar",
       "boton"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onanio.40c203040d79": [
+    "control._capacidades_barrafiltroscapacidades.onanio.40c203040d79": [
       "accion_onanio",
       "boton"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onanio.7284fdb2f250": [
+    "control._capacidades_barrafiltroscapacidades.onanio.7284fdb2f250": [
       "accion_onanio",
       "boton"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onanio.9728f4bf17c9": [
+    "control._capacidades_barrafiltroscapacidades.onanio.9728f4bf17c9": [
       "accion_onanio",
       "boton"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onvista.37c142eb0aa6": [
+    "control._capacidades_barrafiltroscapacidades.onvista.37c142eb0aa6": [
       "accion_onvista",
       "boton"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onvista.bd46a8f1ae2e": [
+    "control._capacidades_barrafiltroscapacidades.onvista.bd46a8f1ae2e": [
       "accion_onvista",
       "boton"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onmodo.3a7730c9c49c": [
+    "control._capacidades_barrafiltroscapacidades.onmodo.3a7730c9c49c": [
       "accion_onmodo",
       "boton"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onmodo.d94c700bdcf1": [
+    "control._capacidades_barrafiltroscapacidades.onmodo.d94c700bdcf1": [
       "accion_onmodo",
       "boton"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onfiltros.75c5a370ce82": [
+    "control._capacidades_barrafiltroscapacidades.onfiltros.75c5a370ce82": [
       "accion_onfiltros",
       "busqueda"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onfiltros.cb8128cd83f2": [
+    "control._capacidades_barrafiltroscapacidades.onfiltros.cb8128cd83f2": [
       "accion_onfiltros",
       "filtro"
     ],
-    "control.pages_capacidades_barrafiltroscapacidades.onfiltros.49fcced1ffd5": [
+    "control._capacidades_barrafiltroscapacidades.onfiltros.49fcced1ffd5": [
       "accion_onfiltros",
       "boton"
     ],
@@ -11783,99 +11998,99 @@
       "accion_ondeshacer",
       "boton"
     ],
-    "control.pages_configuracion_modaleditarparametro.seteditclave.610b795516ac": [
+    "control.s_configuracion_modaleditarparametro.seteditclave.610b795516ac": [
       "accion_seteditclave",
       "filtro"
     ],
-    "control.pages_configuracion_modaleditarparametro.seteditgrupo.10484f5aa48c": [
+    "control.s_configuracion_modaleditarparametro.seteditgrupo.10484f5aa48c": [
       "accion_seteditgrupo",
       "filtro"
     ],
-    "control.pages_configuracion_modaleditarparametro.seteditvalor.cd9f4bdb84df": [
+    "control.s_configuracion_modaleditarparametro.seteditvalor.cd9f4bdb84df": [
       "accion_seteditvalor",
       "filtro"
     ],
-    "control.pages_configuracion_modaleditarparametro.setedititem.942221d82612": [
+    "control.s_configuracion_modaleditarparametro.setedititem.942221d82612": [
       "accion_setedititem",
       "boton"
     ],
-    "control.pages_configuracion_modaleditarparametro.guardaredicion.af181ca8f5a6": [
+    "control.s_configuracion_modaleditarparametro.guardaredicion.af181ca8f5a6": [
       "accion_guardaredicion",
       "boton"
     ],
-    "control.pages_configuracion_modaleditartarifa.setteditanio.07bf006e979e": [
+    "control.ages_configuracion_modaleditartarifa.setteditanio.07bf006e979e": [
       "accion_setteditanio",
       "filtro"
     ],
-    "control.pages_configuracion_modaleditartarifa.setteditvalorhora.de3d15c6ad02": [
+    "control.ages_configuracion_modaleditartarifa.setteditvalorhora.de3d15c6ad02": [
       "accion_setteditvalorhora",
       "filtro"
     ],
-    "control.pages_configuracion_modaleditartarifa.setteditramificacion.0f139252fe8a": [
+    "control.ages_configuracion_modaleditartarifa.setteditramificaci.0f139252fe8a": [
       "accion_setteditramificacion",
       "filtro"
     ],
-    "control.pages_configuracion_modaleditartarifa.settedititem.073ccd932a47": [
+    "control.ages_configuracion_modaleditartarifa.settedititem.073ccd932a47": [
       "accion_settedititem",
       "boton"
     ],
-    "control.pages_configuracion_modaleditartarifa.guardarpopuptarifa.6657c8b247bc": [
+    "control.ages_configuracion_modaleditartarifa.guardarpopuptarifa.6657c8b247bc": [
       "accion_guardarpopuptarifa",
       "boton"
     ],
-    "control.pages_configuracion_seccionazuredevops.alternartipo.a7db0d19f2f3": [
+    "control.ges_configuracion_seccionazuredevops.alternartipo.a7db0d19f2f3": [
       "accion_alternartipo",
       "boton"
     ],
-    "control.pages_configuracion_seccionazuredevops.guardar.56e97cb687b8": [
+    "control.ges_configuracion_seccionazuredevops.guardar.56e97cb687b8": [
       "accion_guardar",
       "boton"
     ],
-    "control.s_configuracion_seccioncamposconfigurables.alternarcolumna.311cf82f2813": [
+    "control.iguracion_seccioncamposconfigurables.alternarcolumna.311cf82f2813": [
       "accion_alternarcolumna",
       "filtro"
     ],
-    "control.s_configuracion_seccioncamposconfigurables.alternarfiltro.446103f0e02e": [
+    "control.iguracion_seccioncamposconfigurables.alternarfiltro.446103f0e02e": [
       "accion_alternarfiltro",
       "filtro"
     ],
-    "control.s_configuracion_seccioncamposconfigurables.alternarexport.9fe631ac6b3a": [
+    "control.iguracion_seccioncamposconfigurables.alternarexport.9fe631ac6b3a": [
       "accion_alternarexport",
       "filtro"
     ],
-    "control.pages_configuracion_seccioncargaexcel.setrutacargaexcel.ce40c8db3534": [
+    "control.ages_configuracion_seccioncargaexcel.setrutacargaexcel.ce40c8db3534": [
       "accion_setrutacargaexcel",
       "filtro"
     ],
-    "control.pages_configuracion_seccioncargaexcel.boton.e22e8186bfd9": [
+    "control.ages_configuracion_seccioncargaexcel.boton.e22e8186bfd9": [
       "activar",
       "boton"
     ],
-    "control.pages_configuracion_seccioncargaexcel.consultarultimaejecu.a28adec2654a": [
+    "control.ages_configuracion_seccioncargaexcel.consultarultimaeje.a28adec2654a": [
       "accion_consultarultimaejecucionauto",
       "boton"
     ],
-    "control.pages_configuracion_seccioncargaexcel.probarcargaautomatic.592e1f839bc8": [
+    "control.ages_configuracion_seccioncargaexcel.probarcargaautomat.592e1f839bc8": [
       "accion_probarcargaautomatica",
       "boton"
     ],
-    "control.pages_configuracion_seccioncategorias.setcnombre.c62a16eefd33": [
+    "control.ages_configuracion_seccioncategorias.setcnombre.c62a16eefd33": [
       "accion_setcnombre",
       "filtro"
     ],
-    "control.pages_configuracion_seccioncategorias.setccolor.205749c530b7": [
+    "control.ages_configuracion_seccioncategorias.setccolor.205749c530b7": [
       "accion_setccolor",
       "filtro"
     ],
-    "control.pages_configuracion_seccioncategorias.boton.4fe581a641be": [
+    "control.ages_configuracion_seccioncategorias.boton.4fe581a641be": [
       "activar",
       "boton"
     ],
-    "control.pages_configuracion_seccioncategorias.setceditvalue.a86ae5f313b8": [
+    "control.ages_configuracion_seccioncategorias.setceditvalue.a86ae5f313b8": [
       "accion_setceditvalue",
       "filtro"
     ],
-    "control.pages_configuracion_seccioncategorias.celiminar.a1228d3008dd": [
+    "control.ages_configuracion_seccioncategorias.celiminar.a1228d3008dd": [
       "accion_celiminar",
       "boton"
     ],
@@ -11915,47 +12130,47 @@
       "accion_eliminarfestivo",
       "boton"
     ],
-    "control.pages_configuracion_seccionlistachips.quitar.8722a1b6cba7": [
+    "control.ages_configuracion_seccionlistachips.quitar.8722a1b6cba7": [
       "accion_quitar",
       "boton"
     ],
-    "control.pages_configuracion_seccionlistachips.setnuevo.219547430c06": [
+    "control.ages_configuracion_seccionlistachips.setnuevo.219547430c06": [
       "accion_setnuevo",
       "filtro"
     ],
-    "control.pages_configuracion_seccionlistachips.agregar.e92b3ba1a0b0": [
+    "control.ages_configuracion_seccionlistachips.agregar.e92b3ba1a0b0": [
       "accion_agregar",
       "boton"
     ],
-    "control.pages_configuracion_seccionparametros.setnuevaclave.b3564422ff80": [
+    "control.ages_configuracion_seccionparametros.setnuevaclave.b3564422ff80": [
       "accion_setnuevaclave",
       "filtro"
     ],
-    "control.pages_configuracion_seccionparametros.setnuevovalor.26caa10fcd0d": [
+    "control.ages_configuracion_seccionparametros.setnuevovalor.26caa10fcd0d": [
       "accion_setnuevovalor",
       "filtro"
     ],
-    "control.pages_configuracion_seccionparametros.setgrupo.bcc64c7894ae": [
+    "control.ages_configuracion_seccionparametros.setgrupo.bcc64c7894ae": [
       "accion_setgrupo",
       "filtro"
     ],
-    "control.pages_configuracion_seccionparametros.boton.f7873e23978b": [
+    "control.ages_configuracion_seccionparametros.boton.f7873e23978b": [
       "activar",
       "boton"
     ],
-    "control.pages_configuracion_seccionparametros.setvalores.bf4e39e61cac": [
+    "control.ages_configuracion_seccionparametros.setvalores.bf4e39e61cac": [
       "accion_setvalores",
       "filtro"
     ],
-    "control.pages_configuracion_seccionparametros.guardar.4fa8a0fb4579": [
+    "control.ages_configuracion_seccionparametros.guardar.4fa8a0fb4579": [
       "accion_guardar",
       "boton"
     ],
-    "control.pages_configuracion_seccionparametros.abriredicion.f3c57a941da8": [
+    "control.ages_configuracion_seccionparametros.abriredicion.f3c57a941da8": [
       "accion_abriredicion",
       "boton"
     ],
-    "control.pages_configuracion_seccionparametros.eliminarparametro.5c0dde9a9b25": [
+    "control.ages_configuracion_seccionparametros.eliminarparametro.5c0dde9a9b25": [
       "accion_eliminarparametro",
       "boton"
     ],
@@ -11983,95 +12198,95 @@
       "accion_eliminartarifa",
       "boton"
     ],
-    "control.pages_dashboard_backlog_filtrorangorapido.onseleccionar.6d0aa4537268": [
+    "control._dashboard_backlog_filtrorangorapido.onseleccionar.6d0aa4537268": [
       "accion_onseleccionar",
       "boton"
     ],
-    "control.es_dashboard_backlog_graficacapacidadsquad.onverdetalle.ee803675867b": [
+    "control.hboard_backlog_graficacapacidadsquad.onverdetalle.ee803675867b": [
       "accion_onverdetalle",
       "boton"
     ],
-    "control.pages_dashboard_backlog_graficawopormes.onverdetalle.9f20d19e0bb9": [
+    "control.es_dashboard_backlog_graficawopormes.onverdetalle.9f20d19e0bb9": [
       "accion_onverdetalle",
       "boton"
     ],
-    "control.dashboard_backlog_modaldetalleaplicaciones.oncerrar.8d4623bbb575": [
+    "control.ard_backlog_modaldetalleaplicaciones.oncerrar.8d4623bbb575": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.dashboard_backlog_modaldetalleaplicaciones.onbusqueda.5cc27892f4db": [
+    "control.ard_backlog_modaldetalleaplicaciones.onbusqueda.5cc27892f4db": [
       "accion_onbusqueda",
       "busqueda"
     ],
-    "control.ges_dashboard_backlog_modaldetalleentregas.oncerrar.cc63c1fbc4f5": [
+    "control.shboard_backlog_modaldetalleentregas.oncerrar.cc63c1fbc4f5": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.ges_dashboard_backlog_modaldetalleentregas.onbusqueda.525695c7e05a": [
+    "control.shboard_backlog_modaldetalleentregas.onbusqueda.525695c7e05a": [
       "accion_onbusqueda",
       "busqueda"
     ],
-    "control.ges_dashboard_backlog_modaldetalleentregas.link.c9ffc7f27ab7": [
+    "control.shboard_backlog_modaldetalleentregas.link.c9ffc7f27ab7": [
       "navegar",
       "enlace"
     ],
-    "control.ges_dashboard_backlog_modaldetallepersonas.oncerrar.c45313fb0f9d": [
+    "control.shboard_backlog_modaldetallepersonas.oncerrar.c45313fb0f9d": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.ges_dashboard_backlog_modaldetallepersonas.onbusqueda.0703783b3139": [
+    "control.shboard_backlog_modaldetallepersonas.onbusqueda.0703783b3139": [
       "accion_onbusqueda",
       "busqueda"
     ],
-    "control.pages_dashboard_backlog_modaldetallewo.oncerrar.eec535a0afb1": [
+    "control.ges_dashboard_backlog_modaldetallewo.oncerrar.eec535a0afb1": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_dashboard_backlog_modaldetallewo.onbusqueda.95e02a6f183f": [
+    "control.ges_dashboard_backlog_modaldetallewo.onbusqueda.95e02a6f183f": [
       "accion_onbusqueda",
       "busqueda"
     ],
-    "control.pages_dashboard_backlog_modalreglaswo.oncerrar.a2d3e9017473": [
+    "control.ages_dashboard_backlog_modalreglaswo.oncerrar.a2d3e9017473": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_dashboard_backlog_modalreglaswo.oncerrar.d9b51790166b": [
+    "control.ages_dashboard_backlog_modalreglaswo.oncerrar.d9b51790166b": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_dashboard_backlog_tabladetallesquad.onverreglaswo.6bd4a90d5310": [
+    "control._dashboard_backlog_tabladetallesquad.onverreglaswo.6bd4a90d5310": [
       "accion_onverreglaswo",
       "boton"
     ],
-    "control.pages_dashboard_backlog_tabladetallesquad.onverpersonas.078ff934e17f": [
+    "control._dashboard_backlog_tabladetallesquad.onverpersonas.078ff934e17f": [
       "accion_onverpersonas",
       "boton"
     ],
-    "control.pages_dashboard_backlog_tabladetallesquad.onverwo.46cfa3c3324b": [
+    "control._dashboard_backlog_tabladetallesquad.onverwo.46cfa3c3324b": [
       "accion_onverwo",
       "boton"
     ],
-    "control.pages_dashboard_backlog_tabladetallesquad.onverentregas.917e91b1ade8": [
+    "control._dashboard_backlog_tabladetallesquad.onverentregas.917e91b1ade8": [
       "accion_onverentregas",
       "boton"
     ],
-    "control.pages_dashboard_backlog_tabladetallesquad.onveraplicaciones.41bb4ed4461e": [
+    "control._dashboard_backlog_tabladetallesquad.onveraplicaciones.41bb4ed4461e": [
       "accion_onveraplicaciones",
       "boton"
     ],
-    "control.pages_dashboard_estados_modalgarantias.onclick.bec104498145": [
+    "control.ges_dashboard_estados_modalgarantias.onclick.bec104498145": [
       "accion_onclick",
       "boton"
     ],
-    "control.pages_dashboard_estados_modalgarantias.oncerrar.a63cbf9919ce": [
+    "control.ges_dashboard_estados_modalgarantias.oncerrar.a63cbf9919ce": [
       "accion_oncerrar",
       "modal"
     ],
-    "control.hboard_requerimientos_modaldetalleanshitss.cambiarcategoria.de6fd145fbcf": [
+    "control._requerimientos_modaldetalleanshitss.cambiarcategoria.de6fd145fbcf": [
       "accion_cambiarcategoria",
       "tab"
     ],
-    "control.hboard_requerimientos_modaldetalleanshitss.link.beb01e1d3ae4": [
+    "control._requerimientos_modaldetalleanshitss.link.beb01e1d3ae4": [
       "navegar",
       "enlace"
     ],
@@ -12083,7 +12298,7 @@
       "accion_setexpandido",
       "boton"
     ],
-    "control.pages_detalle_ans_filaans.oncambiartipificacio.5a766bdb6826": [
+    "control.pages_detalle_ans_filaans.oncambiartipificac.5a766bdb6826": [
       "accion_oncambiartipificacion",
       "filtro"
     ],
@@ -12099,7 +12314,7 @@
       "navegar",
       "enlace"
     ],
-    "control.pages_detalle_ans_listarequerimientosans.link.9f26c4613513": [
+    "control.s_detalle_ans_listarequerimientosans.link.9f26c4613513": [
       "navegar",
       "enlace"
     ],
@@ -12119,43 +12334,43 @@
       "accion_oncambiarpagina",
       "paginacion"
     ],
-    "control.pages_esquema_azure_arbolesquemaazure.onalternar.a8d70d3b15ef": [
+    "control.ages_esquema_azure_arbolesquemaazure.onalternar.a8d70d3b15ef": [
       "accion_onalternar",
       "boton"
     ],
-    "control.pages_esquema_azure_arbolesquemaazure.a.c51dfbea846b": [
+    "control.ages_esquema_azure_arbolesquemaazure.a.c51dfbea846b": [
       "navegar",
       "enlace"
     ],
-    "control.pages_esquema_azure_arbolesquemaazure.onexpandirtodo.d6cf9ed4da2f": [
+    "control.ages_esquema_azure_arbolesquemaazure.onexpandirtodo.d6cf9ed4da2f": [
       "accion_onexpandirtodo",
       "boton"
     ],
-    "control.pages_esquema_azure_arbolesquemaazure.oncolapsartodo.f4f5d70d6f26": [
+    "control.ages_esquema_azure_arbolesquemaazure.oncolapsartodo.f4f5d70d6f26": [
       "accion_oncolapsartodo",
       "boton"
     ],
-    "control.pages_esquema_azure_filtrosesquemaazure.onproyecto.d07ed1fe71df": [
+    "control.es_esquema_azure_filtrosesquemaazure.onproyecto.d07ed1fe71df": [
       "accion_onproyecto",
       "filtro"
     ],
-    "control.pages_esquema_azure_filtrosesquemaazure.cambiartipos.f942d5b52201": [
+    "control.es_esquema_azure_filtrosesquemaazure.cambiartipos.f942d5b52201": [
       "accion_cambiartipos",
       "filtro"
     ],
-    "control.pages_esquema_azure_filtrosesquemaazure.oniteracionpath.da7841c49c5a": [
+    "control.es_esquema_azure_filtrosesquemaazure.oniteracionpath.da7841c49c5a": [
       "accion_oniteracionpath",
       "filtro"
     ],
-    "control.pages_esquema_azure_filtrosesquemaazure.onbusqueda.54b377c43aca": [
+    "control.es_esquema_azure_filtrosesquemaazure.onbusqueda.54b377c43aca": [
       "accion_onbusqueda",
       "busqueda"
     ],
-    "control.pages_esquema_azure_filtrosesquemaazure.onrecargar.ada87cb2aaa7": [
+    "control.es_esquema_azure_filtrosesquemaazure.onrecargar.ada87cb2aaa7": [
       "accion_onrecargar",
       "boton"
     ],
-    "control.pages_esquema_azure_zonasincronizacion.sincronizar.2b98e466cab1": [
+    "control.ges_esquema_azure_zonasincronizacion.sincronizar.2b98e466cab1": [
       "accion_sincronizar",
       "boton"
     ],
@@ -12311,7 +12526,7 @@
       "accion_settipo",
       "filtro"
     ],
-    "control.pages_personas_panelpersona.setaplicacionmanual.fe9f150ccf61": [
+    "control.pages_personas_panelpersona.setaplicacionmanua.fe9f150ccf61": [
       "accion_setaplicacionmanual",
       "filtro"
     ],
@@ -12319,7 +12534,7 @@
       "accion_setvalorpersona",
       "filtro"
     ],
-    "control.pages_personas_panelpersona.setvalorperifericos.3a49d91aa1cc": [
+    "control.pages_personas_panelpersona.setvalorperiferico.3a49d91aa1cc": [
       "accion_setvalorperifericos",
       "filtro"
     ],
@@ -12375,31 +12590,31 @@
       "accion_onelegir",
       "boton"
     ],
-    "control.pages_planes_accion_barrafiltrosplanes.alcambiarvista.019f5aa497f2": [
+    "control.ges_planes_accion_barrafiltrosplanes.alcambiarvista.019f5aa497f2": [
       "accion_alcambiarvista",
       "boton"
     ],
-    "control.pages_planes_accion_barrafiltrosplanes.alcambiar.0622e66849ba": [
+    "control.ges_planes_accion_barrafiltrosplanes.alcambiar.0622e66849ba": [
       "accion_alcambiar",
       "boton"
     ],
-    "control.pages_planes_accion_barrafiltrosplanes.alcambiar.cabfd7497984": [
+    "control.ges_planes_accion_barrafiltrosplanes.alcambiar.cabfd7497984": [
       "accion_alcambiar",
       "boton"
     ],
-    "control.pages_planes_accion_barrafiltrosplanes.alcambiar.02c6554650df": [
+    "control.ges_planes_accion_barrafiltrosplanes.alcambiar.02c6554650df": [
       "accion_alcambiar",
       "boton"
     ],
-    "control.pages_planes_accion_barrafiltrosplanes.alcambiar.a46ae52b67f6": [
+    "control.ges_planes_accion_barrafiltrosplanes.alcambiar.a46ae52b67f6": [
       "accion_alcambiar",
       "filtro"
     ],
-    "control.pages_planes_accion_barrafiltrosplanes.alcambiar.251e2460f065": [
+    "control.ges_planes_accion_barrafiltrosplanes.alcambiar.251e2460f065": [
       "accion_alcambiar",
       "filtro"
     ],
-    "control.pages_planes_accion_barrafiltrosplanes.alcambiar.c1a9f942676c": [
+    "control.ges_planes_accion_barrafiltrosplanes.alcambiar.c1a9f942676c": [
       "accion_alcambiar",
       "busqueda"
     ],
@@ -12479,163 +12694,163 @@
       "accion_deshacer",
       "boton"
     ],
-    "control.es_requerimiento_detalle_formularioentrega.actualizar.8b55f3dadfc7": [
+    "control.uerimiento_detalle_formularioentrega.actualizar.8b55f3dadfc7": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.es_requerimiento_detalle_formularioentrega.actualizar.0d6eb702f228": [
+    "control.uerimiento_detalle_formularioentrega.actualizar.0d6eb702f228": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.es_requerimiento_detalle_formularioentrega.actualizar.b845cc91679c": [
+    "control.uerimiento_detalle_formularioentrega.actualizar.b845cc91679c": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.es_requerimiento_detalle_formularioentrega.actualizar.4f230dbf4b78": [
+    "control.uerimiento_detalle_formularioentrega.actualizar.4f230dbf4b78": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.es_requerimiento_detalle_formularioentrega.actualizar.7895a07480c8": [
+    "control.uerimiento_detalle_formularioentrega.actualizar.7895a07480c8": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.es_requerimiento_detalle_formularioentrega.actualizar.f6f48e233103": [
+    "control.uerimiento_detalle_formularioentrega.actualizar.f6f48e233103": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.es_requerimiento_detalle_formularioentrega.actualizar.69b560a5b5d3": [
+    "control.uerimiento_detalle_formularioentrega.actualizar.69b560a5b5d3": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.s_requerimiento_detalle_modaleditarentrega.actualizar.01e28871706a": [
+    "control.erimiento_detalle_modaleditarentrega.actualizar.01e28871706a": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.s_requerimiento_detalle_modaleditarentrega.actualizar.da9c3e21c15b": [
+    "control.erimiento_detalle_modaleditarentrega.actualizar.da9c3e21c15b": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.s_requerimiento_detalle_modaleditarentrega.actualizar.cd590e99a818": [
+    "control.erimiento_detalle_modaleditarentrega.actualizar.cd590e99a818": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.s_requerimiento_detalle_modaleditarentrega.actualizar.9967081601da": [
+    "control.erimiento_detalle_modaleditarentrega.actualizar.9967081601da": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.s_requerimiento_detalle_modaleditarentrega.actualizar.3cdb3ad6089e": [
+    "control.erimiento_detalle_modaleditarentrega.actualizar.3cdb3ad6089e": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.s_requerimiento_detalle_modaleditarentrega.actualizar.7643164ebecb": [
+    "control.erimiento_detalle_modaleditarentrega.actualizar.7643164ebecb": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.ages_requerimiento_detalle_seccionbitacora.oneliminar.8dab4399a7b0": [
+    "control.equerimiento_detalle_seccionbitacora.oneliminar.8dab4399a7b0": [
       "accion_oneliminar",
       "boton"
     ],
-    "control.ages_requerimiento_detalle_seccionbitacora.setmostrartodo.f5316c57b7e3": [
+    "control.equerimiento_detalle_seccionbitacora.setmostrartodo.f5316c57b7e3": [
       "accion_setmostrartodo",
       "boton"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.setvalor.3eaac9758755": [
+    "control.miento_detalle_secciondatosgenerales.setvalor.3eaac9758755": [
       "accion_setvalor",
       "filtro"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.actualizar.74c4d62e46e2": [
+    "control.miento_detalle_secciondatosgenerales.actualizar.74c4d62e46e2": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.actualizar.72a2b9aab60a": [
+    "control.miento_detalle_secciondatosgenerales.actualizar.72a2b9aab60a": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.actualizar.7c60fbd58abb": [
+    "control.miento_detalle_secciondatosgenerales.actualizar.7c60fbd58abb": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.actualizar.4d1bd8bd7e63": [
+    "control.miento_detalle_secciondatosgenerales.actualizar.4d1bd8bd7e63": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.actualizar.68bb9cdb4e67": [
+    "control.miento_detalle_secciondatosgenerales.actualizar.68bb9cdb4e67": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.actualizar.b898a01f7d58": [
+    "control.miento_detalle_secciondatosgenerales.actualizar.b898a01f7d58": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.actualizar.03afea7f4e85": [
+    "control.miento_detalle_secciondatosgenerales.actualizar.03afea7f4e85": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.equerimiento_detalle_secciondatosgenerales.actualizar.f61255f0fd1f": [
+    "control.miento_detalle_secciondatosgenerales.actualizar.f61255f0fd1f": [
       "accion_actualizar",
       "filtro"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.oncambiartipif.01eeb0b19e22": [
+    "control.equerimiento_detalle_seccionentregas.oncambiartipif.01eeb0b19e22": [
       "accion_oncambiartipif",
       "filtro"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.oncambiartipif.7a6673ccfded": [
+    "control.equerimiento_detalle_seccionentregas.oncambiartipif.7a6673ccfded": [
       "accion_oncambiartipif",
       "filtro"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.setexpandido.ed21158fce80": [
+    "control.equerimiento_detalle_seccionentregas.setexpandido.ed21158fce80": [
       "accion_setexpandido",
       "boton"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.onverhistorialentreg.138dff653c3c": [
+    "control.equerimiento_detalle_seccionentregas.onverhistorialentr.138dff653c3c": [
       "accion_onverhistorialentrega",
       "boton"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.oneditarentrega.eac5f03a2ee3": [
+    "control.equerimiento_detalle_seccionentregas.oneditarentrega.eac5f03a2ee3": [
       "accion_oneditarentrega",
       "boton"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.oneliminarentrega.69b58c5bb80a": [
+    "control.equerimiento_detalle_seccionentregas.oneliminarentrega.69b58c5bb80a": [
       "accion_oneliminarentrega",
       "boton"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.onguardartipif.c928e09fa8e7": [
+    "control.equerimiento_detalle_seccionentregas.onguardartipif.c928e09fa8e7": [
       "accion_onguardartipif",
       "boton"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.oncancelartipif.67df675450be": [
+    "control.equerimiento_detalle_seccionentregas.oncancelartipif.67df675450be": [
       "accion_oncancelartipif",
       "boton"
     ],
-    "control.ages_requerimiento_detalle_seccionentregas.oniniciarediciontipi.8a4370d4c28e": [
+    "control.equerimiento_detalle_seccionentregas.oniniciaredicionti.8a4370d4c28e": [
       "accion_oniniciarediciontipif",
       "boton"
     ],
-    "control.uerimiento_detalle_seccionseguimientohitss.seteditando.122d3ce08669": [
+    "control.ento_detalle_seccionseguimientohitss.seteditando.122d3ce08669": [
       "accion_seteditando",
       "boton"
     ],
-    "control.uerimiento_detalle_seccionseguimientohitss.oncambiar.440e77b2e1e9": [
+    "control.ento_detalle_seccionseguimientohitss.oncambiar.440e77b2e1e9": [
       "accion_oncambiar",
       "filtro"
     ],
-    "control.uerimiento_detalle_seccionseguimientohitss.oncambiar.0d878fcb9ce9": [
+    "control.ento_detalle_seccionseguimientohitss.oncambiar.0d878fcb9ce9": [
       "accion_oncambiar",
       "filtro"
     ],
-    "control.uerimiento_detalle_seccionseguimientohitss.guardar.91dcd0cc8c5d": [
+    "control.ento_detalle_seccionseguimientohitss.guardar.91dcd0cc8c5d": [
       "accion_guardar",
       "boton"
     ],
-    "control.requerimientos_barraaccionesrequerimientos.link.f83ca2ce034d": [
+    "control.imientos_barraaccionesrequerimientos.link.f83ca2ce034d": [
       "navegar",
       "enlace"
     ],
-    "control.requerimientos_barraaccionesrequerimientos.setmostrarfiltros.90fd76bf6543": [
+    "control.imientos_barraaccionesrequerimientos.setmostrarfiltros.90fd76bf6543": [
       "accion_setmostrarfiltros",
       "boton"
     ],
-    "control.requerimientos_barraaccionesrequerimientos.onexportar.2aed035fdff5": [
+    "control.imientos_barraaccionesrequerimientos.onexportar.2aed035fdff5": [
       "accion_onexportar",
       "boton"
     ],
@@ -12647,27 +12862,27 @@
       "accion_seteditvalue",
       "filtro"
     ],
-    "control.pages_requerimientos_filarequerimiento.toggleexpandreq.f72c7ae6c321": [
+    "control.ges_requerimientos_filarequerimiento.toggleexpandreq.f72c7ae6c321": [
       "accion_toggleexpandreq",
       "boton"
     ],
-    "control.pages_requerimientos_filarequerimiento.link.383054c30141": [
+    "control.ges_requerimientos_filarequerimiento.link.383054c30141": [
       "navegar",
       "enlace"
     ],
-    "control.pages_requerimientos_filarequerimiento.setexpandedentregas.486fa0c6b293": [
+    "control.ges_requerimientos_filarequerimiento.setexpandedentrega.486fa0c6b293": [
       "accion_setexpandedentregas",
       "boton"
     ],
-    "control.pages_requerimientos_filarequerimiento.openestimationmodal.b0c2ddf0a5de": [
+    "control.ges_requerimientos_filarequerimiento.openestimationmoda.b0c2ddf0a5de": [
       "accion_openestimationmodal",
       "modal"
     ],
-    "control.pages_requerimientos_filarequerimiento.handleuploadclick.8e0d697f8006": [
+    "control.ges_requerimientos_filarequerimiento.handleuploadclick.8e0d697f8006": [
       "accion_handleuploadclick",
       "boton"
     ],
-    "control.pages_requerimientos_filarequerimiento.eliminar.4af5d51c005e": [
+    "control.ges_requerimientos_filarequerimiento.eliminar.4af5d51c005e": [
       "accion_eliminar",
       "boton"
     ],
@@ -12687,75 +12902,75 @@
       "accion_oneliminar",
       "boton"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.52e69dc16e79": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.52e69dc16e79": [
       "accion_setfiltros",
       "boton"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.4614b81e97bf": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.4614b81e97bf": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.68eea1c6f3ae": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.68eea1c6f3ae": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.53f587a4fe49": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.53f587a4fe49": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.31c9e6b9ab12": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.31c9e6b9ab12": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.890fc346dff8": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.890fc346dff8": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.e583c730c07d": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.e583c730c07d": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.f920b37f158f": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.f920b37f158f": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.3f7b8f4f71c6": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.3f7b8f4f71c6": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.92478a4db387": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.92478a4db387": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.68457c93c883": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.68457c93c883": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.a878d4b56eb0": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.a878d4b56eb0": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.68dda56ad8f5": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.68dda56ad8f5": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.73f35a15b32d": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.73f35a15b32d": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.3bb01809872c": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.3bb01809872c": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.34b5528964fa": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.34b5528964fa": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control._requerimientos_panelfiltrosrequerimientos.setfiltros.52e5cab1e662": [
+    "control.rimientos_panelfiltrosrequerimientos.setfiltros.52e5cab1e662": [
       "accion_setfiltros",
       "filtro"
     ],
-    "control.es_requerimientos_seccionresumencolapsable.ontoggle.a226e88e88db": [
+    "control.uerimientos_seccionresumencolapsable.ontoggle.a226e88e88db": [
       "accion_ontoggle",
       "boton"
     ],
@@ -12763,27 +12978,27 @@
       "accion_togglehu",
       "boton"
     ],
-    "control.pages_requerimientos_tarjetarequerimiento.toggleexpandreq.ff0119a871c9": [
+    "control._requerimientos_tarjetarequerimiento.toggleexpandreq.ff0119a871c9": [
       "accion_toggleexpandreq",
       "boton"
     ],
-    "control.pages_requerimientos_tarjetarequerimiento.link.59a0af5a1c56": [
+    "control._requerimientos_tarjetarequerimiento.link.59a0af5a1c56": [
       "navegar",
       "enlace"
     ],
-    "control.pages_requerimientos_tarjetarequerimiento.setexpandedentregas.c24ad030eee1": [
+    "control._requerimientos_tarjetarequerimiento.setexpandedentrega.c24ad030eee1": [
       "accion_setexpandedentregas",
       "boton"
     ],
-    "control.pages_requerimientos_tarjetarequerimiento.openestimationmodal.8dfad270caa4": [
+    "control._requerimientos_tarjetarequerimiento.openestimationmoda.8dfad270caa4": [
       "accion_openestimationmodal",
       "modal"
     ],
-    "control.pages_requerimientos_tarjetarequerimiento.handleuploadclick.14e8e98845ed": [
+    "control._requerimientos_tarjetarequerimiento.handleuploadclick.14e8e98845ed": [
       "accion_handleuploadclick",
       "boton"
     ],
-    "control.pages_requerimientos_tarjetarequerimiento.eliminar.203dcea3cfc0": [
+    "control._requerimientos_tarjetarequerimiento.eliminar.203dcea3cfc0": [
       "accion_eliminar",
       "boton"
     ],
@@ -12835,7 +13050,7 @@
       "accion_navegar",
       "boton"
     ],
-    "control.pages_roadmap_resumenroadmap.onseleccionarvencido.a618940c0624": [
+    "control.pages_roadmap_resumenroadmap.onseleccionarvenci.a618940c0624": [
       "accion_onseleccionarvencido",
       "boton"
     ],
@@ -12847,19 +13062,19 @@
       "accion_navegar",
       "boton"
     ],
-    "control.pages_solicitudes_fabrica_filaregistro.onverdescripcion.79b86f897cfa": [
+    "control.ges_solicitudes_fabrica_filaregistro.onverdescripcion.79b86f897cfa": [
       "accion_onverdescripcion",
       "boton"
     ],
-    "control.pages_solicitudes_fabrica_filaregistro.onvertask.cfb7a48973f6": [
+    "control.ges_solicitudes_fabrica_filaregistro.onvertask.cfb7a48973f6": [
       "accion_onvertask",
       "boton"
     ],
-    "control.pages_solicitudes_fabrica_filaregistro.onvertask.5ad7999d2c48": [
+    "control.ges_solicitudes_fabrica_filaregistro.onvertask.5ad7999d2c48": [
       "accion_onvertask",
       "boton"
     ],
-    "control.pages_solicitudes_fabrica_filaregistro.onvertask.f40eef586e1e": [
+    "control.ges_solicitudes_fabrica_filaregistro.onvertask.f40eef586e1e": [
       "accion_onvertask",
       "boton"
     ],
@@ -12871,7 +13086,7 @@
       "accion_oncambiarnombre",
       "filtro"
     ],
-    "control.pages_usuarios_formulariorol.oncambiardescripcion.049eb850978e": [
+    "control.pages_usuarios_formulariorol.oncambiardescripci.049eb850978e": [
       "accion_oncambiardescripcion",
       "filtro"
     ],
@@ -12896,7 +13111,8 @@
     "entregas_excel",
     "requerimientos_excel",
     "backlog_excel",
-    "personas_excel"
+    "personas_excel",
+    "plantilla_importacion_excel"
   ],
   "eventos": [
     "app_page_view",
@@ -12935,7 +13151,7 @@
   "limites": [
     "Actas.tsx CRUD no tiene ruta activa; no existe workflow de aprobación de actas.",
     "Formulario: solo los seis IDs explícitos tienen asociación de confirmación HTTP; no se infiere éxito desde onSubmit.",
-    "Solo cuatro exportaciones XLSX locales tienen app_export; un clic descargar no acredita descarga al disco.",
+    "Solo las exportaciones XLSX de EXPORTACIONES (cuatro locales y la plantilla de importación) tienen app_export; un clic descargar no acredita descarga al disco.",
     "No se registran lecturas GET generales ni polling.",
     "El inventario cuenta callsites, no instancias por fila ni uso observado."
   ]

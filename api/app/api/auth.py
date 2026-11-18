@@ -10,7 +10,7 @@ from app.schemas.auth import LoginIn, TokenOut, UsuarioOut
 from app.security.deps import permisos_usuario, rol_actual, usuario_actual
 from app.security.hashing import verificar_password
 from app.security.jwt import crear_token
-from app.services.auditoria import RutaAuditada
+from app.services.auditoria import RutaAuditada, hmac_email, ip_cliente
 from app.services.identidad_analitica import obtener_id_analitico
 
 router = APIRouter(prefix="/auth", tags=["auth"], route_class=RutaAuditada)
@@ -38,6 +38,15 @@ async def _usuario_out(u: Usuario) -> UsuarioOut:
 async def login(datos: LoginIn, request: Request) -> TokenOut:
     """Valida credenciales y devuelve un token JWT."""
     usuario = await Usuario.find_one(Usuario.email == datos.email)
+    # Datos mínimos para auditar el intento (sin email en claro ni contraseña).
+    request.state.auditoria_login = {
+        "email_hmac": hmac_email(datos.email),
+        "ip": ip_cliente(request),
+        "user_agent": (request.headers.get("user-agent") or "")[:200] or None,
+    }
+    if usuario is not None:
+        # Solo para atribuir el fallo/éxito al usuario real; el 401 sigue siendo genérico.
+        request.state.usuario_autenticado = usuario
     if (
         usuario is None
         or not usuario.activo

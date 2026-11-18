@@ -3,6 +3,7 @@ import {
 } from './catalogo'
 import type { IdExportacion, IdFormulario, OperacionCatalogada } from './catalogo'
 import type { DecisionConsentimiento } from './consentimiento'
+import type { EventoUso } from './registro'
 
 export interface IdentidadAnalitica {
   id_analitico?: string | null
@@ -23,6 +24,49 @@ export const CAMPOS = [
   'operation_id', 'status_code', 'error_type', 'form_id', 'elapsed_ms', 'export_id',
 ] as const
 type CamposEvento = Partial<Record<typeof CAMPOS[number], string | number | null>>
+export type AccionSesion = 'session_start' | 'session_end' | 'session_expired' | 'login_failed'
+
+// Eventos que alimentan también el registro propio (auditoría interna). app_operation y
+// app_error quedan fuera: el backend ya audita las operaciones por su cuenta.
+const EVENTOS_PROPIOS: readonly string[] = ['app_page_view', 'app_interaction', 'app_screen_engagement',
+  'app_session', 'app_export', 'app_form']
+const DURACION_MAXIMA_MS = 86_400_000
+const VALOR_USO =/^[a-z0-9_.:-]{1,80}$/
+const valorUso = (valor: unknown) => typeof valor === 'string' && VALOR_USO.test(valor) ? valor : undefined
+
+// Proyección mínima y saneada del evento para el registro propio: sin URLs, IDs ni valores.
+// export_id / form_id viajan como interaction_id (el contrato no tiene campo propio).
+export function aEventoUso(datos: Record<string, string | number | null>): EventoUso | null {
+  const momento = typeof datos.timestamp_ms === 'number' ? new Date(datos.timestamp_ms) : null
+  if (!momento || Number.isNaN(momento.getTime()) || typeof datos.event !== 'string') return null
+  const esExport = datos.event === 'app_export'
+  const esFormulario = datos.event === 'app_form'
+  const interaccion = valorUso(esExport ? datos.export_id : esFormulario ? datos.form_id : datos.interaction_id)
+  if (datos.event === 'app_interaction' && !interaccion) return null
+  const accion = esExport && datos.outcome === 'failure' ? 'exportar_fallida' : datos.action_name
+  const evento: EventoUso = { event: datos.event, ts: momento.toISOString() }
+  const pantalla = valorUso(datos.screen)
+  const modulo = valorUso(datos.module)
+  const nombreAccion = valorUso(accion)
+  if (pantalla) evento.screen = pantalla
+  if (modulo) evento.module = modulo
+  if (interaccion) evento.interaction_id = interaccion
+  if (nombreAccion) evento.action_name = nombreAccion
+  // La duración de la participación viaja como campo propio, entero y acotado a 24 h.
+  if (datos.event === 'app_screen_engagement' && typeof datos.elapsed_ms === 'number' &&
+    Number.isFinite(datos.elapsed_ms)) {
+    evento.duracion_ms = Math.min(DURACION_MAXIMA_MS, Math.max(0, Math.round(datos.elapsed_ms)))
+  }
+  return evento
+}
+
+// Id corto y único por evento (sin PII), solo alfanumérico y de máximo 32 caracteres.
+function idEvento(generar: () => string): string | undefined {
+  try {
+    const id = generar().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 32)
+    return id || undefined
+  } catch { return undefined }
+}
 
 interface Entorno {
   produccion: boolean
@@ -34,7 +78,10 @@ interface Entorno {
   reloj: () => number
   aleatorio: () => string
   visible: () => boolean
+  /** Canal de dataLayer/Google: solo con consentimiento y en producción. */
   enviar: (datos: Record<string, string | number | null>) => void
+  /** Registro propio (auditoría interna): obligatorio en producción, sin consentimiento. */
+  registrar?: (evento: EventoUso) => void
   obtenerIdentidad: () => IdentidadAnalitica | null
 }
 
@@ -74,6 +121,10 @@ export function categorizarError(estado?: number, cancelado = false): TipoError 
 // Fábrica pura e inyectable: pruebas sin Google, React, almacenamiento ni reloj real.
 export function crearServicioAnalitica(entorno: Entorno) {
   let permitido = false
+  let sesionActiva = false
+  // El registro propio no depende del consentimiento; solo existe en producción.
+  const propio = entorno.produccion && typeof entorno.registrar === 'function'
+  const activo = () => permitido || propio
   let rutaActual = ''
   let rutaVista = ''
   let identidad: CamposEvento = {}
@@ -90,8 +141,10 @@ export function crearServicioAnalitica(entorno: Entorno) {
     if (url.protocol === 'https:' || url.protocol === 'http:') referente = url.origin
   } catch { /* Referente ausente o inválido. */ }
 
+  const pantallaActual = () => rutaActual === '' ? undefined : buscarPantalla(rutaActual)
+
   function contexto(): CamposEvento {
-    const pantalla = buscarPantalla(rutaActual)
+    const pantalla = pantallaActual()
     return pantalla ? {
       module: pantalla[2], screen: pantalla[1], route_template: pantalla[0],
       page_location: `${entorno.origen}${base}${pantalla[0].slice(1)}`,
@@ -100,12 +153,12 @@ export function crearServicioAnalitica(entorno: Entorno) {
   }
 
   function pantallaMedible() {
-    const pantalla = buscarPantalla(rutaActual)
+    const pantalla = pantallaActual()
     return pantalla && (pantalla[2] === 'sesion' || typeof identidad.user_role === 'string')
   }
 
-  function emitir(evento: Evento, campos: CamposEvento = {}) {
-    if (!permitido || !pantallaMedible()) return
+  function emitir(evento: Evento, campos: CamposEvento = {}, soloDataLayer = false) {
+    if (!activo() || !pantallaMedible()) return
     const datos: Record<string, string | number | null> = { event: evento }
     for (const campo of CAMPOS) datos[campo] = null
     const seleccionados = { ...contexto(), ...identidad,
@@ -114,8 +167,22 @@ export function crearServicioAnalitica(entorno: Entorno) {
     }
     for (const campo of CAMPOS) datos[campo] = seleccionados[campo] ?? null
     // La analítica no puede romper una operación de la aplicación.
-    try { entorno.enviar(datos) } catch {
-      console.error('No se pudo registrar el evento de analítica; la operación del sistema continúa.')
+    if (permitido) {
+      try { entorno.enviar(datos) } catch {
+        console.error('No se pudo registrar el evento de analítica; la operación del sistema continúa.')
+      }
+    }
+    // Solo sesiones autenticadas: el backend atribuye el evento al usuario del token.
+    if (propio && !soloDataLayer && EVENTOS_PROPIOS.includes(evento) && typeof identidad.user_role === 'string') {
+      try {
+        const registro = aEventoUso(datos)
+        if (registro) {
+          const id = idEvento(entorno.aleatorio)
+          entorno.registrar?.(id ? { id, ...registro } : registro)
+        }
+      } catch {
+        console.error('No se pudo registrar el evento de uso; la operación del sistema continúa.')
+      }
     }
   }
 
@@ -135,11 +202,11 @@ export function crearServicioAnalitica(entorno: Entorno) {
     operaciones.clear()
     formularios.clear()
     tiempoActivo = 0
-    inicioVisible = permitido && entorno.visible() ? entorno.reloj() : null
+    inicioVisible = activo() && entorno.visible() ? entorno.reloj() : null
   }
 
   function asegurarVista() {
-    if (!permitido || rutaVista === rutaActual || !pantallaMedible()) return
+    if (!activo() || rutaVista === rutaActual || !pantallaMedible()) return
     rutaVista = rutaActual
     emitir('app_page_view')
     tiempoActivo = 0
@@ -166,9 +233,10 @@ export function crearServicioAnalitica(entorno: Entorno) {
       siguiente.role_group === identidad.role_group) return
     // No contar cambio de objeto / polling como login o nueva vista.
     reiniciarMediciones()
-    identidad = permitido ? siguiente : {}
-    if (permitido) {
-      limpiarDatos(identidad)
+    sesionActiva = false
+    identidad = activo() ? siguiente : {}
+    if (activo()) {
+      if (permitido) limpiarDatos(identidad)
       asegurarVista()
     }
   }
@@ -177,6 +245,14 @@ export function crearServicioAnalitica(entorno: Entorno) {
     const siguiente = entorno.produccion && decision === 'aceptado'
     if (siguiente === permitido) return
     permitido = siguiente
+    if (propio) {
+      // El registro propio sigue su curso sin reiniciar mediciones: solo se (des)activa dataLayer.
+      if (siguiente) {
+        limpiarDatos(identidad)
+        emitir('app_page_view', {}, true)
+      } else limpiarDatos()
+      return
+    }
     identidad = siguiente ? sanitizarIdentidad(entorno.obtenerIdentidad()) : {}
     reiniciarMediciones()
     rutaVista = ''
@@ -237,7 +313,7 @@ export function crearServicioAnalitica(entorno: Entorno) {
   }
 
   function iniciarFormulario(elemento: object, id: string) {
-    if (!permitido || !pantallaMedible() || !esFormulario(id) || formularios.has(elemento)) return
+    if (!activo() || !pantallaMedible() || !esFormulario(id) || formularios.has(elemento)) return
     asegurarVista()
     formularios.set(elemento, { id, inicio: entorno.reloj() })
     emitir('app_form', { form_id: id, action_name: 'start' })
@@ -269,31 +345,61 @@ export function crearServicioAnalitica(entorno: Entorno) {
     }
   }
 
+  function exportacion(id: IdExportacion, resultado: 'success' | 'failure' = 'success') {
+    if (!EXPORTACIONES.includes(id)) return
+    asegurarVista()
+    emitir('app_export', { export_id: id, action_name: 'exportar', outcome: resultado })
+  }
+
+  function salir() {
+    cerrarPantalla()
+    if (!sesionActiva) return
+    sesionActiva = false
+    emitir('app_session', { action_name: 'session_end', outcome: 'success' })
+  }
+
   return {
     consentimiento, navegar, actualizarIdentidad, interaccion, iniciarOperacion, terminarOperacion,
-    habilitado: () => permitido,
+    habilitado: activo,
     iniciarFormulario, finalizarFormulario, prepararEnvioFormulario, abandonarFormulario,
     formulariosActivos: () => Array.from(formularios.keys()),
-    sesion(accion: 'login' | 'logout') {
+    // session_start es idempotente por identidad (login y restauración tras recargar);
+    // session_end / session_expired solo cuentan si había una sesión iniciada.
+    sesion(accion: AccionSesion) {
+      const cierra = accion === 'session_end' || accion === 'session_expired'
+      if (accion === 'session_start') {
+        if (sesionActiva) return
+        sesionActiva = true
+      } else if (cierra) {
+        if (!sesionActiva) return
+        sesionActiva = false
+      }
       asegurarVista()
-      emitir('app_session', { action_name: accion, outcome: 'success' })
-      if (accion === 'logout') {
+      emitir('app_session', { action_name: accion,
+        outcome: accion === 'session_start' || accion === 'session_end' ? 'success' : 'failure' })
+      if (cierra) {
         identidad = {}
         reiniciarMediciones()
         if (permitido) limpiarDatos()
       }
     },
-    exportacion(id: IdExportacion) {
-      if (!EXPORTACIONES.includes(id)) return
-      asegurarVista()
-      emitir('app_export', { export_id: id, action_name: 'exportar', outcome: 'success' })
+    exportacion,
+    // Ejecuta la descarga y registra su resultado real; relanza el error original.
+    exportar<T>(id: IdExportacion, descarga: () => T): T {
+      let resultado: T
+      try { resultado = descarga() } catch (error) {
+        exportacion(id, 'failure')
+        throw error
+      }
+      exportacion(id, 'success')
+      return resultado
     },
     visibilidad() {
-      if (!permitido) return
+      if (!activo()) return
       acumular()
       if (entorno.visible()) inicioVisible = entorno.reloj()
     },
-    salir: cerrarPantalla,
+    salir,
   }
 }
 

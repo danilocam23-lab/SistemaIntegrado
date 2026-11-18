@@ -17,8 +17,9 @@ const ID_CONTENEDOR = 'GTM-W86DRFZ3'
  * Antes de publicar para este sistema interno, el administrador debe:
  * - Revisar las etiquetas existentes; si falta GA4, obtener el G-ID real del flujo
  *   web en GA4 y configurar la etiqueta de Google/GA4 dentro de GTM, no en React.
- * - No enviar datos personales, financieros, identidad, aplicación ni campos o
- *   contenido de negocio. Anonimizar page_location, page_referrer y las rutas
+ * - El dataLayer lleva user_id SEUDÓNIMO (UUID analítico estable, nunca correo,
+ *   nombre ni ID de base de datos), user_role y role_group. No enviar datos
+ *   personales, financieros, aplicación ni campos o contenido de negocio. Anonimizar page_location, page_referrer y las rutas
  *   dinámicas (incluidos IDs, query y hash) ANTES de cualquier envío de etiquetas.
  * - Desactivar/revisar la recogida automática de formularios y clics.
  * - React es el único emisor SPA: app_page_view se mapea a page_view en GTM.
@@ -26,6 +27,10 @@ const ID_CONTENEDOR = 'GTM-W86DRFZ3'
  *   de clics/formularios. No añadir gtag config ni un segundo bootstrap.
  * - Validar consentimiento y etiquetas con Tag Assistant y DebugView. Pendiente:
  *   requiere acceso del usuario a Google; las pruebas locales interceptan el script.
+ *
+ * El consentimiento gobierna SOLO el envío a dataLayer/GTM/Google. El registro propio
+ * de uso (POST /api/auditoria/eventos-uso, auditoría interna, ver registro.ts) es
+ * obligatorio, no depende del consentimiento y solo envía campos saneados sin URLs.
  *
  * Decisión versionada en localStorage, sin selección por defecto. Solo aceptar
  * permite cargar; fallo de almacenamiento no concede permiso. Tras aceptar o

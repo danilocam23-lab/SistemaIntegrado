@@ -25,6 +25,7 @@ from app.documents.configuracion import Configuracion
 from app.documents.control_horas import ControlHoras
 from app.documents.endpoint_admin import EndpointAdmin
 from app.documents.estimacion import Estimacion
+from app.documents.evento_uso import EventoUso
 from app.documents.festivo import Festivo
 from app.documents.garantia_wo import GarantiaWO
 from app.documents.identidad_analitica import IdentidadAnalitica
@@ -48,6 +49,7 @@ ALL_DOCUMENTS = [
     Rol,
     Usuario,
     Auditoria,
+    EventoUso,
     IdentidadAnalitica,
     # Operativas — base
     Persona,
@@ -87,6 +89,7 @@ __all__ = [
     "Rol",
     "Usuario",
     "Auditoria",
+    "EventoUso",
     "IdentidadAnalitica",
     "Persona",
     "Categoria",

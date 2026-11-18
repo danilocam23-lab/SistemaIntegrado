@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test:analitica": "node scripts/probar-consentimiento.mjs && node scripts/probar-analitica.mjs",
+    "test:dashboard-analistas": "node scripts/probar-dashboard-analistas.mjs",
     "analitica:inventario": "node scripts/inventariar-analitica.mjs --guardar"
   },
   "dependencies": {

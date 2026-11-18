@@ -93,7 +93,7 @@ export default function SoporteSolicitudesFabrica() {
     void verificarUltimaSync(false)
 
     // Refresca solo el estado de sincronización cada 60s (liviano) para
-    // detectar si corrió el proceso automático (3x/día) o "Probar ahora"
+    // detectar si corrió el proceso automático (cada hora) o "Probar ahora"
     // desde Configuración mientras esta página sigue abierta.
     const intervalo = window.setInterval(() => {
       void verificarUltimaSync(false)

@@ -1,7 +1,14 @@
 // Solo identificadores funcionales estáticos; nunca nombres o IDs del negocio.
 export const PANTALLAS = [
   ['/login', 'login', 'sesion'],
+  // Redirecciones y 404 de App.tsx: se registran porque la vista ocurre antes del redireccionamiento.
+  ['/', 'inicio_redireccion', 'sistema'],
+  ['/dashboard-squad', 'dashboard_squad_redireccion', 'dashboard'],
+  ['/tarifas', 'tarifas_redireccion', 'configuracion'],
+  ['/categorias', 'categorias_redireccion', 'configuracion'],
+  ['/*', 'no_encontrada', 'sistema'],
   ['/dashboard', 'dashboard', 'dashboard'],
+  ['/dashboard-analistas', 'dashboard_analistas', 'dashboard'],
   ['/dashboard-estados', 'dashboard_estados', 'dashboard'],
   ['/dashboard-backlog', 'dashboard_backlog', 'dashboard'],
   ['/requerimientos', 'requerimientos', 'requerimientos'],
@@ -22,6 +29,7 @@ export const PANTALLAS = [
   ['/configuracion', 'configuracion', 'configuracion'],
   ['/admin/aplicaciones', 'admin_aplicaciones', 'administracion'],
   ['/admin/usuarios', 'admin_usuarios', 'administracion'],
+  ['/admin/uso-personas', 'admin_uso_personas', 'administracion'],
   ['/admin/endpoints', 'admin_endpoints', 'administracion'],
   ['/admin/esquema-azure', 'admin_esquema_azure', 'azure'],
   ['/admin/importacion', 'admin_importacion', 'importacion'],
@@ -41,6 +49,10 @@ const controlesCompilados: Record<string, readonly [string, TipoControl]> =
   typeof __CONTROLES_ANALITICA__ === 'undefined' ? {} : __CONTROLES_ANALITICA__
 
 export const CONTROLES = {
+  'dashboard_analistas.ano': ['filtrar_ano', 'filtro'],
+  'dashboard_analistas.mes': ['filtrar_mes', 'filtro'],
+  'dashboard_analistas.analista': ['filtrar_analista', 'filtro'],
+  'dashboard_analistas.recargar': ['recargar', 'boton'],
   'requerimiento.volver': ['volver', 'enlace'],
   'requerimiento.crear': ['crear', 'boton'],
   'requerimiento.squad_destino': ['seleccionar_squad_destino', 'filtro'],
@@ -113,21 +125,28 @@ export const CONTROLES = {
   'entregas.compromiso_hasta': ['filtrar_compromiso_hasta', 'filtro'],
   'entregas.real_desde': ['filtrar_real_desde', 'filtro'],
   'entregas.real_hasta': ['filtrar_real_hasta', 'filtro'],
+  'uso.desde': ['filtrar_desde', 'filtro'],
+  'uso.hasta': ['filtrar_hasta', 'filtro'],
+  'uso.consultar': ['consultar', 'boton'],
+  'uso.detalle': ['alternar_detalle', 'boton'],
 } as const satisfies Record<string, readonly [string, TipoControl]>
 
 export type IdControl = keyof typeof CONTROLES
 export const FORMULARIOS = ['usuario', 'rol', 'requerimiento_nuevo', 'entrega', 'entrega_editar', 'requerimiento_general'] as const
 export type IdFormulario = typeof FORMULARIOS[number]
-export const EXPORTACIONES = ['entregas_excel', 'requerimientos_excel', 'backlog_excel', 'personas_excel'] as const
+export const EXPORTACIONES = ['entregas_excel', 'requerimientos_excel', 'backlog_excel', 'personas_excel',
+  'plantilla_importacion_excel'] as const
 export type IdExportacion = typeof EXPORTACIONES[number]
 
 export function buscarPantalla(ruta: string) {
   const limpia = ruta.split(/[?#]/, 1)[0].replace(/\/$/, '') || '/'
   const exacta = PANTALLAS.find(([plantilla]) => plantilla === limpia)
   if (exacta) return exacta
-  return /^\/requerimientos\/[^/]+$/.test(limpia)
-    ? PANTALLAS.find(([plantilla]) => plantilla === '/requerimientos/:reqId')
-    : undefined
+  if (/^\/requerimientos\/[^/]+$/.test(limpia)) {
+    return PANTALLAS.find(([plantilla]) => plantilla === '/requerimientos/:reqId')
+  }
+  // Ruta desconocida (404): plantilla fija, nunca la ruta real.
+  return PANTALLAS.find(([plantilla]) => plantilla === '/*')
 }
 
 export function quitarBaseAnalitica(ruta: string, base: string): string {
@@ -150,7 +169,8 @@ export function esFormulario(id: string | null): id is IdFormulario {
 // Catálogo por método y plantilla constatado en llamadas del frontend.
 // No se emiten URLs. Un 2xx indica respuesta HTTP, NO finalización de trabajos asíncronos.
 const OPERACIONES: ReadonlyArray<readonly [string, RegExp, Modulo, string, string]> = [
-  ['POST', /^\/auth\/login$/, 'sesion', 'login', 'sesion'],
+  // POST /auth/login NO se cataloga: la sesión se registra con app_session (session_start /
+  // login_failed). Catalogarlo duplicaría el mismo ingreso como app_operation.
   ['GET', /^\/azdo\/test$/, 'azure', 'comprobar_conexion', 'azure'],
   ['GET', /^\/requerimientos\/[^/]+\/diagnostico$/, 'administracion', 'diagnosticar', 'requerimiento'],
   ['POST', /^\/requerimientos\/[^/]+\/reasignar-aplicacion$/, 'administracion', 'reasignar', 'requerimiento'],

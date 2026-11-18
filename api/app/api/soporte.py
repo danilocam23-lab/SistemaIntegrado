@@ -145,7 +145,7 @@ async def ultima_sincronizacion(
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     _: object = permiso("soporte.solicitudes_fabrica.ver"),
 ) -> dict | None:
-    """Resultado de la última sincronización (manual o automática 3x/día),
+    """Resultado de la última sincronización (manual o automática cada hora),
     para avisar en la vista si quedaron registros con error por revisar."""
     return await SoporteSolicitudesFabricaService.ultima_sincronizacion(ctx)
 
@@ -154,7 +154,7 @@ async def ultima_sincronizacion(
 async def ejecutar_carga_automatica(
     _: object = permiso(PERM_ADMIN_ACCESO),
 ) -> dict:
-    """Dispara manualmente el mismo proceso que corre el scheduler 3x/día
+    """Dispara manualmente el mismo proceso que corre el scheduler cada hora en punto
     (Configuración > Carga de Excel), para poder probar que la ruta/archivo
     configurados funcionan sin tener que esperar al próximo horario.
 
@@ -164,14 +164,14 @@ async def ejecutar_carga_automatica(
     ``soporte.solicitudes_fabrica.actualizar`` en una sola aplicación para
     disparar esa sincronización global; ahora exige ``admin.acceso``.
     """
+    archivo, motivo = await SoporteSolicitudesFabricaService.localizar_archivo_carga_automatica()
+    if archivo is None:
+        return {"ejecutado": False, "mensaje": motivo}
     resultado = await SoporteSolicitudesFabricaService.sincronizar_automatico()
     if resultado is None:
         return {
             "ejecutado": False,
-            "mensaje": (
-                "No se encontró un archivo para cargar. Verifique la ruta "
-                "configurada y que el archivo exista con el nombre esperado."
-            ),
+            "mensaje": "No hay aplicaciones activas a las que cargar el archivo.",
         }
     from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabricaSyncLog
 

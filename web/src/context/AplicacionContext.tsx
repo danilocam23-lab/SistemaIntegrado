@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import client, { APP_KEY, CONSOLIDADO } from '../api/client'
 import type { Aplicacion } from '../types'
+import { vaciarRegistroUso } from '../analitica'
 import { useAuth } from './AuthContext'
 
 interface AplicacionContextValue {
@@ -23,6 +24,8 @@ export function AplicacionProvider({ children }: { children: ReactNode }) {
   const [activa, setActivaState] = useState<string>(() => localStorage.getItem(APP_KEY) ?? '')
 
   function setActiva(codigo: string): void {
+    // Los eventos pendientes quedan atribuidos a la aplicación anterior y salen ya.
+    if (localStorage.getItem(APP_KEY) !== codigo) vaciarRegistroUso()
     localStorage.setItem(APP_KEY, codigo)
     setActivaState(codigo)
   }

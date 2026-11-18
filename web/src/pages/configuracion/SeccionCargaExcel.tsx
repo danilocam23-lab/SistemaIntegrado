@@ -23,9 +23,10 @@ export function SeccionCargaExcel({
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-500">
-        Ruta local (en el servidor) donde el proceso automático busca el archivo
+        Ruta de la carpeta del SERVIDOR (no de tu PC) donde el proceso automático busca el archivo
         <code className="mx-1 rounded bg-slate-100 px-1">Solicitudes Fabrica soporte.xlsx</code>
-        y lo sincroniza 3 veces al día (6:00, 12:00 y 18:00), sin pedir confirmación. Solo se cargan
+        y lo sincroniza cada hora en punto, sin pedir confirmación. La carpeta debe ser accesible
+        por la cuenta con la que corre el backend. Solo se cargan
         los registros sin error; si hay registros con error, quedan disponibles para revisión y carga
         manual desde la vista "Soporte — Solicitudes Fábrica".
       </p>
@@ -96,7 +97,7 @@ export function SeccionCargaExcel({
           </div>
         )}
         <p className="text-xs text-slate-400">
-          Este estado se actualiza automáticamente 3 veces al día (6:00, 12:00 y 18:00, hora Colombia) y
+          Este estado se actualiza automáticamente cada hora en punto (hora Colombia) y
           también cada vez que uses "Probar ahora" más abajo.
         </p>
       </div>

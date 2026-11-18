@@ -24,13 +24,6 @@ from app.services.vigencia import recalcular_squads_todas
 _log = logging.getLogger("scheduler")
 _scheduler: AsyncIOScheduler | None = None
 
-# Horarios de la carga automática de Solicitudes Fábrica en hora de Colombia
-# (UTC-5, sin horario de verano) expresados en horas UTC, para poder detectar
-# si el proceso se reinició y se "saltó" alguno de ellos (ver
-# ``_verificar_y_recuperar_carga_excel``).
-_HORAS_UTC_CARGA_EXCEL = [11, 17, 23]  # 6:00, 12:00, 18:00 hora Colombia
-
-
 def _toca_sincronizar(ultima: datetime | None, intervalo: str) -> bool:
     if ultima is None:
         return True
@@ -87,7 +80,7 @@ async def _tarea_sync_azdo() -> None:
 
 
 async def _tarea_carga_excel_solicitudes_fabrica() -> None:
-    """Carga automática (3 veces al día) del Excel de Solicitudes Fábrica desde
+    """Carga automática (cada hora en punto) del Excel de Solicitudes Fábrica desde
     la ruta local configurada en Configuración > Carga de Excel. No pide
     confirmación: carga los registros sin error y omite (dejando registrado en
     el log) los que tengan error, para que se revisen manualmente en la vista."""
@@ -117,21 +110,11 @@ async def _tarea_sync_esquema_azdo_automatico() -> None:
 async def _verificar_y_recuperar_carga_excel() -> None:
     """Si el proceso backend se reinició (p. ej. por reciclaje del pool de IIS
     por inactividad) y con eso se perdió el horario programado más reciente
-    (6:00, 12:00 o 18:00 hora Colombia), ejecuta la carga una sola vez al
-    arrancar para autorecuperarse, en vez de esperar en silencio al siguiente
-    horario."""
+    (el inicio de la hora actual), ejecuta la carga una sola vez al arrancar
+    para autorecuperarse, en vez de esperar en silencio a la siguiente hora."""
     from app.documents.soporte_solicitud_fabrica import SoporteSolicitudFabricaSyncLog
 
-    ahora_utc = datetime.now(UTC)
-    hoy = ahora_utc.date()
-    slot_objetivo: datetime | None = None
-    for h in sorted(_HORAS_UTC_CARGA_EXCEL, reverse=True):
-        candidato = datetime(hoy.year, hoy.month, hoy.day, h, 0, 0, tzinfo=UTC)
-        if candidato <= ahora_utc:
-            slot_objetivo = candidato
-            break
-    if slot_objetivo is None:
-        return  # Todavía no ha pasado ningún horario programado hoy.
+    slot_objetivo = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
 
     ultimo = (
         await SoporteSolicitudFabricaSyncLog.find(SoporteSolicitudFabricaSyncLog.aplicacion_id == "__todas__")
@@ -159,8 +142,11 @@ def iniciar_scheduler() -> None:
     _scheduler.add_job(
         _tarea_carga_excel_solicitudes_fabrica,
         "cron",
-        hour="6,12,18",
+        hour="*",
+        minute=0,
         id="carga_excel_solicitudes_fabrica",
+        max_instances=1,
+        coalesce=True,
     )
     _scheduler.add_job(
         _tarea_sync_esquema_azdo_automatico,
@@ -178,7 +164,7 @@ def iniciar_scheduler() -> None:
     )
     _scheduler.start()
     _log.info("Scheduler de Azure DevOps iniciado (revisión cada 30 min)")
-    _log.info("Scheduler de carga automática de Solicitudes Fábrica iniciado (6:00, 12:00 y 18:00)")
+    _log.info("Scheduler de carga automática de Solicitudes Fábrica iniciado (cada hora en punto)")
     _log.info("Scheduler de auto-sync de esquema AzDO iniciado (6:00 y 12:00 hora Colombia)")
     asyncio.create_task(_verificar_y_recuperar_carga_excel())
 

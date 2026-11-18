@@ -47,7 +47,7 @@ class ContextoAplicacion:
         return self.filtro()
 
 
-async def _codigos_autorizados(usuario: Usuario) -> list[str]:
+async def codigos_autorizados(usuario: Usuario) -> list[str]:
     """Códigos de aplicación a los que el usuario tiene acceso.
 
     El superadmin ve todas las aplicaciones activas; el resto, solo las asignadas.
@@ -61,13 +61,17 @@ async def _codigos_autorizados(usuario: Usuario) -> list[str]:
     return list(usuario.aplicaciones_codigos)
 
 
+# Alias por compatibilidad con los importadores previos del nombre privado.
+_codigos_autorizados = codigos_autorizados
+
+
 async def contexto_aplicacion(
     request: Request,
     x_aplicacion: str | None = Header(default=None, alias="X-Aplicacion"),
     usuario: Usuario = Depends(usuario_actual),
 ) -> ContextoAplicacion:
     """Dependencia: resuelve y valida la aplicación activa."""
-    autorizadas = await _codigos_autorizados(usuario)
+    autorizadas = await codigos_autorizados(usuario)
     if not x_aplicacion:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Falta la cabecera X-Aplicacion")
 

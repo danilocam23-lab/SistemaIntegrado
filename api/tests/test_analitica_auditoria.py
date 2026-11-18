@@ -65,7 +65,7 @@ async def test_login_sigue_funcionando_y_no_audita_credenciales(
     )
     assert fallo.status_code == 401
     evento_fallido = await Auditoria.find_one({
-        "usuario_id": None, "accion": "login", "resultado": "fallo",
+        "usuario_id": str(usuario.id), "accion": "login", "resultado": "fallo",
     })
     assert evento_fallido is not None and evento_fallido.codigo_http == 401
     assert "secreto-incorrecto" not in json.dumps(evento_fallido.model_dump(mode="json"))

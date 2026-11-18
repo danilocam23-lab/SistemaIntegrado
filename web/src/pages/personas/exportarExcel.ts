@@ -27,6 +27,5 @@ export function exportarPersonasExcel(personas: Persona[], incluirValores: boole
   const libro = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(libro, hoja, 'Personas')
   const fecha = new Date().toISOString().slice(0, 10)
-  XLSX.writeFile(libro, `personas_${fecha}.xlsx`)
-  analitica.exportacion('personas_excel')
+  analitica.exportar('personas_excel', () => XLSX.writeFile(libro, `personas_${fecha}.xlsx`))
 }

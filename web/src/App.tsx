@@ -9,6 +9,7 @@ import RoleRoute from './components/RoleRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import DashboardRequerimientos from './pages/DashboardRequerimientos'
+import DashboardAnalistas from './pages/DashboardAnalistas'
 import AdminAplicaciones from './pages/AdminAplicaciones'
 import Usuarios from './pages/Usuarios'
 import Requerimientos from './pages/Requerimientos'
@@ -38,6 +39,7 @@ import FacturacionValoresProyecto from './pages/FacturacionValoresProyecto'
 import SoporteSolicitudesFabrica from './pages/SoporteSolicitudesFabrica'
 import SoporteDetalleANS from './pages/SoporteDetalleANS'
 import SoporteGarantiasWO from './pages/SoporteGarantiasWO'
+import UsoPersonas from './pages/UsoPersonas'
 import ObservadorNavegacion from './analitica/ObservadorNavegacion'
 
 export default function App() {
@@ -58,6 +60,7 @@ export default function App() {
             >
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<RoleRoute permiso="dashboard.ver"><DashboardRequerimientos /></RoleRoute>} />
+              <Route path="dashboard-analistas" element={<RoleRoute permiso="dashboard.ver"><DashboardAnalistas /></RoleRoute>} />
               <Route path="dashboard-estados" element={<RoleRoute permiso="dashboard.estados.ver"><DashboardEstados /></RoleRoute>} />
               <Route path="dashboard-backlog" element={<RoleRoute permiso="dashboard.squad.ver"><DashboardSquad /></RoleRoute>} />
               <Route path="dashboard-squad" element={<Navigate to="/dashboard-backlog" replace />} />
@@ -84,6 +87,7 @@ export default function App() {
                 element={<RoleRoute permiso="aplicaciones.ver"><AdminAplicaciones /></RoleRoute>}
               />
               <Route path="admin/usuarios" element={<RoleRoute permiso="admin.usuarios.ver"><Usuarios /></RoleRoute>} />
+              <Route path="admin/uso-personas" element={<RoleRoute permiso="admin.auditoria.ver"><UsoPersonas /></RoleRoute>} />
               <Route
                 path="admin/endpoints"
                 element={<RoleRoute permiso="admin.endpoints.ver"><AdminEndpoints /></RoleRoute>}

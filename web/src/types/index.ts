@@ -104,6 +104,9 @@ export interface Requerimiento {
   estado: string
   solicitud: Solicitud
   total_horas_estimadas: number | null
+  horas_siguiente_anio: string | number | null
+  fecha_entrega_comprometida_siguiente_anio: string | null
+  fecha_real_entrega_siguiente_anio: string | null
   fecha_real_entrega_estimacion: string | null
   ans_estimacion: string | null
   se_levanto_ans?: boolean | null

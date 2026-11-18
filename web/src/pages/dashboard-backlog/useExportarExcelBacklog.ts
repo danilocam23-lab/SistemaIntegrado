@@ -36,8 +36,7 @@ export function useExportarExcelBacklog(filas: FilaSquadAnalisis[]) {
     const libro = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(libro, hoja, 'Detalle por Squad')
     const fecha = new Date().toISOString().slice(0, 10)
-    XLSX.writeFile(libro, `dashboard-backlog_${fecha}.xlsx`)
-    analitica.exportacion('backlog_excel')
+    analitica.exportar('backlog_excel', () => XLSX.writeFile(libro, `dashboard-backlog_${fecha}.xlsx`))
   }
 
   return { exportarExcel }

@@ -4,11 +4,9 @@
 import axios from 'axios'
 import { analitica, establecerIdentidadAnalitica } from '../analitica'
 import { crearAdaptadorOperaciones } from '../analitica/operaciones'
+import { APP_KEY, CONSOLIDADO, TOKEN_KEY, USUARIO_KEY } from './claves'
 
-export const TOKEN_KEY = 'si_token'
-export const USUARIO_KEY = 'si_usuario'
-export const APP_KEY = 'si_aplicacion'
-export const CONSOLIDADO = '__todas__'
+export { APP_KEY, CONSOLIDADO, TOKEN_KEY, USUARIO_KEY }
 
 const client = axios.create({ baseURL: `${import.meta.env.BASE_URL}api` })
 const operacionesAnaliticas = crearAdaptadorOperaciones(analitica)
@@ -54,6 +52,8 @@ client.interceptors.response.use(
   (error: unknown) => {
     if (axios.isAxiosError(error)) operacionesAnaliticas.finalizar(error.config, error.response?.status, axios.isCancel(error))
     if (axios.isAxiosError(error) && error.response?.status === 401) {
+      // Solo cuenta como expiración si había sesión iniciada (no un login fallido).
+      analitica.sesion('session_expired')
       establecerIdentidadAnalitica(null)
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USUARIO_KEY)

@@ -7,9 +7,10 @@ import client from '../../api/client'
 import { analitica } from '../../analitica'
 import { mensajeError } from '../../api/hooks'
 import type { Entrega, EventoBitacora, Liquidacion, Requerimiento } from '../../types'
+import { convertirHorasSiguienteAnio } from './horasSiguienteAnio'
 
 /**
- * Los 16 campos editables del detalle del requerimiento.
+ * Los campos editables del detalle del requerimiento.
  *
  * INVARIANTE: `seguimiento` y `tipificacion` son el MISMO estado que consumen
  * la tarjeta "Datos generales" (a través de `guardar`, PUT `/requerimientos/:id`)
@@ -27,6 +28,9 @@ export interface ValoresRequerimiento {
   scrumId: string
   analistaId: string
   horas: string
+  horasSiguienteAnio: string
+  fechaEntregaComprometidaSiguienteAnio: string
+  fechaRealEntregaSiguienteAnio: string
   fechaSolicitudActa: string
   fechaRealEntregaEst: string
   seguimiento: string
@@ -47,6 +51,9 @@ const VALORES_VACIOS: ValoresRequerimiento = {
   scrumId: '',
   analistaId: '',
   horas: '',
+  horasSiguienteAnio: '',
+  fechaEntregaComprometidaSiguienteAnio: '',
+  fechaRealEntregaSiguienteAnio: '',
   fechaSolicitudActa: '',
   fechaRealEntregaEst: '',
   seguimiento: '',
@@ -83,8 +90,8 @@ export function useRequerimientoDetalle(
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
 
-  // Formulario de datos generales (los 16 campos, estado único compartido por
-  // las tarjetas "Datos generales" y "Seguimiento Hitss").
+  // Estado único de "Datos generales", "Seguimiento Hitss" y
+  // "Horas para el siguiente año", guardado por el formulario general.
   const [valores, setValores] = useState<ValoresRequerimiento>(VALORES_VACIOS)
 
   const actualizar = useCallback(
@@ -115,6 +122,9 @@ export function useRequerimientoDetalle(
         scrumId: data.solicitud?.scrum_id ?? '',
         analistaId: data.solicitud?.analista_requerimientos_id ?? '',
         horas: data.total_horas_estimadas != null ? String(data.total_horas_estimadas) : '',
+        horasSiguienteAnio: data.horas_siguiente_anio != null ? String(data.horas_siguiente_anio) : '',
+        fechaEntregaComprometidaSiguienteAnio: data.fecha_entrega_comprometida_siguiente_anio?.slice(0, 16) ?? '',
+        fechaRealEntregaSiguienteAnio: data.fecha_real_entrega_siguiente_anio?.slice(0, 16) ?? '',
         fechaSolicitudActa: data.fecha_solicitud_acta ? data.fecha_solicitud_acta.slice(0, 16) : '',
         fechaRealEntregaEst: data.fecha_real_entrega_estimacion
           ? data.fecha_real_entrega_estimacion.slice(0, 16)
@@ -173,6 +183,7 @@ export function useRequerimientoDetalle(
     }
     if (!req) return
     try {
+      const horasSiguienteAnio = convertirHorasSiguienteAnio(valores.horasSiguienteAnio)
       await client.put(`/requerimientos/${reqId}`, {
         nombre: valores.nombreActa || null,
         solicitud: {
@@ -186,6 +197,9 @@ export function useRequerimientoDetalle(
           analista_requerimientos_id: valores.analistaId || null,
         },
         total_horas_estimadas: valores.horas ? Number(valores.horas) : null,
+        horas_siguiente_anio: horasSiguienteAnio,
+        fecha_entrega_comprometida_siguiente_anio: valores.fechaEntregaComprometidaSiguienteAnio || null,
+        fecha_real_entrega_siguiente_anio: valores.fechaRealEntregaSiguienteAnio || null,
         fecha_solicitud_acta: valores.fechaSolicitudActa || null,
         fecha_real_entrega_estimacion: valores.fechaRealEntregaEst || null,
         seguimiento: valores.seguimiento || null,

@@ -28,6 +28,7 @@ const GRUPOS: Grupo[] = [
     icono: 'panel',
     items: [
       { to: '/dashboard', label: 'Dashboard', icono: 'panel', permiso: 'dashboard.ver' },
+      { to: '/dashboard-analistas', label: 'Analista de requerimientos', icono: 'personas', permiso: 'dashboard.ver' },
       { to: '/dashboard-estados', label: 'Estados', icono: 'marcador', permiso: 'dashboard.estados.ver' },
       { to: '/dashboard-backlog', label: 'Backlog', icono: 'portafolio', permiso: 'dashboard.squad.ver' },
     ],
@@ -80,6 +81,7 @@ const GRUPOS: Grupo[] = [
     items: [
       { to: '/admin/aplicaciones', label: 'Squads', icono: 'edificio', permiso: 'aplicaciones.ver' },
       { to: '/admin/usuarios', label: 'Usuarios', icono: 'personas', permiso: 'admin.usuarios.ver' },
+      { to: '/admin/uso-personas', label: 'Uso por personas', icono: 'grafico-barras', permiso: 'admin.auditoria.ver' },
       { to: '/admin/importacion', label: 'Importar / Exportar datos', icono: 'recargar', permiso: 'admin.importacion.ver' },
       { to: '/admin/endpoints', label: 'Endpoints', icono: 'globo', permiso: 'admin.endpoints.ver' },
       { to: '/admin/esquema-azure', label: 'Esquema de Azure', icono: 'nube', permiso: 'azure_devops.ver' },

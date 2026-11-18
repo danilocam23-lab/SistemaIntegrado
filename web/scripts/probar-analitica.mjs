@@ -41,12 +41,18 @@ function probar(nombre, prueba) {
   console.log(`OK: ${nombre}`)
 }
 
+async function probarAsync(nombre, prueba) {
+  await prueba()
+  casos++
+  console.log(`OK: ${nombre}`)
+}
+
 probar('No enviar en dev, rechazo, sin decisión ni antes de aceptar; sin backlog', () => {
   for (const produccion of [false, true]) {
     const caso = preparar({ produccion })
     caso.servicio.navegar('/requerimientos')
     caso.servicio.interaccion('usuarios.nuevo', 'click')
-    caso.servicio.sesion('login')
+    caso.servicio.sesion('session_start')
     caso.servicio.exportacion('personas_excel')
     const adaptador = crearAdaptadorOperaciones(caso.servicio)
     const peticion = { method: 'post', url: '/usuarios' }
@@ -81,7 +87,10 @@ probar('Plantilla :reqId, query/hash y referente inicial nunca filtran IDs o PII
   caso.servicio.navegar('/dashboard?algo=privado')
   assert.equal(caso.eventos('app_page_view')[1].page_referrer, vista.page_location)
   caso.servicio.navegar('/ruta-inventada/id-privado')
-  assert.equal(caso.eventos('app_page_view').length, 2)
+  assert.equal(caso.eventos('app_page_view').length, 3)
+  assert.equal(caso.eventos('app_page_view')[2].route_template, '/*')
+  assert.equal(caso.eventos('app_page_view')[2].screen, 'no_encontrada')
+  assert.doesNotMatch(JSON.stringify(caso.datos), /ruta-inventada|id-privado/)
 })
 
 probar('Referente inválido/credenciales URL se descartan; BASE_URL raíz canónica', () => {
@@ -106,7 +115,8 @@ probar('StrictMode, mismo pathname, nuevos objetos /me y visibilidad no duplican
   caso.visibilidad(true)
   assert.equal(caso.eventos('app_page_view').length, 1)
   assert.equal(caso.eventos('app_session').length, 0)
-  caso.servicio.sesion('login')
+  caso.servicio.sesion('session_start')
+  caso.servicio.sesion('session_start')
   assert.equal(caso.eventos('app_session').length, 1)
 })
 
@@ -157,7 +167,8 @@ probar('Logout y cambio de usuario limpian dataLayer e invalidan operaciones/for
   const formulario = {}
   caso.servicio.iniciarFormulario(formulario, 'usuario')
   const confirmar = caso.servicio.prepararEnvioFormulario('usuario')
-  caso.servicio.sesion('logout')
+  caso.servicio.sesion('session_start')
+  caso.servicio.sesion('session_end')
   caso.identidad(null)
   assert.equal(caso.datos.at(-1).user_id, null)
   caso.identidad({ id_analitico: '64fbb20c-f7bc-46a7-977f-e6356e8c57e1', rol: 'viewer' })
@@ -327,7 +338,7 @@ probar('Exportaciones registradas solamente y analítica bloqueada no interrumpe
   assert.doesNotThrow(() => {
     bloqueado.aceptar()
     bloqueado.servicio.interaccion('usuarios.nuevo', 'click')
-    bloqueado.servicio.sesion('logout')
+    bloqueado.servicio.sesion('session_end')
   })
 })
 
@@ -501,7 +512,7 @@ probar('AST: IDs deterministas por handler, filas iguales comparten ID; sin labe
   assert.doesNotMatch(JSON.stringify(primero.catalogo), /fila\.|nombre|email|password|busqueda.*value/)
   assert.ok(primero.codigo.includes('data-analytics-id="usuarios.nuevo"'))
   assert.equal(Object.keys(analizarControles(primero.codigo, 'src/pages/Ejemplo.tsx').catalogo).length, 0)
-  for (const id of Object.keys(primero.catalogo)) assert.ok(id.length <= 100)
+  for (const id of Object.keys(primero.catalogo)) assert.ok(id.length <= 80)
   const compilado = cargarTypeScript(rutaServicio, { __CONTROLES_ANALITICA__: primero.catalogo })
   const datos = []
   const servicio = compilado.crearServicioAnalitica({
@@ -528,8 +539,247 @@ probar('Inventario real AST reproducible, catálogo de rutas completo y Actas no
   console.log(`Inventario: ${JSON.stringify(primero.inventario.totales)}`)
   const { PANTALLAS, buscarPantalla } = cargarTypeScript(new URL('../src/analitica/catalogo.ts', import.meta.url))
   const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
-  for (const [ruta] of PANTALLAS) assert.ok(app.includes(`path="${ruta === '/login' ? ruta : ruta.slice(1)}"`), ruta)
-  assert.equal(buscarPantalla('/actas'), undefined)
+  for (const [ruta] of PANTALLAS) assert.ok(app.includes(`path="${ruta === '/login' || ruta === '/' ? ruta : ruta === '/*' ? '*' : ruta.slice(1)}"`), ruta)
+  // Inverso: toda ruta de App.tsx debe estar en PANTALLAS (sin rutas sin medir).
+  const rutasApp = new Set()
+  for (const [, ruta] of app.matchAll(/<Route\s+(?:index\s+)?path="([^"]*)"/g)) {
+    rutasApp.add(ruta === '*' ? '/*' : ruta.startsWith('/') ? ruta : `/${ruta}`)
+  }
+  assert.equal(JSON.stringify([...rutasApp].sort()), JSON.stringify(PANTALLAS.map(([ruta]) => ruta).sort()))
+  // /actas no existe en App.tsx: cae en la plantilla 404, no en una pantalla real.
+  assert.equal(buscarPantalla('/actas')[1], 'no_encontrada')
+  for (const ruta of ['/dashboard-squad', '/tarifas', '/categorias', '/admin/uso-personas']) {
+    assert.ok(buscarPantalla(ruta) && buscarPantalla(ruta)[0] === ruta, ruta)
+  }
+})
+
+probar('Login: POST /auth/login no se cataloga (sin triple conteo); login_failed y session_start una sola vez', () => {
+  const { buscarOperacion, esOperacionCatalogada } = cargarTypeScript(new URL('../src/analitica/catalogo.ts', import.meta.url))
+  assert.equal(buscarOperacion('POST', '/auth/login'), undefined)
+  assert.equal(esOperacionCatalogada({ module: 'sesion', action_name: 'login', resource_type: 'sesion' }), false)
+  const caso = preparar({ usuario: null })
+  caso.aceptar('/login')
+  const adaptador = crearAdaptadorOperaciones(caso.servicio)
+  const peticion = { method: 'post', url: '/auth/login' }
+  adaptador.solicitar(peticion)
+  adaptador.finalizar(peticion, 200)
+  assert.equal(caso.eventos('app_operation').length, 0)
+  caso.servicio.sesion('login_failed')
+  assert.equal(caso.eventos('app_session')[0].action_name, 'login_failed')
+  assert.equal(caso.eventos('app_session')[0].outcome, 'failure')
+  caso.identidad(identidad)
+  caso.servicio.sesion('session_start')
+  caso.servicio.sesion('session_start')
+  assert.equal(caso.eventos('app_session').filter(e => e.action_name === 'session_start').length, 1)
+})
+
+probar('Sesión: start al restaurar, end al salir (una vez), expired solo con sesión; export con resultado real', () => {
+  const caso = preparar()
+  caso.aceptar()
+  caso.servicio.sesion('session_expired')
+  assert.equal(caso.eventos('app_session').length, 0)
+  caso.servicio.sesion('session_start')
+  caso.servicio.salir()
+  caso.servicio.salir()
+  assert.deepEqual(caso.eventos('app_session').map(e => e.action_name), ['session_start', 'session_end'])
+  caso.identidad(null)
+  caso.identidad(identidad)
+  caso.servicio.sesion('session_start')
+  caso.servicio.sesion('session_expired')
+  assert.equal(caso.eventos('app_session').at(-1).action_name, 'session_expired')
+  assert.equal(caso.eventos('app_session').at(-1).outcome, 'failure')
+  const otro = preparar()
+  otro.aceptar()
+  assert.equal(otro.servicio.exportar('personas_excel', () => 42), 42)
+  assert.throws(() => otro.servicio.exportar('personas_excel', () => { throw new Error('disco') }), /disco/)
+  assert.deepEqual(otro.eventos('app_export').map(e => e.outcome), ['success', 'failure'])
+  assert.ok(otro.eventos('app_export').every(e => e.elapsed_ms === null))
+  otro.servicio.exportacion('plantilla_importacion_excel')
+  assert.equal(otro.eventos('app_export').length, 3)
+})
+
+function prepararConRegistro({ consentimiento = null } = {}) {
+  const caso = preparar()
+  const registrados = []
+  let numero = 0
+  const servicio = crearServicioAnalitica({
+    produccion: true, version: 'v', base: '/SistemaIntegrado/', origen: 'https://hitss.test',
+    referenteInicial: '', ahora: () => 1700000000000, reloj: () => 0, aleatorio: () => `op-${++numero}`,
+    visible: () => true, obtenerIdentidad: () => identidad, enviar: dato => caso.datos.push(dato),
+    registrar: evento => registrados.push(evento),
+  })
+  servicio.navegar('/admin/usuarios')
+  servicio.actualizarIdentidad(identidad)
+  if (consentimiento) servicio.consentimiento(consentimiento)
+  return { servicio, registrados, datos: caso.datos }
+}
+
+probar('Registro propio: obligatorio sin consentimiento, solo campos saneados, dataLayer sigue condicionado', () => {
+  const caso = prepararConRegistro()
+  assert.equal(caso.datos.length, 0)
+  assert.equal(caso.registrados[0].event, 'app_page_view')
+  caso.servicio.interaccion('usuarios.nuevo', 'click')
+  caso.servicio.sesion('session_start')
+  const id = caso.servicio.iniciarOperacion({ module: 'administracion', action_name: 'crear', resource_type: 'usuario' })
+  assert.equal(id, null)
+  assert.deepEqual(caso.registrados.map(e => e.event), ['app_page_view', 'app_interaction', 'app_session'])
+  assert.deepEqual(Object.keys(caso.registrados[1]).sort(), ['action_name', 'event', 'id', 'interaction_id', 'module', 'screen', 'ts'])
+  assert.equal(caso.registrados[1].ts, '2023-11-14T22:13:20.000Z')
+  assert.doesNotMatch(JSON.stringify(caso.registrados), /https?:|persona|5bd287ad|superadmin|\/admin/)
+  caso.servicio.consentimiento('aceptado')
+  assert.equal(caso.registrados.length, 3)
+  assert.equal(caso.datos.filter(d => d.event === 'app_page_view').length, 1)
+  caso.servicio.interaccion('usuarios.nuevo', 'click')
+  assert.equal(caso.registrados.length, 4)
+  assert.equal(caso.datos.filter(d => d.event === 'app_interaction').length, 1)
+  caso.servicio.consentimiento('rechazado')
+  caso.servicio.interaccion('usuarios.nuevo', 'click')
+  assert.equal(caso.registrados.length, 5)
+  assert.equal(caso.datos.filter(d => d.event === 'app_interaction').length, 1)
+})
+
+probar('Registro propio: sin sesión autenticada no registra y valores inválidos se descartan', () => {
+  const { aEventoUso } = cargarTypeScript(rutaServicio)
+  assert.equal(aEventoUso({ event: 'app_interaction', interaction_id: 'Mayuscula con espacio', timestamp_ms: 1 }), null)
+  const evento = aEventoUso({ event: 'app_page_view', screen: 'x'.repeat(81), module: 'm', timestamp_ms: 1 })
+  assert.equal(evento.screen, undefined)
+  assert.equal(evento.module, 'm')
+  assert.equal(aEventoUso({ event: 'app_export', export_id: 'personas_excel', outcome: 'failure', action_name: 'exportar', timestamp_ms: 1 }).action_name, 'exportar_fallida')
+  const publico = []
+  const servicio = crearServicioAnalitica({
+    produccion: true, version: 'v', base: '/', origen: 'https://hitss.test', referenteInicial: '',
+    ahora: () => 0, reloj: () => 0, aleatorio: () => 'op', visible: () => true,
+    obtenerIdentidad: () => null, enviar: () => {}, registrar: e => publico.push(e),
+  })
+  servicio.navegar('/login')
+  assert.equal(publico.length, 0)
+})
+
+const { crearRegistroUso, LOTE_MAXIMO, UMBRAL_ENVIO, INTERVALO_ENVIO_MS, COLA_MAXIMA } = cargarTypeScript(
+  new URL('../src/analitica/registro.ts', import.meta.url))
+
+function prepararCola({ estados = [], token = true } = {}) {
+  const envios = []
+  const temporizadores = new Map()
+  let siguiente = 0
+  const estadoEntorno = { aplicacion: 'app-a', sesion: token ? 'u1.t1' : null }
+  const cola = crearRegistroUso({
+    aplicacionActual: () => estadoEntorno.aplicacion,
+    sesionActual: () => estadoEntorno.sesion,
+    programar: accion => { temporizadores.set(++siguiente, accion); return siguiente },
+    cancelar: id => temporizadores.delete(id),
+    enviar: async (eventos, keepalive, aplicacion) => {
+      envios.push({ eventos, keepalive, aplicacion })
+      const estado = estados.shift() ?? 202
+      if (estado === 'red') throw new Error('sin red')
+      return estado
+    },
+  })
+  const evento = n => ({ event: 'app_page_view', ts: new Date(n).toISOString() })
+  return { cola, envios, temporizadores, evento, estadoEntorno,
+    disparar: async () => { const acciones = [...temporizadores.values()]; temporizadores.clear(); acciones.forEach(a => a()); await new Promise(r => setImmediate(r)) } }
+}
+
+await probarAsync('Cola: lote por umbral y por tiempo, máximo 50, pagehide con keepalive', async () => {
+  const c = prepararCola()
+  for (let i = 0; i < UMBRAL_ENVIO - 1; i++) c.cola.agregar(c.evento(i))
+  assert.equal(c.envios.length, 0)
+  assert.equal(c.temporizadores.size, 1)
+  c.cola.agregar(c.evento(99))
+  assert.equal(c.envios.length, 1)
+  assert.equal(c.envios[0].eventos.length, UMBRAL_ENVIO)
+  assert.equal(c.envios[0].keepalive, false)
+  const t = prepararCola()
+  t.cola.agregar(t.evento(1))
+  await t.disparar()
+  assert.equal(t.envios.length, 1)
+  assert.equal(INTERVALO_ENVIO_MS, 10000)
+  const u = prepararCola()
+  for (let i = 0; i < 120; i++) u.cola.agregar(u.evento(i))
+  await u.cola.vaciar(true)
+  assert.ok(u.envios.every(e => e.eventos.length <= LOTE_MAXIMO))
+  assert.ok(u.envios.some(e => e.keepalive))
+  assert.equal(u.cola.pendientes(), 0)
+  assert.ok(LOTE_MAXIMO <= 50 && COLA_MAXIMA >= 50)
+})
+
+await probarAsync('Cola: fallos de red/5xx reintentan una vez; 4xx/429 y sin token descartan; nunca lanza', async () => {
+  const red = prepararCola({ estados: ['red', 'red', 'red'] })
+  red.cola.agregar(red.evento(1))
+  await red.disparar()
+  assert.equal(red.cola.pendientes(), 1)
+  await red.disparar()
+  assert.equal(red.cola.pendientes(), 0)
+  await red.disparar()
+  assert.equal(red.envios.length, 2)
+  for (const estado of [429, 422, 401]) {
+    const c = prepararCola({ estados: [estado] })
+    c.cola.agregar(c.evento(1))
+    await c.disparar()
+    assert.equal(c.cola.pendientes(), 0)
+    assert.equal(c.envios.length, 1)
+  }
+  const sin = prepararCola({ token: false })
+  sin.cola.agregar(sin.evento(1))
+  await sin.disparar()
+  assert.equal(sin.envios.length, 0)
+  assert.equal(sin.cola.pendientes(), 0)
+})
+
+await probarAsync('Cola: cambio de app con cola pendiente atribuye cada evento a su aplicación', async () => {
+  const c = prepararCola()
+  c.cola.agregar(c.evento(1))
+  c.cola.agregar(c.evento(2))
+  c.estadoEntorno.aplicacion = 'app-b'
+  c.cola.agregar(c.evento(3))
+  await c.cola.vaciar(true)
+  await new Promise(r => setImmediate(r))
+  assert.deepEqual(c.envios.map(e => [e.aplicacion, e.eventos.length]), [['app-a', 2], ['app-b', 1]])
+  assert.ok(c.envios.every(e => e.keepalive))
+  // Envío no urgente: también un POST por aplicación.
+  const n = prepararCola()
+  n.cola.agregar(n.evento(1))
+  n.estadoEntorno.aplicacion = '__todas__'
+  n.cola.agregar(n.evento(2))
+  await n.disparar()
+  assert.deepEqual(n.envios.map(e => e.aplicacion), ['app-a', '__todas__'])
+})
+
+await probarAsync('Cola: cambio de usuario/token (también otra pestaña) descarta sin reatribuir', async () => {
+  const c = prepararCola()
+  c.cola.agregar(c.evento(1))
+  c.estadoEntorno.sesion = 'u2.t2'
+  c.cola.agregar(c.evento(2))
+  await c.cola.vaciar(true)
+  await new Promise(r => setImmediate(r))
+  assert.equal(c.envios.length, 1)
+  assert.equal(c.envios[0].eventos.length, 1)
+  assert.equal(c.envios[0].eventos[0].ts, new Date(2).toISOString())
+  const d = prepararCola()
+  d.cola.agregar(d.evento(1))
+  d.estadoEntorno.sesion = 'u1.t-otro'
+  await d.disparar()
+  assert.equal(d.envios.length, 0)
+  assert.equal(d.cola.pendientes(), 0)
+})
+
+probar('Id por evento, duracion_ms acotado y sin consentimiento no hay dataLayer pero sí registro', () => {
+  const caso = prepararConRegistro()
+  caso.servicio.interaccion('usuarios.nuevo', 'click')
+  caso.servicio.sesion('session_start')
+  assert.equal(caso.datos.length, 0)
+  assert.ok(caso.registrados.length >= 3)
+  const ids = caso.registrados.map(e => e.id)
+  assert.ok(ids.every(id => typeof id === 'string' && /^[a-z0-9]{1,32}$/.test(id)))
+  assert.equal(new Set(ids).size, ids.length)
+  const { aEventoUso } = cargarTypeScript(rutaServicio)
+  const base = { event: 'app_screen_engagement', timestamp_ms: 1, screen: 'x' }
+  assert.equal(aEventoUso({ ...base, elapsed_ms: 1234.4 }).duracion_ms, 1234)
+  assert.equal(aEventoUso({ ...base, elapsed_ms: 999_999_999 }).duracion_ms, 86_400_000)
+  assert.equal(aEventoUso({ ...base, elapsed_ms: -5 }).duracion_ms, 0)
+  assert.equal(aEventoUso({ ...base, elapsed_ms: null }).duracion_ms, undefined)
+  assert.equal(aEventoUso({ event: 'app_form', form_id: 'usuario', elapsed_ms: 50, timestamp_ms: 1 }).duracion_ms, undefined)
+  assert.equal(aEventoUso({ event: 'app_export', export_id: 'personas_excel', timestamp_ms: 1 }).interaction_id, 'personas_excel')
 })
 
 console.log(`${casos} casos conductuales completados; sin red ni datos enviados a Google.`)

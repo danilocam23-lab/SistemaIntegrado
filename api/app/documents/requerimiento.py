@@ -12,7 +12,7 @@ from decimal import Decimal
 from typing import Annotated, Any
 
 from bson import Decimal128
-from pydantic import BaseModel, BeforeValidator, PlainSerializer
+from pydantic import BaseModel, BeforeValidator, Field, PlainSerializer
 from pymongo import ASCENDING, IndexModel
 
 from app.documents.base import DocumentoOperativo
@@ -97,6 +97,10 @@ class Requerimiento(DocumentoOperativo):
     solicitud: Solicitud
     estado: str
     total_horas_estimadas: MongoDecimal | None = None
+    # Bloque informativo único; no participa en liquidación ni ANS.
+    horas_siguiente_anio: MongoDecimal | None = Field(default=None, ge=0, allow_inf_nan=False)
+    fecha_entrega_comprometida_siguiente_anio: datetime | None = None
+    fecha_real_entrega_siguiente_anio: datetime | None = None
     fecha_real_entrega_estimacion: datetime | None = None
     ans_estimacion: AnsResultado | None = None
     fecha_solicitud_acta: datetime | None = None

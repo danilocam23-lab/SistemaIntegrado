@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import client, { TOKEN_KEY, USUARIO_KEY, APP_KEY } from '../api/client'
 import type { TokenResponse, Usuario } from '../types'
-import { analitica, establecerIdentidadAnalitica } from '../analitica'
+import { analitica, establecerIdentidadAnalitica, vaciarRegistroUso } from '../analitica'
 
 interface AuthContextValue {
   usuario: Usuario | null
@@ -41,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem(USUARIO_KEY, JSON.stringify(r.data))
           setUsuario(r.data)
           establecerIdentidadAnalitica({ id_analitico: r.data.id_analitico, rol: r.data.rol })
+          // Restauración de sesión tras recargar; idempotente si ya estaba iniciada.
+          analitica.sesion('session_start')
         })
         .catch(() => {})
     }
@@ -53,20 +55,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   async function login(email: string, password: string): Promise<void> {
-    const { data } = await client.post<TokenResponse>('/auth/login', { email, password })
+    let data: TokenResponse
+    try {
+      data = (await client.post<TokenResponse>('/auth/login', { email, password })).data
+    } catch (error) {
+      analitica.sesion('login_failed')
+      throw error
+    }
+    // Lo pendiente de la sesión/aplicación anterior sale con SUS credenciales, antes del cambio.
+    vaciarRegistroUso()
     localStorage.setItem(TOKEN_KEY, data.access_token)
     localStorage.setItem(USUARIO_KEY, JSON.stringify(data.usuario))
     setUsuario(data.usuario)
     establecerIdentidadAnalitica({ id_analitico: data.usuario.id_analitico, rol: data.usuario.rol })
-    analitica.sesion('login')
+    analitica.sesion('session_start')
   }
 
   function logout(): void {
+    // Antes de borrar el token: el envío con keepalive necesita credenciales vigentes.
+    analitica.sesion('session_end')
+    vaciarRegistroUso()
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USUARIO_KEY)
     localStorage.removeItem(APP_KEY)
     setUsuario(null)
-    analitica.sesion('logout')
     establecerIdentidadAnalitica(null)
   }
 

@@ -1,4 +1,7 @@
 """Registro confirmado y minimizado de operaciones backend."""
+import hashlib
+import hmac
+import ipaddress
 import json
 import logging
 import re
@@ -12,6 +15,7 @@ from fastapi import HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 
+from app.config import get_settings
 from app.documents.auditoria import Auditoria
 from app.errors import ErrorDominio
 from app.security.deps import rol_actual
@@ -66,6 +70,33 @@ def _recurso_id(request: Request, respuesta: Response | None, codigo: int) -> st
     return None
 
 
+def hmac_email(email: str) -> str:
+    """Huella irreversible del email intentado.
+
+    Usa ``auditoria_hmac_secret``; solo si no está definida cae a ``jwt_secret``.
+    """
+    ajustes = get_settings()
+    clave = (ajustes.auditoria_hmac_secret or ajustes.jwt_secret).encode()
+    return hmac.new(clave, email.strip().lower().encode(), hashlib.sha256).hexdigest()
+
+
+def ip_cliente(request: Request) -> str | None:
+    """IP del cliente. ``X-Forwarded-For`` solo se respeta con ``auditoria_confiar_proxy``.
+
+    Con proxy de confianza se toma el ÚLTIMO valor (el que añadió nuestro proxy); los
+    anteriores los controla el cliente y se ignoran. Un valor no válido cae a la IP del socket.
+    """
+    socket = request.client.host if request.client else None
+    if get_settings().auditoria_confiar_proxy:
+        reenviado = request.headers.get("x-forwarded-for", "").split(",")[-1].strip()
+        if reenviado:
+            try:
+                return str(ipaddress.ip_address(reenviado))
+            except ValueError:
+                pass
+    return socket
+
+
 def _codigo_error(exc: Exception) -> int:
     if isinstance(exc, (HTTPException, ErrorDominio)):
         return exc.status_code
@@ -92,14 +123,26 @@ async def registrar_operacion(
         accion = "restablecer_password"
     elif recurso_tipo == "importacion":
         accion = "importar" if request.method == "POST" else "consultar"
+    if codigo == 401 and usuario is None and ruta != "/auth/login":
+        # Token ausente/inválido: ruido anónimo sin valor de auditoría.
+        return
+    es_login = ruta == "/auth/login"
+    if es_login and usuario is not None and usuario.aplicaciones_codigos:
+        # El ingreso pertenece a las aplicaciones del usuario (visible a su admin_app).
+        codigos, plataforma = list(usuario.aplicaciones_codigos), False
+    else:
+        codigos = list(ctx.codigos) if ctx is not None else []
+        plataforma = ctx is None
+    extra = getattr(request.state, "auditoria_login", None) if es_login else None
+    extra = extra or {}
     try:
         rol = await rol_actual(usuario) if usuario is not None else None
         await Auditoria(
             usuario_id=str(usuario.id) if usuario is not None else None,
             id_analitico=await obtener_id_analitico(usuario) if usuario is not None else None,
             rol=(rol.clave if rol else usuario.rol) if usuario is not None else None,
-            aplicaciones_codigos=list(ctx.codigos) if ctx is not None else [],
-            plataforma=ctx is None,
+            aplicaciones_codigos=codigos,
+            plataforma=plataforma,
             recurso_tipo=recurso_tipo,
             recurso_id=_recurso_id(request, respuesta, codigo),
             accion=accion,
@@ -108,6 +151,9 @@ async def registrar_operacion(
             duracion_ms=max(0, round((monotonic() - inicio) * 1000)),
             ruta=ruta,
             metodo=request.method,
+            email_hmac=extra.get("email_hmac"),
+            ip=extra.get("ip"),
+            user_agent=extra.get("user_agent"),
         ).insert()
     except Exception:
         # Una operación ya confirmada no debe convertirse en 500 y provocar un reintento.
@@ -125,6 +171,8 @@ class RutaAuditada(APIRoute):
         ruta = self.path.removeprefix("/api")
 
         async def manejar(request: Request) -> Response:
+            if ruta == "/auditoria/eventos-uso":
+                return await original(request)  # telemetría: no se audita a sí misma
             auditar = request.method != "GET" or ruta.startswith(
                 ("/usuarios", "/roles", "/configuracion", "/actas", "/auditoria/identidad/")
             ) or (ruta.startswith("/requerimientos/") and ruta.count("/") == 2)

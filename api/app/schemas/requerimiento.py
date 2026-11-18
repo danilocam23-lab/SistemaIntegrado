@@ -5,7 +5,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.documents.enums import (
     AnsResultado,
@@ -42,6 +42,9 @@ class RequerimientoIn(BaseModel):
     solicitud: SolicitudIn
     estado: str
     total_horas_estimadas: Decimal | None = None
+    horas_siguiente_anio: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
+    fecha_entrega_comprometida_siguiente_anio: datetime | None = None
+    fecha_real_entrega_siguiente_anio: datetime | None = None
     fecha_real_entrega_estimacion: datetime | None = None
     ans_estimacion: AnsResultado | None = None
     fecha_solicitud_acta: datetime | None = None
@@ -66,6 +69,9 @@ class RequerimientoUpdate(BaseModel):
     solicitud: SolicitudIn | None = None
     estado: str | None = None
     total_horas_estimadas: Decimal | None = None
+    horas_siguiente_anio: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
+    fecha_entrega_comprometida_siguiente_anio: datetime | None = None
+    fecha_real_entrega_siguiente_anio: datetime | None = None
     fecha_real_entrega_estimacion: datetime | None = None
     ans_estimacion: AnsResultado | None = None
     fecha_solicitud_acta: datetime | None = None

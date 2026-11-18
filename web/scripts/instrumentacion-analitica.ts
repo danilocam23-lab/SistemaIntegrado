@@ -114,7 +114,7 @@ export function analizarControles(fuente: string, archivo: string) {
         const firma = `${archivo}|${etiqueta}|${(click ?? cambio ?? teclas)?.getText(arbol) ?? accion}`
         const hash = createHash('sha256').update(firma).digest('hex').slice(0, 12)
         const id = cobertura === 'explicito' ? literal(explicito) ?? null :
-          cobertura === 'automatico' ? `control.${simplificar(archivo.replace(/^src\//, '').replace(/\.tsx$/, '')).slice(-42)}.${simplificar(handler || etiqueta).slice(0, 20)}.${hash}` : null
+          cobertura === 'automatico' ? `control.${simplificar(archivo.replace(/^src\//, '').replace(/\.tsx$/, '')).slice(-36)}.${simplificar(handler || etiqueta).slice(0, 18)}.${hash}` : null
         controles.push({
           archivo, linea: arbol.getLineAndCharacterOfPosition(nodo.getStart(arbol)).line + 1,
           componente: etiqueta, handler, id, accion, tipo, cobertura,
@@ -259,7 +259,7 @@ export function inventariarProyecto(raiz: string) {
       limites: [
         'Actas.tsx CRUD no tiene ruta activa; no existe workflow de aprobación de actas.',
         'Formulario: solo los seis IDs explícitos tienen asociación de confirmación HTTP; no se infiere éxito desde onSubmit.',
-        'Solo cuatro exportaciones XLSX locales tienen app_export; un clic descargar no acredita descarga al disco.',
+        'Solo las exportaciones XLSX de EXPORTACIONES (cuatro locales y la plantilla de importación) tienen app_export; un clic descargar no acredita descarga al disco.',
         'No se registran lecturas GET generales ni polling.',
         'El inventario cuenta callsites, no instancias por fila ni uso observado.',
       ],

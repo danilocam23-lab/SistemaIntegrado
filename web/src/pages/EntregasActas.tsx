@@ -584,8 +584,7 @@ export default function EntregasActas() {
     const libro = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(libro, hoja, 'Entregas de actas')
     const fecha = new Date().toISOString().slice(0, 10)
-    XLSX.writeFile(libro, `entregas_actas_${fecha}.xlsx`)
-    analitica.exportacion('entregas_excel')
+    analitica.exportar('entregas_excel', () => XLSX.writeFile(libro, `entregas_actas_${fecha}.xlsx`))
   }
 
   return (

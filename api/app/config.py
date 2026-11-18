@@ -45,6 +45,28 @@ class Settings(BaseSettings):
     jwt_algoritmo: str = "HS256"
     jwt_expira_minutos: int = 480
 
+    # Retención de eventos de uso (telemetría de pantallas); TTL de Mongo en días
+    eventos_uso_retencion_dias: int = 400
+    # Límite por usuario de eventos de uso aceptados por minuto
+    eventos_uso_limite_por_minuto: int = 120
+    # Tamaño máximo (bytes) del cuerpo de POST /auditoria/eventos-uso; si lo excede, 413
+    eventos_uso_max_bytes: int = 32768
+    # Cupo de interaction_id "nuevos" (fuera del catálogo conocido) por usuario y día
+    eventos_uso_ids_nuevos_por_dia: int = 30
+    # Máximo de días que puede abarcar una consulta de resumen-uso (por defecto: 90 días)
+    resumen_uso_rango_max_dias: int = 400
+    # Tope de filas por agregación de resumen-uso
+    resumen_uso_max_filas: int = 5000
+
+    # Auditoría de login (ip, user_agent, email_hmac): retención propia en días
+    auditoria_login_retencion_dias: int = 180
+    # Clave del HMAC del email intentado. Si está vacía se usa jwt_secret (rotar jwt_secret
+    # invalidaría las huellas); definirla aparte evita acoplar ambos secretos.
+    auditoria_hmac_secret: str = ""
+    # Solo si la API corre detrás de un proxy inverso propio (IIS/ARR): usar el último
+    # valor de X-Forwarded-For (el que añadió el proxy) como IP del cliente.
+    auditoria_confiar_proxy: bool = False
+
     # CORS
     cors_origins: str = "http://localhost:5173"
 

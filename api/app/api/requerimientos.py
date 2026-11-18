@@ -229,6 +229,9 @@ async def crear(
         solicitud=Solicitud(**datos.solicitud.model_dump()),
         estado=datos.estado,
         total_horas_estimadas=datos.total_horas_estimadas,
+        horas_siguiente_anio=datos.horas_siguiente_anio,
+        fecha_entrega_comprometida_siguiente_anio=datos.fecha_entrega_comprometida_siguiente_anio,
+        fecha_real_entrega_siguiente_anio=datos.fecha_real_entrega_siguiente_anio,
         fecha_real_entrega_estimacion=datos.fecha_real_entrega_estimacion,
         ans_estimacion=datos.ans_estimacion,
         fecha_solicitud_acta=datos.fecha_solicitud_acta,
@@ -288,12 +291,20 @@ async def actualizar(
 
     req = await _buscar(ctx, codigo_req)
     cambios = datos.model_dump(exclude_unset=True)
+    solo_siguiente_anio = bool(cambios) and cambios.keys() <= {
+        "horas_siguiente_anio",
+        "fecha_entrega_comprometida_siguiente_anio",
+        "fecha_real_entrega_siguiente_anio",
+    }
     solicitud = cambios.pop("solicitud", None)
 
     # Registrar qué campos cambiaron para la bitácora
     etiquetas = {
         "nombre": "Nombre de acta",
         "total_horas_estimadas": "Horas estimadas",
+        "horas_siguiente_anio": "Horas para el siguiente año",
+        "fecha_entrega_comprometida_siguiente_anio": "Fecha entrega comprometida siguiente año",
+        "fecha_real_entrega_siguiente_anio": "Fecha real entrega siguiente año",
         "fecha_solicitud_acta": "Fecha solicitud acta",
         "fecha_real_entrega_estimacion": "Fecha real entrega",
         "seguimiento": "Seguimiento Hitss",
@@ -329,28 +340,31 @@ async def actualizar(
 
     for campo, valor in cambios.items():
         viejo = getattr(req, campo, None)
-        if str(viejo or "") != str(valor or ""):
+        texto_viejo = str(viejo) if viejo is not None else ""
+        texto_nuevo = str(valor) if valor is not None else ""
+        if texto_viejo != texto_nuevo:
             label = etiquetas.get(campo, campo)
-            detalle_cambios.append(f"{label}: '{viejo or ''}' → '{valor or ''}'")
+            detalle_cambios.append(f"{label}: '{texto_viejo}' → '{texto_nuevo}'")
         setattr(req, campo, valor)
 
-    # Recalcular fecha_limite si hay fecha_solicitud_acta y horas
-    if req.fecha_solicitud_acta is not None:
-        horas = float(req.total_horas_estimadas) if req.total_horas_estimadas else None
-        req.fecha_limite = await calcular_fecha_limite(
-            req.aplicacion_id, req.fecha_solicitud_acta, horas
-        )
-        # Calcular ANS ACTA: si hay fecha real de entrega, comparar con fecha_limite
-        if req.fecha_real_entrega_estimacion is not None and req.fecha_limite is not None:
-            if req.fecha_real_entrega_estimacion <= req.fecha_limite:
-                req.ans_acta = AnsResultado.CUMPLE
+    # El bloque informativo no recalcula ANS; el resto conserva el comportamiento previo.
+    if not solo_siguiente_anio:
+        if req.fecha_solicitud_acta is not None:
+            horas = float(req.total_horas_estimadas) if req.total_horas_estimadas else None
+            req.fecha_limite = await calcular_fecha_limite(
+                req.aplicacion_id, req.fecha_solicitud_acta, horas
+            )
+            # Calcular ANS ACTA: comparar fecha real de entrega con fecha_limite.
+            if req.fecha_real_entrega_estimacion is not None and req.fecha_limite is not None:
+                if req.fecha_real_entrega_estimacion <= req.fecha_limite:
+                    req.ans_acta = AnsResultado.CUMPLE
+                else:
+                    req.ans_acta = AnsResultado.NO_CUMPLE
             else:
-                req.ans_acta = AnsResultado.NO_CUMPLE
+                req.ans_acta = None
         else:
+            req.fecha_limite = None
             req.ans_acta = None
-    else:
-        req.fecha_limite = None
-        req.ans_acta = None
 
     req.marcar_actualizado()
     await req.save()

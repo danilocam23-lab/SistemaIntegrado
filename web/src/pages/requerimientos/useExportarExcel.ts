@@ -30,8 +30,7 @@ export function useExportarExcel(
     XLSX.utils.book_append_sheet(libro, hoja, 'Requerimientos')
     // INVARIANTE 16: nombre de archivo con fecha UTC.
     const fecha = new Date().toISOString().slice(0, 10)
-    XLSX.writeFile(libro, `requerimientos_${fecha}.xlsx`)
-    analitica.exportacion('requerimientos_excel')
+    analitica.exportar('requerimientos_excel', () => XLSX.writeFile(libro, `requerimientos_${fecha}.xlsx`))
   }
 
   return { exportarExcel }

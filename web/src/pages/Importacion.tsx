@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import type { ChangeEvent } from 'react'
+import { analitica } from '../analitica'
 import client from '../api/client'
 import { mensajeError } from '../api/hooks'
 import Modal from '../components/Modal'
@@ -145,7 +146,9 @@ export default function Importacion() {
       enlace.click()
       enlace.remove()
       window.URL.revokeObjectURL(url)
+      analitica.exportacion('plantilla_importacion_excel')
     } catch (err) {
+      analitica.exportacion('plantilla_importacion_excel', 'failure')
       const blobError = (err as { response?: { data?: unknown } })?.response?.data
       if (typeof Blob !== 'undefined' && blobError instanceof Blob) {
         try {
