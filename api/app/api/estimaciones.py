@@ -377,7 +377,7 @@ async def _cargar_estimacion(estimacion_id: str, ctx: ContextoAplicacion) -> Est
 async def crear_tareas_hitss(
     estimacion_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = permiso("requerimientos.editar"),
+    usuario: Usuario = permiso("requerimientos.editar"),
 ):
     """Crea la jerarquía Feature → User Story → Task en la org HITSS.
 
@@ -389,17 +389,25 @@ async def crear_tareas_hitss(
     4. Crea las Tasks heredando AreaPath e IterationPath del padre.
     5. Reintentos automáticos para campos requeridos/inválidos.
     """
-    from app.services.azdo_sync import crear_servicio_azdo, leer_config_azdo
+    from app.services.azdo_sync import (
+        crear_servicio_azdo,
+        leer_config_azdo,
+        persona_de_usuario,
+    )
 
     estimacion = await _cargar_estimacion(estimacion_id, ctx)
     # Un ValueError de crear_servicio_azdo (sin configuración) lo traduce a
     # 400 el handler global (ADR-0008 F2.6).
-    svc = await crear_servicio_azdo(ctx.codigo, "azdo_")
-    proyecto = await leer_config_azdo(ctx.codigo, "azdo_default_project")
+    # Config de la vista Azure DevOps: usuario (su Persona) > squad > app.
+    persona_id = await persona_de_usuario(usuario)
+    svc = await crear_servicio_azdo(ctx.codigo, "azdo_", usuario_id=persona_id)
+    proyecto = await leer_config_azdo(
+        ctx.codigo, "azdo_default_project", usuario_id=persona_id
+    )
     if not proyecto:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Falta configurar 'azdo_default_project' (proyecto HITSS por defecto)",
+            "Falta configurar el proyecto por defecto de HITSS en la vista Azure DevOps.",
         )
 
     wit_types = await svc.obtener_tipos_work_item(proyecto)
@@ -532,15 +540,16 @@ async def crear_tareas_hitss(
 async def crear_tareas_epm(
     estimacion_id: str,
     ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: Usuario = permiso("requerimientos.editar"),
+    usuario: Usuario = permiso("requerimientos.editar"),
 ):
     """Crea las tareas en la org EPM. Cada fila debe traer ``id_epm`` (HU padre)."""
-    from app.services.azdo_sync import crear_servicio_azdo
+    from app.services.azdo_sync import crear_servicio_azdo, persona_de_usuario
 
     estimacion = await _cargar_estimacion(estimacion_id, ctx)
     # Un ValueError de crear_servicio_azdo (sin configuración) lo traduce a
     # 400 el handler global (ADR-0008 F2.6).
-    svc = await crear_servicio_azdo(ctx.codigo, "azdo2_")
+    persona_id = await persona_de_usuario(usuario)
+    svc = await crear_servicio_azdo(ctx.codigo, "azdo2_", usuario_id=persona_id)
 
     # Cache de proyecto y WI padre por id_epm.
     proyecto_por_epm: dict[int, str] = {}

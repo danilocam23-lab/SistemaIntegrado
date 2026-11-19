@@ -24,6 +24,7 @@ from app.services.azdo_esquema_sync import (
     ejecutar_sincronizacion_esquema,
     preparar_corrida,
 )
+from app.services.azdo_sync import persona_de_usuario, resolver_config
 from app.services.azure_devops import AzureDevOpsService, normalizar_org_key
 
 logger = logging.getLogger(__name__)
@@ -92,29 +93,13 @@ async def _resolver_config(
     squad_id: str | None = None,
     usuario_id: str | None = None,
 ) -> AzdoConfig | None:
-    """Resuelve la configuración con prioridad: user > squad > app."""
-    target = _normalizar_target(target)
-    if usuario_id:
-        cfg = await AzdoConfig.find_one(
-            AzdoConfig.aplicacion_id == aplicacion_id,
-            AzdoConfig.scope == _scope_config("user", target),
-            AzdoConfig.usuario_id == usuario_id,
-        )
-        if cfg and cfg.org_url and cfg.pat:
-            return cfg
+    """Resuelve la configuración con prioridad: user > squad > app.
 
-    if squad_id:
-        cfg = await AzdoConfig.find_one(
-            AzdoConfig.aplicacion_id == aplicacion_id,
-            AzdoConfig.scope == _scope_config("squad", target),
-            AzdoConfig.squad_id == squad_id,
-        )
-        if cfg and cfg.org_url and cfg.pat:
-            return cfg
-
-    return await AzdoConfig.find_one(
-        AzdoConfig.aplicacion_id == aplicacion_id,
-        AzdoConfig.scope == _scope_config("app", target),
+    La lógica vive en ``services.azdo_sync.resolver_config`` (compartida con el resto
+    de servicios); aquí solo se valida el target como error HTTP 400.
+    """
+    return await resolver_config(
+        aplicacion_id, _normalizar_target(target), squad_id, usuario_id
     )
 
 
@@ -178,18 +163,7 @@ def _separar_csv(valor: str | None) -> list[str]:
     return [parte.strip() for parte in valor.split(",") if parte.strip()]
 
 
-async def _persona_de_usuario(usuario: Usuario) -> str | None:
-    """Devuelve el id de la Persona vinculada al usuario, si existe."""
-    persona = await Persona.find_one(Persona.usuario_id == str(usuario.id))
-    if persona:
-        return str(persona.id)
-    email = (usuario.email or "").strip().lower()
-    if not email:
-        return None
-    persona = await Persona.find_one(
-        {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
-    )
-    return str(persona.id) if persona else None
+_persona_de_usuario = persona_de_usuario
 
 
 def _es_superadmin_configurado(usuario: Usuario) -> bool:

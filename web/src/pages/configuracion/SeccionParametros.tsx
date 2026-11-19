@@ -47,10 +47,8 @@ export function SeccionParametros({
   return (
     <div>
       <p className="mb-4 text-sm text-slate-500">
-        Parámetros del squad activo:
-        <code className="mx-1 rounded bg-slate-100 px-1">azdo_org_url</code>,
-        <code className="mx-1 rounded bg-slate-100 px-1">azdo_pat</code>,
-        <code className="mx-1 rounded bg-slate-100 px-1">azdo_sync_interval</code>.
+        Parámetros generales de la aplicación. La URL de la organización y el PAT de Azure DevOps
+        se configuran en la vista Azure DevOps.
       </p>
       <form onSubmit={crear} className="barra-filtros mb-4">
         <Campo

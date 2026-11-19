@@ -247,6 +247,26 @@ antigua por sprint (`POST /api/azdo/sync`) fue eliminada:
 
 El inventario completo se consulta en la vista frontend **Administración de Endpoints**.
 
+### Origen de la conexión (solo `azdo_config`)
+
+La URL de la organización, el PAT y el proyecto por defecto se leen **únicamente** de la
+colección `azdo_config` (lo que se guarda en la vista Azure DevOps), resueltos por
+`app.services.azdo_sync.resolver_config` con prioridad usuario > squad > aplicación
+(scopes `user` / `squad` / `app`, con sufijo `_epm` para el target EPM). El `usuario_id` de
+la config de usuario es el id de la Persona (`persona_de_usuario`). `crear_servicio_azdo`
+y `leer_config_azdo` aceptan `usuario_id` / `squad_id` opcionales y lanzan `ValueError`
+(400) si falta URL o PAT. **Ya no se leen** las claves legacy de la colección
+`configuracion` (`azdo_org_url`, `azdo_pat`, `azdo_sync_interval`, `azdo_default_project` y
+sus equivalentes `azdo2_*`), ni se siembran al provisionar una aplicación. Para retirarlas
+de una base existente (migrando antes a `azdo_config` lo que falte):
+
+```bash
+python scripts/limpiar_config_azdo_legacy.py                              # dry-run
+python scripts/limpiar_config_azdo_legacy.py --aplicar --respaldo ./respaldos
+```
+
+El respaldo JSON contiene PAT en claro: es sensible.
+
 ## Integración externa (Power Automate) — patrón de API Keys
 
 Cada endpoint bajo `/api/integracion/*` usa su **propia** API Key independiente

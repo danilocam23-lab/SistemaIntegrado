@@ -24,10 +24,8 @@ CONFIG_BASE: list[tuple[str, str, str]] = [
     ("registros_por_pagina", "50", "general"),
     ("horas_mes_default", "180", "capacidad"),
     ("estados_proyecto", "Activo,En progreso,Finalizado,Inactivo", "estados"),
-    ("azdo_org_url", "https://dev.azure.com/HitssColombia", "azure_devops"),
-    ("azdo_pat", "", "azure_devops"),
-    # Ya no se siembra "azdo_sync_interval" (solo servía a la sync por sprint,
-    # eliminada); los registros existentes quedan como están.
+    # Azure DevOps (URL, PAT, proyecto) ya no se siembra aquí: vive en la colección
+    # azdo_config y se guarda desde la vista Azure DevOps.
 ]
 
 
