@@ -16,7 +16,6 @@ from pymongo.errors import OperationFailure
 from app.db import obtener_cliente
 from app.documents.aplicacion import Aplicacion
 from app.documents.asignacion import Asignacion
-from app.documents.azdo import AzdoWorkItem
 from app.documents.base import ahora
 from app.documents.bitacora import Bitacora
 from app.documents.capacidad import Capacidad
@@ -306,21 +305,14 @@ async def _fusionar_personas(
             )
             refs_actualizadas += squads_upd.modified_count
 
-            # Redirigir asignaciones, capacidades y work items (no eliminar, reasignar)
+            # Redirigir asignaciones, capacidades (no eliminar, reasignar)
             asignaciones = await Asignacion.get_pymongo_collection().update_many(
                 {"persona_id": pid}, {"$set": {"persona_id": gid}}, session=session
             )
             capacidades = await Capacidad.get_pymongo_collection().update_many(
                 {"persona_id": pid}, {"$set": {"persona_id": gid}}, session=session
             )
-            work_items = await AzdoWorkItem.get_pymongo_collection().update_many(
-                {"persona_id": pid}, {"$set": {"persona_id": gid}}, session=session
-            )
-            refs_actualizadas += (
-                asignaciones.modified_count
-                + capacidades.modified_count
-                + work_items.modified_count
-            )
+            refs_actualizadas += asignaciones.modified_count + capacidades.modified_count
 
             await perdedor.delete(session=session)
             fusionados += 1
@@ -723,7 +715,7 @@ async def impacto_eliminacion(
     """Qué ocurriría al eliminar la persona (para el modal de confirmación).
 
     Devuelve los conteos de lo que la cascada borraría (asignaciones, capacidades de
-    persona y work items de Azure) y las referencias que bloquean el borrado
+    persona) y las referencias que bloquean el borrado
     (requerimientos y squads; si hay alguna, ``eliminable`` es ``False`` y el DELETE
     responde 409).
     """
@@ -733,7 +725,6 @@ async def impacto_eliminacion(
     capacidades = await Capacidad.find(
         Capacidad.scope == "persona", Capacidad.persona_id == pid
     ).count()
-    work_items = await AzdoWorkItem.find(AzdoWorkItem.persona_id == pid).count()
     requerimientos, squads = await _contar_referencias(pid)
     return {
         "persona_id": pid,
@@ -741,7 +732,6 @@ async def impacto_eliminacion(
         "cascada": {
             "asignaciones": asignaciones,
             "capacidades": capacidades,
-            "work_items": work_items,
         },
         "referencias": {"requerimientos": requerimientos, "squads": squads},
         "eliminable": requerimientos == 0 and squads == 0,
@@ -771,6 +761,5 @@ async def eliminar(
     await Capacidad.find(
         Capacidad.scope == "persona", Capacidad.persona_id == persona_id
     ).delete()
-    await AzdoWorkItem.find(AzdoWorkItem.persona_id == persona_id).delete()
     await Membresia.find({"persona_id": persona_id}).delete()
     await persona.delete()

@@ -37,7 +37,6 @@ _METODOS_VALIDOS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 _DESTRUCTIVOS_EXPLICITOS: frozenset[tuple[str, str]] = frozenset(
     {
         ("POST", "/api/personas/deduplicar"),
-        ("POST", "/api/azdo/sync"),
         ("GET", "/api/azdo/campos-requeridos"),
         ("DELETE", "/api/azdo/config"),
         ("POST", "/api/soporte/solicitudes-fabrica/sincronizar"),

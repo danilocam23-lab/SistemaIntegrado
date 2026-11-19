@@ -237,13 +237,13 @@ pytest tests/test_requerimientos_horas_siguiente_anio.py tests/test_migracion_pe
 ## Azure DevOps HITSS/EPM
 
 Los endpoints de `/api/azdo` aceptan `target=hitss|epm` para separar configuración,
-prueba de conexión, descubrimiento de campos y sincronización:
+prueba de conexión, descubrimiento de campos y espejo de esquema (`/api/azdo/esquema/*`). La sync
+antigua por sprint (`POST /api/azdo/sync`) fue eliminada:
 
 - `GET /api/azdo/config?target=hitss|epm`
 - `PUT /api/azdo/config` con `target` en el cuerpo.
 - `GET /api/azdo/test?target=hitss|epm`
 - `GET /api/azdo/campos-requeridos?target=hitss|epm`
-- `POST /api/azdo/sync` con `azdo_project`, `iteration_path` y `target`.
 
 El inventario completo se consulta en la vista frontend **Administración de Endpoints**.
 

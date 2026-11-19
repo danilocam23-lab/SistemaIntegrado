@@ -42,7 +42,7 @@ export const FILTROS_INICIALES: FiltrosPersonas = {
 export interface ImpactoEliminacion {
   persona_id: string
   nombre: string
-  cascada: { asignaciones: number; capacidades: number; work_items: number }
+  cascada: { asignaciones: number; capacidades: number }
   referencias: { requerimientos: number; squads: number }
   eliminable: boolean
 }

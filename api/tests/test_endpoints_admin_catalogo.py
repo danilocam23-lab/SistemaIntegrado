@@ -85,7 +85,6 @@ async def test_clasificacion_de_riesgo_en_muestra_conocida(cliente, fabrica_usua
     # ...más la lista explícita del ADR, incluido el caso que demuestra que
     # gana incluso sobre un método por defecto "seguro" (GET).
     assert por_ruta[("POST", "/api/personas/deduplicar")]["riesgo"] == "destructivo"
-    assert por_ruta[("POST", "/api/azdo/sync")]["riesgo"] == "destructivo"
     assert por_ruta[("GET", "/api/azdo/campos-requeridos")]["riesgo"] == "destructivo"
     assert por_ruta[("DELETE", "/api/azdo/config")]["riesgo"] == "destructivo"
     assert (

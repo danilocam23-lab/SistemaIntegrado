@@ -10,6 +10,10 @@ interface PropsArbol {
   tipos: TipoWorkItemAzure[]
   expandidos: Set<number>
   onAlternar: (id: number) => void
+  onCargarHijos: (id: number) => void
+  cargandoHijos: Set<number>
+  siguientesOffsets: Record<number, number | null>
+  erroresHijos: Record<number, string>
   onExpandirTodo: () => void
   onColapsarTodo: () => void
 }
@@ -21,13 +25,17 @@ interface PropsNodo {
   expandidos: Set<number>
   nivel: number
   onAlternar: (id: number) => void
+  onCargarHijos: (id: number) => void
+  cargandoHijos: Set<number>
+  siguientesOffsets: Record<number, number | null>
+  erroresHijos: Record<number, string>
 }
 
 function numeroHoras(valor: number | null): number {
   return valor ?? 0
 }
 
-function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar }: PropsNodo) {
+function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar, onCargarHijos, cargandoHijos, siguientesOffsets, erroresHijos }: PropsNodo) {
   const tieneHijos = nodo.hijos.length > 0
   const expandido = expandidos.has(nodo.azdo_id)
   const color = coloresPorTipo[nodo.tipo]
@@ -35,6 +43,10 @@ function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar
   const horasOriginales = numeroHoras(nodo.original_estimate)
   const mostrarHoras = horasCompletadas !== 0 || horasOriginales !== 0
   const esContexto = nodo.contexto
+  const pendientes = nodo.hijos_pendientes ?? 0
+  const cargandoEste = cargandoHijos.has(nodo.azdo_id)
+  const hayMas = nodo.azdo_id in siguientesOffsets
+  const errorEste = erroresHijos[nodo.azdo_id]
 
   return (
     <div className={cx(nivel > 0 && 'border-l border-slate-200 pl-3')}>
@@ -99,6 +111,19 @@ function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar
           </span>
         )}
 
+        {pendientes > 0 && (
+          <Boton
+            variante="fantasma"
+            tamano="sm"
+            className="shrink-0"
+            disabled={cargandoEste}
+            aria-label={`Cargar ${pendientes.toLocaleString('es-CO')} hijos pendientes de #${nodo.azdo_id}`}
+            onClick={() => onCargarHijos(nodo.azdo_id)}
+          >
+            {cargandoEste ? 'Cargando…' : `+${pendientes.toLocaleString('es-CO')} hijos${hayMas ? ' más' : ''}`}
+          </Boton>
+        )}
+
         <div className={cx('flex shrink-0 items-center gap-3 text-2xs', esContexto ? 'text-slate-300' : 'text-slate-400')}>
           {nodo.estado && <span>{nodo.estado}</span>}
           {nodo.asignado_a && <span className="hidden sm:inline">{nodo.asignado_a}</span>}
@@ -107,6 +132,12 @@ function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar
           )}
         </div>
       </div>
+
+      {errorEste && (
+        <p role="alert" className="py-1 pl-14 text-2xs text-red-600">
+          No se pudieron cargar los hijos: {errorEste}
+        </p>
+      )}
 
       {tieneHijos && expandido && (
         <div>
@@ -119,6 +150,10 @@ function NodoArbol({ nodo, numero, coloresPorTipo, expandidos, nivel, onAlternar
               expandidos={expandidos}
               nivel={nivel + 1}
               onAlternar={onAlternar}
+              onCargarHijos={onCargarHijos}
+              cargandoHijos={cargandoHijos}
+              siguientesOffsets={siguientesOffsets}
+              erroresHijos={erroresHijos}
             />
           ))}
         </div>
@@ -132,6 +167,10 @@ export function ArbolEsquemaAzure({
   tipos,
   expandidos,
   onAlternar,
+  onCargarHijos,
+  cargandoHijos,
+  siguientesOffsets,
+  erroresHijos,
   onExpandirTodo,
   onColapsarTodo,
 }: PropsArbol) {
@@ -160,6 +199,10 @@ export function ArbolEsquemaAzure({
             expandidos={expandidos}
             nivel={0}
             onAlternar={onAlternar}
+            onCargarHijos={onCargarHijos}
+            cargandoHijos={cargandoHijos}
+              siguientesOffsets={siguientesOffsets}
+            erroresHijos={erroresHijos}
           />
         ))}
       </div>

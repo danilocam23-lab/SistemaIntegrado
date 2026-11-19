@@ -60,8 +60,8 @@ export function ModalEliminar({ persona, eliminando, error, onConfirmar, onCerra
         {errorImpacto && (
           <Aviso tono="alerta">
             <span role="alert">
-              No se pudo calcular el impacto ({errorImpacto}). Al eliminar se borran también las asignaciones, capacidades
-              y work items de Azure de esta persona.
+              No se pudo calcular el impacto ({errorImpacto}). Al eliminar se borran también las asignaciones y capacidades
+              de esta persona.
             </span>
           </Aviso>
         )}
@@ -72,7 +72,6 @@ export function ModalEliminar({ persona, eliminando, error, onConfirmar, onCerra
             <ul className="list-disc space-y-1 pl-5">
               <li>{plural(impacto.cascada.asignaciones, 'asignación', 'asignaciones')}</li>
               <li>{plural(impacto.cascada.capacidades, 'capacidad mensual', 'capacidades mensuales')}</li>
-              <li>{plural(impacto.cascada.work_items, 'work item de Azure', 'work items de Azure')}</li>
             </ul>
           </>
         )}

@@ -1,38 +1,20 @@
 # Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 # SPDX-License-Identifier: MIT
 
-"""Scheduler de auto-sincronización con Azure DevOps (APScheduler).
-
-Cada 30 minutos revisa las aplicaciones con auto-sync activo (configuración
-``azdo_sync_interval`` = hourly | daily) y sincroniza las iteraciones mapeadas
-en los sprints de sus asignaciones.
-"""
+"""Scheduler de tareas periódicas (APScheduler): espejo de esquema de Azure DevOps,
+carga automática de Solicitudes Fábrica y recálculo de squads."""
 import asyncio
 import logging
 from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app.documents.aplicacion import Aplicacion
-from app.documents.asignacion import Asignacion
-from app.documents.azdo import AzdoSyncLog
 from app.services.azdo_esquema_sync import sincronizar_todas_las_configuraciones_con_pat
-from app.services.azdo_sync import leer_config_azdo, sincronizar_iteracion
 from app.services.soporte_solicitudes_fabrica_service import SoporteSolicitudesFabricaService
 from app.services.vigencia import recalcular_squads_todas
 
 _log = logging.getLogger("scheduler")
 _scheduler: AsyncIOScheduler | None = None
-
-def _toca_sincronizar(ultima: datetime | None, intervalo: str) -> bool:
-    if ultima is None:
-        return True
-    horas = (datetime.now(UTC) - ultima).total_seconds() / 3600
-    if intervalo == "hourly":
-        return horas >= 1
-    if intervalo == "daily":
-        return horas >= 24
-    return False
 
 
 async def _tarea_recalcular_squads_membresias() -> None:
@@ -43,40 +25,6 @@ async def _tarea_recalcular_squads_membresias() -> None:
         _log.info("[scheduler] Squads derivados recalculados: %s personas cambiaron", cambiadas)
     except Exception as exc:  # noqa: BLE001
         _log.warning("[scheduler] Recalcular squads derivados falló: %s", exc)
-
-
-async def _tarea_sync_azdo() -> None:
-    """Recorre las aplicaciones y sincroniza las que tengan auto-sync pendiente."""
-    apps = await Aplicacion.find(Aplicacion.activa == True).to_list()  # noqa: E712
-    for app in apps:
-        intervalo = await leer_config_azdo(app.codigo, "azdo_sync_interval", "manual")
-        if intervalo == "manual":
-            continue
-        ultimo = (
-            await AzdoSyncLog.find(AzdoSyncLog.aplicacion_id == app.codigo)
-            .sort("-iniciado_en")
-            .first_or_none()
-        )
-        if not _toca_sincronizar(ultimo.iniciado_en if ultimo else None, intervalo):
-            continue
-
-        # Las iteraciones a sincronizar viven en los mapeos AzDO de los sprints.
-        asignaciones = await Asignacion.find(Asignacion.aplicacion_id == app.codigo).to_list()
-        vistos: set[tuple[str, str]] = set()
-        for asig in asignaciones:
-            for proyecto in asig.proyectos:
-                for sprint in proyecto.sprints:
-                    mapping = sprint.azdo_mapping
-                    if mapping is None:
-                        continue
-                    clave = (mapping.azdo_project, mapping.iteration_path)
-                    if clave in vistos:
-                        continue
-                    vistos.add(clave)
-                    try:
-                        await sincronizar_iteracion(app.codigo, clave[0], clave[1])
-                    except Exception as exc:  # noqa: BLE001
-                        _log.warning("[scheduler] sync AzDO falló (%s): %s", app.codigo, exc)
 
 
 async def _tarea_carga_excel_solicitudes_fabrica() -> None:
@@ -100,7 +48,7 @@ async def _tarea_sync_esquema_azdo_automatico() -> None:
     """Sincronización automática del espejo de esquema de Azure DevOps (del
     que depende Horas de Azure en Asignaciones), 2 veces al día, para toda
     AzdoConfig que ya tenga PAT configurado — independiente del campo
-    sync_interval, que gobierna el sync viejo por sprint (_tarea_sync_azdo)."""
+    sync_interval."""
     try:
         await sincronizar_todas_las_configuraciones_con_pat()
     except Exception as exc:  # noqa: BLE001
@@ -138,7 +86,6 @@ def iniciar_scheduler() -> None:
     if _scheduler is not None:
         return
     _scheduler = AsyncIOScheduler()
-    _scheduler.add_job(_tarea_sync_azdo, "interval", minutes=30, id="azdo_sync")
     _scheduler.add_job(
         _tarea_carga_excel_solicitudes_fabrica,
         "cron",
@@ -163,7 +110,6 @@ def iniciar_scheduler() -> None:
         id="recalcular_squads_membresias",
     )
     _scheduler.start()
-    _log.info("Scheduler de Azure DevOps iniciado (revisión cada 30 min)")
     _log.info("Scheduler de carga automática de Solicitudes Fábrica iniciado (cada hora en punto)")
     _log.info("Scheduler de auto-sync de esquema AzDO iniciado (6:00 y 12:00 hora Colombia)")
     asyncio.create_task(_verificar_y_recuperar_carga_excel())

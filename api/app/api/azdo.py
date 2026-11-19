@@ -7,17 +7,12 @@ import re
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.config import get_settings
 from app.documents.aplicacion import Aplicacion
-from app.documents.azdo import (
-    AzdoEsquemaItem,
-    AzdoEsquemaSyncLog,
-    AzdoSyncLog,
-    AzdoWorkItem,
-)
+from app.documents.azdo import AzdoEsquemaItem, AzdoEsquemaSyncLog
 from app.documents.azdo_config import AzdoConfig
 from app.documents.persona import Persona
 from app.documents.usuario import Usuario
@@ -29,7 +24,6 @@ from app.services.azdo_esquema_sync import (
     ejecutar_sincronizacion_esquema,
     preparar_corrida,
 )
-from app.services.azdo_sync import sincronizar_iteracion
 from app.services.azure_devops import AzureDevOpsService, normalizar_org_key
 
 logger = logging.getLogger(__name__)
@@ -38,17 +32,11 @@ router = APIRouter(prefix="/azdo", tags=["azure-devops"])
 
 # ── Modelos de entrada ──
 
-class SyncIn(BaseModel):
-    azdo_project: str
-    iteration_path: str
-    target: str = "hitss"
-
-
 class AzdoConfigIn(BaseModel):
     org_url: str = ""
     pat: str | None = None  # None = no cambiar
     default_project: str = ""
-    sync_interval: str = "manual"
+    sync_interval: str | None = None  # ya no se usa; None = conservar el guardado
     squad_id: str | None = None
     usuario_id: str | None = None
     target: str = "hitss"
@@ -322,7 +310,10 @@ async def _tipos_esquema_activos(
 
 
 def _construir_arbol(items: list[dict]) -> list[dict]:
-    indice = {item["azdo_id"]: {**item, "hijos": []} for item in items}
+    indice = {
+        item["azdo_id"]: {**item, "hijos": [], "hijos_pendientes": item.get("hijos_pendientes", 0)}
+        for item in items
+    }
     raices: list[dict] = []
     colocados: set[int] = set()
 
@@ -541,13 +532,14 @@ async def guardar_config(
             org_url=datos.org_url,
             pat=datos.pat or "",
             default_project=datos.default_project,
-            sync_interval=datos.sync_interval,
+            sync_interval=datos.sync_interval or "manual",
         )
         await cfg.insert()
     else:
         cfg.org_url = datos.org_url
         cfg.default_project = datos.default_project
-        cfg.sync_interval = datos.sync_interval
+        if datos.sync_interval is not None:
+            cfg.sync_interval = datos.sync_interval
         if datos.pat is not None:
             cfg.pat = datos.pat
         cfg.marcar_actualizado()
@@ -1051,6 +1043,7 @@ def _esquema_item_a_nodo(doc: AzdoEsquemaItem, contexto: bool = False) -> dict:
         "url_api": doc.url,
         "parent_id": doc.parent_id,
         "contexto": contexto,
+        "hijos_pendientes": 0,
     }
 
 
@@ -1091,6 +1084,132 @@ async def _recuperar_ancestros_sincronizados(
         sin_resultado.update(set(faltantes) - encontrados)
 
 
+# Tope de hijos directos por llamada a ``/esquema/hijos`` y tamaño de lote de los ``$in``
+# sobre ``parent_id`` (constantes de módulo para poder acotarlas en tests).
+_MAX_HIJOS_ESQUEMA = 500
+_LOTE_PARENT_IDS = 1000
+
+
+def _filtro_esquema_sincronizado(
+    org_key: str,
+    proyecto: str,
+    tipos: list[str],
+    estados: list[str],
+    iteraciones_consulta: list[str] | None,
+) -> dict:
+    """Filtro Mongo común del espejo (tipos, estados e iteraciones permitidas)."""
+    filtro: dict = {"org_key": org_key, "proyecto": proyecto}
+    if tipos:
+        filtro["tipo"] = {"$in": tipos}
+    if estados:
+        filtro["estado"] = {"$in": estados}
+    if iteraciones_consulta:
+        filtro["$or"] = [_regex_iteracion_esquema(it) for it in iteraciones_consulta]
+    return filtro
+
+
+def _lotes(valores: list[int]) -> list[list[int]]:
+    return [valores[i : i + _LOTE_PARENT_IDS] for i in range(0, len(valores), _LOTE_PARENT_IDS)]
+
+
+async def _ids_raices_filtradas(filtro: dict, tope: int) -> list[int]:
+    """Ids (orden ``azdo_id``, máx. ``tope``) de los coincidentes sin padre coincidente.
+
+    Raíz = ``parent_id`` nulo o padre que no cumple el filtro / no existe en el espejo.
+    Se resuelve en MongoDB con ``$lookup`` (índice único sobre ``azdo_id``) y se corta
+    con ``$limit`` sin cargar el conjunto completo.
+    """
+    extra = {k: v for k, v in filtro.items() if k not in ("org_key", "proyecto")}
+    pipeline: list[dict] = [
+        {"$match": filtro},
+        {"$sort": {"azdo_id": 1}},
+        {
+            "$lookup": {
+                "from": AzdoEsquemaItem.get_collection_name(),
+                "let": {"padre": "$parent_id"},
+                "pipeline": [
+                    {
+                        "$match": {
+                            "org_key": filtro["org_key"],
+                            "proyecto": filtro["proyecto"],
+                            "$expr": {"$eq": ["$azdo_id", "$$padre"]},
+                        }
+                    },
+                    {"$match": extra},
+                    {"$limit": 1},
+                    {"$project": {"_id": 1}},
+                ],
+                "as": "_padre",
+            }
+        },
+        {"$match": {"_padre": {"$size": 0}}},
+        {"$limit": tope},
+        {"$project": {"_id": 0, "azdo_id": 1}},
+    ]
+    filas = await AzdoEsquemaItem.aggregate(pipeline).to_list()
+    return [fila["azdo_id"] for fila in filas]
+
+
+async def _hijos_de_padres(filtro: dict, padres: list[int], tope: int) -> list[AzdoEsquemaItem]:
+    """Hijos directos (que cumplen ``filtro``) de ``padres``, orden ``azdo_id``, máx. ``tope``."""
+    hallados: list[AzdoEsquemaItem] = []
+    for lote in _lotes(padres):
+        hallados.extend(
+            await AzdoEsquemaItem.find({**filtro, "parent_id": {"$in": lote}})
+            .sort("+azdo_id")
+            .limit(tope)
+            .to_list()
+        )
+    hallados.sort(key=lambda d: d.azdo_id)
+    return hallados[:tope]
+
+
+async def _seleccionar_por_niveles(filtro: dict, limite: int) -> list[AzdoEsquemaItem]:
+    """Elige hasta ``limite`` documentos de arriba hacia abajo, nivel a nivel."""
+    ids_raices = await _ids_raices_filtradas(filtro, limite)
+    seleccion: list[AzdoEsquemaItem] = []
+    if ids_raices:
+        seleccion = (
+            await AzdoEsquemaItem.find(
+                {**filtro, "azdo_id": {"$in": ids_raices}}
+            )
+            .sort("+azdo_id")
+            .to_list()
+        )
+    vistos = {d.azdo_id for d in seleccion}
+    nivel = [d.azdo_id for d in seleccion]
+    while nivel and len(seleccion) < limite:
+        hijos = await _hijos_de_padres(filtro, nivel, limite - len(seleccion))
+        hijos = [h for h in hijos if h.azdo_id not in vistos]
+        seleccion.extend(hijos)
+        vistos.update(h.azdo_id for h in hijos)
+        nivel = [h.azdo_id for h in hijos]
+    return seleccion
+
+
+async def _asignar_hijos_pendientes(filtro: dict, items: list[dict]) -> None:
+    """Rellena ``hijos_pendientes``: hijos directos que cumplen ``filtro`` y no están."""
+    if not items:
+        return
+    incluidos: dict[int, int] = {}
+    for item in items:
+        padre = item.get("parent_id")
+        if isinstance(padre, int):
+            incluidos[padre] = incluidos.get(padre, 0) + 1
+    totales: dict[int, int] = {}
+    for lote in _lotes([item["azdo_id"] for item in items]):
+        filas = await AzdoEsquemaItem.aggregate(
+            [
+                {"$match": {**filtro, "parent_id": {"$in": lote}}},
+                {"$group": {"_id": "$parent_id", "n": {"$sum": 1}}},
+            ]
+        ).to_list()
+        totales.update({fila["_id"]: fila["n"] for fila in filas})
+    for item in items:
+        pendientes = totales.get(item["azdo_id"], 0) - incluidos.get(item["azdo_id"], 0)
+        item["hijos_pendientes"] = max(pendientes, 0)
+
+
 async def _esquema_arbol_sincronizado(
     org_key: str,
     proyecto: str,
@@ -1100,20 +1219,23 @@ async def _esquema_arbol_sincronizado(
     filtrado_por_squad: bool,
     limite: int,
 ) -> dict:
-    """Lee el árbol de esquema desde el espejo ``azdo_esquema_items``."""
-    filtro: dict = {"org_key": org_key, "proyecto": proyecto}
-    if tipos:
-        filtro["tipo"] = {"$in": tipos}
-    if estados:
-        filtro["estado"] = {"$in": estados}
-    if iteraciones_consulta:
-        filtro["$or"] = [_regex_iteracion_esquema(it) for it in iteraciones_consulta]
+    """Lee el árbol de esquema desde el espejo ``azdo_esquema_items``.
 
-    docs = await AzdoEsquemaItem.find(filtro).sort("+azdo_id").to_list()
-    truncado = len(docs) > limite
-    docs = docs[:limite]
+    Si los coincidentes superan ``limite`` se elige de arriba hacia abajo por
+    niveles (raíces, hijos, nietos...) para que el árbol quede sin huérfanos; los
+    hijos no incluidos se anuncian en ``hijos_pendientes``.
+    """
+    filtro = _filtro_esquema_sincronizado(org_key, proyecto, tipos, estados, iteraciones_consulta)
+    total_coincidentes = await AzdoEsquemaItem.find(filtro).count()
+    truncado = total_coincidentes > limite
+    if truncado:
+        docs = await _seleccionar_por_niveles(filtro, limite)
+    else:
+        docs = await AzdoEsquemaItem.find(filtro).sort("+azdo_id").limit(limite).to_list()
     items = [_esquema_item_a_nodo(doc) for doc in docs]
     await _recuperar_ancestros_sincronizados(org_key, proyecto, items)
+    if truncado:
+        await _asignar_hijos_pendientes(filtro, items)
 
     alguno = await AzdoEsquemaItem.find_one(
         {"org_key": org_key, "proyecto": proyecto}
@@ -1124,6 +1246,8 @@ async def _esquema_arbol_sincronizado(
     return {
         "proyecto": proyecto,
         "total": len(items),
+        "total_coincidentes": total_coincidentes,
+        "limite": limite,
         "truncado": truncado,
         "tipos_consultados": tipos,
         "iteraciones_aplicadas": iteraciones_consulta or [],
@@ -1222,6 +1346,8 @@ async def esquema_arbol(
         return {
             "proyecto": proyecto_resuelto,
             "total": len(items),
+            "total_coincidentes": len(items),
+            "limite": limite,
             "truncado": truncado,
             "tipos_consultados": tipos_consultados,
             "iteraciones_aplicadas": iteraciones_consulta or [],
@@ -1233,6 +1359,75 @@ async def esquema_arbol(
         }
     except (RuntimeError, httpx.HTTPError) as exc:
         raise _mapear_error_esquema(exc, proyecto_resuelto) from exc
+
+
+@router.get("/esquema/hijos", dependencies=[permiso("azure_devops.ver")])
+async def esquema_hijos(
+    padre_id: int,
+    offset: int = Query(0, ge=0),
+    target: str = "hitss",
+    proyecto: str | None = None,
+    tipos: str | None = None,
+    estados: str | None = None,
+    iteration_path: str | None = None,
+    origen: str = "sincronizado",
+    usuario_id: str | None = None,
+    usuario: Usuario = Depends(usuario_actual),
+    ctx: ContextoAplicacion = Depends(contexto_aplicacion),
+) -> dict:
+    """Hijos directos de ``padre_id`` en el espejo (carga perezosa del árbol).
+
+    Aplica los mismos filtros y el mismo control de iteraciones por squad que
+    ``/esquema/arbol``. Devuelve como máximo ``_MAX_HIJOS_ESQUEMA`` hijos.
+    """
+    target = _normalizar_target(target)
+    origen = _normalizar_origen(origen)
+    if origen != "sincronizado":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Este endpoint solo admite origen=sincronizado.",
+        )
+    usuario_id_efectivo = await _usuario_id_efectivo(usuario, usuario_id)
+    cfg, _ = await _resolver_config_contexto(ctx, target, None, usuario_id_efectivo)
+    org_key = (
+        normalizar_org_key(cfg.org_url) if cfg else await _resolver_org_key_compartido(target)
+    )
+    if not org_key:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Sin configuración de Azure DevOps.")
+    proyecto_resuelto = await _resolver_proyecto_esquema(proyecto, cfg)
+    iteraciones_consulta, _ = _resolver_iteraciones_consulta(
+        await _iteraciones_permitidas_contexto(ctx),
+        iteration_path,
+        proyecto_resuelto,
+    )
+    filtro = _filtro_esquema_sincronizado(
+        org_key,
+        proyecto_resuelto,
+        _separar_csv(tipos),
+        _separar_csv(estados),
+        iteraciones_consulta,
+    )
+    filtro_hijos = {**filtro, "parent_id": padre_id}
+    total = await AzdoEsquemaItem.find(filtro_hijos).count()
+    docs = (
+        await AzdoEsquemaItem.find(filtro_hijos)
+        .sort("+azdo_id")
+        .skip(offset)
+        .limit(_MAX_HIJOS_ESQUEMA)
+        .to_list()
+    )
+    nodos = [_esquema_item_a_nodo(doc) for doc in docs]
+    # Ninguno de sus hijos está cargado aún: pendientes = todos los que cumplan el filtro.
+    await _asignar_hijos_pendientes(filtro, nodos)
+    siguiente = offset + len(nodos)
+    quedan = siguiente < total
+    return {
+        "padre_id": padre_id,
+        "total": total,
+        "truncado": quedan,
+        "siguiente_offset": siguiente if quedan else None,
+        "nodos": nodos,
+    }
 
 
 @router.post("/esquema/sync", dependencies=[permiso("azure_devops.editar")])
@@ -1477,40 +1672,3 @@ async def esquema_detalle_feature(
         "por_sprint": _serializar(por_sprint, "Sin sprint"),
         "por_mes": _serializar(por_mes, "Sin fecha"),
     }
-
-
-# ── Work items y sync ──
-
-@router.get("/work-items", dependencies=[permiso("azure_devops.ver")])
-async def listar_work_items(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
-    return await AzdoWorkItem.find(ctx.filtro()).to_list()
-
-
-@router.get("/sync-log", dependencies=[permiso("azure_devops.ver")])
-async def listar_sync_log(ctx: ContextoAplicacion = Depends(contexto_aplicacion)):
-    return await AzdoSyncLog.find(ctx.filtro()).sort("-iniciado_en").to_list()
-
-
-@router.post("/sync")
-async def sincronizar(
-    datos: SyncIn,
-    ctx: ContextoAplicacion = Depends(contexto_escritura),
-    _: object = permiso("azure_devops.editar"),
-) -> dict:
-    """Sincroniza los work items de una iteración de Azure DevOps.
-
-    Un ``ValueError`` (falta configurar org_url/PAT) lo traduce a 400 el
-    handler global. Antes también se atrapaba cualquier ``Exception`` y se
-    devolvía ``f"Error de Azure DevOps: {exc}"`` en un 502 (ADR-0008 E4): eso
-    filtraba al cliente el cuerpo crudo de la respuesta de Azure DevOps y,
-    además, un bug de programación propio (no de Azure DevOps) también salía
-    como "Error de Azure DevOps" (ADR-0008 E3). Ahora solo se traducen a
-    ``ErrorIntegracion`` los fallos de red/API reales; cualquier otra
-    excepción cae en la red de seguridad de ``main.py`` (500 genérico).
-    """
-    try:
-        return await sincronizar_iteracion(
-            ctx.codigo, datos.azdo_project, datos.iteration_path, datos.target
-        )
-    except (RuntimeError, httpx.HTTPError) as exc:
-        raise ErrorIntegracion("No se pudo sincronizar con Azure DevOps.") from exc

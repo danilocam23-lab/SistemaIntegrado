@@ -123,24 +123,30 @@ async def test_tipos_config_consolidado_guarda_y_recupera_sin_409(
     assert resp_leer.json()["activos"] == ["Task", "Feature"]
 
 
-async def test_azdo_sync_en_consolidado_sigue_devolviendo_409(
+async def test_put_azdo_config_sin_sync_interval_conserva_valores(
     cliente, fabrica_usuario, fabrica_aplicacion
 ):
-    app_a = await fabrica_aplicacion()
-    app_b = await fabrica_aplicacion()
+    app = await fabrica_aplicacion()
+    await AzdoConfig(
+        aplicacion_id=app.codigo,
+        scope="app",
+        org_url="https://dev.azure.com/org",
+        pat="pat-guardado",
+        default_project="Proyecto X",
+        sync_interval="daily",
+    ).insert()
+    _, token = await fabrica_usuario([app.codigo], permisos=["azure_devops.editar"])
 
-    _, token = await fabrica_usuario(
-        [app_a.codigo, app_b.codigo],
-        permisos=["azure_devops.editar", "consolidado.ver"],
-    )
-    resp = await cliente.post(
-        "/api/azdo/sync",
-        json={
-            "azdo_project": "Proyecto",
-            "iteration_path": "Proyecto\\Sprint 1",
-            "target": "hitss",
-        },
-        headers=headers_con_token(token, CONSOLIDADO),
+    resp = await cliente.put(
+        "/api/azdo/config",
+        json={"org_url": "https://dev.azure.com/org", "default_project": "Proyecto X"},
+        headers=headers_con_token(token, app.codigo),
     )
 
-    assert resp.status_code == 409
+    assert resp.status_code == 200
+    assert resp.json()["pat_guardado"] is True
+    cfg = await AzdoConfig.find_one(AzdoConfig.aplicacion_id == app.codigo)
+    assert cfg.org_url == "https://dev.azure.com/org"
+    assert cfg.pat == "pat-guardado"
+    assert cfg.default_project == "Proyecto X"
+    assert cfg.sync_interval == "daily"

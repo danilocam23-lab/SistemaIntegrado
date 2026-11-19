@@ -28,7 +28,6 @@ interface AzdoConfigResp {
   pat: string
   pat_guardado: boolean
   default_project: string
-  sync_interval: string
   squad_id: string | null
   usuario_id: string | null
   learned_fields: Record<string, Record<string, unknown>> | null
@@ -38,12 +37,6 @@ const WIT_LABELS: Record<string, string> = {
   feature: 'Feature',
   userStory: 'User Story / PBI',
   task: 'Task',
-}
-
-const frecuenciaLabel: Record<string, string> = {
-  manual: 'Manual',
-  hourly: 'Cada hora',
-  daily: 'Diario',
 }
 
 /**
@@ -72,7 +65,6 @@ function PanelAzdo({ titulo, target }: {
   const [patGuardado, setPatGuardado] = useState(false)
   const [mostrarPat, setMostrarPat] = useState(false)
   const [proyecto, setProyecto] = useState('')
-  const [frecuencia, setFrecuencia] = useState('manual')
 
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
@@ -134,7 +126,6 @@ function PanelAzdo({ titulo, target }: {
       setPatGuardado(data.pat_guardado)
       setPat(data.pat ?? '')
       setProyecto(data.default_project ?? '')
-      setFrecuencia(data.sync_interval ?? 'manual')
     } catch {
       // No config yet
     }
@@ -171,7 +162,6 @@ function PanelAzdo({ titulo, target }: {
         org_url: orgUrl,
         pat: pat || null,
         default_project: proyecto,
-        sync_interval: frecuencia,
         usuario_id: scopeUsuarioId,
         target,
       })
@@ -214,7 +204,7 @@ function PanelAzdo({ titulo, target }: {
           <h2 className="titulo-seccion">{titulo}</h2>
         </div>
         <p className="mb-5 text-xs text-slate-500">
-          Conecta con Azure DevOps para crear Work Items y sincronizar sprints.
+          Conecta con Azure DevOps para crear Work Items y consultar el esquema del proyecto.
         </p>
 
         {aviso && <Aviso tono="error" className="mb-3">{aviso}</Aviso>}
@@ -301,7 +291,7 @@ function PanelAzdo({ titulo, target }: {
         </div>
 
         {/* Proyecto */}
-        <div className="mb-4">
+        <div className="mb-5">
           <Campo
             etiqueta="Proyecto por defecto"
             value={proyecto}
@@ -310,21 +300,6 @@ function PanelAzdo({ titulo, target }: {
             placeholder="Nombre del proyecto"
             className="w-full"
           />
-        </div>
-
-        {/* Frecuencia */}
-        <div className="mb-5">
-          <Selector
-            etiqueta="Frecuencia de sincronización"
-            value={frecuencia}
-            onChange={(e) => setFrecuencia(e.target.value)}
-            disabled={formularioDeshabilitado}
-            className="w-full"
-          >
-            {Object.entries(frecuenciaLabel).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
-            ))}
-          </Selector>
         </div>
 
         {/* Guardar */}

@@ -6,62 +6,13 @@ from datetime import datetime
 
 from pymongo import ASCENDING, DESCENDING, IndexModel
 
-from app.documents.base import DocumentoBase, DocumentoOperativo
-
-
-class AzdoWorkItem(DocumentoOperativo):
-    """Work item de Azure DevOps sincronizado a la plataforma."""
-
-    azdo_id: int
-    asignacion_id: str | None = None
-    proyecto_id: str | None = None
-    sprint_id: str | None = None
-    persona_id: str | None = None
-    tipo: str
-    titulo: str
-    estado: str | None = None
-    asignado_a: str | None = None
-    original_estimate: float = 0
-    completed_work: float = 0
-    remaining_work: float = 0
-    fecha_inicio: datetime | None = None
-    iteration_path: str | None = None
-    area_path: str | None = None
-    tags: str | None = None
-    url: str | None = None
-    ultima_sync: datetime | None = None
-
-    class Settings:
-        name = "azdo_work_items"
-        indexes = [
-            IndexModel(
-                [("aplicacion_id", ASCENDING), ("azdo_id", ASCENDING)], unique=True, name="uq_app_azdo_id"
-            )
-        ]
-
-
-class AzdoSyncLog(DocumentoOperativo):
-    """Registro histórico de una sincronización con Azure DevOps."""
-
-    sprint_id: str | None = None
-    estado: str
-    work_items: int = 0
-    total_completado: float = 0
-    total_restante: float = 0
-    total_original: float = 0
-    error: str | None = None
-    iniciado_en: datetime
-    finalizado_en: datetime | None = None
-
-    class Settings:
-        name = "azdo_sync_log"
-        indexes = [IndexModel([("aplicacion_id", ASCENDING), ("sprint_id", ASCENDING)], name="ix_app_sprint")]
+from app.documents.base import DocumentoBase
 
 
 class AzdoEsquemaItem(DocumentoBase):
     """Espejo sincronizado del árbol de esquema de un proyecto de Azure DevOps.
 
-    A diferencia de ``AzdoWorkItem``, esta colección **no** hereda de
+    A diferencia de las colecciones operativas, esta colección **no** hereda de
     ``DocumentoOperativo`` y por tanto **no lleva ``aplicacion_id``**. Es
     deliberado y correcto, no un fallo de aislamiento:
 
@@ -79,10 +30,8 @@ class AzdoEsquemaItem(DocumentoBase):
       ``aplicacion_id="2"`` y no encontraría nada. Escribir y leer por
       ``(org_key, proyecto)`` elimina esa asimetría.
 
-    Vive en una colección propia (``azdo_esquema_items``), no en
-    ``azdo_work_items``, para que borrar una Persona
-    (``AzdoWorkItem.find(persona_id == ...).delete()`` en ``personas.py``) no
-    abra agujeros en el árbol jerárquico del esquema.
+    Vive en una colección propia (``azdo_esquema_items``), independiente de las
+    personas, para que borrar una Persona no abra agujeros en el árbol jerárquico.
     """
 
     target: str  # "hitss" | "epm"
@@ -120,17 +69,23 @@ class AzdoEsquemaItem(DocumentoBase):
                 [("org_key", ASCENDING), ("proyecto", ASCENDING), ("parent_id", ASCENDING)],
                 name="ix_orgkey_proyecto_parent",
             ),
+            IndexModel(
+                [
+                    ("org_key", ASCENDING),
+                    ("proyecto", ASCENDING),
+                    ("parent_id", ASCENDING),
+                    ("tipo", ASCENDING),
+                ],
+                name="ix_orgkey_proyecto_parent_tipo",
+            ),
         ]
 
 
 class AzdoEsquemaSyncLog(DocumentoBase):
     """Estado de una corrida de sincronización del espejo de esquema.
 
-    Documento propio (no ``AzdoSyncLog``) por dos razones: ``AzdoSyncLog``
-    hereda de ``DocumentoOperativo`` (exige ``aplicacion_id``, justo lo que este
-    espejo evita, ver ``AzdoEsquemaItem``) y su forma es específica de la sync
-    por sprint (``sprint_id``, totales de horas). Aquí la identidad de la corrida
-    es ``(org_key, proyecto)`` y el progreso se mide en particiones.
+    Documento propio, sin ``aplicacion_id`` (ver ``AzdoEsquemaItem``): la identidad
+    de la corrida es ``(org_key, proyecto)`` y el progreso se mide en particiones.
     """
 
     target: str

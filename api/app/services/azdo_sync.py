@@ -1,15 +1,13 @@
 # Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 # SPDX-License-Identifier: MIT
 
-"""Sincronización de work items de Azure DevOps hacia la plataforma."""
-from datetime import UTC, datetime
+"""Helpers de configuración y cliente de Azure DevOps (config por aplicación).
 
-from pymongo import UpdateOne
-
-from app.documents.azdo import AzdoSyncLog, AzdoWorkItem
+La sincronización antigua por sprint/iteración fue eliminada; el espejo de
+esquema vive en ``azdo_esquema_sync``.
+"""
 from app.documents.azdo_config import AzdoConfig
 from app.documents.configuracion import Configuracion
-from app.documents.persona import Persona
 from app.services.azure_devops import AzureDevOpsService
 
 
@@ -80,96 +78,3 @@ async def crear_servicio_azdo(
             "en la vista de Azure DevOps."
         )
     return AzureDevOpsService(org_url, pat)
-
-
-async def sincronizar_iteracion(
-    aplicacion_id: str,
-    azdo_project: str,
-    iteration_path: str,
-    target: str = "hitss",
-) -> dict:
-    """Trae los work items de una iteración y los actualiza en la base.
-
-    Registra el resultado en ``azdo_sync_log``. Lanza ``ValueError`` si falta
-    la configuración (org_url / PAT).
-    """
-    prefijo = "azdo2_" if target == "epm" else "azdo_"
-    org_url = await leer_config_azdo(aplicacion_id, f"{prefijo}org_url")
-    pat = await leer_config_azdo(aplicacion_id, f"{prefijo}pat")
-    if not org_url or not pat:
-        raise ValueError("Falta configurar 'azdo_org_url' o 'azdo_pat' para la aplicación")
-
-    inicio = datetime.now(UTC)
-    servicio = AzureDevOpsService(org_url, pat)
-
-    try:
-        items = await servicio.obtener_work_items_sprint(azdo_project, iteration_path)
-    except Exception as exc:  # noqa: BLE001 - se registra y se relanza
-        await AzdoSyncLog(
-            aplicacion_id=aplicacion_id,
-            estado="error",
-            error=str(exc),
-            iniciado_en=inicio,
-            finalizado_en=datetime.now(UTC),
-        ).insert()
-        raise
-
-    # ADR-0008 F3.3 (P5): antes era un find_one (Persona) + find_one
-    # (AzdoWorkItem) + save por work item = 3N viajes por sprint. Se precargan
-    # las personas por email en una consulta y se reemplazan los N find_one +
-    # save de AzdoWorkItem por un único bulk_write con upsert, apoyado en el
-    # índice único (aplicacion_id, azdo_id).
-    emails = {item["asignado_a"] for item in items if item["asignado_a"]}
-    personas = (
-        await Persona.find(
-            {"aplicacion_id": aplicacion_id, "email": {"$in": list(emails)}}
-        ).to_list()
-        if emails
-        else []
-    )
-    persona_id_por_email = {p.email: str(p.id) for p in personas if p.email}
-
-    completado = restante = original = 0.0
-    marca = datetime.now(UTC)
-    operaciones = []
-    for item in items:
-        persona_id = (
-            persona_id_por_email.get(item["asignado_a"]) if item["asignado_a"] else None
-        )
-        datos = {
-            **item,
-            "persona_id": persona_id,
-            "iteration_path": iteration_path,
-            "ultima_sync": marca,
-        }
-        operaciones.append(
-            UpdateOne(
-                {"aplicacion_id": aplicacion_id, "azdo_id": item["azdo_id"]},
-                {"$set": {**datos, "actualizado_en": marca}, "$setOnInsert": {"creado_en": marca}},
-                upsert=True,
-            )
-        )
-        completado += item["completed_work"]
-        restante += item["remaining_work"]
-        original += item["original_estimate"]
-
-    if operaciones:
-        await AzdoWorkItem.get_pymongo_collection().bulk_write(operaciones)
-
-    await AzdoSyncLog(
-        aplicacion_id=aplicacion_id,
-        estado="success",
-        work_items=len(items),
-        total_completado=completado,
-        total_restante=restante,
-        total_original=original,
-        iniciado_en=inicio,
-        finalizado_en=datetime.now(UTC),
-    ).insert()
-
-    return {
-        "work_items": len(items),
-        "total_completado": completado,
-        "total_restante": restante,
-        "total_original": original,
-    }

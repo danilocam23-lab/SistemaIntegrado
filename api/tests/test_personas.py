@@ -244,7 +244,7 @@ async def test_impacto_eliminacion_y_delete(cliente, fabrica_aplicacion, fabrica
     resp = await cliente.get(f"/api/personas/{pid}/impacto", headers=h)
     assert resp.status_code == 200
     datos = resp.json()
-    assert datos["cascada"] == {"asignaciones": 2, "capacidades": 1, "work_items": 0}
+    assert datos["cascada"] == {"asignaciones": 2, "capacidades": 1}
     assert datos["referencias"] == {"requerimientos": 0, "squads": 0}
     assert datos["eliminable"] is True
 

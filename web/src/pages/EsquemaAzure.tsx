@@ -10,6 +10,7 @@ import type {
   AzdoProyecto,
   NivelJerarquiaAzure,
   RespuestaEsquemaAzure,
+  RespuestaHijosEsquemaAzure,
   RespuestaIteracionesPermitidasAzure,
   RespuestaTiposAzure,
   TipoWorkItemAzure,
@@ -21,7 +22,7 @@ import { ArbolEsquemaAzure } from './esquema-azure/ArbolEsquemaAzure'
 import { FiltrosEsquemaAzure } from './esquema-azure/FiltrosEsquemaAzure'
 import { PanelJerarquia } from './esquema-azure/PanelJerarquia'
 import { ZonaSincronizacion } from './esquema-azure/ZonaSincronizacion'
-import { contarPorTipo, filtrarArbol, idsDelArbol, resumenConteo } from './esquema-azure/utilidades'
+import { contarPorTipo, filtrarArbol, fusionarHijos, hijosCargados, idsDelArbol, resumenConteo, textoAvisoTruncado } from './esquema-azure/utilidades'
 
 const TARGET_AZURE = 'hitss'
 const LIMITE_ARBOL = 2000
@@ -73,6 +74,9 @@ export default function EsquemaAzure() {
   const [sinConfigurar, setSinConfigurar] = useState(false)
   const [error, setError] = useState('')
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set())
+  const [cargandoHijos, setCargandoHijos] = useState<Set<number>>(new Set())
+  const [siguientesOffsets, setSiguientesOffsets] = useState<Record<number, number | null>>({})
+  const [erroresHijos, setErroresHijos] = useState<Record<number, string>>({})
   const { usuarioId, puedeElegir, personasConConfig, personaSeleccionada, cambiarUsuario } =
     useConfigPersonaAzure(TARGET_AZURE)
 
@@ -108,6 +112,9 @@ export default function EsquemaAzure() {
     setCargando(true)
     setError('')
     setSinConfigurar(false)
+    setCargandoHijos(new Set())
+    setErroresHijos({})
+    setSiguientesOffsets({})
 
     const paramsTipos = parametrosBase(proyecto, usuarioId)
     const paramsArbol = parametrosBase(proyecto, usuarioId)
@@ -206,6 +213,38 @@ export default function EsquemaAzure() {
     setIteracionPath('')
   }
 
+  async function cargarHijos(padreId: number) {
+    setCargandoHijos((actual) => new Set(actual).add(padreId))
+    setErroresHijos((actual) => {
+      const resto = { ...actual }
+      delete resto[padreId]
+      return resto
+    })
+    const params = parametrosBase(proyecto, usuarioId)
+    params.set('padre_id', String(padreId))
+    const guardado = siguientesOffsets[padreId]
+    params.set('offset', String(guardado ?? hijosCargados(respuesta?.nodos ?? [], padreId)))
+    params.set('origen', 'sincronizado')
+    if (tiposSeleccionados.length > 0) params.set('tipos', tiposSeleccionados.join(','))
+    if (iteracionPath) params.set('iteration_path', iteracionPath)
+    try {
+      const { data } = await client.get<RespuestaHijosEsquemaAzure>(`/azdo/esquema/hijos?${params.toString()}`)
+      setRespuesta((previa) =>
+        previa ? { ...previa, nodos: fusionarHijos(previa.nodos, padreId, data.nodos, data.total) } : previa,
+      )
+      setSiguientesOffsets((actual) => ({ ...actual, [padreId]: data.siguiente_offset ?? null }))
+      setExpandidos((actual) => new Set(actual).add(padreId))
+    } catch (err) {
+      setErroresHijos((actual) => ({ ...actual, [padreId]: mensajeError(err) }))
+    } finally {
+      setCargandoHijos((actual) => {
+        const siguiente = new Set(actual)
+        siguiente.delete(padreId)
+        return siguiente
+      })
+    }
+  }
+
   function alternarNodo(id: number) {
     setExpandidos((actual) => {
       const siguiente = new Set(actual)
@@ -292,7 +331,7 @@ export default function EsquemaAzure() {
 
         {respuesta?.truncado && (
           <Aviso tono="alerta">
-            Se alcanzó el límite de {LIMITE_ARBOL} work items. Afina los filtros para confirmar que ves todo el esquema.
+            {textoAvisoTruncado(respuesta.total, respuesta.total_coincidentes, respuesta.truncado)}
           </Aviso>
         )}
 
@@ -325,6 +364,10 @@ export default function EsquemaAzure() {
                 tipos={tipos}
                 expandidos={expandidos}
                 onAlternar={alternarNodo}
+                onCargarHijos={(id) => void cargarHijos(id)}
+                cargandoHijos={cargandoHijos}
+                siguientesOffsets={siguientesOffsets}
+                erroresHijos={erroresHijos}
                 onExpandirTodo={expandirTodo}
                 onColapsarTodo={colapsarTodo}
               />

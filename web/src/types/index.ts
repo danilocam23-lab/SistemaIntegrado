@@ -385,6 +385,7 @@ export interface ItemRoadmap {
 
 export interface Configuracion {
   id: string
+  aplicacion_id?: string
   clave: string
   valor: string
   grupo: string
@@ -515,6 +516,8 @@ export interface NodoEsquemaAzure {
   remaining_work: number | null
   url: string
   parent_id: number | null
+  /** Hijos directos que cumplen los filtros y no vinieron en la respuesta. */
+  hijos_pendientes?: number
   hijos: NodoEsquemaAzure[]
 }
 
@@ -524,6 +527,9 @@ export interface RespuestaEsquemaAzure {
   proyecto: string
   total: number
   truncado: boolean
+  /** Work items que cumplen los filtros (puede faltar en backends antiguos). */
+  total_coincidentes?: number
+  limite?: number
   tipos_consultados: string[]
   iteraciones_aplicadas: string[]
   filtrado_por_squad: boolean
@@ -531,6 +537,14 @@ export interface RespuestaEsquemaAzure {
   origen: OrigenEsquemaAzure
   ultima_sync: string | null
   sin_sincronizar: boolean
+}
+
+export interface RespuestaHijosEsquemaAzure {
+  padre_id: number
+  total: number
+  truncado: boolean
+  siguiente_offset: number | null
+  nodos: NodoEsquemaAzure[]
 }
 
 export interface RespuestaSyncEsquemaAzure {
@@ -572,29 +586,4 @@ export interface RespuestaPersonasConfigAzure {
   puede_elegir_cualquiera: boolean
   persona_propia_id: string | null
   personas: PersonaConfigAzure[]
-}
-
-export interface AzdoWorkItem {
-  id: string
-  azdo_id: number
-  tipo: string
-  titulo: string
-  estado: string | null
-  asignado_a: string | null
-  original_estimate: number
-  completed_work: number
-  remaining_work: number
-  iteration_path: string | null
-}
-
-export interface AzdoSyncLog {
-  id: string
-  estado: string
-  work_items: number
-  total_completado: number
-  total_restante: number
-  total_original: number
-  error: string | null
-  iniciado_en: string
-  finalizado_en: string | null
 }

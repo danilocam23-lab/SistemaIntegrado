@@ -26,7 +26,8 @@ CONFIG_BASE: list[tuple[str, str, str]] = [
     ("estados_proyecto", "Activo,En progreso,Finalizado,Inactivo", "estados"),
     ("azdo_org_url", "https://dev.azure.com/HitssColombia", "azure_devops"),
     ("azdo_pat", "", "azure_devops"),
-    ("azdo_sync_interval", "manual", "azure_devops"),
+    # Ya no se siembra "azdo_sync_interval" (solo servía a la sync por sprint,
+    # eliminada); los registros existentes quedan como están.
 ]
 
 

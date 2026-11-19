@@ -13,8 +13,6 @@ from app.documents.auditoria import Auditoria
 from app.documents.azdo import (
     AzdoEsquemaItem,
     AzdoEsquemaSyncLog,
-    AzdoSyncLog,
-    AzdoWorkItem,
 )
 from app.documents.azdo_config import AzdoConfig
 from app.documents.backlog_futuro import BacklogFuturo
@@ -70,8 +68,6 @@ ALL_DOCUMENTS = [
     Asignacion,
     Capacidad,
     Estimacion,
-    AzdoWorkItem,
-    AzdoSyncLog,
     AzdoEsquemaItem,
     AzdoEsquemaSyncLog,
     AzdoConfig,
@@ -107,8 +103,6 @@ __all__ = [
     "Asignacion",
     "Capacidad",
     "Estimacion",
-    "AzdoWorkItem",
-    "AzdoSyncLog",
     "AzdoEsquemaItem",
     "AzdoEsquemaSyncLog",
     "AzdoConfig",
