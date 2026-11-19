@@ -55,6 +55,7 @@ export const MESES_ES = [
  *  de la vista /entregas-actas sin necesidad de desarrollo. */
 export const ENTREGAS_ACTAS_CONFIG_CLAVES = {
   columnas: 'entregas_actas_columnas',
+  ordenColumnas: 'entregas_actas_orden_columnas',
   filtros: 'entregas_actas_filtros',
   exportCampos: 'entregas_actas_export_campos',
 } as const
@@ -158,6 +159,7 @@ export const ENTREGAS_ACTAS_FILTROS: EntregasActasCampo[] = [
  *  de la vista /requerimientos sin necesidad de desarrollo. */
 export const REQUERIMIENTOS_CONFIG_CLAVES = {
   columnas: 'requerimientos_columnas',
+  ordenColumnas: 'requerimientos_orden_columnas',
   filtros: 'requerimientos_filtros',
   exportCampos: 'requerimientos_export_campos',
 } as const

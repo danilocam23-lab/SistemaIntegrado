@@ -16,7 +16,10 @@ import {
   leerCamposActivos,
 } from '../constantes'
 import type { Aplicacion, Categoria, Configuracion as ConfigItem, Persona, Requerimiento, Squad } from '../types'
-import { Aviso, BarraFiltros, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, TablaScroll } from '../components/ui'
+import { Aviso, BarraFiltros, Boton, Campo, Chip, EncabezadoPagina, Icono, Paginacion, Selector, TablaScroll } from '../components/ui'
+import { usePaginacion, useRegistrosPorPagina } from '../hooks/useRegistrosPorPagina'
+import { CeldasTotalesColumnas } from '../components/CeldasTotalesColumnas'
+import { leerOrdenColumnas, ordenarColumnasVisibles } from '../utils/ordenColumnas'
 
 type TonoChip = 'neutro' | 'marca' | 'exito' | 'alerta' | 'error'
 
@@ -159,8 +162,12 @@ export default function EntregasActas() {
     [configuracion],
   )
   const columnasVisibles = useMemo(
-    () => ENTREGAS_ACTAS_COLUMNAS.filter((c) => columnasActivas.has(c.key)),
-    [columnasActivas],
+    () => ordenarColumnasVisibles(
+      ENTREGAS_ACTAS_COLUMNAS,
+      leerOrdenColumnas(configuracion, ENTREGAS_ACTAS_CONFIG_CLAVES.ordenColumnas, ENTREGAS_ACTAS_COLUMNAS),
+      columnasActivas,
+    ),
+    [columnasActivas, configuracion],
   )
 
   // Auto-refresca cuando el usuario vuelve a esta pestaña/vista
@@ -332,6 +339,14 @@ export default function EntregasActas() {
       })
       .sort((a, b) => a.sc.localeCompare(b.sc, 'es', { numeric: true }))
   }, [filas, filtroTexto, filtroEstado, filtroAns, filtroMes, filtroFechaDesde, filtroFechaHasta, filtroRealDesde, filtroRealHasta, filtroReqEstado, filtroSquad, filtroTipificacion, filtroGarantia])
+
+  // Paginación: último paso, después de filtrar y ordenar. Totales y exportación usan `filasFiltradas`.
+  const registrosPorPagina = useRegistrosPorPagina()
+  const { filasPagina, rango: rangoPagina, cambiarPagina } = usePaginacion(
+    filasFiltradas,
+    registrosPorPagina,
+    JSON.stringify([filtroTexto, filtroEstado, filtroAns, filtroMes, filtroFechaDesde, filtroFechaHasta, filtroRealDesde, filtroRealHasta, filtroReqEstado, filtroSquad, filtroTipificacion, filtroGarantia]),
+  )
 
   /** Meses de aprobación únicos presentes en los datos */
   const mesesEnBD = useMemo(() => {
@@ -792,7 +807,7 @@ export default function EntregasActas() {
                 <td colSpan={columnasVisibles.length || 1} className="p-4 text-center text-slate-400">Sin entregas.</td>
               </tr>
             )}
-            {filasFiltradas.map((f, i) => {
+            {filasPagina.map((f, i) => {
               const diasInfo = calcularDiasTranscurridos(f.fechaComprometida, f.fechaReal)
               const vencida = diasInfo?.esNegativo ?? false
               return (
@@ -812,25 +827,32 @@ export default function EntregasActas() {
             const promPct = filasConPct.length
               ? Number((filasConPct.reduce((s, f) => s + f.porcentaje!, 0) / filasConPct.length).toFixed(1))
               : null
-            const columnasMetricas = columnasVisibles.filter((c) => c.key === 'horas' || c.key === 'porcentaje')
-            const leadCount = columnasVisibles.length - columnasMetricas.length
             return (
               <tfoot>
-                <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700">
-                  {leadCount > 0 && (
-                    <td className="p-2" colSpan={leadCount}>Total ({filasFiltradas.length} entregas)</td>
-                  )}
-                  {columnasMetricas.map((c) => (
-                    <td key={c.key} className="p-2 text-right">
-                      {c.key === 'horas' ? totalHoras.toLocaleString('es-CO') : (promPct != null ? `${promPct}%` : '—')}
-                    </td>
-                  ))}
+                <tr className="border-t-2 border-marca-osc bg-slate-50 font-semibold text-slate-700" aria-label={`Total (${filasFiltradas.length} entregas)`}>
+                  <CeldasTotalesColumnas
+                    columnas={columnasVisibles}
+                    etiqueta={`Total (${filasFiltradas.length} entregas)`}
+                    metricas={{ horas: totalHoras.toLocaleString('es-CO'), porcentaje: promPct != null ? `${promPct}%` : '—' }}
+                  />
                 </tr>
               </tfoot>
             )
           })()}
         </table>
       </TablaScroll>
+
+      <Paginacion
+        rango={rangoPagina}
+        onCambiarPagina={cambiarPagina}
+        etiqueta="entregas"
+        ids={{
+          primera: 'entregas.pagina_primera',
+          anterior: 'entregas.pagina_anterior',
+          siguiente: 'entregas.pagina_siguiente',
+          ultima: 'entregas.pagina_ultima',
+        }}
+      />
     </div>
   )
 }

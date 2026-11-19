@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test:analitica": "node scripts/probar-consentimiento.mjs && node scripts/probar-analitica.mjs",
     "test:dashboard-analistas": "node scripts/probar-dashboard-analistas.mjs",
+    "test:columnas": "node scripts/probar-orden-columnas.mjs",
     "analitica:inventario": "node scripts/inventariar-analitica.mjs --guardar"
   },
   "dependencies": {

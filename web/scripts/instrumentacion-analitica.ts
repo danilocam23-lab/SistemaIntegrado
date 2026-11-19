@@ -107,7 +107,10 @@ export function analizarControles(fuente: string, archivo: string) {
         const requiereAdaptador = /^[A-Z]/.test(etiqueta) && !PRIMITIVOS.has(etiqueta) && !ENLACES.has(etiqueta)
         const idExplicito = literal(explicito)
         const idRegistrado = idExplicito && Object.prototype.hasOwnProperty.call(CONTROLES, idExplicito)
-        const cobertura = secreto ? 'excluido_seguridad' : explicito ? (idRegistrado ? 'explicito' : 'id_no_registrado') :
+        // Id dinámico en un primitivo (p. ej. `ids.anterior` en `Paginacion`): el tipo `IdControl` de la
+        // prop ya obliga a que esté registrado en el catálogo, así que cuenta como explícito.
+        const idDinamicoTipado = !!explicito && idExplicito === undefined && PRIMITIVOS.has(etiqueta)
+        const cobertura = secreto ? 'excluido_seguridad' : explicito ? (idRegistrado || idDinamicoTipado ? 'explicito' : 'id_no_registrado') :
           internoCompartido ? 'compartido' : requiereAdaptador ? 'requiere_adaptador' : soloPropagacion ? 'sin_handler' : (!click && !cambio && !ENLACES.has(etiqueta) && etiqueta !== 'summary' &&
             literal(atributo(nodo, 'type')) !== 'submit' && etiqueta !== 'Boton' && etiqueta !== 'button') ? 'sin_handler' : 'automatico'
         // El hash depende del código del handler, nunca del orden de filas/índices.

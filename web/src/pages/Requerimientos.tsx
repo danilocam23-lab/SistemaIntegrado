@@ -17,7 +17,8 @@ import { useModalEstimacion } from './requerimientos/useModalEstimacion'
 import { useCargaEstimacion } from './requerimientos/useCargaEstimacion'
 import { TablaRequerimientos } from './requerimientos/TablaRequerimientos'
 import { ModalEstimacion } from './requerimientos/ModalEstimacion'
-import { Aviso } from '../components/ui'
+import { Aviso, Paginacion } from '../components/ui'
+import { usePaginacion, useRegistrosPorPagina } from '../hooks/useRegistrosPorPagina'
 
 export default function Requerimientos() {
   const { tienePermiso } = useAuth()
@@ -35,7 +36,7 @@ export default function Requerimientos() {
     nombrePersona,
   } = useDatosRequerimientos()
 
-  const { columnasActivas, filtrosActivos, exportCamposActivos, columnasExtra, coreVisibleCount, metricasVisibles, totalColumnasTabla } =
+  const { columnasActivas, filtrosActivos, exportCamposActivos, columnasExtra, columnasOrdenadas, coreVisibleCount, metricasVisibles, totalColumnasTabla } =
     useCamposRequerimientos(configuracion)
 
   const {
@@ -43,7 +44,12 @@ export default function Requerimientos() {
     squadsDisponibles, lideresDisponibles, categoriasDisponibles, tipificacionesDisponibles, tiposCostoDisponibles,
   } = useFiltrosRequerimientos(datos, personas, squadPorId, categoriaPorId)
 
-  const { CAMPO_ACCESOR_REQ } = useAccesoresRequerimiento(squadPorId, categoriaPorId, personaPorId, nombrePersona)
+  // Paginación: último paso, después de filtrar. Totales y exportación usan `datosFiltrados`.
+  const registrosPorPagina = useRegistrosPorPagina()
+  const { filasPagina: datosPagina, rango: rangoPagina, cambiarPagina } =
+    usePaginacion(datosFiltrados, registrosPorPagina, JSON.stringify(filtros))
+
+  const { CAMPO_ACCESOR_REQ } =useAccesoresRequerimiento(squadPorId, categoriaPorId, personaPorId, nombrePersona)
   const { exportarExcel } = useExportarExcel(puedeExportar, exportCamposActivos, datosFiltrados, CAMPO_ACCESOR_REQ)
 
   const [aviso, setAvisoMensaje] = useState('')
@@ -109,9 +115,11 @@ export default function Requerimientos() {
 
       <TablaRequerimientos
         datosFiltrados={datosFiltrados}
+        datosPagina={datosPagina}
         hayFiltrosActivos={hayFiltrosActivos}
         columnasActivas={columnasActivas}
         columnasExtra={columnasExtra}
+        columnasOrdenadas={columnasOrdenadas}
         coreVisibleCount={coreVisibleCount}
         metricasVisibles={metricasVisibles}
         totalColumnasTabla={totalColumnasTabla}
@@ -133,6 +141,18 @@ export default function Requerimientos() {
         puedeEditar={puedeEditar}
         puedeEliminar={puedeEliminar}
         eliminar={eliminar}
+      />
+
+      <Paginacion
+        rango={rangoPagina}
+        onCambiarPagina={cambiarPagina}
+        etiqueta="requerimientos"
+        ids={{
+          primera: 'requerimiento.pagina_primera',
+          anterior: 'requerimiento.pagina_anterior',
+          siguiente: 'requerimiento.pagina_siguiente',
+          ultima: 'requerimiento.pagina_ultima',
+        }}
       />
 
       {estModalReqId && (

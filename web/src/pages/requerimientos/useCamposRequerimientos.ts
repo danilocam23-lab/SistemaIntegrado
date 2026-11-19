@@ -5,6 +5,7 @@ import { useMemo } from 'react'
 import { REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS, leerCamposActivos } from '../../constantes'
 import type { Configuracion as ConfigItem } from '../../types'
 import { CORE_COLUMNAS } from './tipos'
+import { leerOrdenColumnas, ordenarColumnasVisibles } from '../../utils/ordenColumnas'
 
 export function useCamposRequerimientos(configuracion: ConfigItem[]) {
   /** Columnas, filtros y campos de exportación activados desde /configuracion
@@ -26,11 +27,20 @@ export function useCamposRequerimientos(configuracion: ConfigItem[]) {
     () => REQUERIMIENTOS_COLUMNAS.filter((c) => !CORE_COLUMNAS.includes(c.key) && columnasActivas.has(c.key)),
     [columnasActivas],
   )
+  const columnasOrdenadas = useMemo(
+    () => ordenarColumnasVisibles(
+      REQUERIMIENTOS_COLUMNAS,
+      leerOrdenColumnas(configuracion, REQUERIMIENTOS_CONFIG_CLAVES.ordenColumnas, REQUERIMIENTOS_COLUMNAS),
+      columnasActivas,
+    ),
+    [configuracion, columnasActivas],
+  )
 
   // INVARIANTE 12: totalColumnasTabla se calcula una vez aqui y se inyecta; no recalcular en subfilas.
   const coreVisibleCount = CORE_COLUMNAS.filter((k) => columnasActivas.has(k)).length
   const metricasVisibles = ['horas', 'entregasCount'].filter((k) => columnasActivas.has(k))
-  const totalColumnasTabla = 2 + coreVisibleCount + columnasExtra.length
+  // Expandir, estimación y editar/eliminar son tres columnas funcionales fijas.
+  const totalColumnasTabla = 3 + columnasOrdenadas.length
 
-  return { columnasActivas, filtrosActivos, exportCamposActivos, columnasExtra, coreVisibleCount, metricasVisibles, totalColumnasTabla }
+  return { columnasActivas, filtrosActivos, exportCamposActivos, columnasExtra, columnasOrdenadas, coreVisibleCount, metricasVisibles, totalColumnasTabla }
 }

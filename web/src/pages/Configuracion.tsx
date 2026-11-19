@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ENTREGAS_ACTAS_CONFIG_CLAVES, ENTREGAS_ACTAS_COLUMNAS, ENTREGAS_ACTAS_FILTROS, REQUERIMIENTOS_CONFIG_CLAVES, REQUERIMIENTOS_COLUMNAS, REQUERIMIENTOS_FILTROS } from '../constantes'
-import { EncabezadoPagina, Icono } from '../components/ui'
+import { Aviso, Boton, EncabezadoPagina, Icono } from '../components/ui'
 import { SeccionAzureDevOps } from './configuracion/SeccionAzureDevOps'
 import { SeccionCargaExcel } from './configuracion/SeccionCargaExcel'
 import { SeccionCamposConfigurables } from './configuracion/SeccionCamposConfigurables'
@@ -28,7 +28,8 @@ import { useTarifas } from './configuracion/useTarifas'
 export default function Configuracion() {
   const [tab, setTab] = useState<Tab>('tarifas')
 
-  const { datos, error, recargar } = useDatosConfiguracion()
+  const { datos, error, cargando, recargar } = useDatosConfiguracion()
+  const bloqueoGuardado = useRef(false)
   // INVARIANTE 4: aviso/ok compartidos viven en el shell y se inyectan a Roles, Tipos, Festivos y Parametros.
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
@@ -59,6 +60,8 @@ export default function Configuracion() {
   const estadosState = useEstadosConfigurables({ datos, recargar })
   const entregasActasState = useCamposConfigurables({
     datos,
+    cargando: cargando || !!error,
+    bloqueoGuardado,
     recargar,
     configClaves: ENTREGAS_ACTAS_CONFIG_CLAVES,
     columnasCatalogo: ENTREGAS_ACTAS_COLUMNAS,
@@ -67,6 +70,8 @@ export default function Configuracion() {
   })
   const requerimientosState = useCamposConfigurables({
     datos,
+    cargando: cargando || !!error,
+    bloqueoGuardado,
     recargar,
     configClaves: REQUERIMIENTOS_CONFIG_CLAVES,
     columnasCatalogo: REQUERIMIENTOS_COLUMNAS,
@@ -146,9 +151,16 @@ export default function Configuracion() {
 
 
       {/* ═══ TAB: Entregas de Actas ═══ */}
+      {(tab === 'entregas_actas' || tab === 'requerimientos') && error && (
+        <Aviso tono="error">
+          {error}. No se puede editar hasta cargar la configuración.
+          <Boton tamano="sm" onClick={recargar} disabled={cargando}>Reintentar</Boton>
+        </Aviso>
+      )}
       {tab === 'entregas_actas' && (
         <SeccionCamposConfigurables
           {...entregasActasState}
+          bloqueado={cargando || !!error || entregasActasState.guardando || requerimientosState.guardando}
           descripcion={(
             <p className="text-sm text-slate-500">
               Activa o desactiva, sin necesidad de desarrollo, las columnas visibles en la tabla, los
@@ -166,6 +178,7 @@ export default function Configuracion() {
       {tab === 'requerimientos' && (
         <SeccionCamposConfigurables
           {...requerimientosState}
+          bloqueado={cargando || !!error || entregasActasState.guardando || requerimientosState.guardando}
           descripcion={(
             <p className="text-sm text-slate-500">
               Activa o desactiva, sin necesidad de desarrollo, las columnas visibles en la tabla principal,

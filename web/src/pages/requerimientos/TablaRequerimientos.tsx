@@ -5,18 +5,24 @@ import type { Dispatch, SetStateAction } from 'react'
 import { Fragment } from 'react'
 import { TablaScroll } from '../../components/ui/primitivos'
 import type { EntregasActasCampo } from '../../constantes'
+import { REQUERIMIENTOS_COLUMNAS } from '../../constantes'
+import { CeldasTotalesColumnas } from '../../components/CeldasTotalesColumnas'
 import type { Estimacion, Requerimiento } from '../../types'
 import type { crearRenderCelda } from './CeldaEditable'
 import { FilaRequerimiento } from './FilaRequerimiento'
 import { SubfilaEntregas } from './SubfilaEntregas'
 import { SubfilaEstimacionHU } from './SubfilaEstimacionHU'
 import { TarjetaRequerimiento } from './TarjetaRequerimiento'
+import { CORE_COLUMNAS } from './tipos'
 
 interface TablaRequerimientosProps {
   datosFiltrados: Requerimiento[]
+  /** Filas de la página actual; si falta se pintan todas. Totales y vacío usan `datosFiltrados`. */
+  datosPagina?: Requerimiento[]
   hayFiltrosActivos: boolean
   columnasActivas: Set<string>
   columnasExtra: EntregasActasCampo[]
+  columnasOrdenadas?: EntregasActasCampo[]
   coreVisibleCount: number
   metricasVisibles: string[]
   /** INVARIANTE 12: calculado una vez en `useCamposRequerimientos`, se inyecta aquí y en
@@ -42,49 +48,40 @@ interface TablaRequerimientosProps {
   eliminar: (req: Requerimiento) => Promise<void>
 }
 
-/** Tabla principal de requerimientos: cabecera con las 15 columnas core + columnas
- *  extra activadas desde Configuración, una fila por requerimiento (con sus sub-filas
+/** Tabla principal de requerimientos: columnas de datos en orden configurable,
+ *  una fila por requerimiento (con sus sub-filas
  *  de entregas y de estimación) y el pie con los totales. */
 export function TablaRequerimientos({
-  datosFiltrados, hayFiltrosActivos, columnasActivas, columnasExtra, coreVisibleCount, metricasVisibles,
+  datosFiltrados, datosPagina, hayFiltrosActivos, columnasActivas, columnasExtra,
+  columnasOrdenadas = REQUERIMIENTOS_COLUMNAS.filter((columna) => columnasActivas.has(columna.key)),
   totalColumnasTabla, expandedReqs, estimacionIds, estimacionesMap, loadingReqEst, toggleExpandReq,
   expandedEntregas, setExpandedEntregas, renderCelda, squadPorId, nombrePersona, CAMPO_ACCESOR_REQ,
   uploadingId, puedeGestionarEstimaciones, handleUploadClick, openEstimationModal,
   puedeEditar, puedeEliminar, eliminar,
 }: TablaRequerimientosProps) {
+  const filasVisibles = datosPagina ?? datosFiltrados
   return (
     <>
-      {/* Escritorio (>= md, mismo umbral que el colapso del Sidebar): tabla sin cambios */}
+      {/* Escritorio (>= md, mismo umbral que el colapso del Sidebar). */}
       <div className="hidden md:block">
         <TablaScroll>
           <table className="tabla">
             <thead>
               <tr>
                 <th className="w-8"></th>
-                {columnasActivas.has('codigoReq') && <th>Código REQ</th>}
-                {columnasActivas.has('sc') && <th>SC</th>}
-                {columnasActivas.has('squad') && <th>Squad</th>}
-                {columnasActivas.has('nombreActa') && <th>Nombre de acta</th>}
-                {columnasActivas.has('aplicacionEpm') && <th>Aplicación EPM</th>}
-                {columnasActivas.has('estado') && <th>Estado</th>}
-                {columnasActivas.has('ansEstimacion') && <th className="text-center">ANS Estimación</th>}
-                {columnasActivas.has('ltHitss') && <th>Líder técnico</th>}
-                {columnasActivas.has('scrum') && <th>Scrum</th>}
-                {columnasActivas.has('horas') && <th className="text-right">Horas</th>}
-                {columnasActivas.has('fechaSolicitud') && <th className="text-center">F. Solicitud</th>}
-                {columnasActivas.has('fechaLimite') && <th className="text-center">F. Límite</th>}
-                {columnasActivas.has('fechaReal') && <th className="text-center">F. Real</th>}
-                {columnasActivas.has('diasTranscurridos') && <th className="text-right">Días transcurridos</th>}
-                {columnasActivas.has('entregasCount') && <th className="text-center">Entregas</th>}
-                <th className="text-center">Est.</th>
-                {columnasExtra.map((c) => (
-                  <th key={c.key} className="whitespace-nowrap">{c.label}</th>
+                {columnasOrdenadas.map((columna) => (
+                  <th key={columna.key} className={
+                    ['horas', 'diasTranscurridos'].includes(columna.key) ? 'text-right'
+                      : ['ansEstimacion', 'fechaSolicitud', 'fechaLimite', 'fechaReal', 'entregasCount'].includes(columna.key)
+                        ? 'text-center' : CORE_COLUMNAS.includes(columna.key) ? undefined : 'whitespace-nowrap'
+                  }>{columna.label}</th>
                 ))}
+                <th className="text-center">Est.</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {datosFiltrados.map((req) => {
+              {filasVisibles.map((req) => {
                 const isExpanded = expandedReqs.has(req.id)
                 const hasEst = estimacionIds.has(req.id)
                 const estCargada = estimacionesMap[req.id]
@@ -98,6 +95,7 @@ export function TablaRequerimientos({
                       toggleExpandReq={toggleExpandReq}
                       columnasActivas={columnasActivas}
                       columnasExtra={columnasExtra}
+                      columnasOrdenadas={columnasOrdenadas}
                       renderCelda={renderCelda}
                       squadPorId={squadPorId}
                       nombrePersona={nombrePersona}
@@ -141,15 +139,20 @@ export function TablaRequerimientos({
             {datosFiltrados.length > 0 && (() => {
               const totalHoras = datosFiltrados.reduce((s, r) => s + (r.total_horas_estimadas ?? 0), 0)
               const totalEntregas = datosFiltrados.reduce((s, r) => s + (r.entregas?.length ?? 0), 0)
-              // Label ocupa todas las columnas activas no numéricas (lead + Est. + extras + acciones vacía).
-              const leadCount = coreVisibleCount - metricasVisibles.length + columnasExtra.length + 1
               return (
                 <tfoot>
                   <tr className="border-t-2 border-slate-300 bg-slate-50 font-semibold">
                     <td className="p-2"></td>
-                    <td className="p-2" colSpan={leadCount}>Total ({datosFiltrados.length} requerimientos)</td>
-                    {columnasActivas.has('horas') && <td className="p-2 text-right">{totalHoras.toLocaleString('es-CO')}</td>}
-                    {columnasActivas.has('entregasCount') && <td className="p-2 text-center">{totalEntregas}</td>}
+                    <CeldasTotalesColumnas
+                      columnas={columnasOrdenadas}
+                      etiqueta={`Total (${datosFiltrados.length} requerimientos)`}
+                      metricas={{ horas: totalHoras.toLocaleString('es-CO'), entregasCount: totalEntregas }}
+                      centradas={['entregasCount']}
+                    />
+                    <td className="p-2">
+                      {columnasOrdenadas.every((columna) => ['horas', 'entregasCount'].includes(columna.key))
+                        ? `Total (${datosFiltrados.length} requerimientos)` : null}
+                    </td>
                     <td className="p-2"></td>
                   </tr>
                 </tfoot>
@@ -163,7 +166,7 @@ export function TablaRequerimientos({
        *  Mismos datos/handlers/permisos que la tabla de escritorio — ver
        *  `TarjetaRequerimiento`; ninguna columna se omite. */}
       <div className="space-y-3 md:hidden">
-        {datosFiltrados.map((req) => {
+        {filasVisibles.map((req) => {
           const isExpanded = expandedReqs.has(req.id)
           const hasEst = estimacionIds.has(req.id)
           const estCargada = estimacionesMap[req.id]

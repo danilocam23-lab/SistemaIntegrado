@@ -17,5 +17,6 @@ export {
   Aviso,
 } from './primitivos'
 export { default as FiltroDesplegable } from './FiltroDesplegable'
+export { Paginacion } from './Paginacion'
 export { Icono } from './Icono'
 export type { NombreIcono } from './Icono'

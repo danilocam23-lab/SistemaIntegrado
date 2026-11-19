@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 import type { Dispatch, SetStateAction } from 'react'
+import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { Boton, Chip, Icono } from '../../components/ui'
 import type { EntregasActasCampo } from '../../constantes'
+import { REQUERIMIENTOS_COLUMNAS } from '../../constantes'
 import type { Requerimiento } from '../../types'
 import type { crearRenderCelda } from './CeldaEditable'
 import { calcularDiasTranscurridos, normalizarAns } from './utilidades'
+import { CORE_COLUMNAS } from './tipos'
 
 interface FilaRequerimientoProps {
   req: Requerimiento
@@ -17,6 +20,7 @@ interface FilaRequerimientoProps {
   toggleExpandReq: (reqId: string) => Promise<void>
   columnasActivas: Set<string>
   columnasExtra: EntregasActasCampo[]
+  columnasOrdenadas?: EntregasActasCampo[]
   renderCelda: ReturnType<typeof crearRenderCelda>
   squadPorId: Map<string, string>
   nombrePersona: (id: string | null) => string
@@ -32,14 +36,13 @@ interface FilaRequerimientoProps {
   eliminar: (req: Requerimiento) => Promise<void>
 }
 
-/** `<tr>` principal de un requerimiento: 15 columnas core (con JSX propio — edición
- *  en línea, badge ANS, botón de entregas, `Link` al detalle) + columnas extra (vía
- *  `CAMPO_ACCESOR_REQ`) + acciones. INVARIANTE 14: dos caminos de render deliberadamente
- *  distintos, no unificar. INVARIANTE 17: no memoizar este componente ni darle una `key`
- *  que cambie con la edición — se perdería el guardado en `onBlur`. */
+/** Conserva los editores especializados de las columnas históricas y los accesores
+ * de las adicionales, pero los intercala según un orden común con la cabecera.
+ * No memoizar ni cambiar la key de la fila durante una edición (guardado en onBlur). */
 export function FilaRequerimiento({
   req, isExpanded, hasEst, isLoadingEstimacion, toggleExpandReq,
-  columnasActivas, columnasExtra, renderCelda, squadPorId, nombrePersona, CAMPO_ACCESOR_REQ,
+  columnasActivas, columnasOrdenadas = REQUERIMIENTOS_COLUMNAS.filter((columna) => columnasActivas.has(columna.key)),
+  renderCelda, squadPorId, nombrePersona, CAMPO_ACCESOR_REQ,
   expandedEntregas, setExpandedEntregas,
   uploadingId, puedeGestionarEstimaciones, handleUploadClick, openEstimationModal,
   puedeEditar, puedeEliminar, eliminar,
@@ -57,33 +60,35 @@ export function FilaRequerimiento({
           </button>
         ) : null}
       </td>
-      {columnasActivas.has('codigoReq') && (
+      {columnasOrdenadas.map((columna) => (
+      <Fragment key={columna.key}>
+      {columna.key === 'codigoReq' && (
       <td className="p-2 font-mono">
         <Link to={`/requerimientos/${req.id}`} className="enlace-accion">
           {req.codigo_req}
         </Link>
       </td>
       )}
-      {columnasActivas.has('sc') && (
+      {columna.key === 'sc' && (
       <td className="p-2">{renderCelda(req, 'codigo_sc', req.solicitud?.codigo_sc ?? '')}</td>
       )}
-      {columnasActivas.has('squad') && (
+      {columna.key === 'squad' && (
       <td className="p-2 text-xs text-slate-600">
         {req.solicitud?.squad_id ? (squadPorId.get(String(req.solicitud.squad_id)) ?? String(req.solicitud.squad_id)) : '—'}
       </td>
       )}
-      {columnasActivas.has('nombreActa') && (
+      {columna.key === 'nombreActa' && (
       <td className="p-2">{renderCelda(req, 'nombre', req.nombre ?? '')}</td>
       )}
-      {columnasActivas.has('aplicacionEpm') && (
+      {columna.key === 'aplicacionEpm' && (
       <td className="p-2 text-xs text-slate-600">
         {req.nombre ? req.nombre.split('-')[0].trim() : '—'}
       </td>
       )}
-      {columnasActivas.has('estado') && (
+      {columna.key === 'estado' && (
       <td className="p-2">{renderCelda(req, 'estado', req.estado, 'select')}</td>
       )}
-      {columnasActivas.has('ansEstimacion') && (
+      {columna.key === 'ansEstimacion' && (
       <td className="p-2 text-center">
         {(() => {
           const v = (req.ans_acta ?? '').trim().toUpperCase().replace(/[_-]+/g, ' ')
@@ -93,37 +98,37 @@ export function FilaRequerimiento({
         })()}
       </td>
       )}
-      {columnasActivas.has('ltHitss') && (
+      {columna.key === 'ltHitss' && (
       <td className="p-2">{renderCelda(req, 'lt_hitss_id', nombrePersona(req.solicitud?.lt_hitss_id ?? null), 'select-persona', 'LT_HITSS')}</td>
       )}
-      {columnasActivas.has('scrum') && (
+      {columna.key === 'scrum' && (
       <td className="p-2">{renderCelda(req, 'scrum_id', nombrePersona(req.solicitud?.scrum_id ?? null), 'select-persona', 'SCRUM')}</td>
       )}
-      {columnasActivas.has('horas') && (
+      {columna.key === 'horas' && (
       <td className="p-2 text-right">{renderCelda(req, 'total_horas_estimadas', req.total_horas_estimadas != null ? String(req.total_horas_estimadas) : '', 'number')}</td>
       )}
-      {columnasActivas.has('fechaSolicitud') && (
+      {columna.key === 'fechaSolicitud' && (
       <td className="p-2 text-center text-xs">
         {req.fecha_solicitud_acta
           ? req.fecha_solicitud_acta.slice(0, 10)
           : <span className="text-slate-400">—</span>}
       </td>
       )}
-      {columnasActivas.has('fechaLimite') && (
+      {columna.key === 'fechaLimite' && (
       <td className="p-2 text-center text-xs">
         {req.fecha_limite
           ? req.fecha_limite.slice(0, 10)
           : <span className="text-slate-400">—</span>}
       </td>
       )}
-      {columnasActivas.has('fechaReal') && (
+      {columna.key === 'fechaReal' && (
       <td className="p-2 text-center text-xs">
         {req.fecha_real_entrega_estimacion
           ? req.fecha_real_entrega_estimacion.slice(0, 10)
           : <span className="text-slate-400">—</span>}
       </td>
       )}
-      {columnasActivas.has('diasTranscurridos') && (
+      {columna.key === 'diasTranscurridos' && (
       <td className="p-2 text-right">
         {(() => {
           const result = calcularDiasTranscurridos(req.fecha_limite, req.fecha_real_entrega_estimacion)
@@ -137,7 +142,7 @@ export function FilaRequerimiento({
         })()}
       </td>
       )}
-      {columnasActivas.has('entregasCount') && (
+      {columna.key === 'entregasCount' && (
       <td className="p-2 text-center">
         {(req.entregas?.length ?? 0) > 0 ? (
           <Boton
@@ -158,6 +163,16 @@ export function FilaRequerimiento({
         )}
       </td>
       )}
+      {!CORE_COLUMNAS.includes(columna.key) && (
+        <td className="p-2 text-xs text-slate-600 whitespace-nowrap">
+          {(() => {
+            const valor = CAMPO_ACCESOR_REQ[columna.key]?.(req)
+            return valor != null && valor !== '' ? valor : <span className="text-slate-400">—</span>
+          })()}
+        </td>
+      )}
+      </Fragment>
+      ))}
       <td className="p-2 text-center">
         {hasEst ? (
           <button onClick={() => { void openEstimationModal(req.id) }} title="Ver estimación"
@@ -175,14 +190,6 @@ export function FilaRequerimiento({
           <span className="text-slate-300">—</span>
         )}
       </td>
-      {columnasExtra.map((c) => (
-        <td key={c.key} className="p-2 text-xs text-slate-600 whitespace-nowrap">
-          {(() => {
-            const v = CAMPO_ACCESOR_REQ[c.key]?.(req)
-            return v != null && v !== '' ? v : <span className="text-slate-400">—</span>
-          })()}
-        </td>
-      ))}
       <td className="p-2 text-center whitespace-nowrap">
         {(puedeEditar || puedeEliminar) && (
           <>
