@@ -7,6 +7,27 @@ import client from '../../api/client'
 import { mensajeError } from '../../api/hooks'
 import type { Configuracion as Config } from '../../types'
 
+// Claves de configuracion que se administran en otra pestana (fuente de verdad unica).
+// Se ocultan en Parametros y el hook no actua sobre ellas. NO borrar el registro: lo lee /personas/roles.
+export const CLAVES_GESTIONADAS: string[] = [
+  'roles_persona',
+  'tipos_contratacion',
+  'estados_requerimiento',
+  'estados_entrega',
+]
+
+const PESTANA_DE: Record<string, string> = {
+  roles_persona: 'Roles',
+  tipos_contratacion: 'Tipo de contratación',
+  estados_requerimiento: 'Estados',
+  estados_entrega: 'Estados',
+}
+
+export const esGestionada = (clave: string): boolean => CLAVES_GESTIONADAS.includes(clave.trim())
+
+const avisoGestionada = (clave: string): string =>
+  `${clave.trim()} se administra en la pestaña ${PESTANA_DE[clave.trim()] ?? 'correspondiente'}.`
+
 interface Params {
   recargar: () => void
   setAviso: (aviso: string) => void
@@ -41,6 +62,11 @@ export function useParametros({ recargar, setAviso, setOk }: Params) {
     if (!editItem) return
     setAviso('')
     setOk('')
+    const gestionada = [editItem.clave, editClave].find(esGestionada)
+    if (gestionada) {
+      setAviso(avisoGestionada(gestionada))
+      return
+    }
     try {
       // INVARIANTE 11: no corregir bug latente; el modal permite renombrar la clave.
       // INVARIANTE 15: configuracion global; no introducir cabecerasAplicacion.
@@ -59,6 +85,10 @@ export function useParametros({ recargar, setAviso, setOk }: Params) {
   async function guardar(c: Config): Promise<void> {
     setAviso('')
     setOk('')
+    if (esGestionada(c.clave)) {
+      setAviso(avisoGestionada(c.clave))
+      return
+    }
     try {
       // INVARIANTE 15: configuracion global; no introducir cabecerasAplicacion.
       await client.put(`/configuracion/${encodeURIComponent(c.clave)}`, {
@@ -76,6 +106,10 @@ export function useParametros({ recargar, setAviso, setOk }: Params) {
     e.preventDefault()
     setAviso('')
     setOk('')
+    if (esGestionada(nuevaClave)) {
+      setAviso(avisoGestionada(nuevaClave))
+      return
+    }
     try {
       // INVARIANTE 15: configuracion global; no introducir cabecerasAplicacion.
       await client.put(`/configuracion/${encodeURIComponent(nuevaClave)}`, {
@@ -93,6 +127,10 @@ export function useParametros({ recargar, setAviso, setOk }: Params) {
   async function eliminarParametro(c: Config): Promise<void> {
     setAviso('')
     setOk('')
+    if (esGestionada(c.clave)) {
+      setAviso(avisoGestionada(c.clave))
+      return
+    }
     try {
       // INVARIANTE 15: configuracion global; no introducir cabecerasAplicacion.
       await client.delete(`/configuracion/${encodeURIComponent(c.clave)}`)

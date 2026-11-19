@@ -4,6 +4,7 @@
 import { Aviso, Boton, Campo, TablaScroll } from '../../components/ui'
 import type { Configuracion as Config } from '../../types'
 import { ModalEditarParametro } from './ModalEditarParametro'
+import { esGestionada } from './useParametros'
 import type { ParametrosState } from './useParametros'
 
 type Props = ParametrosState & {
@@ -41,6 +42,8 @@ export function SeccionParametros({
   crear,
   eliminarParametro,
 }: Props) {
+  // Claves administradas en otra pestana (p. ej. roles_persona): no se listan aqui.
+  const visibles = datos.filter((c) => !esGestionada(c.clave))
   return (
     <div>
       <p className="mb-4 text-sm text-slate-500">
@@ -83,28 +86,30 @@ export function SeccionParametros({
           </tr>
         </thead>
         <tbody>
-          {datos.map((c) => (
-            <tr key={c.id}>
-              <td className="font-mono">{c.clave}</td>
-              <td className="text-slate-500">{c.grupo}</td>
-              <td>
-                <Campo
-                  value={valorDe(c)}
-                  onChange={(e) => setValores({ ...valores, [c.clave]: e.target.value })}
-                  compacto
-                  className="w-full"
-                />
-              </td>
-              <td className="text-center">
-                <div className="flex justify-center gap-2">
-                  <button onClick={() => guardar(c)} className="enlace-accion">Guardar</button>
-                  <button onClick={() => abrirEdicion(c)} className="enlace-accion enlace-accion-alerta">Editar</button>
-                  <button onClick={() => void eliminarParametro(c)} className="enlace-accion enlace-accion-peligro">Eliminar</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-          {datos.length === 0 && (
+          {visibles.map((c) => {
+            return (
+              <tr key={c.id}>
+                <td className="font-mono">{c.clave}</td>
+                <td className="text-slate-500">{c.grupo}</td>
+                <td>
+                  <Campo
+                    value={valorDe(c)}
+                    onChange={(e) => setValores({ ...valores, [c.clave]: e.target.value })}
+                    compacto
+                    className="w-full"
+                  />
+                </td>
+                <td className="text-center">
+                  <div className="flex justify-center gap-2">
+                    <button onClick={() => guardar(c)} className="enlace-accion">Guardar</button>
+                    <button onClick={() => abrirEdicion(c)} className="enlace-accion enlace-accion-alerta">Editar</button>
+                    <button onClick={() => void eliminarParametro(c)} className="enlace-accion enlace-accion-peligro">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
+          {visibles.length === 0 && (
             <tr><td colSpan={4} className="text-center text-slate-400">Sin parámetros.</td></tr>
           )}
         </tbody>
