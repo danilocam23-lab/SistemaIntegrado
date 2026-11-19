@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { Asignacion, BacklogFuturo, Persona } from '../../types'
+import { anoActualColombia } from './anosAsignaciones'
 
 export const ESTADO_ACTIVO = 'ESTIMACION APROBADA ENTREGA PENDIENTE'
 
@@ -79,6 +80,8 @@ export type VistaAsignaciones = 'actas' | 'personas'
 
 export interface FiltrosAsignaciones {
   vista: VistaAsignaciones
+  /** Año de solicitud del acta; [] incluye todos, también los registros sin fecha. */
+  anos: string[]
   estado: string
   persona: string
   /** Búsqueda de texto por requerimiento (SC, REQ, nombre). */
@@ -89,6 +92,7 @@ export interface FiltrosAsignaciones {
 
 export const FILTROS_INICIALES: FiltrosAsignaciones = {
   vista: 'actas',
+  anos: [anoActualColombia()],
   estado: '__todos__',
   persona: '__todos__',
   requerimiento: '',

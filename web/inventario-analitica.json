@@ -2,10 +2,10 @@
   "version": 1,
   "metodo": "AST TypeScript: callsites estáticos, sin inferencia DOM. Alcanzabilidad de imports relativos estáticos desde main; no garantiza acceso por permisos.",
   "totales": {
-    "controles": 799,
+    "controles": 800,
     "explicitos": 98,
     "automaticos": 634,
-    "compartidos": 43,
+    "compartidos": 44,
     "excluidos_seguridad": 10,
     "sin_handler": 10,
     "requiere_adaptador": 4,
@@ -548,7 +548,7 @@
     },
     {
       "archivo": "src/pages/Asignaciones.tsx",
-      "linea": 240,
+      "linea": 242,
       "componente": "Boton",
       "handler": "limpiar",
       "id": "control.pages_asignaciones.limpiar.d435d84ae351",
@@ -559,7 +559,7 @@
     },
     {
       "archivo": "src/pages/Asignaciones.tsx",
-      "linea": 243,
+      "linea": 245,
       "componente": "Boton",
       "handler": "abrirAsignar",
       "id": "control.pages_asignaciones.abrirasignar.38957430a00f",
@@ -570,7 +570,7 @@
     },
     {
       "archivo": "src/pages/Asignaciones.tsx",
-      "linea": 284,
+      "linea": 286,
       "componente": "Boton",
       "handler": "abrirAsignar",
       "id": "control.pages_asignaciones.abrirasignar.38957430a00f",
@@ -581,7 +581,7 @@
     },
     {
       "archivo": "src/pages/Asignaciones.tsx",
-      "linea": 294,
+      "linea": 296,
       "componente": "Boton",
       "handler": "reintentarTodo",
       "id": "control.pages_asignaciones.reintentartodo.ae4b78fdb4ab",
@@ -592,7 +592,7 @@
     },
     {
       "archivo": "src/pages/Asignaciones.tsx",
-      "linea": 303,
+      "linea": 305,
       "componente": "Boton",
       "handler": "reintentarTodo",
       "id": "control.pages_asignaciones.reintentartodo.ae4b78fdb4ab",
@@ -603,7 +603,7 @@
     },
     {
       "archivo": "src/pages/Asignaciones.tsx",
-      "linea": 339,
+      "linea": 341,
       "componente": "button",
       "handler": "actualizar",
       "id": "control.pages_asignaciones.actualizar.5861b7aa6e43",
@@ -614,7 +614,7 @@
     },
     {
       "archivo": "src/pages/Asignaciones.tsx",
-      "linea": 349,
+      "linea": 351,
       "componente": "button",
       "handler": "actualizar",
       "id": "control.pages_asignaciones.actualizar.a38e4973bc96",
@@ -1230,7 +1230,7 @@
     },
     {
       "archivo": "src/pages/DashboardAnalistas.tsx",
-      "linea": 251,
+      "linea": 256,
       "componente": "Link",
       "handler": "",
       "id": "control.pages_dashboardanalistas.link.866fde0aabbf",
@@ -1241,7 +1241,7 @@
     },
     {
       "archivo": "src/pages/DashboardAnalistas.tsx",
-      "linea": 280,
+      "linea": 290,
       "componente": "summary",
       "handler": "",
       "id": "control.pages_dashboardanalistas.summary.b5d582277752",
@@ -3628,7 +3628,7 @@
     },
     {
       "archivo": "src/pages/asignaciones/BarraFiltrosAsignaciones.tsx",
-      "linea": 61,
+      "linea": 74,
       "componente": "Boton",
       "handler": "setAbiertoMovil",
       "id": "control.signaciones_barrafiltrosasignaciones.setabiertomovil.37fbc4aa3053",
@@ -3639,7 +3639,7 @@
     },
     {
       "archivo": "src/pages/asignaciones/BarraFiltrosAsignaciones.tsx",
-      "linea": 70,
+      "linea": 83,
       "componente": "button",
       "handler": "onLimpiar",
       "id": "control.signaciones_barrafiltrosasignaciones.onlimpiar.d62d85533ef0",
@@ -3650,7 +3650,18 @@
     },
     {
       "archivo": "src/pages/asignaciones/BarraFiltrosAsignaciones.tsx",
-      "linea": 78,
+      "linea": 91,
+      "componente": "FiltroDesplegable",
+      "handler": "",
+      "id": null,
+      "accion": "activar",
+      "tipo": "boton",
+      "cobertura": "compartido",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/asignaciones/BarraFiltrosAsignaciones.tsx",
+      "linea": 98,
       "componente": "Selector",
       "handler": "onCambio",
       "id": "control.signaciones_barrafiltrosasignaciones.oncambio.4b87d10d5059",
@@ -3661,7 +3672,7 @@
     },
     {
       "archivo": "src/pages/asignaciones/BarraFiltrosAsignaciones.tsx",
-      "linea": 91,
+      "linea": 111,
       "componente": "Campo",
       "handler": "setTextoReq",
       "id": "control.signaciones_barrafiltrosasignaciones.settextoreq.af4e9675247a",
@@ -3672,7 +3683,7 @@
     },
     {
       "archivo": "src/pages/asignaciones/BarraFiltrosAsignaciones.tsx",
-      "linea": 116,
+      "linea": 136,
       "componente": "Boton",
       "handler": "onCambio",
       "id": "control.signaciones_barrafiltrosasignaciones.oncambio.a7564da96633",
@@ -3683,7 +3694,7 @@
     },
     {
       "archivo": "src/pages/asignaciones/BarraFiltrosAsignaciones.tsx",
-      "linea": 131,
+      "linea": 151,
       "componente": "button",
       "handler": "onLimpiar",
       "id": "control.signaciones_barrafiltrosasignaciones.onlimpiar.d62d85533ef0",

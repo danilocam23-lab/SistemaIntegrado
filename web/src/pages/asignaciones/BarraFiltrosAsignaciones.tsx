@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useMemo, useState } from 'react'
-import { BarraFiltros, Boton, Campo, Icono, Selector } from '../../components/ui'
+import type { Dispatch, SetStateAction } from 'react'
+import { BarraFiltros, Boton, Campo, FiltroDesplegable, Icono, Selector } from '../../components/ui'
 import type { Persona } from '../../types'
 import { Combobox } from './Combobox'
 import type { FiltroMostrar, FiltrosAsignaciones } from './tipos'
+import { anoActualColombia } from './anosAsignaciones'
 
 interface Props {
   filtros: FiltrosAsignaciones
@@ -14,6 +16,7 @@ interface Props {
   hayFiltros: boolean
   nFiltros: number
   estadosUnicos: string[]
+  anosDisponibles: string[]
   personasDisponibles: Persona[]
 }
 
@@ -36,9 +39,19 @@ export function BarraFiltrosAsignaciones({
   hayFiltros,
   nFiltros,
   estadosUnicos,
+  anosDisponibles,
   personasDisponibles,
 }: Props) {
   const [abiertoMovil, setAbiertoMovil] = useState(false)
+  const anosActivos = useMemo(() => new Set(filtros.anos), [filtros.anos])
+  const setAnosActivos: Dispatch<SetStateAction<Set<string>>> = (seleccion) => {
+    const siguientes = typeof seleccion === 'function' ? seleccion(anosActivos) : seleccion
+    // "Todos" del primitivo entrega un Set completo; aquí [] también recupera actas sin fecha.
+    const todos = typeof seleccion !== 'function'
+      && siguientes.size === anosDisponibles.length
+      && anosDisponibles.every((ano) => siguientes.has(ano))
+    onCambio({ anos: todos ? [] : Array.from(siguientes) })
+  }
 
   // El texto se escribe en local y se aplica con un debounce corto; si el filtro cambia
   // desde fuera (Limpiar, saltos desde otras secciones) el campo se resincroniza.
@@ -75,6 +88,13 @@ export function BarraFiltrosAsignaciones({
 
       <div className={abiertoMovil ? 'mt-2' : 'hidden md:block'}>
         <BarraFiltros>
+          <FiltroDesplegable
+            label="Año"
+            opciones={anosDisponibles}
+            activos={anosActivos}
+            setActivos={setAnosActivos}
+            valorInicial={anoActualColombia()}
+          />
           <Selector
             etiqueta="Estado del requerimiento"
             compacto
@@ -136,6 +156,9 @@ export function BarraFiltrosAsignaciones({
           </div>
         </BarraFiltros>
       </div>
+      <p className="mt-2 text-xs text-slate-500">
+        Año según fecha de solicitud del acta; carga y capacidad muestran el total vigente
+      </p>
     </div>
   )
 }

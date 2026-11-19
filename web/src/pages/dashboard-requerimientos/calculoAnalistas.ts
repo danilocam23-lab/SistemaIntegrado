@@ -21,6 +21,7 @@ interface IdentificacionRegistroAnalista {
   acta: string
   numeroEntrega: number | null
   fechaReferencia: string | null
+  observacionesHitss?: string | null
 }
 
 export interface RegistroAnalista extends ItemAns {
@@ -79,6 +80,7 @@ function identificarRegistro(
     numeroEntrega: e?.numero ?? null,
     fechaReferencia: (e ? e.fecha_recepcion ?? e.fecha_comprometida : r.fecha_solicitud_acta)
       ?.slice(0, 10) ?? null,
+    observacionesHitss: e ? e.observaciones_hitss : r.seguimiento,
   }
 }
 

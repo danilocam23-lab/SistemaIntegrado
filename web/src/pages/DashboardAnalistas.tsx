@@ -220,6 +220,10 @@ export default function DashboardAnalistas() {
                 Acta corresponde al acta de trabajo del requerimiento (o su nombre si no tiene identificador),
                 no al acta de entrega.
               </p>
+              <p id="ayuda-observaciones-hitss" className="text-sm text-slate-600">
+                Observaciones Hitss: las filas de requerimiento muestran Seguimiento Hitss;
+                las de entrega, las observaciones de esa entrega.
+              </p>
               {resumen.detalles.length === 0 ? (
                 <Aviso>No hay incumplimientos ANS con los filtros de año, mes y analista seleccionados.</Aviso>
               ) : (
@@ -242,6 +246,7 @@ export default function DashboardAnalistas() {
                         <th scope="col">ANS real</th>
                         <th scope="col">ANS HITSS</th>
                         <th scope="col">Tipificación</th>
+                        <th scope="col" aria-describedby="ayuda-observaciones-hitss">Observaciones Hitss</th>
                       </tr></thead>
                       <tbody>{resumen.detalles.map(detalle => (
                         <tr key={detalle.clave}>
@@ -267,6 +272,11 @@ export default function DashboardAnalistas() {
                             ? <Chip tono="error">NO CUMPLE</Chip>
                             : <Chip tono="exito">CUMPLE por atribución EPM</Chip>}</td>
                           <td>{detalle.tipificacion || '—'}</td>
+                          <td>
+                            <div className="w-64 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                              {detalle.observacionesHitss?.trim() ? detalle.observacionesHitss : '—'}
+                            </div>
+                          </td>
                         </tr>
                       ))}</tbody>
                     </table>

@@ -19,6 +19,7 @@ import type {
 import { cargaVacia, HORAS_MES_POR_DEFECTO, repartirIgual } from './carga'
 import type { CargaPersona } from './carga'
 import { reqIdDeAsignacion } from './resolverApp'
+import { anoActualColombia, anoSolicitudActa, pasaAnoSolicitudActa } from './anosAsignaciones'
 import type { HorasAzureFeatureEntry } from './useHorasAzurePorFeature'
 
 interface ParametrosDerivados {
@@ -34,6 +35,8 @@ interface ParametrosDerivados {
   horasAzurePorFeature: Map<number, HorasAzureFeatureEntry[]>
   filtroEstado: string
   filtroPersona: string
+  /** Solo visibilidad: nunca limita carga, validaciones ni opciones del panel de edición. */
+  filtroAnos: readonly string[]
   /** Texto de búsqueda por requerimiento (SC, código REQ o nombre). */
   busquedaReq: string
   mostrar: FiltroMostrar
@@ -81,6 +84,7 @@ export function useDerivadosAsignaciones({
   horasAzurePorFeature,
   filtroEstado,
   filtroPersona,
+  filtroAnos,
   busquedaReq,
   mostrar,
   orden,
@@ -140,6 +144,20 @@ export function useDerivadosAsignaciones({
     }
     return map
   }, [requerimientos])
+
+  const anosDisponibles = useMemo(() => {
+    const anos = new Set([anoActualColombia()])
+    for (const req of requerimientos) {
+      const ano = anoSolicitudActa(req.fecha_solicitud_acta)
+      if (ano) anos.add(ano)
+    }
+    return Array.from(anos).sort()
+  }, [requerimientos])
+
+  const anosActivos = useMemo(() => new Set(filtroAnos), [filtroAnos])
+  const reqPasaAno = useCallback((reqId: string | null) => (
+    pasaAnoSolicitudActa(reqId ? reqPorId.get(reqId)?.req : undefined, anosActivos)
+  ), [reqPorId, anosActivos])
 
   const reqIdsActivos = useMemo(() => {
     const ids = new Set<string>()
@@ -275,8 +293,8 @@ export function useDerivadosAsignaciones({
     for (const asig of asignaciones) {
       for (const p of asig.proyectos) if (p.requerimiento_id) conAsignacion.add(p.requerimiento_id)
     }
-    return opcionesReq.filter((o) => reqIdsActivos.has(o.id) && !conAsignacion.has(o.id))
-  }, [asignaciones, opcionesReq, reqIdsActivos])
+    return opcionesReq.filter((o) => reqIdsActivos.has(o.id) && !conAsignacion.has(o.id) && reqPasaAno(o.id))
+  }, [asignaciones, opcionesReq, reqIdsActivos, reqPasaAno])
 
   const gruposReq = useMemo<GrupoReq[]>(() => {
     const map = new Map<string | null, GrupoReq>()
@@ -413,9 +431,9 @@ export function useDerivadosAsignaciones({
 
   const terminoReq = sinTildes(busquedaReq.trim())
 
-  // Estado + persona + requerimiento: base común de las dos pestañas.
+  // Año de solicitud del acta + estado + persona + búsqueda: base común de ambas pestañas.
   const gruposBase = useMemo(() => {
-    let resultado = gruposReq
+    let resultado = gruposReq.filter((g) => reqPasaAno(g.reqId))
 
     // Búsqueda por requerimiento: sin tildes ni mayúsculas, parcial, sobre SC - REQ - nombre.
     // El grupo "Sin requerimiento" solo aparece con la búsqueda vacía.
@@ -436,7 +454,7 @@ export function useDerivadosAsignaciones({
     }
 
     return resultado
-  }, [gruposReq, filtroEstado, personaFiltrada, terminoReq])
+  }, [gruposReq, filtroEstado, personaFiltrada, terminoReq, reqPasaAno])
 
   // Pestaña "Por Actas": además aplica "Mostrar" (con alerta / prioridad) a las filas.
   const gruposFiltrados = useMemo(() => {
@@ -453,9 +471,8 @@ export function useDerivadosAsignaciones({
   // ─── Vista por personas: agrupa asignaciones por persona_id ───
   // Reagrupa `gruposBase` (estado + persona). Las filas sintéticas de Azure
   // ("Sin asignación formal") NO son asignaciones: se excluyen. Las personas con
-  // solo WO o backlog futuro también se incorporan, y los filtros de persona y de
-  // estado les aplican igual (con estado activo hace falta una asignación en ese
-  // estado; con persona elegida solo aparece esa persona).
+  // solo WO o backlog futuro también se incorporan si no se filtra por año,
+  // estado o texto del requerimiento; con persona elegida solo aparece esa persona.
   const gruposPorPersona = useMemo(() => {
     const map = new Map<string, GrupoPersona>()
     for (const grupo of gruposBase) {
@@ -477,8 +494,9 @@ export function useDerivadosAsignaciones({
       }
     }
 
-    const sinFiltroEstado = filtroEstado === '__todos__' && !terminoReq
-    if (sinFiltroEstado) {
+    // WO y backlog no tienen año de acta: por sí solos no pueden satisfacer ese filtro.
+    const sinFiltroRequerimiento = filtroEstado === '__todos__' && !terminoReq && anosActivos.size === 0
+    if (sinFiltroRequerimiento) {
       const incorporar = (pid: string) => {
         if (map.has(pid)) return
         if (personaFiltrada !== '__todos__' && pid !== personaFiltrada) return
@@ -513,6 +531,7 @@ export function useDerivadosAsignaciones({
     personaFiltrada,
     filtroEstado,
     terminoReq,
+    anosActivos,
     mostrar,
     orden,
     wosPorPersonaMap,
@@ -575,6 +594,7 @@ export function useDerivadosAsignaciones({
     resumen,
     gruposReq,
     estadosUnicos,
+    anosDisponibles,
     gruposFiltrados,
     gruposPorPersona,
   }

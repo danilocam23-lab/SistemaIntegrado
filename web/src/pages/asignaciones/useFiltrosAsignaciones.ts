@@ -13,7 +13,11 @@ function leer(): FiltrosAsignaciones {
     if (!crudo) return FILTROS_INICIALES
     const dato = JSON.parse(crudo) as Partial<FiltrosAsignaciones>
     return {
+      ...FILTROS_INICIALES,
       vista: dato.vista === 'personas' ? 'personas' : 'actas',
+      anos: Array.isArray(dato.anos) && dato.anos.every((ano) => typeof ano === 'string' && /^\d{4}$/.test(ano))
+        ? Array.from(new Set(dato.anos))
+        : [...FILTROS_INICIALES.anos],
       estado: typeof dato.estado === 'string' ? dato.estado : FILTROS_INICIALES.estado,
       persona: typeof dato.persona === 'string' ? dato.persona : FILTROS_INICIALES.persona,
       requerimiento: typeof dato.requerimiento === 'string' ? dato.requerimiento : '',
@@ -48,6 +52,7 @@ export function useFiltrosAsignaciones() {
   const limpiar = useCallback(() => {
     setFiltros((previo) => ({
       ...previo,
+      anos: [],
       estado: FILTROS_INICIALES.estado,
       persona: FILTROS_INICIALES.persona,
       requerimiento: FILTROS_INICIALES.requerimiento,
@@ -56,12 +61,14 @@ export function useFiltrosAsignaciones() {
   }, [])
 
   const hayFiltros =
+    filtros.anos.length > 0 ||
     filtros.estado !== FILTROS_INICIALES.estado ||
     filtros.persona !== FILTROS_INICIALES.persona ||
     filtros.requerimiento.trim() !== '' ||
     filtros.mostrar !== FILTROS_INICIALES.mostrar
 
   const nFiltros =
+    (filtros.anos.length > 0 ? 1 : 0) +
     (filtros.estado !== FILTROS_INICIALES.estado ? 1 : 0) +
     (filtros.persona !== FILTROS_INICIALES.persona ? 1 : 0) +
     (filtros.requerimiento.trim() !== '' ? 1 : 0) +

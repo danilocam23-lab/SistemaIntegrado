@@ -88,6 +88,10 @@ function verificarParidadDetalle(resultado) {
   assert.ok(resultado.detalles.every(detalle => detalle.noCumpleReal))
   assert.equal(new Set(resultado.detalles.map(detalle => detalle.clave)).size, resultado.detalles.length)
 }
+function observacionesRenderizadas(html) {
+  return [...html.matchAll(/<td><div class="[^"]*whitespace-pre-wrap[^"]*">([\s\S]*?)<\/div><\/td>/g)]
+    .map(coincidencia => coincidencia[1])
+}
 function conteos(resumen, id = 'persona:leonor') {
   const fila = resumen.filas.find(fila => fila.id === id)
   return fila ? [fila.requerimientosReal, fila.requerimientosHitss, fila.entregasReal, fila.entregasHitss]
@@ -298,6 +302,75 @@ probar('Acta usa nombre solo si no hay identificador, y nunca sustituye etiqueta
   ])
   assert.deepEqual(Array.from(resultado.detalles, detalle => detalle.acta), ['Migración de reportes', 'Sin acta'])
   assert.equal(resultado.detalles[1].codigoReq, '—')
+})
+
+probar('Observaciones usa seguimiento del requerimiento y el texto de cada entrega sin cruzarlos ni mutar', () => {
+  const reqs = congelar([requerimiento({
+    seguimiento: 'Pendiente validación del acta',
+    entregas: [
+      entrega({ observaciones_hitss: 'Primera entrega: ajustar evidencias' }),
+      entrega({ numero: 2, observaciones_hitss: 'Segunda entrega: pendiente aprobación' }),
+    ],
+  })])
+  const original = JSON.stringify(reqs)
+  const resultado = resumir(reqs)
+  const textos = [
+    'Pendiente validación del acta',
+    'Primera entrega: ajustar evidencias',
+    'Segunda entrega: pendiente aprobación',
+  ]
+  assert.deepEqual(Array.from(resultado.detalles, detalle => [
+    detalle.tipo, detalle.numeroEntrega, detalle.observacionesHitss,
+  ]), [
+    ['requerimiento', null, textos[0]],
+    ['entrega', 1, textos[1]],
+    ['entrega', 2, textos[2]],
+  ])
+  assert.deepEqual(observacionesRenderizadas(renderizarDetalle(reqs)), textos)
+  assert.deepEqual(conteos(resultado), [1, 1, 2, 2])
+  assert.equal(JSON.stringify(reqs), original)
+})
+
+probar('Observaciones nulas, omitidas, vacías o con espacios muestran —; entregas nunca heredan seguimiento', () => {
+  const vacios = [null, undefined, '', ' \n\t ']
+  const reqs = [requerimiento({
+    seguimiento: 'Seguimiento exclusivo del padre',
+    entregas: vacios.map((observaciones_hitss, indice) =>
+      entrega({ numero: indice + 1, observaciones_hitss })),
+  })]
+  const resultado = resumir(reqs)
+  assert.deepEqual(Array.from(resultado.detalles.filter(detalle => detalle.tipo === 'entrega'),
+    detalle => detalle.observacionesHitss), vacios)
+  assert.deepEqual(observacionesRenderizadas(renderizarDetalle(reqs)),
+    ['Seguimiento exclusivo del padre', ...vacios.map(() => '—')])
+  assert.deepEqual(observacionesRenderizadas(renderizarDetalle(
+    vacios.map(seguimiento => requerimiento({ seguimiento })),
+  )), vacios.map(() => '—'))
+  const registros = prepararRegistrosAnalistas(reqs).map(registro => {
+    const identificacion = { ...registro.identificacion }
+    delete identificacion.observacionesHitss
+    return { ...registro, identificacion }
+  })
+  const anterior = resumirAnalistas(registros, [], { ano: '2026', mes: '10', analista: '' })
+  assert.ok(anterior.detalles.every(detalle => detalle.observacionesHitss === undefined))
+})
+
+probar('Observaciones multilínea conservan espacios y HTML literal escapado, con ayuda accesible y sin analítica', () => {
+  const reqs = [requerimiento({
+    seguimiento: '  Línea uno\nLínea dos <script>alert("prueba")</script>  ',
+    entregas: [entrega({ observaciones_hitss: 'Revisión\n<b>Texto & evidencia</b>' })],
+  })]
+  const html = renderizarDetalle(reqs)
+  assert.deepEqual(observacionesRenderizadas(html), [
+    '  Línea uno\nLínea dos &lt;script&gt;alert(&quot;prueba&quot;)&lt;/script&gt;  ',
+    'Revisión\n&lt;b&gt;Texto &amp; evidencia&lt;/b&gt;',
+  ])
+  assert.doesNotMatch(html, /<script>|<b>Texto/)
+  assert.match(html, /<th scope="col" aria-describedby="ayuda-observaciones-hitss">Observaciones Hitss<\/th>/)
+  assert.match(html, /id="ayuda-observaciones-hitss"[^>]*>[\s\S]*?Seguimiento Hitss/)
+  for (const atributo of html.matchAll(/data-analytics[^=]*="([^"]*)"/g)) {
+    assert.doesNotMatch(atributo[1], /Línea|script|evidencia|Revisión/)
+  }
 })
 
 probar('Códigos iguales entre squads no fusionan filas; números de entrega repetidos tienen claves únicas', () => {
