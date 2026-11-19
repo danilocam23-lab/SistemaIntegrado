@@ -2,18 +2,18 @@
   "version": 1,
   "metodo": "AST TypeScript: callsites estáticos, sin inferencia DOM. Alcanzabilidad de imports relativos estáticos desde main; no garantiza acceso por permisos.",
   "totales": {
-    "controles": 800,
-    "explicitos": 98,
-    "automaticos": 634,
+    "controles": 806,
+    "explicitos": 102,
+    "automaticos": 636,
     "compartidos": 44,
     "excluidos_seguridad": 10,
     "sin_handler": 10,
     "requiere_adaptador": 4,
     "id_no_registrado": 0,
-    "instrumentados_alcanzables": 703,
+    "instrumentados_alcanzables": 709,
     "formularios": 28,
     "formularios_confirmados": 6,
-    "peticiones": 181,
+    "peticiones": 182,
     "peticiones_catalogadas": 109,
     "peticiones_por_verificar": 17
   },
@@ -246,6 +246,50 @@
       "id": "filtro.opcion",
       "accion": "accion_alternar",
       "tipo": "filtro",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/components/ui/Paginacion.tsx",
+      "linea": 32,
+      "componente": "Boton",
+      "handler": "onCambiarPagina",
+      "id": null,
+      "accion": "accion_oncambiarpagina",
+      "tipo": "paginacion",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/components/ui/Paginacion.tsx",
+      "linea": 35,
+      "componente": "Boton",
+      "handler": "onCambiarPagina",
+      "id": null,
+      "accion": "accion_oncambiarpagina",
+      "tipo": "paginacion",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/components/ui/Paginacion.tsx",
+      "linea": 46,
+      "componente": "Boton",
+      "handler": "onCambiarPagina",
+      "id": null,
+      "accion": "accion_oncambiarpagina",
+      "tipo": "paginacion",
+      "cobertura": "explicito",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/components/ui/Paginacion.tsx",
+      "linea": 49,
+      "componente": "Boton",
+      "handler": "onCambiarPagina",
+      "id": null,
+      "accion": "accion_oncambiarpagina",
+      "tipo": "paginacion",
       "cobertura": "explicito",
       "alcanzable_desde_main": true
     },
@@ -625,7 +669,7 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 231,
+      "linea": 221,
       "componente": "Selector",
       "handler": "setScopeUsuarioId",
       "id": "control.pages_azuredevops.setscopeusuarioid.510d48a5c06f",
@@ -636,7 +680,7 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 249,
+      "linea": 239,
       "componente": "Campo",
       "handler": "setOrgUrl",
       "id": "control.pages_azuredevops.setorgurl.9d37f683018d",
@@ -647,7 +691,7 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 263,
+      "linea": 253,
       "componente": "Campo",
       "handler": "setPat",
       "id": null,
@@ -658,7 +702,7 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 271,
+      "linea": 261,
       "componente": "Boton",
       "handler": "setMostrarPat",
       "id": "control.pages_azuredevops.setmostrarpat.babce3cb6c63",
@@ -669,7 +713,7 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 287,
+      "linea": 277,
       "componente": "Boton",
       "handler": "probar",
       "id": "control.pages_azuredevops.probar.9cc934eef78b",
@@ -680,7 +724,7 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 305,
+      "linea": 295,
       "componente": "Campo",
       "handler": "setProyecto",
       "id": "control.pages_azuredevops.setproyecto.d30852b60474",
@@ -691,18 +735,7 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 317,
-      "componente": "Selector",
-      "handler": "setFrecuencia",
-      "id": "control.pages_azuredevops.setfrecuencia.adc1164624fa",
-      "accion": "accion_setfrecuencia",
-      "tipo": "filtro",
-      "cobertura": "automatico",
-      "alcanzable_desde_main": true
-    },
-    {
-      "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 332,
+      "linea": 307,
       "componente": "Boton",
       "handler": "guardarConfig",
       "id": "control.pages_azuredevops.guardarconfig.3cb9158c8c45",
@@ -713,7 +746,7 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 354,
+      "linea": 329,
       "componente": "Boton",
       "handler": "descubrirCampos",
       "id": "control.pages_azuredevops.descubrircampos.f1416e47d938",
@@ -900,12 +933,23 @@
     },
     {
       "archivo": "src/pages/Configuracion.tsx",
-      "linea": 85,
+      "linea": 90,
       "componente": "button",
       "handler": "setTab",
       "id": "control.pages_configuracion.settab.7486008a7b4d",
       "accion": "accion_settab",
       "tipo": "tab",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/Configuracion.tsx",
+      "linea": 157,
+      "componente": "Boton",
+      "handler": "recargar",
+      "id": "control.pages_configuracion.recargar.e5f7f72c6c78",
+      "accion": "accion_recargar",
+      "tipo": "boton",
       "cobertura": "automatico",
       "alcanzable_desde_main": true
     },
@@ -1406,7 +1450,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 515,
+      "linea": 530,
       "componente": "Link",
       "handler": "",
       "id": "entregas.detalle",
@@ -1417,7 +1461,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 598,
+      "linea": 613,
       "componente": "Boton",
       "handler": "exportarExcel",
       "id": "entregas.exportar",
@@ -1428,7 +1472,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 614,
+      "linea": 629,
       "componente": "Campo",
       "handler": "setFiltroTexto",
       "id": "entregas.buscar",
@@ -1439,7 +1483,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 624,
+      "linea": 639,
       "componente": "Selector",
       "handler": "setFiltroMes",
       "id": "entregas.mes",
@@ -1450,7 +1494,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 636,
+      "linea": 651,
       "componente": "Selector",
       "handler": "setFiltroEstado",
       "id": "entregas.estado",
@@ -1461,7 +1505,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 648,
+      "linea": 663,
       "componente": "Selector",
       "handler": "setFiltroAns",
       "id": "entregas.ans",
@@ -1472,7 +1516,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 664,
+      "linea": 679,
       "componente": "Campo",
       "handler": "setFiltroFechaDesde",
       "id": "entregas.compromiso_desde",
@@ -1483,7 +1527,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 672,
+      "linea": 687,
       "componente": "Campo",
       "handler": "setFiltroFechaHasta",
       "id": "entregas.compromiso_hasta",
@@ -1494,7 +1538,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 686,
+      "linea": 701,
       "componente": "Campo",
       "handler": "setFiltroRealDesde",
       "id": "entregas.real_desde",
@@ -1505,7 +1549,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 694,
+      "linea": 709,
       "componente": "Campo",
       "handler": "setFiltroRealHasta",
       "id": "entregas.real_hasta",
@@ -1516,7 +1560,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 705,
+      "linea": 720,
       "componente": "Selector",
       "handler": "setFiltroReqEstado",
       "id": "entregas.req_estado",
@@ -1527,7 +1571,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 717,
+      "linea": 732,
       "componente": "Selector",
       "handler": "setFiltroSquad",
       "id": "entregas.squad",
@@ -1538,7 +1582,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 729,
+      "linea": 744,
       "componente": "Selector",
       "handler": "setFiltroTipificacion",
       "id": "entregas.tipificacion",
@@ -1549,7 +1593,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 741,
+      "linea": 756,
       "componente": "Selector",
       "handler": "setFiltroGarantia",
       "id": "entregas.garantia",
@@ -1560,7 +1604,7 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 754,
+      "linea": 769,
       "componente": "Boton",
       "handler": "setFiltroTexto",
       "id": "filtro.limpiar",
@@ -1571,7 +1615,7 @@
     },
     {
       "archivo": "src/pages/EsquemaAzure.tsx",
-      "linea": 233,
+      "linea": 272,
       "componente": "Boton",
       "handler": "cargarDatos",
       "id": "control.pages_esquemaazure.cargardatos.41ba73ff361a",
@@ -1582,7 +1626,7 @@
     },
     {
       "archivo": "src/pages/EsquemaAzure.tsx",
-      "linea": 277,
+      "linea": 316,
       "componente": "Link",
       "handler": "",
       "id": "control.pages_esquemaazure.link.7ec5d74da167",
@@ -1593,7 +1637,7 @@
     },
     {
       "archivo": "src/pages/EsquemaAzure.tsx",
-      "linea": 289,
+      "linea": 328,
       "componente": "Boton",
       "handler": "cargarDatos",
       "id": "control.pages_esquemaazure.cargardatos.41ba73ff361a",
@@ -2473,7 +2517,7 @@
     },
     {
       "archivo": "src/pages/Requerimientos.tsx",
-      "linea": 157,
+      "linea": 177,
       "componente": "input",
       "handler": "handleFileSelected",
       "id": "control.pages_requerimientos.handlefileselected.af3c0600fb3e",
@@ -2597,7 +2641,7 @@
       "linea": 232,
       "componente": "Campo",
       "handler": "setFiltroWo",
-      "id": "control.pages_soportedetalleans.setfiltrowo.4f8c366e78fe",
+      "id": "control.pages_soportedetalleans.setfiltrowo.308a54e3c33b",
       "accion": "accion_setfiltrowo",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -2608,7 +2652,7 @@
       "linea": 244,
       "componente": "Selector",
       "handler": "setFiltroAssignedTo",
-      "id": "control.pages_soportedetalleans.setfiltroassignedt.95a88d7cdd3d",
+      "id": "control.pages_soportedetalleans.setfiltroassignedt.c5dd75df2f4e",
       "accion": "accion_setfiltroassignedto",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3708,7 +3752,7 @@
       "linea": 106,
       "componente": "Campo",
       "handler": "setConsulta",
-      "id": "control.pages_asignaciones_combobox.setconsulta.0fe856825a7f",
+      "id": "control.pages_asignaciones_combobox.setconsulta.85f81ad133fa",
       "accion": "accion_setconsulta",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4797,7 +4841,7 @@
       "linea": 161,
       "componente": "Boton",
       "handler": "onEliminar",
-      "id": "control.pages_capacidades_panelcapacidad.oneliminar.863f73770c9c",
+      "id": "control.pages_capacidades_panelcapacidad.oneliminar.48203b5d4ed5",
       "accion": "accion_oneliminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -5069,7 +5113,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionCamposConfigurables.tsx",
-      "linea": 48,
+      "linea": 64,
       "componente": "input",
       "handler": "alternarColumna",
       "id": "control.iguracion_seccioncamposconfigurables.alternarcolumna.311cf82f2813",
@@ -5080,7 +5124,18 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionCamposConfigurables.tsx",
-      "linea": 70,
+      "linea": 72,
+      "componente": "Selector",
+      "handler": "cambiarPosicion",
+      "id": "control.iguracion_seccioncamposconfigurables.cambiarposicion.812d8b46afbb",
+      "accion": "accion_cambiarposicion",
+      "tipo": "filtro",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/configuracion/SeccionCamposConfigurables.tsx",
+      "linea": 99,
       "componente": "input",
       "handler": "alternarFiltro",
       "id": "control.iguracion_seccioncamposconfigurables.alternarfiltro.446103f0e02e",
@@ -5091,7 +5146,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionCamposConfigurables.tsx",
-      "linea": 93,
+      "linea": 122,
       "componente": "input",
       "handler": "alternarExport",
       "id": "control.iguracion_seccioncamposconfigurables.alternarexport.9fe631ac6b3a",
@@ -5355,7 +5410,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 53,
+      "linea": 56,
       "componente": "Campo",
       "handler": "setNuevaClave",
       "id": "control.ages_configuracion_seccionparametros.setnuevaclave.b3564422ff80",
@@ -5366,7 +5421,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 59,
+      "linea": 62,
       "componente": "Campo",
       "handler": "setNuevoValor",
       "id": "control.ages_configuracion_seccionparametros.setnuevovalor.26caa10fcd0d",
@@ -5377,7 +5432,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 64,
+      "linea": 67,
       "componente": "Campo",
       "handler": "setGrupo",
       "id": "control.ages_configuracion_seccionparametros.setgrupo.bcc64c7894ae",
@@ -5388,7 +5443,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 69,
+      "linea": 72,
       "componente": "Boton",
       "handler": "",
       "id": "control.ages_configuracion_seccionparametros.boton.f7873e23978b",
@@ -5399,7 +5454,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 91,
+      "linea": 95,
       "componente": "Campo",
       "handler": "setValores",
       "id": "control.ages_configuracion_seccionparametros.setvalores.bf4e39e61cac",
@@ -5410,7 +5465,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 100,
+      "linea": 104,
       "componente": "button",
       "handler": "guardar",
       "id": "control.ages_configuracion_seccionparametros.guardar.4fa8a0fb4579",
@@ -5421,7 +5476,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 101,
+      "linea": 105,
       "componente": "button",
       "handler": "abrirEdicion",
       "id": "control.ages_configuracion_seccionparametros.abriredicion.f3c57a941da8",
@@ -5432,7 +5487,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 102,
+      "linea": 106,
       "componente": "button",
       "handler": "eliminarParametro",
       "id": "control.ages_configuracion_seccionparametros.eliminarparametro.5c0dde9a9b25",
@@ -5916,7 +5971,7 @@
     },
     {
       "archivo": "src/pages/esquema-azure/ArbolEsquemaAzure.tsx",
-      "linea": 50,
+      "linea": 62,
       "componente": "button",
       "handler": "onAlternar",
       "id": "control.ages_esquema_azure_arbolesquemaazure.onalternar.a8d70d3b15ef",
@@ -5927,7 +5982,7 @@
     },
     {
       "archivo": "src/pages/esquema-azure/ArbolEsquemaAzure.tsx",
-      "linea": 74,
+      "linea": 86,
       "componente": "a",
       "handler": "",
       "id": "control.ages_esquema_azure_arbolesquemaazure.a.c51dfbea846b",
@@ -5938,7 +5993,18 @@
     },
     {
       "archivo": "src/pages/esquema-azure/ArbolEsquemaAzure.tsx",
-      "linea": 148,
+      "linea": 115,
+      "componente": "Boton",
+      "handler": "onCargarHijos",
+      "id": "control.ages_esquema_azure_arbolesquemaazure.oncargarhijos.efe21bcca152",
+      "accion": "accion_oncargarhijos",
+      "tipo": "boton",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/esquema-azure/ArbolEsquemaAzure.tsx",
+      "linea": 187,
       "componente": "Boton",
       "handler": "onExpandirTodo",
       "id": "control.ages_esquema_azure_arbolesquemaazure.onexpandirtodo.d6cf9ed4da2f",
@@ -5949,7 +6015,7 @@
     },
     {
       "archivo": "src/pages/esquema-azure/ArbolEsquemaAzure.tsx",
-      "linea": 149,
+      "linea": 188,
       "componente": "Boton",
       "handler": "onColapsarTodo",
       "id": "control.ages_esquema_azure_arbolesquemaazure.oncolapsartodo.f4f5d70d6f26",
@@ -6389,7 +6455,7 @@
     },
     {
       "archivo": "src/pages/personas/ModalEliminar.tsx",
-      "linea": 98,
+      "linea": 97,
       "componente": "Boton",
       "handler": "onCerrar",
       "id": "control.pages_personas_modaleliminar.oncerrar.cfa5cba82a95",
@@ -6400,7 +6466,7 @@
     },
     {
       "archivo": "src/pages/personas/ModalEliminar.tsx",
-      "linea": 99,
+      "linea": 98,
       "componente": "Boton",
       "handler": "onConfirmar",
       "id": "control.pages_personas_modaleliminar.onconfirmar.fe8bcd069039",
@@ -6711,7 +6777,7 @@
       "linea": 67,
       "componente": "Boton",
       "handler": "onCambiar",
-      "id": "control.pages_personas_selectorsquads.oncambiar.6a1ac5848408",
+      "id": "control.pages_personas_selectorsquads.oncambiar.6be146f05783",
       "accion": "accion_oncambiar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -6876,7 +6942,7 @@
       "linea": 97,
       "componente": "Boton",
       "handler": "onEliminar",
-      "id": "control.pages_planes_accion_panelplan.oneliminar.a35050c80b3d",
+      "id": "control.pages_planes_accion_panelplan.oneliminar.80a8d327c66d",
       "accion": "accion_oneliminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7797,7 +7863,7 @@
     },
     {
       "archivo": "src/pages/requerimientos/FilaRequerimiento.tsx",
-      "linea": 51,
+      "linea": 54,
       "componente": "button",
       "handler": "toggleExpandReq",
       "id": "control.ges_requerimientos_filarequerimiento.toggleexpandreq.f72c7ae6c321",
@@ -7808,7 +7874,7 @@
     },
     {
       "archivo": "src/pages/requerimientos/FilaRequerimiento.tsx",
-      "linea": 62,
+      "linea": 67,
       "componente": "Link",
       "handler": "",
       "id": "control.ges_requerimientos_filarequerimiento.link.383054c30141",
@@ -7819,10 +7885,10 @@
     },
     {
       "archivo": "src/pages/requerimientos/FilaRequerimiento.tsx",
-      "linea": 143,
+      "linea": 148,
       "componente": "Boton",
       "handler": "setExpandedEntregas",
-      "id": "control.ges_requerimientos_filarequerimiento.setexpandedentrega.486fa0c6b293",
+      "id": "control.ges_requerimientos_filarequerimiento.setexpandedentrega.0402f4426ca8",
       "accion": "accion_setexpandedentregas",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -7830,7 +7896,7 @@
     },
     {
       "archivo": "src/pages/requerimientos/FilaRequerimiento.tsx",
-      "linea": 163,
+      "linea": 178,
       "componente": "button",
       "handler": "openEstimationModal",
       "id": "control.ges_requerimientos_filarequerimiento.openestimationmoda.b0c2ddf0a5de",
@@ -7841,7 +7907,7 @@
     },
     {
       "archivo": "src/pages/requerimientos/FilaRequerimiento.tsx",
-      "linea": 170,
+      "linea": 185,
       "componente": "button",
       "handler": "handleUploadClick",
       "id": "control.ges_requerimientos_filarequerimiento.handleuploadclick.8e0d697f8006",
@@ -7852,7 +7918,7 @@
     },
     {
       "archivo": "src/pages/requerimientos/FilaRequerimiento.tsx",
-      "linea": 190,
+      "linea": 197,
       "componente": "Link",
       "handler": "",
       "id": "control.ges_requerimientos_filarequerimiento.link.383054c30141",
@@ -7863,7 +7929,7 @@
     },
     {
       "archivo": "src/pages/requerimientos/FilaRequerimiento.tsx",
-      "linea": 195,
+      "linea": 202,
       "componente": "button",
       "handler": "eliminar",
       "id": "control.ges_requerimientos_filarequerimiento.eliminar.4af5d51c005e",
@@ -8163,7 +8229,7 @@
       "linea": 164,
       "componente": "Boton",
       "handler": "setExpandedEntregas",
-      "id": "control._requerimientos_tarjetarequerimiento.setexpandedentrega.c24ad030eee1",
+      "id": "control._requerimientos_tarjetarequerimiento.setexpandedentrega.2ad1fc5ca330",
       "accion": "accion_setexpandedentregas",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8955,7 +9021,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 52,
+      "linea": 55,
       "handler": "crear",
       "id": null,
       "confirmacion_integrada": false
@@ -9104,35 +9170,35 @@
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 101,
+      "linea": 93,
       "metodo": "GET",
       "plantilla": "/azdo/personas-config",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 132,
+      "linea": 124,
       "metodo": "GET",
       "plantilla": "/azdo/config",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 148,
+      "linea": 139,
       "metodo": "GET",
       "plantilla": "/azdo/test",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 170,
+      "linea": 161,
       "metodo": "PUT",
       "plantilla": "/azdo/config",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/AzureDevOps.tsx",
-      "linea": 197,
+      "linea": 187,
       "metodo": "GET",
       "plantilla": "/azdo/campos-requeridos",
       "instrumentada": false
@@ -9216,44 +9282,51 @@
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 176,
+      "linea": 183,
       "metodo": "GET",
       "plantilla": "/squads",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 180,
+      "linea": 187,
       "metodo": "GET",
       "plantilla": "/squads",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/EsquemaAzure.tsx",
-      "linea": 125,
+      "linea": 132,
       "metodo": "GET",
       "plantilla": "/azdo/proyectos",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/EsquemaAzure.tsx",
-      "linea": 126,
+      "linea": 133,
       "metodo": "GET",
       "plantilla": "/azdo/esquema/tipos",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/EsquemaAzure.tsx",
-      "linea": 127,
+      "linea": 134,
       "metodo": "GET",
       "plantilla": "/azdo/esquema/arbol",
       "instrumentada": false
     },
     {
       "archivo": "src/pages/EsquemaAzure.tsx",
-      "linea": 193,
+      "linea": 200,
       "metodo": "GET",
       "plantilla": "/azdo/esquema/iteraciones-permitidas",
+      "instrumentada": false
+    },
+    {
+      "archivo": "src/pages/EsquemaAzure.tsx",
+      "linea": 231,
+      "metodo": "GET",
+      "plantilla": "/azdo/esquema/hijos",
       "instrumentada": false
     },
     {
@@ -9776,7 +9849,7 @@
     },
     {
       "archivo": "src/pages/configuracion/useCamposConfigurables.ts",
-      "linea": 53,
+      "linea": 79,
       "metodo": "PUT",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
@@ -9860,28 +9933,28 @@
     },
     {
       "archivo": "src/pages/configuracion/useParametros.ts",
-      "linea": 47,
+      "linea": 73,
       "metodo": "PUT",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/configuracion/useParametros.ts",
-      "linea": 64,
+      "linea": 94,
       "metodo": "PUT",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/configuracion/useParametros.ts",
-      "linea": 81,
+      "linea": 115,
       "metodo": "PUT",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/configuracion/useParametros.ts",
-      "linea": 98,
+      "linea": 136,
       "metodo": "DELETE",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
@@ -10290,7 +10363,7 @@
   "exportaciones": [
     {
       "archivo": "src/pages/EntregasActas.tsx",
-      "linea": 587,
+      "linea": 602,
       "mecanismo": "xlsx_local"
     },
     {
@@ -10760,6 +10833,38 @@
       "alternar_activo",
       "filtro"
     ],
+    "requerimiento.pagina_primera": [
+      "primera",
+      "paginacion"
+    ],
+    "requerimiento.pagina_anterior": [
+      "anterior",
+      "paginacion"
+    ],
+    "requerimiento.pagina_siguiente": [
+      "siguiente",
+      "paginacion"
+    ],
+    "requerimiento.pagina_ultima": [
+      "ultima",
+      "paginacion"
+    ],
+    "entregas.pagina_primera": [
+      "primera",
+      "paginacion"
+    ],
+    "entregas.pagina_anterior": [
+      "anterior",
+      "paginacion"
+    ],
+    "entregas.pagina_siguiente": [
+      "siguiente",
+      "paginacion"
+    ],
+    "entregas.pagina_ultima": [
+      "ultima",
+      "paginacion"
+    ],
     "entregas.exportar": [
       "exportar",
       "boton"
@@ -10924,10 +11029,6 @@
       "accion_setproyecto",
       "filtro"
     ],
-    "control.pages_azuredevops.setfrecuencia.adc1164624fa": [
-      "accion_setfrecuencia",
-      "filtro"
-    ],
     "control.pages_azuredevops.guardarconfig.3cb9158c8c45": [
       "accion_guardarconfig",
       "boton"
@@ -10963,6 +11064,10 @@
     "control.pages_configuracion.settab.7486008a7b4d": [
       "accion_settab",
       "tab"
+    ],
+    "control.pages_configuracion.recargar.e5f7f72c6c78": [
+      "accion_recargar",
+      "boton"
     ],
     "control.pages_controlhorasfacturable.setanio.4a50695c8937": [
       "accion_setanio",
@@ -11380,11 +11485,11 @@
       "accion_elegirpreset",
       "boton"
     ],
-    "control.pages_soportedetalleans.setfiltrowo.4f8c366e78fe": [
+    "control.pages_soportedetalleans.setfiltrowo.308a54e3c33b": [
       "accion_setfiltrowo",
       "filtro"
     ],
-    "control.pages_soportedetalleans.setfiltroassignedt.95a88d7cdd3d": [
+    "control.pages_soportedetalleans.setfiltroassignedt.c5dd75df2f4e": [
       "accion_setfiltroassignedto",
       "filtro"
     ],
@@ -11640,7 +11745,7 @@
       "accion_oncambio",
       "boton"
     ],
-    "control.pages_asignaciones_combobox.setconsulta.0fe856825a7f": [
+    "control.pages_asignaciones_combobox.setconsulta.85f81ad133fa": [
       "accion_setconsulta",
       "filtro"
     ],
@@ -12016,7 +12121,7 @@
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_capacidades_panelcapacidad.oneliminar.863f73770c9c": [
+    "control.pages_capacidades_panelcapacidad.oneliminar.48203b5d4ed5": [
       "accion_oneliminar",
       "boton"
     ],
@@ -12106,6 +12211,10 @@
     ],
     "control.iguracion_seccioncamposconfigurables.alternarcolumna.311cf82f2813": [
       "accion_alternarcolumna",
+      "filtro"
+    ],
+    "control.iguracion_seccioncamposconfigurables.cambiarposicion.812d8b46afbb": [
+      "accion_cambiarposicion",
       "filtro"
     ],
     "control.iguracion_seccioncamposconfigurables.alternarfiltro.446103f0e02e": [
@@ -12400,6 +12509,10 @@
       "navegar",
       "enlace"
     ],
+    "control.ages_esquema_azure_arbolesquemaazure.oncargarhijos.efe21bcca152": [
+      "accion_oncargarhijos",
+      "boton"
+    ],
     "control.ages_esquema_azure_arbolesquemaazure.onexpandirtodo.d6cf9ed4da2f": [
       "accion_onexpandirtodo",
       "boton"
@@ -12640,7 +12753,7 @@
       "accion_setq",
       "filtro"
     ],
-    "control.pages_personas_selectorsquads.oncambiar.6a1ac5848408": [
+    "control.pages_personas_selectorsquads.oncambiar.6be146f05783": [
       "accion_oncambiar",
       "boton"
     ],
@@ -12696,7 +12809,7 @@
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_planes_accion_panelplan.oneliminar.a35050c80b3d": [
+    "control.pages_planes_accion_panelplan.oneliminar.80a8d327c66d": [
       "accion_oneliminar",
       "boton"
     ],
@@ -12928,7 +13041,7 @@
       "navegar",
       "enlace"
     ],
-    "control.ges_requerimientos_filarequerimiento.setexpandedentrega.486fa0c6b293": [
+    "control.ges_requerimientos_filarequerimiento.setexpandedentrega.0402f4426ca8": [
       "accion_setexpandedentregas",
       "boton"
     ],
@@ -13044,7 +13157,7 @@
       "navegar",
       "enlace"
     ],
-    "control._requerimientos_tarjetarequerimiento.setexpandedentrega.c24ad030eee1": [
+    "control._requerimientos_tarjetarequerimiento.setexpandedentrega.2ad1fc5ca330": [
       "accion_setexpandedentregas",
       "boton"
     ],
