@@ -7,9 +7,10 @@ Unifica el Requerimiento + SolicitudCotizacion del Liquidador con el
 project_catalog del Workload Manager. La solicitud y las entregas (con su
 facturación) se modelan como documentos embebidos.
 """
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated, Any
+from uuid import uuid4
 
 from bson import Decimal128
 from pydantic import BaseModel, BeforeValidator, Field, PlainSerializer
@@ -91,6 +92,19 @@ class Solicitud(BaseModel):
     tarifa_id: str | None = None
 
 
+def _nuevo_id_seguimiento() -> str:
+    return uuid4().hex
+
+
+class SeguimientoEpm(BaseModel):
+    """Registro inmutable del historial de Seguimiento EPM (documento embebido)."""
+
+    id: str = Field(default_factory=_nuevo_id_seguimiento)
+    fecha: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    usuario: str
+    texto: str
+
+
 class Requerimiento(DocumentoOperativo):
     codigo_req: str
     nombre: str | None = None
@@ -108,10 +122,13 @@ class Requerimiento(DocumentoOperativo):
     ans_acta: AnsResultado | None = None
     se_levanto_ans: bool | None = None
     observaciones_ans: str | None = None
-    motivo_cierre: str | None = None
     reemplaza_a_id: str | None = None
     seguimiento: str | None = None  # Seguimiento Hitss
+    # Espejo del último registro de ``seguimientos_epm`` (lo leen ANS y EntregasActas);
+    # ya no se edita a mano.
     seguimiento_epm: str | None = None
+    # Historial en orden de inserción (el más reciente es el último).
+    seguimientos_epm: list[SeguimientoEpm] = []
     tipificacion: Tipificacion | None = None
     monto_pactado: MongoDecimal | None = None
     acta_trabajo: str | None = None

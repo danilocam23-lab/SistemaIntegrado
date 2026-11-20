@@ -61,9 +61,7 @@ class RequerimientoIn(BaseModel):
     fecha_real_entrega_estimacion: datetime | None = None
     ans_estimacion: AnsResultado | None = None
     fecha_solicitud_acta: datetime | None = None
-    motivo_cierre: str | None = None
     seguimiento: str | None = None
-    seguimiento_epm: str | None = None
     tipificacion: Tipificacion | None = None
     monto_pactado: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     acta_trabajo: str | None = None
@@ -100,9 +98,7 @@ class RequerimientoUpdate(BaseModel):
     fecha_real_entrega_estimacion: datetime | None = None
     ans_estimacion: AnsResultado | None = None
     fecha_solicitud_acta: datetime | None = None
-    motivo_cierre: str | None = None
     seguimiento: str | None = None
-    seguimiento_epm: str | None = None
     tipificacion: Tipificacion | None = None
     monto_pactado: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     acta_trabajo: str | None = None
@@ -157,11 +153,28 @@ class EntregaIn(BaseModel):
     facturacion: FacturacionIn | None = None
 
 
+class SeguimientoEpmIn(BaseModel):
+    """Nuevo registro del historial de Seguimiento EPM."""
+
+    texto: str = Field(min_length=1, max_length=4000)
+
+    @field_validator("texto")
+    @classmethod
+    def _validar_texto(cls, valor: str) -> str:
+        return _texto_no_vacio(valor)
+
+
 class TransicionIn(BaseModel):
     """Cambio de estado de un requerimiento, con la nota que queda en la bitácora."""
 
     nuevo_estado: str
     descripcion: str = ""
+
+
+class CambiarSquadIn(BaseModel):
+    """Cuerpo de ``POST /requerimientos/{codigo_req}/cambiar-squad``."""
+
+    squad_destino: str
 
 
 class AnsCalcularIn(BaseModel):

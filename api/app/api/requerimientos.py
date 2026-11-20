@@ -19,18 +19,27 @@ from app.documents.bitacora import Bitacora
 from app.documents.enums import EstadoRequerimiento, Tipificacion
 from app.documents.estimacion import Estimacion
 from app.documents.persona import Persona
-from app.documents.requerimiento import Entrega, Requerimiento, Solicitud
+from app.documents.requerimiento import Entrega, Requerimiento, SeguimientoEpm, Solicitud
 from app.documents.usuario import Usuario
-from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
+from app.middleware.aplicacion import (
+    ContextoAplicacion,
+    codigos_autorizados,
+    contexto_aplicacion,
+    contexto_escritura,
+)
 from app.schemas.requerimiento import (
     AnsCalcularIn,
+    CambiarSquadIn,
     EntregaIn,
     HorasSiguienteAnioUpdate,
     RequerimientoIn,
     RequerimientoUpdate,
+    SeguimientoEpmIn,
     TransicionIn,
 )
 from app.security.deps import (
+    es_admin_app,
+    es_superadmin,
     permiso,
     tiene_permiso,
     usuario_actual,
@@ -456,9 +465,7 @@ async def crear(
         fecha_real_entrega_estimacion=datos.fecha_real_entrega_estimacion,
         ans_estimacion=datos.ans_estimacion,
         fecha_solicitud_acta=datos.fecha_solicitud_acta,
-        motivo_cierre=datos.motivo_cierre,
         seguimiento=datos.seguimiento,
-        seguimiento_epm=datos.seguimiento_epm,
         tipificacion=datos.tipificacion,
         monto_pactado=datos.monto_pactado,
         acta_trabajo=datos.acta_trabajo,
@@ -555,9 +562,7 @@ async def actualizar(
         "fecha_solicitud_acta": "Fecha solicitud acta",
         "fecha_real_entrega_estimacion": "Fecha real entrega",
         "seguimiento": "Seguimiento Hitss",
-        "seguimiento_epm": "Seguimiento EPM",
         "tipificacion": "Tipificación",
-        "motivo_cierre": "Motivo cierre",
         "acta_trabajo": "Acta de trabajo",
         "id_azure_hitss": "ID de Azure (Hitss)",
         "monto_pactado": "Monto pactado",
@@ -772,6 +777,33 @@ async def actualizar_id_azure_hitss(
 
 
 @router.post(
+    "/{codigo_req}/seguimientos-epm",
+    dependencies=[permiso("requerimientos.editar")],
+)
+async def agregar_seguimiento_epm(
+    codigo_req: str,
+    datos: SeguimientoEpmIn,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    usuario: Usuario = Depends(usuario_actual),
+):
+    """Agrega un registro al historial de Seguimiento EPM (inmutable, sin borrado).
+
+    ``seguimiento_epm`` queda como espejo del último texto para los lectores existentes.
+    """
+    req = await _buscar(ctx, codigo_req)
+    req.seguimientos_epm.append(
+        SeguimientoEpm(usuario=usuario.nombre or usuario.email, texto=datos.texto)
+    )
+    req.seguimiento_epm = datos.texto
+    req.marcar_actualizado()
+    await req.save()
+    await _registrar_bitacora(
+        ctx.codigo, str(req.id), "actualizar", "Seguimiento EPM agregado", usuario
+    )
+    return await _salida_autorizada(req, usuario)
+
+
+@router.post(
     "/{codigo_req}/transicion",
     dependencies=[permiso("requerimientos.editar")],
 )
@@ -859,7 +891,11 @@ async def guardar_entrega(
     req.marcar_actualizado()
     await req.save()
     accion = "actualizar_entrega" if entrega_anterior is not None else "crear_entrega"
-    descripcion = f"Entrega {nueva.numero} {'actualizada' if entrega_anterior is not None else 'registrada'}"
+    descripcion = (
+        f"Entrega N.º {nueva.numero} actualizada"
+        if entrega_anterior is not None
+        else f"Entrega N.º {nueva.numero} creada"
+    )
     if nueva.observaciones:
         descripcion += f" · Observaciones: {nueva.observaciones}"
     if nueva.mes_aprobacion:
@@ -1008,6 +1044,124 @@ async def _buscar_unico_consolidado(ctx: ContextoAplicacion, codigo: str) -> Req
     raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo} no encontrado")
 
 
+async def _exigir_administrador(usuario: Usuario) -> None:
+    """Solo los roles ``superadmin`` y ``admin_app`` pueden mover entre squads."""
+    if not (await es_superadmin(usuario) or await es_admin_app(usuario)):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Solo un administrador puede cambiar el squad de un requerimiento",
+        )
+
+
+@router.post(
+    "/{codigo_req}/cambiar-squad",
+    dependencies=[permiso("requerimientos.editar")],
+)
+async def cambiar_squad(
+    codigo_req: str,
+    datos: CambiarSquadIn,
+    ctx: ContextoAplicacion = Depends(contexto_escritura),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    """[ADMIN] Mueve el requerimiento al squad (aplicación) destino desde la app activa.
+
+    El requerimiento se busca con ``ctx.filtro()`` (aplicación de origen). Squad ==
+    aplicación: se actualizan ``aplicacion_id`` y ``solicitud.squad_id``. Las LT se
+    conservan; Scrum y Analista de requerimientos se limpian si no pertenecen al
+    squad destino (mismo criterio de pertenencia que ``GET /personas``). Las
+    estimaciones y las entradas de bitácora del requerimiento se mueven con él.
+    """
+    await _exigir_administrador(usuario)
+    destino = (datos.squad_destino or "").strip()
+    app_destino = await Aplicacion.find_one(Aplicacion.codigo == destino) if destino else None
+    if app_destino is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"El squad '{destino}' no existe"
+        )
+    if not app_destino.activa:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"El squad '{destino}' está inactivo"
+        )
+    if destino == ctx.codigo:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "El squad destino es el mismo que el actual",
+        )
+    if destino not in await codigos_autorizados(usuario):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin acceso al squad de destino")
+
+    req = await _buscar(ctx, codigo_req)
+    origen = req.aplicacion_id
+    req_id = str(req.id)
+
+    # Pertenencia al squad destino: misma regla que el listado de personas.
+    ctx_destino = ContextoAplicacion(
+        [destino], modo_consolidado=False, nombre_app=app_destino.nombre
+    )
+    limpiadas: list[dict] = []
+    for campo in ("scrum_id", "analista_requerimientos_id"):
+        persona_id = getattr(req.solicitud, campo)
+        if not persona_id:
+            continue
+        try:
+            persona = await Persona.get(ObjectId(persona_id))
+        except (InvalidId, TypeError):
+            persona = None
+        if persona is not None and _persona_visible(persona, ctx_destino):
+            continue
+        limpiadas.append(
+            {
+                "campo": campo,
+                "persona_id": persona_id,
+                "nombre": persona.nombre if persona is not None else None,
+            }
+        )
+        setattr(req.solicitud, campo, None)
+
+    req.aplicacion_id = destino
+    req.solicitud.squad_id = destino
+    req.marcar_actualizado()
+    try:
+        await req.save()
+    except DuplicateKeyError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Ya existe en el squad de destino un requerimiento con el mismo "
+            "Código REQ, Squad y SC",
+        ) from exc
+
+    # Hijos con aplicacion_id: siguen al requerimiento para no quedar huérfanos.
+    await Estimacion.find(
+        {"aplicacion_id": origen, "requerimiento_id": req_id}
+    ).update({"$set": {"aplicacion_id": destino}})
+    await Bitacora.find(
+        {"aplicacion_id": origen, "entidad_tipo": "requerimiento", "entidad_id": req_id}
+    ).update({"$set": {"aplicacion_id": destino}})
+
+    detalle = f"Squad: {origen} → {destino}"
+    if limpiadas:
+        nombres = ", ".join(f"{p['campo']}={p['nombre'] or p['persona_id']}" for p in limpiadas)
+        detalle += f". Personas limpiadas: {nombres}"
+    # Bajo el destino, donde ya vive el historial completo del requerimiento.
+    await _registrar_bitacora(
+        destino,
+        req_id,
+        "cambiar_squad",
+        detalle,
+        usuario,
+        datos_antes={"aplicacion_id": origen},
+        datos_despues={"aplicacion_id": destino, "personas_limpiadas": limpiadas},
+    )
+
+    return {
+        "requerimiento_id": req_id,
+        "codigo_req": req.codigo_req,
+        "aplicacion_anterior": origen,
+        "aplicacion_nueva": destino,
+        "personas_limpiadas": limpiadas,
+    }
+
+
 @router.post("/{codigo_req}/reasignar-aplicacion")
 async def reasignar_aplicacion(
     codigo_req: str,
@@ -1026,7 +1180,8 @@ async def reasignar_aplicacion(
     Busca por codigo_req O por solicitud.codigo_sc si es numérico.
     """
     if not await tiene_permiso(usuario, "requerimientos.editar"):
-         raise HTTPException(status.HTTP_403_FORBIDDEN, "No autorizado")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "No autorizado")
+    await _exigir_administrador(usuario)
     if not ctx.modo_consolidado:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo en modo consolidado")
 

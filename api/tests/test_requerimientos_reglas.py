@@ -466,6 +466,24 @@ async def test_guardar_entrega_nueva_no_hereda_campos_ans(cliente, entorno):
     assert resp.json()["cantidad_entregas"] == 1
 
 
+async def test_crear_entrega_registra_nota_en_bitacora(cliente, entorno):
+    app, h = entorno
+    req = await _req(app.codigo)
+    # Sin observaciones EPM/Hitss: siguen siendo opcionales.
+    resp = await cliente.post(
+        f"/api/requerimientos/{req.id}/entregas",
+        json={"numero": 1, "fecha_comprometida": "2026-02-01T00:00:00"},
+        headers=h,
+    )
+    assert resp.status_code == 200
+    registros = await Bitacora.find(
+        Bitacora.entidad_id == str(req.id),
+        Bitacora.accion == "crear_entrega",
+        Bitacora.aplicacion_id == app.codigo,
+    ).to_list()
+    assert [r.descripcion for r in registros] == ["Entrega N.º 1 creada"]
+
+
 # --- Listado: paginación y resumen --------------------------------------------------
 
 
@@ -542,3 +560,67 @@ async def test_codigo_req_ambiguo_da_409_y_el_id_resuelve(cliente, entorno):
     por_codigo = await cliente.get("/api/requerimientos/REQ-UNICO", headers=h)
     assert por_codigo.json()["_id"] == str(unico.id)
     assert (await cliente.get("/api/requerimientos/NO-EXISTE", headers=h)).status_code == 404
+
+
+# --- Historial de Seguimiento EPM ---------------------------------------------------
+
+
+async def test_seguimiento_epm_agrega_registro_y_espeja(cliente, entorno):
+    app, h = entorno
+    req = await _req(app.codigo)
+    url = f"/api/requerimientos/{req.id}/seguimientos-epm"
+    r1 = await cliente.post(url, json={"texto": "  Primero  "}, headers=h)
+    assert r1.status_code == 200
+    r2 = await cliente.post(url, json={"texto": "Segundo"}, headers=h)
+    cuerpo = r2.json()
+    assert [s["texto"] for s in cuerpo["seguimientos_epm"]] == ["Primero", "Segundo"]
+    registro = cuerpo["seguimientos_epm"][0]
+    assert len(registro["id"]) == 32 and registro["usuario"] and registro["fecha"]
+    assert cuerpo["seguimiento_epm"] == "Segundo"
+    guardado = await Requerimiento.get(req.id)
+    assert len(guardado.seguimientos_epm) == 2
+    bitacora = await Bitacora.find(
+        Bitacora.entidad_id == str(req.id), Bitacora.aplicacion_id == app.codigo
+    ).to_list()
+    assert [b.descripcion for b in bitacora].count("Seguimiento EPM agregado") == 2
+
+
+@pytest.mark.parametrize("texto", ["", "   ", "x" * 4001])
+async def test_seguimiento_epm_rechaza_texto_invalido(cliente, entorno, texto):
+    app, h = entorno
+    req = await _req(app.codigo)
+    resp = await cliente.post(
+        f"/api/requerimientos/{req.id}/seguimientos-epm", json={"texto": texto}, headers=h
+    )
+    assert resp.status_code == 422
+    assert (await Requerimiento.get(req.id)).seguimientos_epm == []
+
+
+async def test_seguimiento_epm_exige_permiso_y_aislamiento(
+    cliente, entorno, fabrica_usuario, fabrica_aplicacion
+):
+    app, h = entorno
+    req = await _req(app.codigo)
+    url = f"/api/requerimientos/{req.id}/seguimientos-epm"
+    _, token = await fabrica_usuario([app.codigo], permisos=["requerimientos.ver"])
+    sin_permiso = await cliente.post(
+        url, json={"texto": "x"}, headers=headers_con_token(token, app.codigo)
+    )
+    assert sin_permiso.status_code == 403
+    otra = await fabrica_aplicacion()
+    _, token2 = await fabrica_usuario([otra.codigo], permisos=PERMISOS)
+    ajena = await cliente.post(
+        url, json={"texto": "x"}, headers=headers_con_token(token2, otra.codigo)
+    )
+    assert ajena.status_code == 404
+    assert (await Requerimiento.get(req.id)).seguimientos_epm == []
+
+
+async def test_put_no_edita_seguimiento_epm_a_mano(cliente, entorno):
+    app, h = entorno
+    req = await _req(app.codigo)
+    resp = await cliente.put(
+        f"/api/requerimientos/{req.id}", json={"seguimiento_epm": "manual"}, headers=h
+    )
+    assert resp.status_code == 200
+    assert (await Requerimiento.get(req.id)).seguimiento_epm is None

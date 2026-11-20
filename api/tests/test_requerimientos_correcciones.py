@@ -173,7 +173,7 @@ async def test_put_estado_nulo_o_vacio_da_422(cliente, entorno, estado):  # noqa
 async def dos_apps(cliente, fabrica_usuario, fabrica_aplicacion):
     """Usuario con dos squads activos y permiso de edición: puede usar el consolidado."""
     a, b = await fabrica_aplicacion(), await fabrica_aplicacion()
-    _, token = await fabrica_usuario([a.codigo, b.codigo], permisos=PERMISOS)
+    _, token = await fabrica_usuario([a.codigo, b.codigo], permisos=PERMISOS, rol="admin_app")
     return a, b, headers_con_token(token, "__todas__")
 
 

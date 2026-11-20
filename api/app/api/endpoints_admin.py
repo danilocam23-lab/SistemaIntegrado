@@ -42,6 +42,7 @@ _DESTRUCTIVOS_EXPLICITOS: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/soporte/solicitudes-fabrica/sincronizar"),
         ("POST", "/api/soporte/solicitudes-fabrica/ejecutar-carga-automatica"),
         ("POST", "/api/requerimientos/{codigo_req}/reasignar-aplicacion"),
+        ("POST", "/api/requerimientos/{codigo_req}/cambiar-squad"),
         ("POST", "/api/importacion/excel"),
     }
 )
