@@ -41,10 +41,37 @@ export function resolverTema(valor: string | null | undefined, fecha: Date): Tem
 // --- Almacén a nivel de módulo: una sola lectura de /configuracion por sesión de la SPA ---
 // El Sidebar se desmonta/monta poco, pero así ni navegar ni re-renderizar vuelve a pedirla, y
 // Parámetros puede publicar el cambio tras guardar sin recargar la página.
-let valorActual: string | null = 'auto'
+// Mientras el valor real no se conoce (`null`) no se decora: evita el parpadeo de un tema no
+// activado en cada recarga. La última lectura se cachea en localStorage para que un tema SÍ
+// activo aparezca desde el primer render; el valor del servidor siempre manda.
+const CLAVE_CACHE = 'tema_estacional_cache'
+
+function leerCache(): string | null {
+  try {
+    const v = globalThis.localStorage?.getItem(CLAVE_CACHE)
+    return typeof v === 'string' && v.trim() ? v : null
+  } catch {
+    return null
+  }
+}
+
+function guardarCache(valor: string) {
+  try {
+    globalThis.localStorage?.setItem(CLAVE_CACHE, valor)
+  } catch {
+    /* sin localStorage: la página funciona igual */
+  }
+}
+
+let valorActual: string | null = leerCache()
 let leido = false
 let leyendo = false
 const oyentes = new Set<() => void>()
+
+/** Tema a mostrar: sin valor conocido (aún sin leer ni caché) => `ninguno`. */
+export function temaVigente(valor: string | null, fecha: Date): TemaEstacional {
+  return valor === null ? 'ninguno' : resolverTema(valor, fecha)
+}
 
 function emitir() {
   oyentes.forEach((o) => o())
@@ -57,6 +84,7 @@ function leerConfiguracion() {
     .get<{ clave: string; valor: string }[]>('/configuracion')
     .then((r) => {
       valorActual = r.data.find((c) => c.clave === CLAVE_TEMA_ESTACIONAL)?.valor ?? 'auto'
+      guardarCache(valorActual)
       leido = true
     })
     .catch((err: unknown) => {
@@ -74,6 +102,7 @@ function leerConfiguracion() {
 /** Publica el valor guardado en Parámetros para que el Sidebar se actualice sin recargar. */
 export function publicarTemaEstacional(valor: string) {
   valorActual = valor
+  guardarCache(valor)
   leido = true
   emitir()
 }
@@ -91,5 +120,5 @@ export function useTemaEstacional(): TemaEstacional {
   useEffect(() => {
     leerConfiguracion()
   }, [])
-  return resolverTema(valor, new Date())
+  return temaVigente(valor, new Date())
 }
