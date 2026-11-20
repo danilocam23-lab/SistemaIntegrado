@@ -78,7 +78,8 @@ async def test_responsable_cross_squad_no_da_404(cliente, fabrica_aplicacion, fa
 
 async def test_consolidado_rechaza_escrituras(cliente, fabrica_aplicacion, fabrica_usuario):
     app = await fabrica_aplicacion()
-    _, token = await fabrica_usuario([app.codigo, "otra-app"], permisos=EDITOR)
+    otra = await fabrica_aplicacion()
+    _, token = await fabrica_usuario([app.codigo, otra.codigo], permisos=EDITOR)
     h = headers_con_token(token, CONSOLIDADO)
     fake = "0" * 24
     assert (await cliente.post(URL, json={"titulo": "t"}, headers=h)).status_code == 409

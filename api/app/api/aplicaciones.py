@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 
 """Router de administración de aplicaciones (tenants) y sus usuarios."""
+import re
+
 from beanie.operators import In
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -11,7 +13,6 @@ from app.documents.usuario import Usuario
 from app.schemas.aplicacion import AplicacionIn, AplicacionOut, AplicacionUpdate, EstadoIn
 from app.schemas.auth import UsuarioOut
 from app.security.deps import (
-    es_admin_app,
     es_superadmin,
     permiso,
     permisos_usuario,
@@ -51,15 +52,38 @@ async def _usuario_out(u: Usuario) -> UsuarioOut:
 
 
 @router.get("", response_model=list[AplicacionOut])
-async def listar(usuario: Usuario = Depends(usuario_actual)) -> list[AplicacionOut]:
-    """Lista las aplicaciones visibles para el usuario."""
+async def listar(
+    incluir_inactivas: bool = True,
+    usuario: Usuario = Depends(usuario_actual),
+) -> list[AplicacionOut]:
+    """Lista las aplicaciones visibles para el usuario.
+
+    Solo el superadmin ve todas; el resto (incluido ``admin_app``) ve las asignadas.
+    Con ``incluir_inactivas=false`` se devuelven únicamente los squads activos.
+    """
     if await es_superadmin(usuario):
-        apps = await Aplicacion.find_all().to_list()
-    elif await es_admin_app(usuario) and len(usuario.aplicaciones_codigos) == 0:
         apps = await Aplicacion.find_all().to_list()
     else:
         apps = await Aplicacion.find(In(Aplicacion.codigo, usuario.aplicaciones_codigos)).to_list()
+    if not incluir_inactivas:
+        apps = [a for a in apps if a.activa]
     return [_out(a) for a in apps]
+
+
+async def _validar_nombre_unico(nombre: str, excluir_codigo: str | None = None) -> None:
+    """409 si otro squad ya usa ese nombre (comparación insensible a mayúsculas)."""
+    filtro: dict = {"nombre": {"$regex": f"^{re.escape(nombre)}$", "$options": "i"}}
+    if excluir_codigo is not None:
+        filtro["codigo"] = {"$ne": excluir_codigo}
+    if await Aplicacion.find_one(filtro):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe un squad con ese nombre")
+
+
+async def _contar_otros_activos(codigo: str) -> int:
+    """Cantidad de squads activos distintos de ``codigo``."""
+    return await Aplicacion.find(
+        Aplicacion.activa == True, Aplicacion.codigo != codigo  # noqa: E712
+    ).count()
 
 
 @router.post("", response_model=AplicacionOut, status_code=status.HTTP_201_CREATED)
@@ -68,14 +92,16 @@ async def crear(
     usuario: Usuario = permiso("aplicaciones.crear"),
 ) -> AplicacionOut:
     """Crea una aplicación nueva y provisiona su estructura base."""
-    codigo = datos.codigo.strip().lower()
-    if not codigo:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El código es obligatorio")
+    codigo = datos.codigo  # ya normalizado y validado por el esquema
+    nombre = datos.nombre.strip()
+    if not nombre:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El nombre es obligatorio")
     if await Aplicacion.find_one(Aplicacion.codigo == codigo):
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe un squad con ese código")
+    await _validar_nombre_unico(nombre)
     app = await Aplicacion(
         codigo=codigo,
-        nombre=datos.nombre.strip(),
+        nombre=nombre,
         descripcion=datos.descripcion.strip(),
         iteraciones=datos.iteraciones.strip(),
         creada_por=str(usuario.id),
@@ -95,7 +121,11 @@ async def editar(
     if app is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Squad no encontrado")
     if datos.nombre is not None:
-        app.nombre = datos.nombre.strip()
+        nombre = datos.nombre.strip()
+        if not nombre:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "El nombre es obligatorio")
+        await _validar_nombre_unico(nombre, excluir_codigo=app.codigo)
+        app.nombre = nombre
     if datos.descripcion is not None:
         app.descripcion = datos.descripcion.strip()
     if datos.iteraciones is not None:
@@ -115,6 +145,12 @@ async def cambiar_estado(
     app = await Aplicacion.find_one(Aplicacion.codigo == codigo)
     if app is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Squad no encontrado")
+    if not datos.activa and app.activa:
+        if await _contar_otros_activos(app.codigo) == 0:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "No se puede desactivar el último squad activo",
+            )
     app.activa = datos.activa
     app.marcar_actualizado()
     await app.save()

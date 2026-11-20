@@ -1,9 +1,10 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Aviso, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, Tarjeta } from '../components/ui'
+import client from '../api/client'
 import Modal from '../components/Modal'
 import { useLista, useEstados } from '../api/hooks'
 import { useAplicacion } from '../context/AplicacionContext'
@@ -17,6 +18,7 @@ import SeccionBitacora from './requerimiento-detalle/SeccionBitacora'
 import SeccionEntregas from './requerimiento-detalle/SeccionEntregas'
 import FormularioEntrega from './requerimiento-detalle/FormularioEntrega'
 import { useFormularioEntrega } from './requerimiento-detalle/useFormularioEntrega'
+import { calcularEstadosOfrecidos } from './requerimiento-detalle/estadosOfrecidos'
 import { usePersonasDelSquad } from './requerimiento-detalle/usePersonasDelSquad'
 import { useRequerimientoDetalle } from './requerimiento-detalle/useRequerimientoDetalle'
 import SeccionDatosGenerales, { ID_FORMULARIO_DATOS_GENERALES } from './requerimiento-detalle/SeccionDatosGenerales'
@@ -37,6 +39,14 @@ export default function RequerimientoDetalle() {
   const { datos: personas } = useLista<Persona>('/personas')
   const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
   const { estadosReq, estadosEnt } = useEstados()
+
+  // Mapa {estado: [siguientes permitidos]}; una sola carga. Si falla, se ofrecen todos.
+  const [transiciones, setTransiciones] = useState<Record<string, string[]> | null>(null)
+  useEffect(() => {
+    client.get<Record<string, string[]>>('/requerimientos/transiciones')
+      .then((r) => setTransiciones(r.data))
+      .catch(() => setTransiciones(null))
+  }, [])
 
   const detalle = useRequerimientoDetalle(reqId, {
     modoConsolidado,
@@ -86,11 +96,9 @@ export default function RequerimientoDetalle() {
     analistaId: campos.valores.analistaId,
   })
 
-  function cambiarSquad(codigo: string): void {
-    campos.actualizar('squadId', codigo)
-    campos.actualizar('scrumId', '')
-    campos.actualizar('analistaId', '')
-  }
+  // Estados a ofrecer: el actual + los siguientes permitidos + los personalizados
+  // (fuera del mapa de transiciones). Si no hay mapa, se ofrecen todos.
+  const estadosOfrecidos = calcularEstadosOfrecidos(req?.estado, estadosReq, transiciones)
 
   if (!req) {
     return <div className="text-slate-500">{aviso || 'Cargando…'}</div>
@@ -126,7 +134,7 @@ export default function RequerimientoDetalle() {
                 value={req.estado}
                 onChange={(e) => detalle.transicion(e.target.value)}
               >
-                {estadosReq.map((s) => <option key={s} value={s}>{s}</option>)}
+                {estadosOfrecidos.map((s) => <option key={s} value={s}>{s}</option>)}
               </Selector>
             ) : (
               <Chip tono="neutro">{req.estado}</Chip>
@@ -147,7 +155,18 @@ export default function RequerimientoDetalle() {
         }
       />
 
-      {aviso && <Aviso tono="error">{aviso}</Aviso>}
+      {aviso && (
+        <Aviso tono="error">
+          <span className="flex flex-wrap items-center gap-3">
+            <span>{aviso}</span>
+            {detalle.hayConflicto && (
+              <Boton variante="secundario" tamano="sm" onClick={() => void detalle.recargarTrasConflicto()}>
+                Recargar (se descartan los cambios sin guardar)
+              </Boton>
+            )}
+          </span>
+        </Aviso>
+      )}
       {ok && <Aviso tono="exito">{ok}</Aviso>}
 
       {/* Bento: fila superior Datos generales (1/2) + columna Resumen/Liquidación
@@ -163,7 +182,6 @@ export default function RequerimientoDetalle() {
             onGuardadoIdAzure={detalle.recargar}
             puedeEditarAnalista={puedeEditarAnalista}
             onGuardadoAnalista={detalle.recargar}
-            squads={squads}
             resolverNombreSquad={resolverNombreSquad}
             ltHitss={ltHitss}
             ltEpm={ltEpm}
@@ -173,7 +191,6 @@ export default function RequerimientoDetalle() {
             personasSquad={personasSquad}
             scrumAsignado={scrumAsignado}
             analistaAsignado={analistaAsignado}
-            onCambiarSquad={cambiarSquad}
             onSubmit={detalle.guardar}
           />
         </div>

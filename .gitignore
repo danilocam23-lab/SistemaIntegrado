@@ -42,3 +42,8 @@ graphify-out/
 
 # Pendiente de borrar (node_modules incompleto)
 _to_delete/
+
+# Respaldos de base de datos (contienen hashes y secretos)
+bat/backup_*.gz
+*.gz
+respaldos/

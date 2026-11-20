@@ -11,16 +11,15 @@ import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import { TIPIFICACIONES, TIPOS_COSTO } from '../constantes'
 import { AreaTexto, Boton, Campo, Selector } from '../components/ui'
-import type { Aplicacion, Persona } from '../types'
+import type { Persona } from '../types'
 
 export default function RequerimientoNuevo() {
   const navigate = useNavigate()
   const { tienePermiso } = useAuth()
-  const { modoConsolidado } = useAplicacion()
+  const { modoConsolidado, activa, aplicaciones: squads } = useAplicacion()
   const puedeCrear = tienePermiso('requerimientos.crear')
   const puedeCrearConsolidado = tienePermiso('consolidado.ver') && puedeCrear
   const { datos: personas } = useLista<Persona>('/personas')
-  const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
   const { estadosReq } = useEstados()
 
   const [codigoSc, setCodigoSc] = useState('')
@@ -37,12 +36,18 @@ export default function RequerimientoNuevo() {
   const [seguimiento, setSeguimiento] = useState('')
   const [seguimientoEpm, setSeguimientoEpm] = useState('')
   const [tipificacion, setTipificacion] = useState('')
-  const [aplicacionDestino, setAplicacionDestino] = useState('')
   const [aviso, setAviso] = useState('')
+  const [enviando, setEnviando] = useState(false)
 
-  // Líderes técnicos por rol; el Scrum se filtra por el squad seleccionado.
-  const ltHitss = personas.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS')
-  const ltEpm = personas.filter((p) => p.activo && p.rol_operativo === 'LT_EPM')
+  // Regla de negocio: squad == aplicación. En modo normal el squad es el activo y no
+  // se puede cambiar; en consolidado el único selector "Squad" fija también el destino.
+  useEffect(() => {
+    if (!modoConsolidado && activa) setSquadId(activa)
+  }, [modoConsolidado, activa])
+  const aplicacionDestino = squadId
+  const sinEstadoInicial = estadosReq.length === 0
+  const formularioBloqueado = !puedeCrear || (modoConsolidado && !puedeCrearConsolidado)
+
   const squadNombre = squads.find((s) => s.codigo === squadId)?.nombre
 
   // `personas` (useLista('/personas')) solo trae quienes pertenecen al squad
@@ -56,10 +61,19 @@ export default function RequerimientoNuevo() {
       setPersonasSquad([])
       return
     }
+    // `cancelado` descarta la respuesta si el squad cambió mientras volaba la petición.
+    let cancelado = false
     client.get<Persona[]>('/personas', { headers: { 'X-Aplicacion': squadId } })
-      .then((r) => setPersonasSquad(r.data))
-      .catch(() => setPersonasSquad([]))
+      .then((r) => { if (!cancelado) setPersonasSquad(r.data) })
+      .catch(() => { if (!cancelado) setPersonasSquad([]) })
+    return () => { cancelado = true }
   }, [squadId])
+
+  // Líderes técnicos por rol. Con squad elegido salen de sus personas; en consolidado
+  // `personas` mezcla todas las aplicaciones, así que no se usa de respaldo.
+  const baseLt = squadId && personasSquad.length > 0 ? personasSquad : (modoConsolidado ? [] : personas)
+  const ltHitss = baseLt.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS')
+  const ltEpm = baseLt.filter((p) => p.activo && p.rol_operativo === 'LT_EPM')
 
   const scrums = (personasSquad.length > 0 ? personasSquad : personas).filter(
     (p) => p.activo && p.rol_operativo === 'SCRUM' && (!squadNombre || (p.squads ?? []).includes(squadNombre)),
@@ -72,12 +86,15 @@ export default function RequerimientoNuevo() {
 
   function cambiarSquad(valor: string): void {
     setSquadId(valor)
+    setLtHitssId('')
+    setLtEpmId('')
     setScrumId('')
     setAnalistaId('')
   }
 
   async function crear(e: FormEvent): Promise<void> {
     e.preventDefault()
+    if (enviando) return
     const confirmarFormulario = analitica.prepararEnvioFormulario('requerimiento_nuevo')
     setAviso('')
     if (!puedeCrear) {
@@ -85,15 +102,25 @@ export default function RequerimientoNuevo() {
       return
     }
 
-    // En modo consolidado debe elegir un squad destino
-    if (modoConsolidado && !aplicacionDestino) {
-      setAviso('En modo "Todos los squads" debes seleccionar el squad destino del requerimiento.')
+    if (modoConsolidado && !puedeCrearConsolidado) {
+      setAviso('La creación en modo consolidado requiere permisos de consolidado y creación.')
+      return
+    }
+    if (!squadId) {
+      setAviso(modoConsolidado
+        ? 'En modo "Todos los squads" debes seleccionar el squad del requerimiento.'
+        : 'No hay un squad activo seleccionado.')
+      return
+    }
+    if (sinEstadoInicial) {
+      setAviso('No hay un estado inicial configurado para los requerimientos. Revisa la configuración de estados.')
       return
     }
 
     // Override del header X-Aplicacion cuando estamos en modo consolidado
     const config = modoConsolidado ? { headers: { 'X-Aplicacion': aplicacionDestino } } : {}
 
+    setEnviando(true)
     try {
       const resp = await client.post<{ id: string }>('/requerimientos', {
         codigo_req: codigoReq,
@@ -101,7 +128,7 @@ export default function RequerimientoNuevo() {
         solicitud: {
           codigo_sc: codigoSc,
           tipo_costo: tipoCosto,
-          squad_id: squadId || null,
+          squad_id: squadId,
           lt_hitss_id: ltHitssId || null,
           lt_epm_id: ltEpmId || null,
           scrum_id: scrumId || null,
@@ -118,6 +145,8 @@ export default function RequerimientoNuevo() {
       navigate(`/requerimientos/${resp.data.id}`)
     } catch (err) {
       setAviso(mensajeError(err))
+    } finally {
+      setEnviando(false)
     }
   }
 
@@ -138,32 +167,14 @@ export default function RequerimientoNuevo() {
         </div>
       )}
 
+      {sinEstadoInicial && (
+        <div className="aviso aviso-alerta">
+          No hay estados de requerimiento configurados, por lo que todavía no se pueden crear requerimientos.
+        </div>
+      )}
+
       <form data-analytics-form="requerimiento_nuevo" onSubmit={crear} className="tarjeta tarjeta-pad">
-        <fieldset disabled={!puedeCrear} className="space-y-0">
-        {modoConsolidado && (
-          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-            <label className="text-sm">
-              <span className="mb-1 block font-semibold text-blue-800">
-                Squad destino <span className="text-red-500">*</span>
-              </span>
-              <p className="mb-2 text-xs text-blue-600">
-                Estás en modo "Todos los squads". Selecciona el squad al que pertenecerá este requerimiento.
-              </p>
-              <Selector
-                data-analytics-id="requerimiento.squad_destino"
-                value={aplicacionDestino}
-                onChange={(e) => setAplicacionDestino(e.target.value)}
-                required
-                className="w-full"
-              >
-                <option value="">— Seleccionar squad destino —</option>
-                {squads.filter((s) => s.activa).map((s) => (
-                  <option key={s.codigo} value={s.codigo}>{s.nombre}</option>
-                ))}
-              </Selector>
-            </label>
-          </div>
-        )}
+        <fieldset disabled={formularioBloqueado} className="space-y-0">
         <h2 className="etiqueta-sup mb-3">
           Datos generales
         </h2>
@@ -178,11 +189,18 @@ export default function RequerimientoNuevo() {
             className="w-full">
             {TIPOS_COSTO.map((t) => <option key={t} value={t}>{t}</option>)}
           </Selector>
-          <Selector data-analytics-id="requerimiento.squad" etiqueta="Squad" value={squadId} onChange={(e) => cambiarSquad(e.target.value)}
-            className="w-full">
-            <option value="">— Seleccionar —</option>
-            {squads.filter((s) => s.activa).map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}
-          </Selector>
+          {modoConsolidado ? (
+            <Selector data-analytics-id="requerimiento.squad" etiqueta="Squad *" value={squadId} onChange={(e) => cambiarSquad(e.target.value)}
+              required className="w-full">
+              <option value="">— Seleccionar squad —</option>
+              {squads.map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}
+            </Selector>
+          ) : (
+            <Selector data-analytics-id="requerimiento.squad" etiqueta="Squad" value={squadId} onChange={() => undefined}
+              disabled className="w-full">
+              <option value={squadId}>{squadNombre ?? squadId}</option>
+            </Selector>
+          )}
           <Selector data-analytics-id="requerimiento.lt_hitss" etiqueta="Líder técnico" value={ltHitssId} onChange={(e) => setLtHitssId(e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
@@ -227,8 +245,9 @@ export default function RequerimientoNuevo() {
           La cantidad de entregas inicia en 0 y se calcula automáticamente al registrar
           entregas en el requerimiento.
         </p>
-        <Boton data-analytics-id="requerimiento.crear" variante="primario" type="submit" className="mt-4">
-          Crear requerimiento
+        <Boton data-analytics-id="requerimiento.crear" variante="primario" type="submit" className="mt-4"
+          disabled={enviando || sinEstadoInicial}>
+          {enviando ? 'Creando…' : 'Crear requerimiento'}
         </Boton>
         </fieldset>
       </form>

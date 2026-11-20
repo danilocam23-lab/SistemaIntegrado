@@ -5,7 +5,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.documents.enums import (
     AnsResultado,
@@ -13,6 +13,14 @@ from app.documents.enums import (
     Tipificacion,
     TipoCosto,
 )
+
+
+def _texto_no_vacio(valor: str) -> str:
+    """Recorta espacios y rechaza cadenas vacías (códigos que identifican registros)."""
+    limpio = valor.strip()
+    if not limpio:
+        raise ValueError("No puede estar vacío")
+    return limpio
 
 
 class SolicitudIn(BaseModel):
@@ -33,6 +41,11 @@ class SolicitudIn(BaseModel):
     tecnologia: str | None = None
     tarifa_id: str | None = None
 
+    @field_validator("codigo_sc")
+    @classmethod
+    def _validar_codigo_sc(cls, valor: str) -> str:
+        return _texto_no_vacio(valor)
+
 
 class RequerimientoIn(BaseModel):
     """Datos para crear un requerimiento completo (con su solicitud embebida)."""
@@ -41,7 +54,7 @@ class RequerimientoIn(BaseModel):
     nombre: str | None = None
     solicitud: SolicitudIn
     estado: str
-    total_horas_estimadas: Decimal | None = None
+    total_horas_estimadas: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     horas_siguiente_anio: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     fecha_entrega_comprometida_siguiente_anio: datetime | None = None
     fecha_real_entrega_siguiente_anio: datetime | None = None
@@ -52,7 +65,7 @@ class RequerimientoIn(BaseModel):
     seguimiento: str | None = None
     seguimiento_epm: str | None = None
     tipificacion: Tipificacion | None = None
-    monto_pactado: Decimal | None = None
+    monto_pactado: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     acta_trabajo: str | None = None
     id_azure_hitss: int | None = None
     cantidad_entregas: int = 0
@@ -61,14 +74,26 @@ class RequerimientoIn(BaseModel):
     fecha_inicio: datetime | None = None
     fecha_fin: datetime | None = None
 
+    @field_validator("codigo_req")
+    @classmethod
+    def _validar_codigo_req(cls, valor: str) -> str:
+        return _texto_no_vacio(valor)
+
 
 class RequerimientoUpdate(BaseModel):
-    """Campos editables de un requerimiento existente; todos opcionales."""
+    """Campos editables de un requerimiento existente; todos opcionales.
+
+    ``cantidad_entregas`` no es editable (se calcula con las entregas) y, si llega,
+    se ignora. ``actualizado_en`` es opcional: el valor que el cliente leyó, para
+    detectar ediciones concurrentes (concurrencia optimista); no se persiste.
+    """
+
+    actualizado_en: datetime | None = None
 
     nombre: str | None = None
     solicitud: SolicitudIn | None = None
     estado: str | None = None
-    total_horas_estimadas: Decimal | None = None
+    total_horas_estimadas: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     horas_siguiente_anio: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     fecha_entrega_comprometida_siguiente_anio: datetime | None = None
     fecha_real_entrega_siguiente_anio: datetime | None = None
@@ -79,10 +104,9 @@ class RequerimientoUpdate(BaseModel):
     seguimiento: str | None = None
     seguimiento_epm: str | None = None
     tipificacion: Tipificacion | None = None
-    monto_pactado: Decimal | None = None
+    monto_pactado: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
     acta_trabajo: str | None = None
     id_azure_hitss: int | None = None
-    cantidad_entregas: int | None = None
     categoria_id: str | None = None
     developers_asignados: list[str] | None = None
     fecha_inicio: datetime | None = None

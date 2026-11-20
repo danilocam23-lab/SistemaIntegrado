@@ -2,21 +2,23 @@
 # SPDX-License-Identifier: MIT
 
 """Router de requerimientos — núcleo del dominio de liquidación."""
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Literal
 
 from beanie.operators import In
 from bson import ObjectId
 from bson.errors import InvalidId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError
 
+from app.api.personas import _persona_visible
 from app.documents.aplicacion import Aplicacion
 from app.documents.bitacora import Bitacora
-from app.documents.enums import Tipificacion
+from app.documents.enums import EstadoRequerimiento, Tipificacion
 from app.documents.estimacion import Estimacion
+from app.documents.persona import Persona
 from app.documents.requerimiento import Entrega, Requerimiento, Solicitud
 from app.documents.usuario import Usuario
 from app.middleware.aplicacion import ContextoAplicacion, contexto_aplicacion, contexto_escritura
@@ -36,6 +38,10 @@ from app.security.deps import (
 from app.services.ans import ANSService
 from app.services.auditoria import RutaAuditada
 from app.services.liquidacion import LiquidacionService
+from app.services.state_machine import (
+    TRANSICIONES_REQUERIMIENTO,
+    puede_transitar_requerimiento,
+)
 
 router = APIRouter(prefix="/requerimientos", tags=["requerimientos"], route_class=RutaAuditada)
 
@@ -48,13 +54,16 @@ PERM_VER_SIGUIENTE_ANIO = "requerimientos.horas_siguiente_anio.ver"
 PERM_EDITAR_SIGUIENTE_ANIO = "requerimientos.horas_siguiente_anio.editar"
 
 
-def _salida(req: Requerimiento, ver_siguiente_anio: bool) -> dict:
-    """Redacta solo la respuesta, conservando el alias JSON del identificador."""
-    return req.model_dump(
-        mode="json",
-        by_alias=True,
-        exclude=set() if ver_siguiente_anio else set(CAMPOS_SIGUIENTE_ANIO),
-    )
+def _salida(req: Requerimiento, ver_siguiente_anio: bool, incluir_entregas: bool = True) -> dict:
+    """Redacta solo la respuesta, conservando el alias JSON del identificador.
+
+    Con ``incluir_entregas=False`` (modo resumen) omite ``entregas``; la
+    ``cantidad_entregas`` sigue viajando.
+    """
+    excluir: set[str] = set() if ver_siguiente_anio else set(CAMPOS_SIGUIENTE_ANIO)
+    if not incluir_entregas:
+        excluir.add("entregas")
+    return req.model_dump(mode="json", by_alias=True, exclude=excluir)
 
 
 async def _salida_autorizada(req: Requerimiento, usuario: Usuario) -> dict:
@@ -94,6 +103,140 @@ async def _registrar_bitacora(
 
 def _asegurar_utc(fecha: datetime) -> datetime:
     return fecha if fecha.tzinfo is not None else fecha.replace(tzinfo=UTC)
+
+
+MSG_MODIFICADO = "El requerimiento fue modificado por otra persona; recarga"
+
+# Rol operativo que debe tener la persona de cada campo de la solicitud.
+ROLES_PERSONA_SOLICITUD: dict[str, frozenset[str]] = {
+    "lt_hitss_id": frozenset({"LT_HITSS"}),
+    "lt_epm_id": frozenset({"LT_EPM"}),
+    "scrum_id": frozenset({"SCRUM"}),
+    "analista_requerimientos_id": frozenset({"SCRUM", "AR/QA"}),
+}
+ETIQUETAS_PERSONA = {
+    "lt_hitss_id": "LT HITSS",
+    "lt_epm_id": "LT EPM",
+    "scrum_id": "Scrum",
+    "analista_requerimientos_id": "Analista de requerimientos",
+}
+
+
+def _instante(fecha: datetime) -> datetime:
+    """Instante en UTC, con precisión de milisegundos (la de MongoDB).
+
+    Mongo guarda fechas sin zona (UTC) y trunca a milisegundos: dos valores que
+    representan el mismo instante deben compararse como iguales.
+    """
+    utc = _asegurar_utc(fecha).astimezone(UTC)
+    return utc.replace(microsecond=utc.microsecond // 1000 * 1000)
+
+
+def _normalizar_valor(valor: object) -> object:
+    """Normaliza un valor para detectar cambios reales (sin falsos positivos)."""
+    if valor is None or valor == "":
+        return None
+    if isinstance(valor, datetime):
+        return _instante(valor)
+    if isinstance(valor, Decimal):
+        return valor.normalize()
+    if isinstance(valor, float):
+        return Decimal(str(valor)).normalize()
+    return valor
+
+
+def _cambio_real(viejo: object, nuevo: object) -> bool:
+    return _normalizar_valor(viejo) != _normalizar_valor(nuevo)
+
+
+def _texto_valor(valor: object) -> str:
+    return str(valor) if valor is not None else ""
+
+
+def _normalizar_estado(estado: str) -> str:
+    return estado.strip().upper()
+
+
+_ESTADOS_BASE: dict[str, EstadoRequerimiento] = {
+    _normalizar_estado(e.value): e for e in EstadoRequerimiento
+}
+
+
+def _validar_transicion_estado(actual: str | None, nuevo: str | None) -> None:
+    """Aplica la máquina de estados solo si ambos estados son del enum base.
+
+    Los estados son configurables por despliegue: si alguno no pertenece al enum
+    no hay reglas que aplicar y se permite el cambio.
+    """
+    if not actual or not nuevo:
+        return
+    # Se compara normalizado (strip + mayúsculas) para que "entrega cargada " no
+    # eluda la máquina de estados.
+    a_norm, n_norm = _normalizar_estado(actual), _normalizar_estado(nuevo)
+    if a_norm == n_norm:
+        return
+    a, n = _ESTADOS_BASE.get(a_norm), _ESTADOS_BASE.get(n_norm)
+    if a is None or n is None:
+        return
+    if not puede_transitar_requerimiento(a, n):
+        permitidos = sorted(e.value for e in TRANSICIONES_REQUERIMIENTO.get(a, set()))
+        detalle = ", ".join(permitidos) if permitidos else "ninguno (estado final)"
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Transición de estado no permitida: '{actual}' → '{nuevo}'. "
+            f"Estados siguientes permitidos: {detalle}",
+        )
+
+
+def _validar_squad(squad_id: str | None, ctx: ContextoAplicacion) -> None:
+    """El squad de la solicitud es la propia aplicación activa (o está vacío)."""
+    if squad_id and squad_id != ctx.codigo:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"El squad '{squad_id}' no coincide con la aplicación activa '{ctx.codigo}'. "
+            "Para mover un requerimiento entre squads usa reasignar-aplicacion.",
+        )
+
+
+async def _validar_personas(
+    ctx: ContextoAplicacion, nuevos: dict, anteriores: dict | None = None
+) -> None:
+    """Valida las personas de la solicitud solo cuando su id cambia (o en crear).
+
+    Debe existir en la aplicación, estar activa y tener el rol operativo del campo.
+    """
+    for campo, roles in ROLES_PERSONA_SOLICITUD.items():
+        persona_id = nuevos.get(campo)
+        if not persona_id:
+            continue
+        if anteriores is not None and anteriores.get(campo) == persona_id:
+            continue
+        etiqueta = ETIQUETAS_PERSONA[campo]
+        try:
+            oid = ObjectId(persona_id)
+        except (InvalidId, TypeError):
+            oid = None
+        persona = await Persona.get(oid) if oid is not None else None
+        # Mismo criterio que GET /personas: propia de la app o con membresía (ADR-0010).
+        if persona is not None and not _persona_visible(persona, ctx):
+            persona = None
+        if persona is None:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"{etiqueta}: la persona '{persona_id}' no existe en esta aplicación",
+            )
+        if not persona.activo:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"{etiqueta}: la persona '{persona.nombre}' está inactiva",
+            )
+        if persona.rol_operativo not in roles:
+            esperado = " o ".join(sorted(roles))
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"{etiqueta}: '{persona.nombre}' tiene rol {persona.rol_operativo} "
+                f"y se requiere {esperado}",
+            )
 
 
 def _calcular_duracion(segmentos: list[dict]) -> list[dict]:
@@ -191,26 +334,59 @@ async def _buscar(ctx: ContextoAplicacion, codigo_req: str) -> Requerimiento:
             return req
     except InvalidId:
         pass
-    # Fallback: buscar por codigo_req (compatibilidad con URLs antiguas)
-    req = await Requerimiento.find_one({**ctx.filtro(), "codigo_req": codigo_req})
-    if req is None:
+    # Fallback: buscar por codigo_req (compatibilidad con URLs antiguas). El mismo
+    # REQ puede existir en varios squads/SC (o en varias apps en consolidado): si hay
+    # más de uno no se elige uno arbitrario.
+    candidatos = await Requerimiento.find(
+        {**ctx.filtro(), "codigo_req": codigo_req}
+    ).limit(2).to_list()
+    if not candidatos:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Requerimiento no encontrado")
-    return req
+    if len(candidatos) > 1:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Código REQ ambiguo, usa el id")
+    return candidatos[0]
 
 
 @router.get("", dependencies=[permiso("requerimientos.ver")])
 async def listar(
+    response: Response,
     estado: str | None = None,
+    limite: int | None = Query(default=None, ge=1, le=500),
+    desde: int | None = Query(default=None, ge=0),
+    resumen: bool = False,
     ctx: ContextoAplicacion = Depends(contexto_aplicacion),
     usuario: Usuario = Depends(usuario_actual),
 ):
-    """Lista requerimientos de la aplicación activa (o de todas en modo consolidado)."""
+    """Lista requerimientos de la aplicación activa (o de todas en modo consolidado).
+
+    Sin ``limite``/``desde`` devuelve la lista completa, como siempre. Con alguno de
+    ellos pagina y añade la cabecera ``X-Total-Count``. ``resumen=true`` omite las
+    ``entregas`` (queda ``cantidad_entregas``).
+    """
     consulta = ctx.filtro()
     if estado is not None:
         consulta["estado"] = estado
     ver_siguiente_anio = await tiene_permiso(usuario, PERM_VER_SIGUIENTE_ANIO)
-    requerimientos = await Requerimiento.find(consulta).sort("-creado_en").to_list()
-    return [_salida(req, ver_siguiente_anio) for req in requerimientos]
+    paginado = limite is not None or desde is not None
+    busqueda = Requerimiento.find(consulta)
+    if paginado:
+        response.headers["X-Total-Count"] = str(await busqueda.count())
+        busqueda = busqueda.sort("-creado_en", "-_id").skip(desde or 0)
+        if limite is not None:
+            busqueda = busqueda.limit(limite)
+    else:
+        busqueda = busqueda.sort("-creado_en")
+    requerimientos = await busqueda.to_list()
+    return [_salida(req, ver_siguiente_anio, not resumen) for req in requerimientos]
+
+
+@router.get("/transiciones", dependencies=[permiso("requerimientos.ver")])
+async def listar_transiciones() -> dict[str, list[str]]:
+    """Transiciones permitidas por la máquina de estados: ``{estado: [siguientes]}``."""
+    return {
+        actual.value: sorted(n.value for n in siguientes)
+        for actual, siguientes in TRANSICIONES_REQUERIMIENTO.items()
+    }
 
 
 @router.post("/ans/calcular")
@@ -250,6 +426,11 @@ async def crear(
 ):
     """Crea un requerimiento con su solicitud embebida."""
     await _validar_edicion_siguiente_anio(datos, usuario)
+    _validar_squad(datos.solicitud.squad_id, ctx)
+    if not datos.solicitud.squad_id:
+        # squad == aplicación: sin squad informado se asume el de la aplicación activa.
+        datos.solicitud.squad_id = ctx.codigo
+    await _validar_personas(ctx, datos.solicitud.model_dump())
     existe = await Requerimiento.find_one({
         **ctx.filtro(),
         "codigo_req": datos.codigo_req,
@@ -336,8 +517,33 @@ async def actualizar(
     await _validar_edicion_siguiente_anio(datos, usuario)
     req = await _buscar(ctx, codigo_req)
     cambios = datos.model_dump(exclude_unset=True)
+    leido_en = cambios.pop("actualizado_en", None)
+    if leido_en is not None and _instante(leido_en) != _instante(req.actualizado_en):
+        raise HTTPException(status.HTTP_409_CONFLICT, MSG_MODIFICADO)
     solo_siguiente_anio = bool(cambios) and cambios.keys() <= CAMPOS_SIGUIENTE_ANIO
-    solicitud = cambios.pop("solicitud", None)
+    # Merge con la solicitud existente: solo se pisan los campos enviados.
+    solicitud_enviada = cambios.pop("solicitud", None)
+    solicitud: dict | None = None
+    if solicitud_enviada is not None:
+        if (
+            "squad_id" in solicitud_enviada
+            and not solicitud_enviada["squad_id"]
+            and req.solicitud.squad_id
+        ):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "No se puede borrar el squad de la solicitud",
+            )
+        solicitud = {**req.solicitud.model_dump(), **solicitud_enviada}
+        if solicitud.get("squad_id") != req.solicitud.squad_id:
+            _validar_squad(solicitud.get("squad_id"), ctx)
+        await _validar_personas(ctx, solicitud, req.solicitud.model_dump())
+    if "estado" in cambios:
+        if not (cambios["estado"] or "").strip():
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "El estado no puede estar vacío"
+            )
+        _validar_transicion_estado(req.estado, cambios["estado"])
 
     # Registrar qué campos cambiaron para la bitácora
     etiquetas = {
@@ -373,17 +579,17 @@ async def actualizar(
             "analista_requerimientos_id": "Analista de requerimientos",
         }
         for k, label in sol_etiquetas.items():
-            v_old = str(sol_vieja.get(k) or "")
-            v_new = str(solicitud.get(k) or "")
-            if v_old != v_new:
+            v_old = _texto_valor(sol_vieja.get(k))
+            v_new = _texto_valor(solicitud.get(k))
+            if _cambio_real(sol_vieja.get(k), solicitud.get(k)):
                 detalle_cambios.append(f"{label}: '{v_old}' → '{v_new}'")
         req.solicitud = Solicitud(**solicitud)
 
     for campo, valor in cambios.items():
         viejo = getattr(req, campo, None)
-        texto_viejo = str(viejo) if viejo is not None else ""
-        texto_nuevo = str(valor) if valor is not None else ""
-        if texto_viejo != texto_nuevo:
+        texto_viejo = _texto_valor(viejo)
+        texto_nuevo = _texto_valor(valor)
+        if _cambio_real(viejo, valor):
             label = etiquetas.get(campo, campo)
             if campo in CAMPOS_SIGUIENTE_ANIO:
                 # La bitácora tiene lectura independiente: nunca copiar estos valores.
@@ -412,7 +618,26 @@ async def actualizar(
             req.ans_acta = None
 
     req.marcar_actualizado()
-    await req.save()
+    if leido_en is not None:
+        # Reclamo atómico: solo una de dos peticiones con la misma marca puede ganar.
+        nuevo = _instante(req.actualizado_en)
+        previo = _instante(leido_en)
+        if nuevo <= previo:
+            nuevo = previo + timedelta(milliseconds=1)
+        reclamo = await Requerimiento.get_pymongo_collection().update_one(
+            {"_id": req.id, "actualizado_en": previo.replace(tzinfo=None)},
+            {"$set": {"actualizado_en": nuevo.replace(tzinfo=None)}},
+        )
+        if reclamo.matched_count == 0:
+            raise HTTPException(status.HTTP_409_CONFLICT, MSG_MODIFICADO)
+        req.actualizado_en = nuevo
+    try:
+        await req.save()
+    except DuplicateKeyError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Ya existe un requerimiento con el mismo Código REQ, Squad y SC",
+        ) from exc
     desc = f"Requerimiento {req.codigo_req} actualizado"
     if detalle_cambios:
         desc += ": " + "; ".join(detalle_cambios)
@@ -487,6 +712,11 @@ async def actualizar_analista_requerimientos(
     if viejo == datos.analista_requerimientos_id:
         return await _salida_autorizada(req, usuario)  # sin bitácora vacía
 
+    await _validar_personas(
+        ctx,
+        {"analista_requerimientos_id": datos.analista_requerimientos_id},
+        {"analista_requerimientos_id": viejo},
+    )
     req.solicitud.analista_requerimientos_id = datos.analista_requerimientos_id
     req.marcar_actualizado()
     await req.save()
@@ -554,6 +784,7 @@ async def transicion(
     """Cambia el estado del requerimiento validando la máquina de estados."""
     req = await _buscar(ctx, codigo_req)
     anterior = req.estado
+    _validar_transicion_estado(anterior, datos.nuevo_estado)
     req.estado = datos.nuevo_estado
     req.marcar_actualizado()
     await req.save()
@@ -585,6 +816,10 @@ async def guardar_entrega(
     payload_entrega = datos.model_dump()
     if (payload_entrega.get("estado") or "").upper() != "APROBADA":
         payload_entrega["mes_aprobacion"] = None
+    if entrega_anterior is not None:
+        # EntregaIn no trae estos campos: se conservan los de la entrega reemplazada.
+        payload_entrega["se_levanto_ans"] = entrega_anterior.se_levanto_ans
+        payload_entrega["observaciones_ans"] = entrega_anterior.observaciones_ans
     nueva = Entrega(**payload_entrega)
 
     # Calcular ANS: si hay fecha_recepcion, comparar con fecha_comprometida
@@ -752,6 +987,27 @@ async def eliminar(
     await req.delete()
 
 
+async def _buscar_unico_consolidado(ctx: ContextoAplicacion, codigo: str) -> Requerimiento:
+    """Busca por ``_id``, ``codigo_req`` o ``solicitud.codigo_sc`` dentro de ``ctx.codigos``.
+
+    404 si no hay coincidencias; 409 si el código coincide con más de un documento
+    (en ese caso hay que pasar el id).
+    """
+    try:
+        por_id = await Requerimiento.find_one({**ctx.filtro(), "_id": ObjectId(codigo)})
+    except InvalidId:
+        por_id = None
+    if por_id is not None:
+        return por_id
+    for campo in ("codigo_req", "solicitud.codigo_sc"):
+        candidatos = await Requerimiento.find({**ctx.filtro(), campo: codigo}).limit(2).to_list()
+        if len(candidatos) > 1:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Código REQ ambiguo, usa el id")
+        if candidatos:
+            return candidatos[0]
+    raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo} no encontrado")
+
+
 @router.post("/{codigo_req}/reasignar-aplicacion")
 async def reasignar_aplicacion(
     codigo_req: str,
@@ -780,21 +1036,33 @@ async def reasignar_aplicacion(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             f"La aplicación '{nueva_aplicacion}' no existe",
         )
+    if not aplicacion_destino.activa:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"La aplicación '{nueva_aplicacion}' está inactiva",
+        )
+    if nueva_aplicacion not in ctx.codigos:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Sin acceso a la aplicación de destino"
+        )
 
     # Buscar solo entre las aplicaciones autorizadas para este usuario (S4)
-    req = await Requerimiento.find_one({**ctx.filtro(), "codigo_req": codigo_req})
-    # Si no, buscar por SC
-    if not req:
-        req = await Requerimiento.find_one({**ctx.filtro(), "solicitud.codigo_sc": codigo_req})
-
-    if not req:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo_req} no encontrado")
+    req = await _buscar_unico_consolidado(ctx, codigo_req)
 
     app_anterior = req.aplicacion_id
     req.aplicacion_id = nueva_aplicacion
+    # squad == aplicación: el squad de la solicitud sigue a la aplicación.
+    req.solicitud.squad_id = nueva_aplicacion
     req.marcar_actualizado()
-    await req.save()
-    
+    try:
+        await req.save()
+    except DuplicateKeyError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Ya existe en la aplicación de destino un requerimiento con el mismo "
+            "Código REQ, Squad y SC",
+        ) from exc
+
     await _registrar_bitacora(
         nueva_aplicacion,
         str(req.id),
@@ -802,7 +1070,7 @@ async def reasignar_aplicacion(
         f"Reasignado de {app_anterior} a {nueva_aplicacion}",
         usuario,
     )
-    
+
     return {
         "codigo_req": req.codigo_req,
         "codigo_sc": req.solicitud.codigo_sc,
@@ -829,19 +1097,10 @@ async def diagnostico(
     # Buscar en modo consolidado, pero solo entre las aplicaciones
     # autorizadas para este usuario, nunca en la colección entera (S5).
     if ctx.modo_consolidado:
-        # Primero buscar por codigo_req
-        req = await Requerimiento.find_one({**ctx.filtro(), "codigo_req": codigo_req})
-        # Si no, buscar por SC
-        if not req:
-            req = await Requerimiento.find_one(
-                {**ctx.filtro(), "solicitud.codigo_sc": codigo_req}
-            )
+        req = await _buscar_unico_consolidado(ctx, codigo_req)
     else:
         req = await _buscar(ctx, codigo_req)
-    
-    if not req:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Requerimiento {codigo_req} no encontrado")
-    
+
     return {
         "_id": str(req.id),
         "codigo_req": req.codigo_req,

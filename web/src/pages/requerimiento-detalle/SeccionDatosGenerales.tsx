@@ -7,7 +7,7 @@ import client from '../../api/client'
 import { mensajeError } from '../../api/hooks'
 import { AreaTexto, Aviso, Boton, Campo, Selector } from '../../components/ui'
 import { TIPOS_COSTO } from '../../constantes'
-import type { Aplicacion, Persona, Requerimiento } from '../../types'
+import type { Persona, Requerimiento } from '../../types'
 import type { CamposRequerimiento } from './useRequerimientoDetalle'
 
 /** Id del `<form>`; el botón "Guardar cambios" del encabezado lo referencia
@@ -212,7 +212,6 @@ interface Props {
   onGuardadoIdAzure: () => void
   puedeEditarAnalista: boolean
   onGuardadoAnalista: () => void
-  squads: Aplicacion[]
   resolverNombreSquad: (id: string) => string
   ltHitss: Persona[]
   ltEpm: Persona[]
@@ -222,7 +221,6 @@ interface Props {
   personasSquad: Persona[]
   scrumAsignado: Persona | null
   analistaAsignado: Persona | null
-  onCambiarSquad: (codigo: string) => void
   onSubmit: (e: FormEvent) => void
 }
 
@@ -234,7 +232,6 @@ export default function SeccionDatosGenerales({
   onGuardadoIdAzure,
   puedeEditarAnalista,
   onGuardadoAnalista,
-  squads,
   resolverNombreSquad,
   ltHitss,
   ltEpm,
@@ -244,7 +241,6 @@ export default function SeccionDatosGenerales({
   personasSquad,
   scrumAsignado,
   analistaAsignado,
-  onCambiarSquad,
   onSubmit,
 }: Props) {
   const { valores, actualizar } = campos
@@ -280,27 +276,24 @@ export default function SeccionDatosGenerales({
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Squad</span>
-          {/* Muestra el nombre resuelto (importados: id→nombre, manuales: codigo→nombre) */}
-          <div className="mb-1 rounded border bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+          {/* Solo lectura: mover entre squads es la acción admin reasignar-aplicacion.
+              Muestra el nombre resuelto (importados: id→nombre, manuales: codigo→nombre) */}
+          <div className="rounded border bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
             {resolverNombreSquad(valores.squadId)}
           </div>
-          {puedeEditarReq && (
-            <Selector
-              data-analytics-id="requerimiento.squad"
-              value={valores.squadId}
-              onChange={(e) => onCambiarSquad(e.target.value)}
-              className="w-full"
-            >
-              <option value="">— Cambiar squad —</option>
-              {squads.filter((s) => s.activa).map((s) => <option key={s.codigo} value={s.codigo}>{s.nombre}</option>)}
-            </Selector>
-          )}
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Líder técnico</span>
           <Selector data-analytics-id="requerimiento.lt_hitss" value={valores.ltHitssId} onChange={(e) => actualizar('ltHitssId', e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
+            {valores.ltHitssId && !ltHitss.some((p) => p.id === valores.ltHitssId) && (
+              <option value={valores.ltHitssId}>
+                {personas.find((p) => p.id === valores.ltHitssId)?.nombre
+                  ?? personasSquad.find((p) => p.id === valores.ltHitssId)?.nombre
+                  ?? valores.ltHitssId}
+              </option>
+            )}
             {ltHitss.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </Selector>
         </label>
@@ -309,6 +302,13 @@ export default function SeccionDatosGenerales({
           <Selector data-analytics-id="requerimiento.lt_epm" value={valores.ltEpmId} onChange={(e) => actualizar('ltEpmId', e.target.value)}
             className="w-full">
             <option value="">— Seleccionar —</option>
+            {valores.ltEpmId && !ltEpm.some((p) => p.id === valores.ltEpmId) && (
+              <option value={valores.ltEpmId}>
+                {personas.find((p) => p.id === valores.ltEpmId)?.nombre
+                  ?? personasSquad.find((p) => p.id === valores.ltEpmId)?.nombre
+                  ?? valores.ltEpmId}
+              </option>
+            )}
             {ltEpm.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </Selector>
         </label>

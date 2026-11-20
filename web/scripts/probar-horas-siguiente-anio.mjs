@@ -115,7 +115,9 @@ async function montarHook(opciones = {}, cambiosReq = {}) {
 
 function arbolPagina(detalle, permisos) {
   const modulos = {
-    react: { useState: valor => [valor, () => {}] },
+    // La página ahora usa useEffect + client para cargar /requerimientos/transiciones.
+    react: { useState: valor => [valor, () => {}], useEffect: () => {} },
+    '../api/client': { default: { get: () => new Promise(() => {}) } },
     'react-router-dom': { Link: 'enlace', useParams: () => ({ reqId: 'REQ-PRUEBA' }) },
     '../context/AuthContext': { useAuth: () => ({
       tienePermiso: permiso => ({

@@ -2,7 +2,11 @@
 # SPDX-License-Identifier: MIT
 
 """Esquemas del módulo de administración de aplicaciones."""
-from pydantic import BaseModel
+import re
+
+from pydantic import BaseModel, field_validator
+
+PATRON_CODIGO = re.compile(r"^[a-z0-9][a-z0-9_-]{1,31}$")
 
 
 class AplicacionIn(BaseModel):
@@ -12,6 +16,20 @@ class AplicacionIn(BaseModel):
     nombre: str
     descripcion: str = ""
     iteraciones: str = ""
+
+    @field_validator("codigo")
+    @classmethod
+    def _validar_codigo(cls, valor: str) -> str:
+        """Normaliza (strip + minúsculas) y valida el código del squad."""
+        codigo = valor.strip().lower()
+        if codigo.startswith("__"):
+            raise ValueError("El código no puede empezar por '__' (prefijo reservado)")
+        if not PATRON_CODIGO.fullmatch(codigo):
+            raise ValueError(
+                "Código inválido: use de 2 a 32 caracteres en minúsculas, dígitos, '-' o '_', "
+                "empezando por letra o dígito"
+            )
+        return codigo
 
 
 class AplicacionUpdate(BaseModel):

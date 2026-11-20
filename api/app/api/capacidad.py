@@ -109,6 +109,15 @@ async def _personas_validas(ids: set[str], ctx: ContextoAplicacion) -> None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Persona no encontrada")
 
 
+def _validar_squad_aplicacion(squad_id: str | None, ctx: ContextoAplicacion) -> None:
+    """squad == aplicación: un ``squad_id`` informado debe ser el de la aplicación activa."""
+    if squad_id and squad_id != ctx.codigo:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"El squad '{squad_id}' no coincide con la aplicación activa '{ctx.codigo}'",
+        )
+
+
 async def _validar_destino(
     ctx: ContextoAplicacion,
     scope: str,
@@ -169,6 +178,7 @@ async def crear(
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     _: Usuario = permiso("capacidades.editar"),
 ):
+    _validar_squad_aplicacion(datos.squad_id, ctx)
     await _validar_destino(ctx, datos.scope, datos.persona_id, datos.squad_id, datos.mes)
     capacidad = Capacidad(aplicacion_id=ctx.codigo, **datos.model_dump())
     await capacidad.insert()
@@ -231,6 +241,8 @@ async def actualizar(
                 status.HTTP_422_UNPROCESSABLE_ENTITY, f"{campo} no admite null"
             )
     nuevo = {**capacidad.model_dump(include={"scope", "persona_id", "squad_id", "mes"}), **cambios}
+    if "squad_id" in cambios:
+        _validar_squad_aplicacion(cambios["squad_id"], ctx)
     # Solo se revalida la clave si cambia (no bloquea editar filas con duplicados históricos).
     if any(c in cambios for c in ("scope", "persona_id", "squad_id", "mes")):
         await _validar_destino(

@@ -69,7 +69,8 @@ async def test_prioridad_no_toca_otra_aplicacion(cliente, fabrica_aplicacion, fa
 async def test_consolidado_rechaza_escrituras(cliente, fabrica_aplicacion, fabrica_usuario):
     _, _, persona, cat, _ = await _escenario(fabrica_aplicacion, fabrica_usuario)
     app2 = await fabrica_aplicacion()
-    _, token = await fabrica_usuario([app2.codigo, "otra-app"], permisos=EDITOR)
+    app3 = await fabrica_aplicacion()
+    _, token = await fabrica_usuario([app2.codigo, app3.codigo], permisos=EDITOR)
     h = headers_con_token(token, CONSOLIDADO)
     fake = "0" * 24
     cuerpo = _cuerpo(persona, cat)

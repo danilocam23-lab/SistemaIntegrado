@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useState } from 'react'
-import client from '../../api/client'
+import client, { CONSOLIDADO } from '../../api/client'
+import { useAplicacion } from '../../context/AplicacionContext'
+import { useAuth } from '../../context/AuthContext'
 import type { Aplicacion, Persona, Squad } from '../../types'
 
 interface Parametros {
@@ -17,7 +19,8 @@ interface Parametros {
  * Resolución del squad seleccionado y de las personas que dependen de él
  * (Líder técnico Hitss/EPM, Scrum y Analista de requerimientos).
  *
- * - `ltHitss` / `ltEpm` se derivan de la lista `personas` (squad "ambiente").
+ * - `ltHitss` / `ltEpm` se derivan de `personasSquad` cuando ya cargó y, si no,
+ *   de la lista `personas` (squad "ambiente").
  * - `scrums` / `analistas` se derivan de `personasSquad` (personas del squad
  *   elegido en el formulario), con opción de respaldo por id.
  * - `resolverNombreSquad` / `squadNombre` resuelven el nombre tanto si
@@ -26,6 +29,8 @@ interface Parametros {
  *   que usan las escrituras en modo consolidado.
  */
 export function usePersonasDelSquad({ squadId, personas, squads, scrumId, analistaId }: Parametros) {
+  const { modoConsolidado, activa, aplicaciones } = useAplicacion()
+  const { tienePermiso } = useAuth()
   // Squads reales (colección squads) cargados en modo __todas__ para resolver
   // squad_id importados (que son id del Squad document, no código de aplicación)
   const [squadsDoc, setSquadsDoc] = useState<Squad[]>([])
@@ -36,9 +41,6 @@ export function usePersonasDelSquad({ squadId, personas, squads, scrumId, analis
         client.get<Squad[]>('/squads').then((r) => setSquadsDoc(r.data)).catch(() => {})
       })
   }, [])
-
-  const ltHitss = personas.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS')
-  const ltEpm = personas.filter((p) => p.activo && p.rol_operativo === 'LT_EPM')
 
   // Resuelve nombre del squad desde ambas fuentes:
   // - Aplicaciones (para registros creados manualmente: squad_id = codigo de app)
@@ -72,10 +74,24 @@ export function usePersonasDelSquad({ squadId, personas, squads, scrumId, analis
       setPersonasSquad([])
       return
     }
+    // `cancelado` descarta la respuesta si el squad cambió mientras volaba la petición.
+    let cancelado = false
     client.get<Persona[]>('/personas', { headers: { 'X-Aplicacion': codigoAppSquad } })
-      .then((r) => setPersonasSquad(r.data))
-      .catch(() => setPersonasSquad([]))
+      .then((r) => { if (!cancelado) setPersonasSquad(r.data) })
+      .catch(() => { if (!cancelado) setPersonasSquad([]) })
+    return () => { cancelado = true }
   }, [codigoAppSquad])
+
+  // Líderes técnicos: del squad elegido cuando ya se cargó; si no, de la lista ambiente.
+  const baseLt = personasSquad.length > 0 ? personasSquad : personas
+  const ltHitss = baseLt.filter((p) => p.activo && p.rol_operativo === 'LT_HITSS')
+  const ltEpm = baseLt.filter((p) => p.activo && p.rol_operativo === 'LT_EPM')
+
+  // Cabecera para consultar una persona suelta: '__todas__' solo si el usuario puede
+  // verlo (con un solo squad y sin consolidado.ver daría 403); si no, el squad del
+  // requerimiento o el activo.
+  const puedeConsolidado = modoConsolidado || tienePermiso('consolidado.ver') || aplicaciones.length > 1
+  const cabeceraPersona = puedeConsolidado ? CONSOLIDADO : (codigoAppSquad || activa)
 
   // Cuando ya se cargaron las personas del squad correcto (server-side ya filtra por
   // aplicacion_id o squads), no hace falta repetir el filtro por nombre de squad; solo
@@ -106,10 +122,12 @@ export function usePersonasDelSquad({ squadId, personas, squads, scrumId, analis
       setScrumAsignado(null)
       return
     }
-    client.get<Persona>(`/personas/${scrumId}`, { headers: { 'X-Aplicacion': '__todas__' } })
-      .then((r) => setScrumAsignado(r.data))
-      .catch(() => setScrumAsignado(null))
-  }, [scrumId, personas, personasSquad])
+    let cancelado = false
+    client.get<Persona>(`/personas/${scrumId}`, { headers: { 'X-Aplicacion': cabeceraPersona } })
+      .then((r) => { if (!cancelado) setScrumAsignado(r.data) })
+      .catch(() => { if (!cancelado) setScrumAsignado(null) })
+    return () => { cancelado = true }
+  }, [scrumId, personas, personasSquad, cabeceraPersona])
 
   // Respaldo equivalente para el analista de requerimientos asignado.
   const [analistaAsignado, setAnalistaAsignado] = useState<Persona | null>(null)
@@ -122,10 +140,12 @@ export function usePersonasDelSquad({ squadId, personas, squads, scrumId, analis
       setAnalistaAsignado(null)
       return
     }
-    client.get<Persona>(`/personas/${analistaId}`, { headers: { 'X-Aplicacion': '__todas__' } })
-      .then((r) => setAnalistaAsignado(r.data))
-      .catch(() => setAnalistaAsignado(null))
-  }, [analistaId, personas, personasSquad])
+    let cancelado = false
+    client.get<Persona>(`/personas/${analistaId}`, { headers: { 'X-Aplicacion': cabeceraPersona } })
+      .then((r) => { if (!cancelado) setAnalistaAsignado(r.data) })
+      .catch(() => { if (!cancelado) setAnalistaAsignado(null) })
+    return () => { cancelado = true }
+  }, [analistaId, personas, personasSquad, cabeceraPersona])
 
   return {
     squadNombre,

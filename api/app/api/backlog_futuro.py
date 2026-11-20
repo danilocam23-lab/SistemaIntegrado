@@ -13,6 +13,20 @@ from app.security.deps import permiso
 router = APIRouter(prefix="/backlog-futuro", tags=["backlog_futuro"])
 
 
+def _datos_con_squad(datos: "BacklogFuturoIn", ctx: ContextoAplicacion) -> dict:
+    """Cuerpo a persistir: squad == aplicación. Vacío se fuerza al de la aplicación activa;
+    otro distinto es 422."""
+    cuerpo = datos.model_dump()
+    squad = (cuerpo.get("squad_id") or "").strip()
+    if squad and squad != ctx.codigo:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"El squad '{squad}' no coincide con la aplicación activa '{ctx.codigo}'",
+        )
+    cuerpo["squad_id"] = ctx.codigo
+    return cuerpo
+
+
 class BacklogFuturoIn(BaseModel):
     nombre_iniciativa: str
     tipo_demanda: str | None = None
@@ -37,7 +51,7 @@ async def crear(
     ctx: ContextoAplicacion = Depends(contexto_escritura),
     _: Usuario = permiso("backlog_futuro.editar"),
 ):
-    item = BacklogFuturo(aplicacion_id=ctx.codigo, **datos.model_dump())
+    item = BacklogFuturo(aplicacion_id=ctx.codigo, **_datos_con_squad(datos, ctx))
     await item.insert()
     return item
 
@@ -52,7 +66,7 @@ async def actualizar(
     item = await BacklogFuturo.get(item_id)
     if item is None or item.aplicacion_id != ctx.codigo:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Registro de backlog futuro no encontrado")
-    for campo, valor in datos.model_dump().items():
+    for campo, valor in _datos_con_squad(datos, ctx).items():
         setattr(item, campo, valor)
     item.marcar_actualizado()
     await item.save()

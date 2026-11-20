@@ -12,7 +12,7 @@ from fastapi import Depends, Header, HTTPException, Request, status
 
 from app.documents.aplicacion import Aplicacion
 from app.documents.usuario import Usuario
-from app.security.deps import es_admin_app, es_superadmin, tiene_permiso, usuario_actual
+from app.security.deps import es_superadmin, tiene_permiso, usuario_actual
 from app.security.rbac import PERM_CONSOLIDADO_VER
 
 CONSOLIDADO = "__todas__"
@@ -48,17 +48,16 @@ class ContextoAplicacion:
 
 
 async def codigos_autorizados(usuario: Usuario) -> list[str]:
-    """Códigos de aplicación a los que el usuario tiene acceso.
+    """Códigos de squads ACTIVOS a los que el usuario tiene acceso.
 
-    El superadmin ve todas las aplicaciones activas; el resto, solo las asignadas.
+    El superadmin ve todos los squads activos; el resto (incluido ``admin_app``),
+    solo los asignados que sigan activos. Un ``admin_app`` sin squads no tiene ninguno.
     """
+    activas = await Aplicacion.find(Aplicacion.activa == True).to_list()  # noqa: E712
     if await es_superadmin(usuario):
-        apps = await Aplicacion.find(Aplicacion.activa == True).to_list()  # noqa: E712
-        return [a.codigo for a in apps]
-    if await es_admin_app(usuario) and len(usuario.aplicaciones_codigos) == 0:
-        apps = await Aplicacion.find(Aplicacion.activa == True).to_list()  # noqa: E712
-        return [a.codigo for a in apps]
-    return list(usuario.aplicaciones_codigos)
+        return [a.codigo for a in activas]
+    activos = {a.codigo for a in activas}
+    return [c for c in usuario.aplicaciones_codigos if c in activos]
 
 
 # Alias por compatibilidad con los importadores previos del nombre privado.
@@ -87,9 +86,11 @@ async def contexto_aplicacion(
         request.state.contexto_aplicacion = ctx
         return ctx
 
-    if x_aplicacion not in autorizadas:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin acceso a esa aplicación")
     app = await Aplicacion.find_one(Aplicacion.codigo == x_aplicacion)
+    if x_aplicacion not in autorizadas:
+        if app is not None and not app.activa:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "El squad está inactivo")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin acceso a esa aplicación")
     nombre = app.nombre if app else None
     ctx = ContextoAplicacion([x_aplicacion], modo_consolidado=False, nombre_app=nombre)
     request.state.contexto_aplicacion = ctx

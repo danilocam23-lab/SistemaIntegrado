@@ -122,12 +122,17 @@ export interface Requerimiento {
   id_azure_hitss: number | null
   monto_pactado: number | null
   cantidad_entregas: number
+  /** Marca de última modificación; se reenvía al guardar para detectar ediciones concurrentes. */
+  actualizado_en?: string | null
   categoria_id: string | null
   developers_asignados: string[]
   fecha_inicio: string | null
   fecha_fin: string | null
   entregas: Entrega[]
 }
+
+/** Respuesta de `/requerimientos?resumen=true`: igual que `Requerimiento` pero sin `entregas`. */
+export type RequerimientoResumen = Omit<Requerimiento, 'entregas'>
 
 export interface Tarifa {
   id: string

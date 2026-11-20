@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLista } from '../../api/hooks'
-import type { Asignacion, Configuracion, Festivo, Requerimiento } from '../../types'
+import type { Asignacion, Configuracion, Festivo, RequerimientoResumen } from '../../types'
 import { HORAS_MES_POR_DEFECTO } from '../asignaciones/carga'
 import { ESTADO_ACTIVO } from '../asignaciones/tipos'
 import { fechaKey } from '../dashboard-backlog/utilidades'
@@ -23,7 +23,7 @@ export function useDatosCapacidades() {
   const lFestivos = useLista<Festivo>('/festivos')
   const lConfiguracion = useLista<Configuracion>('/configuracion')
   const lAsignaciones = useLista<Asignacion>('/asignaciones')
-  const lRequerimientos = useLista<Requerimiento>('/requerimientos')
+  const lRequerimientos = useLista<RequerimientoResumen>('/requerimientos?resumen=true')
 
   const cargando = lCapacidades.cargando || lPersonas.cargando
   const yaCargo = useRef(false)

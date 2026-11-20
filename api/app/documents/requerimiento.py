@@ -13,7 +13,7 @@ from typing import Annotated, Any
 
 from bson import Decimal128
 from pydantic import BaseModel, BeforeValidator, Field, PlainSerializer
-from pymongo import ASCENDING, IndexModel
+from pymongo import ASCENDING, DESCENDING, IndexModel
 
 from app.documents.base import DocumentoOperativo
 from app.documents.enums import (
@@ -140,5 +140,9 @@ class Requerimiento(DocumentoOperativo):
             IndexModel(
                 [("aplicacion_id", ASCENDING), ("estado", ASCENDING)],
                 name="ix_app_estado",
+            ),
+            IndexModel(
+                [("aplicacion_id", ASCENDING), ("creado_en", DESCENDING)],
+                name="ix_app_creado_en",
             ),
         ]

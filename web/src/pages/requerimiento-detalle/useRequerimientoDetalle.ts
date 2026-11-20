@@ -94,6 +94,7 @@ export function useRequerimientoDetalle(
   const [eventos, setEventos] = useState<EventoBitacora[]>([])
   const [aviso, setAviso] = useState('')
   const [ok, setOk] = useState('')
+  const [hayConflicto, setHayConflicto] = useState(false)
   const [guardandoHorasSiguienteAnio, setGuardandoHorasSiguienteAnio] = useState(false)
   const [errorHorasSiguienteAnio, setErrorHorasSiguienteAnio] = useState('')
   const [okHorasSiguienteAnio, setOkHorasSiguienteAnio] = useState('')
@@ -206,10 +207,14 @@ export function useRequerimientoDetalle(
     setGuardandoHorasSiguienteAnio(true)
     try {
       const cuerpo = cuerpoHorasSiguienteAnio()
-      await client.patch(`/requerimientos/${reqId}/horas-siguiente-anio`, cuerpo, config)
+      const respuesta = await client.patch<Requerimiento>(`/requerimientos/${reqId}/horas-siguiente-anio`, cuerpo, config)
       // No recargar: reemplazar el formulario completo borraría otros borradores.
-      // Tampoco usar el req completo de la respuesta para pisar estado ajeno.
-      setReq((actual) => actual ? { ...actual, ...cuerpo } : actual)
+      // Tampoco usar el req completo de la respuesta para pisar estado ajeno; solo se
+      // toma `actualizado_en` para que el siguiente PUT no dé un 409 espurio.
+      const nuevaMarca = respuesta?.data?.actualizado_en
+      setReq((actual) => actual
+        ? { ...actual, ...cuerpo, ...(nuevaMarca ? { actualizado_en: nuevaMarca } : {}) }
+        : actual)
       setOkHorasSiguienteAnio('Horas para el siguiente año guardadas.')
       try {
         const { data } = await client.get<EventoBitacora[]>(`/bitacora?entidad_id=${req.id}`)
@@ -229,6 +234,7 @@ export function useRequerimientoDetalle(
     const confirmarFormulario = analitica.prepararEnvioFormulario('requerimiento_general')
     setAviso('')
     setOk('')
+    setHayConflicto(false)
     if (!puedeEditarReq) {
       setAviso('No tienes permiso para editar requerimientos.')
       return
@@ -236,6 +242,7 @@ export function useRequerimientoDetalle(
     if (!req) return
     try {
       await client.put(`/requerimientos/${reqId}`, {
+        actualizado_en: req.actualizado_en ?? null,
         nombre: valores.nombreActa || null,
         solicitud: {
           ...req.solicitud,
@@ -263,7 +270,16 @@ export function useRequerimientoDetalle(
       recargar()
     } catch (err) {
       setAviso(mensajeError(err))
+      // Concurrencia: no se recarga solo, para no perder lo tecleado; el usuario decide.
+      if ((err as { response?: { status?: number } })?.response?.status === 409) setHayConflicto(true)
     }
+  }
+
+  /** Descarta lo tecleado y vuelve a cargar el requerimiento tras un conflicto de edición. */
+  async function recargarTrasConflicto(): Promise<void> {
+    setHayConflicto(false)
+    setAviso('')
+    await recargar()
   }
 
   async function guardarTipificacionReq(): Promise<void> {
@@ -302,6 +318,8 @@ export function useRequerimientoDetalle(
       recargar()
     } catch (err) {
       setAviso(mensajeError(err))
+      // Transición rechazada (p. ej. 409): se recarga para que el selector vuelva al estado real.
+      void recargar()
     }
   }
 
@@ -402,6 +420,8 @@ export function useRequerimientoDetalle(
     setAviso,
     campos: { valores, actualizar } as CamposRequerimiento,
     recargar,
+    hayConflicto,
+    recargarTrasConflicto,
     guardar,
     guardarHorasSiguienteAnio,
     guardandoHorasSiguienteAnio,

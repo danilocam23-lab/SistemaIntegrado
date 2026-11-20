@@ -549,13 +549,18 @@ class ImportadorExcel:
             req = Requerimiento(
                 aplicacion_id=self.aplicacion_id,
                 codigo_req=codigo_req,
-                solicitud=Solicitud(codigo_sc=codigo_sc),
+                solicitud=Solicitud(codigo_sc=codigo_sc, squad_id=self.aplicacion_id),
                 estado=estado,
                 entregas=[],
             )
 
         # Detectar cambios ANTES de hidratar para conteo preciso
-        req_campos_cambian = creado or bool(self._requerimiento_diff(req, payload))
+        req_campos_cambian = (
+            creado
+            or bool(self._requerimiento_diff(req, payload))
+            # Corrige el squad_id heredado (id de Squad) al código de la aplicación.
+            or req.solicitud.squad_id != self.aplicacion_id
+        )
 
         await self._hidratar_solicitud(req.solicitud, payload)
         self._hidratar_requerimiento(req, payload)
@@ -616,7 +621,10 @@ class ImportadorExcel:
         sol.aplicativo_id = await self._aplicativo(
             self._campo(payload, "APLICACIÓN", "APLICACION"), direccion
         )
-        sol.squad_id = await self._squad(payload.get("Squad"), payload.get("LT HITSS"))
+        # Se mantiene el alta del documento Squad del Excel, pero la solicitud guarda el
+        # código de la aplicación: squad == aplicación.
+        await self._squad(payload.get("Squad"), payload.get("LT HITSS"))
+        sol.squad_id = self.aplicacion_id
         sol.lt_hitss_id = await self._persona(payload.get("LT HITSS"), "LT_HITSS")
         sol.lt_epm_id = await self._persona(payload.get("LT EPM"), "LT_EPM")
         sol.scrum_id = await self._persona(payload.get("SCRUM"), "SCRUM")

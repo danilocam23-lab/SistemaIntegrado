@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
+import { useAplicacion } from '../context/AplicacionContext'
 import { useAuth } from '../context/AuthContext'
 import { Boton, EncabezadoPagina, Icono, Kpi } from '../components/ui'
 import ModalBacklogFuturo from './backlog-futuro/ModalBacklogFuturo'
@@ -15,9 +16,10 @@ import type { Aplicacion, BacklogFuturo, Persona, Requerimiento } from '../types
 export default function BacklogFuturoPage() {
   const { datos, error, recargar } = useLista<BacklogFuturo>('/backlog-futuro')
   const { datos: aplicaciones } = useLista<Aplicacion>('/aplicaciones')
-  const { datos: requerimientos } = useLista<Requerimiento>('/requerimientos')
+  const { datos: requerimientos } = useLista<Requerimiento>('/requerimientos?resumen=true')
   const { datos: personas } = useLista<Persona>('/personas')
   const { tienePermiso } = useAuth()
+  const { activa, modoConsolidado } = useAplicacion()
   const puedeEditar = tienePermiso('backlog_futuro.editar')
 
   const [modalAbierto, setModalAbierto] = useState(false)
@@ -133,8 +135,17 @@ export default function BacklogFuturoPage() {
   async function eliminar(item: BacklogFuturo): Promise<void> {
     if (!puedeEditar) return
     if (!window.confirm('¿Eliminar este registro del backlog futuro?')) return
-    await client.delete(`/backlog-futuro/${item.id}`, { headers: { 'X-Aplicacion': item.squad_id } })
-    recargar()
+    // Un squad_id legado puede no ser el código de una aplicación (daría 403): en ese caso
+    // se usa el squad activo, si lo hay.
+    const esCodigoConocido = aplicaciones.some((a) => a.codigo === item.squad_id)
+    const cabecera = esCodigoConocido || !activa || modoConsolidado ? item.squad_id : activa
+    setAviso('')
+    try {
+      await client.delete(`/backlog-futuro/${item.id}`, { headers: { 'X-Aplicacion': cabecera } })
+      recargar()
+    } catch (err) {
+      setAviso(mensajeError(err))
+    }
   }
 
   return (
@@ -152,6 +163,7 @@ export default function BacklogFuturoPage() {
       />
 
       {error && <div className="aviso aviso-error">{error}</div>}
+      {!modalAbierto && aviso && <div className="aviso aviso-error">{aviso}</div>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Kpi

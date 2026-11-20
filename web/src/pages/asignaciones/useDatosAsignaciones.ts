@@ -25,7 +25,7 @@ export function useDatosAsignaciones() {
   const lAsignaciones = useLista<AsignacionItem>('/asignaciones')
   const lPersonas = useLista<Persona>('/personas')
   const lCategorias = useLista<Categoria>('/categorias')
-  const lRequerimientos = useLista<Requerimiento>('/requerimientos')
+  const lRequerimientos = useLista<Requerimiento>('/requerimientos?resumen=true')
   const lConfiguracion = useLista<Configuracion>('/configuracion')
   const lBacklog = useLista<BacklogFuturo>('/backlog-futuro')
 

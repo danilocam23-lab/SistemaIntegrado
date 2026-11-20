@@ -475,9 +475,15 @@ async def test_patch_aislamiento_consolidado_y_sin_edicion_general(
 async def test_mutaciones_no_filtran_bloque_en_respuesta(
     cliente, fabrica_aplicacion, fabrica_usuario, metodo, sufijo, cuerpo,
 ):
+    from app.documents.persona import Persona
     from app.documents.requerimiento import Entrega
 
     app = await fabrica_aplicacion()
+    analista = await Persona(
+        aplicacion_id=app.codigo, nombre="Analista", rol_operativo="AR/QA"
+    ).insert()
+    if cuerpo and cuerpo.get("analista_requerimientos_id") == "analista-sintetico":
+        cuerpo = {"analista_requerimientos_id": str(analista.id)}
     req = await _crear(app.codigo, **BLOQUE, entregas=[Entrega(numero=1)])
     _, token = await fabrica_usuario([app.codigo], permisos=["requerimientos.editar"])
     argumentos = {"json": cuerpo} if cuerpo is not None else {}

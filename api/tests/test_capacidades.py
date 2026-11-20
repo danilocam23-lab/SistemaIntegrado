@@ -39,7 +39,8 @@ async def test_aislamiento_por_aplicacion(cliente, fabrica_aplicacion, fabrica_u
 
 async def test_consolidado_rechaza_escrituras(cliente, fabrica_aplicacion, fabrica_usuario):
     app, _, persona = await _escenario(fabrica_aplicacion, fabrica_usuario)
-    _, token = await fabrica_usuario([app.codigo, "otra-app"], permisos=EDITOR)
+    otra = await fabrica_aplicacion()
+    _, token = await fabrica_usuario([app.codigo, otra.codigo], permisos=EDITOR)
     h = headers_con_token(token, CONSOLIDADO)
     fake = "0" * 24
     assert (await cliente.post(URL, json=_cuerpo(persona), headers=h)).status_code == 409

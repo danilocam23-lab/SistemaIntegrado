@@ -12,6 +12,8 @@ interface AplicacionContextValue {
   aplicaciones: Aplicacion[]
   activa: string
   modoConsolidado: boolean
+  /** true cuando la carga de squads activos devolvió una lista vacía. */
+  sinSquads: boolean
   setActiva: (codigo: string) => void
   recargar: () => Promise<void>
 }
@@ -22,6 +24,7 @@ export function AplicacionProvider({ children }: { children: ReactNode }) {
   const { usuario } = useAuth()
   const [aplicaciones, setAplicaciones] = useState<Aplicacion[]>([])
   const [activa, setActivaState] = useState<string>(() => localStorage.getItem(APP_KEY) ?? '')
+  const [sinSquads, setSinSquads] = useState(false)
 
   function setActiva(codigo: string): void {
     // Los eventos pendientes quedan atribuidos a la aplicación anterior y salen ya.
@@ -31,12 +34,26 @@ export function AplicacionProvider({ children }: { children: ReactNode }) {
   }
 
   async function recargar(): Promise<void> {
-    const { data } = await client.get<Aplicacion[]>('/aplicaciones')
+    // Solo squads activos: nunca se ofrece ni se deja activo uno inactivo.
+    const { data: respuesta } = await client.get<Aplicacion[]>('/aplicaciones?incluir_inactivas=false')
+    const data = respuesta.filter((a) => a.activa !== false)
     setAplicaciones(data)
+    setSinSquads(data.length === 0)
     const guardada = localStorage.getItem(APP_KEY)
-    const puedeVerConsolidado = usuario?.permisos.includes('*') || usuario?.permisos.includes('consolidado.ver') || data.length > 1
+    if (data.length === 0) {
+      // Sin squads (admin sin asignaciones o todos inactivos): no queda ninguno activo.
+      // Se limpia también la clave guardada para no enviar un X-Aplicacion obsoleto.
+      if (guardada) {
+        vaciarRegistroUso()
+        localStorage.removeItem(APP_KEY)
+      }
+      setActivaState('')
+      return
+    }
+    // El modo consolidado solo se ofrece con más de un squad activo.
+    const puedeVerConsolidado = data.length > 1
     const valida = (guardada === CONSOLIDADO && puedeVerConsolidado) || data.some((a) => a.codigo === guardada)
-    if (!valida && data[0]) setActiva(data[0].codigo)
+    if (!valida) setActiva(data[0].codigo)
   }
 
   useEffect(() => {
@@ -50,6 +67,7 @@ export function AplicacionProvider({ children }: { children: ReactNode }) {
         aplicaciones,
         activa,
         modoConsolidado: activa === CONSOLIDADO,
+        sinSquads,
         setActiva,
         recargar,
       }}

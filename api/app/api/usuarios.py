@@ -9,7 +9,6 @@ from app.documents.usuario import Usuario
 from app.schemas.auth import UsuarioOut
 from app.schemas.usuario import CambioPasswordIn, UsuarioIn, UsuarioUpdate
 from app.security.deps import (
-    es_admin_app,
     es_superadmin,
     permiso,
     permisos_usuario,
@@ -41,7 +40,7 @@ async def _out(u: Usuario) -> UsuarioOut:
 @router.get("", response_model=list[UsuarioOut])
 async def listar(me: Usuario = permiso("admin.usuarios.ver")) -> list[UsuarioOut]:
     todos = await Usuario.find_all().to_list()
-    if not await es_superadmin(me) and not (await es_admin_app(me) and len(me.aplicaciones_codigos) == 0):
+    if not await es_superadmin(me):
         mis_apps = set(me.aplicaciones_codigos)
         todos = [
             u for u in todos
@@ -147,8 +146,7 @@ async def eliminar(
         clave_rol = rol.clave if rol else (usuario.rol or "viewer")
         if clave_rol in ("superadmin", "admin_app"):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "No puede eliminar accesos de administración global")
-        if not (await es_admin_app(me) and len(me.aplicaciones_codigos) == 0):
-            mis_apps = set(me.aplicaciones_codigos)
-            if not any(c in mis_apps for c in usuario.aplicaciones_codigos):
-                raise HTTPException(status.HTTP_403_FORBIDDEN, "No puede eliminar accesos fuera de sus squads")
+        mis_apps = set(me.aplicaciones_codigos)
+        if not any(c in mis_apps for c in usuario.aplicaciones_codigos):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "No puede eliminar accesos fuera de sus squads")
     await usuario.delete()
