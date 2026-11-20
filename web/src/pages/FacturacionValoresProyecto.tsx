@@ -6,6 +6,14 @@ import client from '../api/client'
 import { mensajeError, useLista } from '../api/hooks'
 import type { Requerimiento, Tarifa } from '../types'
 import { Aviso, EncabezadoPagina, Icono, Kpi, TablaScroll } from '../components/ui'
+import {
+  agruparPorMesAprobacion,
+  horasSeguras,
+  mapaTarifasPorRamificacion,
+  tarifasDuplicadasConflicto,
+  type FilaMesAprobacion,
+} from './facturacion-valores/agruparPorMesAprobacion'
+import ModalEntregasMes from './facturacion-valores/ModalEntregasMes'
 
 interface RegistroSoporte {
   Work_Order_ID: string
@@ -44,13 +52,9 @@ export default function FacturacionValoresProyecto() {
 
   const filasPorAno = useMemo(() => {
     const anoActual = String(new Date().getFullYear())
-    const tarifasSoporte = new Map(
-      tarifas
-        .filter((tarifa) => tarifa.ramificacion?.trim().toLowerCase() === 'soporte')
-        .map((tarifa) => [String(tarifa.anio), tarifa.valor_hora]),
-    )
+    const tarifasSoporte = mapaTarifasPorRamificacion(tarifas, 'soporte')
     const agrupadas = new Map<string, { wo: Set<string>; horas: number; valorHora: number | null }>()
-    registros.forEach((registro, indice) => {
+    registros.forEach((registro) => {
       const workOrder = registro.Work_Order_ID?.trim()
       if (!workOrder) return
 
@@ -62,7 +66,7 @@ export default function FacturacionValoresProyecto() {
         horas: 0,
         valorHora: tarifasSoporte.get(tieneAno ? ano : anoActual) ?? null,
       }
-      fila.wo.add(workOrder || `registro-${indice}`)
+      fila.wo.add(workOrder)
       fila.horas += numero(registro.Horas_Estimadas)
       agrupadas.set(ano, fila)
     })
@@ -75,11 +79,7 @@ export default function FacturacionValoresProyecto() {
 
   const filasEntregasPorAno = useMemo(() => {
     const anoActual = String(new Date().getFullYear())
-    const tarifasFabrica = new Map(
-      tarifas
-        .filter((tarifa) => tarifa.ramificacion?.trim().toLowerCase() === 'fábrica')
-        .map((tarifa) => [String(tarifa.anio), tarifa.valor_hora]),
-    )
+    const tarifasFabrica = mapaTarifasPorRamificacion(tarifas, 'fábrica')
     const agrupadas = new Map<string, { entregas: number; horas: number; valorHora: number | null }>()
     requerimientos.forEach((requerimiento) => {
       requerimiento.entregas?.forEach((entrega) => {
@@ -92,7 +92,7 @@ export default function FacturacionValoresProyecto() {
           valorHora: tarifasFabrica.get(tieneAno ? ano : anoActual) ?? null,
         }
         fila.entregas += 1
-        fila.horas += Number(entrega.horas ?? 0)
+        fila.horas += horasSeguras(entrega.horas)
         agrupadas.set(ano, fila)
       })
     })
@@ -105,11 +105,7 @@ export default function FacturacionValoresProyecto() {
 
   const filasEntregasPorEstado = useMemo(() => {
     const anoActual = String(new Date().getFullYear())
-    const tarifasFabrica = new Map(
-      tarifas
-        .filter((tarifa) => tarifa.ramificacion?.trim().toLowerCase() === 'fábrica')
-        .map((tarifa) => [String(tarifa.anio), tarifa.valor_hora]),
-    )
+    const tarifasFabrica = mapaTarifasPorRamificacion(tarifas, 'fábrica')
     const agrupadas = new Map<string, {
       division: string
       ano: string
@@ -133,7 +129,7 @@ export default function FacturacionValoresProyecto() {
           valorHora: tarifasFabrica.get(tieneAno ? ano : anoActual) ?? null,
         }
         fila.entregas += 1
-        fila.horas += Number(entrega.horas ?? 0)
+        fila.horas += horasSeguras(entrega.horas)
         agrupadas.set(clave, fila)
       })
     })
@@ -144,6 +140,25 @@ export default function FacturacionValoresProyecto() {
       return b.ano.localeCompare(a.ano)
     })
   }, [requerimientos, tarifas])
+
+  const [filaDetalle, setFilaDetalle] = useState<FilaMesAprobacion | null>(null)
+  const filasPorMesAprobacion = useMemo(
+    () => agruparPorMesAprobacion(requerimientos, tarifas),
+    [requerimientos, tarifas],
+  )
+  const totalesMesAprobacion = useMemo(() => ({
+    entregas: filasPorMesAprobacion.reduce((total, f) => total + f.entregas.length, 0),
+    horas: filasPorMesAprobacion.reduce((total, f) => total + f.horas, 0),
+    valorTotal: filasPorMesAprobacion.reduce(
+      (total, f) => total + (f.valorHora === null ? 0 : f.horas * f.valorHora),
+      0,
+    ),
+  }), [filasPorMesAprobacion])
+
+  const duplicadosTarifas = useMemo(
+    () => tarifasDuplicadasConflicto(tarifas, ['soporte', 'fábrica']),
+    [tarifas],
+  )
 
   const errorVisible = error || errorTarifas || errorRequerimientos
   const cargandoVisible = cargando || cargandoTarifas || cargandoRequerimientos
@@ -194,6 +209,14 @@ export default function FacturacionValoresProyecto() {
         descripcion="Valores de proyecto."
       />
       {errorVisible && <Aviso tono="error">{errorVisible}</Aviso>}
+      {duplicadosTarifas.length > 0 && (
+        <Aviso tono="alerta">
+          Hay tarifas duplicadas con valores distintos (se usa la última registrada):{' '}
+          {duplicadosTarifas
+            .map((d) => `${d.ramificacion === 'soporte' ? 'Soporte' : 'Fábrica'} ${d.anio} (${d.valores.join(' / ')})`)
+            .join('; ')}.
+        </Aviso>
+      )}
       <div className="grid gap-4 md:grid-cols-3">
         <Kpi rotulo="Dinero de soporte" valor={formatoMoneda(totales.valorTotal)} acento="#059669" />
         <Kpi
@@ -381,6 +404,73 @@ export default function FacturacionValoresProyecto() {
           </TablaScroll>
         </div>
       </div>
+      <div>
+        <h2 className="titulo-seccion mb-2">Entregas por mes de aprobación</h2>
+        <div className="tarjeta overflow-hidden">
+          <TablaScroll plano>
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th className="text-center">Año</th>
+                <th className="text-center">Mes de aprobación</th>
+                <th className="text-center">Cantidad de entregas</th>
+                <th className="text-center">Cantidad de horas</th>
+                <th className="text-center">Valor hora</th>
+                <th className="text-center">Valor total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cargandoVisible ? (
+                <tr>
+                  <td colSpan={6} className="p-3 text-center text-slate-400">Cargando…</td>
+                </tr>
+              ) : filasPorMesAprobacion.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-3 text-center text-slate-400">Sin registros</td>
+                </tr>
+              ) : (
+                filasPorMesAprobacion.map((fila) => (
+                  <tr key={fila.clave} className="text-center tabular-nums">
+                    <td className="font-semibold">{fila.ano}</td>
+                    <td>{fila.mes}</td>
+                    <td>
+                      {fila.entregas.length > 0 ? (
+                        <button
+                          type="button"
+                          className="enlace-accion"
+                          aria-label={`Ver detalle de ${fila.entregas.length} entregas de ${fila.mes} ${fila.ano}`}
+                          onClick={() => setFilaDetalle(fila)}
+                        >
+                          {fila.entregas.length}
+                        </button>
+                      ) : 0}
+                    </td>
+                    <td>{fila.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
+                    <td>{fila.valorHora === null ? '—' : formatoMoneda(fila.valorHora)}</td>
+                    <td>{fila.valorHora === null ? '—' : formatoMoneda(fila.horas * fila.valorHora)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {!cargandoVisible && filasPorMesAprobacion.length > 0 && (
+              <tfoot>
+                <tr className="border-t-2 border-marca-osc bg-slate-100 text-center font-bold tabular-nums">
+                  <td colSpan={2}>Totales</td>
+                  <td>{totalesMesAprobacion.entregas}</td>
+                  <td>{totalesMesAprobacion.horas.toLocaleString('es-CO', { maximumFractionDigits: 1 })}</td>
+                  <td>—</td>
+                  <td>{formatoMoneda(totalesMesAprobacion.valorTotal)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+          </TablaScroll>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">
+          Nota: el año se toma de <strong>F. aprobación</strong> (si falta, de F. comprometida). La fila <strong>Sin mes</strong> agrupa entregas APROBADA sin mes de aprobación.
+        </p>
+      </div>
+      <ModalEntregasMes fila={filaDetalle} onCerrar={() => setFilaDetalle(null)} formatoMoneda={formatoMoneda} />
     </div>
   )
 }
