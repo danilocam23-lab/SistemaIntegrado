@@ -64,6 +64,26 @@ await probar('Normaliza duplicados, desconocidas, tipos, JSON corrupto y columna
   }
 })
 
+await probar('Clave obsoleta motivoCierre guardada se descarta en silencio sin afectar el resto', () => {
+  for (const [catalogo, clavesConfig] of [[columnasReq, clavesReq], [columnasEntregas, clavesEntregas]]) {
+    assert.equal(claves(catalogo).includes('motivoCierre'), false)
+    const datos = [
+      config(clavesConfig.columnas, ['horas', 'motivoCierre', 'sc']),
+      config(clavesConfig.exportCampos, ['motivoCierre', 'codigoReq']),
+      config(clavesConfig.ordenColumnas, ['sc', 'motivoCierre', 'horas']),
+    ]
+    assert.deepEqual([...leerCamposActivos(datos, clavesConfig.columnas, catalogo)], ['horas', 'sc'])
+    assert.deepEqual([...leerCamposActivos(datos, clavesConfig.exportCampos, catalogo)], ['codigoReq'])
+    // Solo claves obsoletas: vuelve a los valores por defecto, nunca a una tabla vacía.
+    assert.deepEqual([...leerCamposActivos([config(clavesConfig.columnas, ['motivoCierre'])], clavesConfig.columnas, catalogo)],
+      claves(catalogo.filter(columna => columna.porDefecto)))
+    const orden = copia(leerOrdenColumnas(datos, clavesConfig.ordenColumnas, catalogo))
+    assert.equal(orden.includes('motivoCierre'), false)
+    assert.deepEqual(orden.filter(clave => ['sc', 'horas'].includes(clave)), ['sc', 'horas'])
+    assert.equal(orden.length, catalogo.length)
+  }
+})
+
 await probar('Posiciones visibles consecutivas, desplazamiento y ocultas sin alterar el resto', () => {
   const orden = ['a', 'oculta', 'b', 'c']
   const activas = new Set(['a', 'b', 'c'])
@@ -107,7 +127,7 @@ function tablaReq(datosConfig, adicionales = {}) {
 }
 
 await probar('Requerimientos: todas las históricas y extras intercaladas, celdas y totales alineados', () => {
-  const orden = ['entregasCount', 'motivoCierre', 'horas', ...claves(columnasReq).reverse()]
+  const orden = ['entregasCount', 'fechaLimite', 'horas', ...claves(columnasReq).reverse()]
   const normalizadas = normalizarOrdenColumnas(orden, columnasReq)
   const datos = [config(clavesReq.columnas, claves(columnasReq)), config(clavesReq.ordenColumnas, orden)]
   const html = escritorio(tablaReq(datos))
@@ -157,8 +177,8 @@ await probar('Requerimientos: métricas solas, muchas filas, nombres largos y ac
     ...req, id: `req-${indice}`, nombre: 'Nombre largo de integración '.repeat(15),
   }))
   const html = escritorio(tablaReq([
-    config(clavesReq.columnas, ['horas', 'nombreActa', 'motivoCierre', 'entregasCount']),
-    config(clavesReq.ordenColumnas, ['horas', 'motivoCierre', 'nombreActa', 'entregasCount']),
+    config(clavesReq.columnas, ['horas', 'nombreActa', 'fechaLimite', 'entregasCount']),
+    config(clavesReq.ordenColumnas, ['horas', 'fechaLimite', 'nombreActa', 'entregasCount']),
   ], {
     datosFiltrados: requerimientos, puedeEditar: false, puedeEliminar: false, puedeGestionarEstimaciones: false,
   }))
@@ -209,8 +229,8 @@ await probar('Reordenar mantiene los handlers de expandir, entregas, carga, esti
 })
 
 await probar('Subfilas completas: colSpan real, HU agrupadas, entregas y tablas internas sin reordenar', () => {
-  const datos = [config(clavesReq.columnas, ['horas', 'sc', 'entregasCount', 'motivoCierre']),
-    config(clavesReq.ordenColumnas, ['entregasCount', 'motivoCierre', 'sc', 'horas'])]
+  const datos = [config(clavesReq.columnas, ['horas', 'sc', 'entregasCount', 'fechaLimite']),
+    config(clavesReq.ordenColumnas, ['entregasCount', 'fechaLimite', 'sc', 'horas'])]
   const estimacion = { filas: [
     { numero: 1, historia_usuario: 'HU Pagos', epica_feature: 'Integraciones', horas_estimadas: 10, horas_totales: 11 },
     { numero: 2, historia_usuario: 'HU Pagos', epica_feature: 'Integraciones', horas_estimadas: 20, horas_totales: 22 },

@@ -96,6 +96,14 @@ export interface Entrega {
   facturacion?: Facturacion | null
 }
 
+/** Registro del historial de seguimiento EPM. */
+export interface SeguimientoEpm {
+  id: string
+  fecha: string
+  usuario: string
+  texto: string
+}
+
 export interface Requerimiento {
   id: string
   aplicacion_id: string
@@ -114,9 +122,11 @@ export interface Requerimiento {
   fecha_solicitud_acta: string | null
   fecha_limite: string | null
   ans_acta: string | null
-  motivo_cierre: string | null
   seguimiento: string | null
+  /** Espejo (solo lectura) del último texto de `seguimientos_epm`. */
   seguimiento_epm: string | null
+  /** Historial de seguimiento EPM, en orden de inserción. */
+  seguimientos_epm?: SeguimientoEpm[]
   tipificacion: 'HITSS' | 'EPM' | null
   acta_trabajo: string | null
   id_azure_hitss: number | null

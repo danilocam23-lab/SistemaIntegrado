@@ -17,6 +17,8 @@ export {
   Aviso,
 } from './primitivos'
 export { default as FiltroDesplegable } from './FiltroDesplegable'
+export { Pestanas, PanelPestana, usePestanaEnHash } from './Pestanas'
+export type { DefinicionPestana } from './Pestanas'
 export { Paginacion } from './Paginacion'
 export { Icono } from './Icono'
 export type { NombreIcono } from './Icono'

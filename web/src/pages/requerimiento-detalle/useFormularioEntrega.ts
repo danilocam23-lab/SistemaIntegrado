@@ -32,6 +32,24 @@ const VALORES_VACIOS: Omit<ValoresEntrega, 'estado'> = {
   numeroGarantia: null,
 }
 
+/** Cuerpo del POST de entrega a partir de los valores del formulario (mismo payload de siempre). */
+export function construirCuerpoEntrega(valores: ValoresEntrega): Record<string, unknown> {
+  return {
+    numero: Number(valores.numero),
+    horas: valores.horas ? Number(valores.horas) : null,
+    fecha_comprometida: valores.fecha || null,
+    fecha_recepcion: valores.fechaReal || null,
+    estado: valores.estado,
+    mes_aprobacion:
+      valores.estado.toUpperCase() === 'APROBADA' ? (valores.mesAprobacion || null) : null,
+    observaciones: valores.observaciones || null,
+    observaciones_hitss: valores.observacionesHitss || null,
+    tipificacion: valores.tipificacion || null,
+    garantia: valores.garantia,
+    numero_garantia: valores.garantia ? (valores.numeroGarantia ?? 1) : null,
+  }
+}
+
 /**
  * Estados y lógica del sub-formulario de alta/edición de entrega.
  *
@@ -106,20 +124,16 @@ export function useFormularioEntrega(estadosEnt: string[]) {
     setEditando(false)
   }, [])
 
-  const cuerpoEntrega = useCallback((): Record<string, unknown> => ({
-    numero: Number(valores.numero),
-    horas: valores.horas ? Number(valores.horas) : null,
-    fecha_comprometida: valores.fecha || null,
-    fecha_recepcion: valores.fechaReal || null,
-    estado: valores.estado,
-    mes_aprobacion:
-      valores.estado.toUpperCase() === 'APROBADA' ? (valores.mesAprobacion || null) : null,
-    observaciones: valores.observaciones || null,
-    observaciones_hitss: valores.observacionesHitss || null,
-    tipificacion: valores.tipificacion || null,
-    garantia: valores.garantia,
-    numero_garantia: valores.garantia ? (valores.numeroGarantia ?? 1) : null,
-  }), [valores])
+  const cuerpoEntrega = useCallback(
+    (): Record<string, unknown> => construirCuerpoEntrega(valores),
+    [valores],
+  )
+
+  /** Carga valores ya armados (p. ej. una entrega pendiente de crear) sin marcar "editando". */
+  const cargarValores = useCallback((v: ValoresEntrega): void => {
+    setValores(v)
+    setEditando(false)
+  }, [])
 
   return {
     valores,
@@ -128,6 +142,7 @@ export function useFormularioEntrega(estadosEnt: string[]) {
     cambiarEstado,
     cambiarGarantia,
     cargarEntrega,
+    cargarValores,
     cancelar,
     limpiarTrasGuardar,
     cuerpoEntrega,

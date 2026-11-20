@@ -5,9 +5,11 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../../api/client'
 import { mensajeError } from '../../api/hooks'
-import { AreaTexto, Aviso, Boton, Campo, Selector } from '../../components/ui'
+import { Aviso, Boton, Campo, Selector } from '../../components/ui'
 import { TIPOS_COSTO } from '../../constantes'
+import { useAplicacion } from '../../context/AplicacionContext'
 import type { Persona, Requerimiento } from '../../types'
+import { useCambiarSquad } from './useCambiarSquad'
 import type { CamposRequerimiento } from './useRequerimientoDetalle'
 
 /** Id del `<form>`; el botón "Guardar cambios" del encabezado lo referencia
@@ -204,9 +206,72 @@ function CampoAnalistaRequerimientos({
   )
 }
 
+/**
+ * Squad editable solo para administradores (`superadmin` / `admin_app`): acción
+ * propia (POST cambiar-squad), NO viaja con "Guardar cambios". Elegir un destino
+ * distinto abre una confirmación en la página antes de mover.
+ */
+function CampoSquad({ req, nombreActual }: { req: Requerimiento; nombreActual: string }) {
+  const { aplicaciones } = useAplicacion()
+  const origen = req.aplicacion_id
+  const { cambiarSquad, guardando, error, limpiarError } = useCambiarSquad(req.id, origen)
+  const [destino, setDestino] = useState('')
+  const nombreDestino = aplicaciones.find((a) => a.codigo === destino)?.nombre ?? destino
+
+  function elegir(codigo: string): void {
+    limpiarError()
+    setDestino(codigo === origen ? '' : codigo)
+  }
+
+  return (
+    <>
+      <label className="text-sm">
+        <span className="mb-1 block text-slate-600">Squad</span>
+        <Selector data-analytics-id="requerimiento.squad" value={destino || origen}
+          onChange={(e) => elegir(e.target.value)} disabled={guardando} className="w-full">
+          {!aplicaciones.some((a) => a.codigo === origen) && (
+            <option value={origen}>{nombreActual}</option>
+          )}
+          {aplicaciones.map((a) => <option key={a.codigo} value={a.codigo}>{a.nombre}</option>)}
+        </Selector>
+      </label>
+      {(destino || error) && (
+        <div className="sm:col-span-2" role="alert">
+          <Aviso tono={error ? 'error' : 'alerta'}>
+            <div className="space-y-2">
+              {destino && (
+                <>
+                  <p>
+                    <strong>¿Mover este requerimiento al squad {nombreDestino}?</strong>{' '}
+                    Pasará al squad destino con su historial y sus estimaciones. El líder técnico
+                    (LT HITSS) y el líder técnico EPM se conservan; Scrum y analista de
+                    requerimientos se limpiarán si no pertenecen al squad destino.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Boton data-analytics-id="requerimiento.mover_squad" type="button" variante="primario" tamano="sm"
+                      disabled={guardando} onClick={() => void cambiarSquad(destino)}>
+                      {guardando ? 'Moviendo…' : `Mover a ${nombreDestino}`}
+                    </Boton>
+                    <Boton data-analytics-id="requerimiento.cancelar_mover_squad" type="button" variante="secundario" tamano="sm"
+                      disabled={guardando} onClick={() => elegir(origen)}>
+                      Cancelar
+                    </Boton>
+                  </div>
+                </>
+              )}
+              {error && <p>{error}</p>}
+            </div>
+          </Aviso>
+        </div>
+      )}
+    </>
+  )
+}
+
 interface Props {
   campos: CamposRequerimiento
   req: Requerimiento
+  puedeCambiarSquad: boolean
   puedeEditarReq: boolean
   puedeEditarIdAzure: boolean
   onGuardadoIdAzure: () => void
@@ -227,6 +292,7 @@ interface Props {
 export default function SeccionDatosGenerales({
   campos,
   req,
+  puedeCambiarSquad,
   puedeEditarReq,
   puedeEditarIdAzure,
   onGuardadoIdAzure,
@@ -274,14 +340,18 @@ export default function SeccionDatosGenerales({
             {TIPOS_COSTO.map((t) => <option key={t} value={t}>{t}</option>)}
           </Selector>
         </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Squad</span>
-          {/* Solo lectura: mover entre squads es la acción admin reasignar-aplicacion.
-              Muestra el nombre resuelto (importados: id→nombre, manuales: codigo→nombre) */}
-          <div className="rounded border bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
-            {resolverNombreSquad(valores.squadId)}
-          </div>
-        </label>
+        {puedeCambiarSquad ? (
+          <CampoSquad req={req} nombreActual={resolverNombreSquad(valores.squadId)} />
+        ) : (
+          <label className="text-sm">
+            <span className="mb-1 block text-slate-600">Squad</span>
+            {/* Solo lectura para quien no es administrador.
+                Muestra el nombre resuelto (importados: id→nombre, manuales: codigo→nombre) */}
+            <div className="rounded border bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800">
+              {resolverNombreSquad(valores.squadId)}
+            </div>
+          </label>
+        )}
         <label className="text-sm">
           <span className="mb-1 block text-slate-600">Líder técnico</span>
           <Selector data-analytics-id="requerimiento.lt_hitss" value={valores.ltHitssId} onChange={(e) => actualizar('ltHitssId', e.target.value)}
@@ -383,19 +453,6 @@ export default function SeccionDatosGenerales({
         puedeEditar={puedeEditarIdAzure}
         onGuardado={onGuardadoIdAzure}
       />
-      <fieldset disabled={!puedeEditarReq} style={{ display: 'contents' }}>
-        <label className="text-sm sm:col-span-2">
-          <span className="mb-1 block text-slate-600">Seguimiento EPM</span>
-          <AreaTexto value={valores.seguimientoEpm} onChange={(e) => actualizar('seguimientoEpm', e.target.value)} rows={2}
-            disabled={!puedeEditarReq}
-            className="w-full" />
-        </label>
-        <label className="text-sm sm:col-span-2">
-          <span className="mb-1 block text-slate-600">Motivo de cierre</span>
-          <Campo value={valores.motivoCierre} onChange={(e) => actualizar('motivoCierre', e.target.value)}
-            className="w-full" />
-        </label>
-      </fieldset>
       </div>
     </form>
   )

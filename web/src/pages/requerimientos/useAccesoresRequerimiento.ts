@@ -41,7 +41,6 @@ export function useAccesoresRequerimiento(
     ansEstimacionReal: (r) => r.ans_estimacion ?? '',
     seLevantoAnsReq: (r) => (r.se_levanto_ans == null ? '' : r.se_levanto_ans ? 'Sí' : 'No'),
     observacionesAnsReq: (r) => r.observaciones_ans ?? '',
-    motivoCierre: (r) => r.motivo_cierre ?? '',
     seguimiento: (r) => r.seguimiento ?? '',
     seguimientoEpm: (r) => r.seguimiento_epm ?? '',
     tipificacion: (r) => r.tipificacion ?? '',

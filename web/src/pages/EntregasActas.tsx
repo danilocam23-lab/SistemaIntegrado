@@ -89,7 +89,6 @@ interface FilaEntrega {
   fechaSolicitudActa: string | null
   fechaLimite: string | null
   ansActa: string | null
-  motivoCierre: string | null
   seguimiento: string | null
   seguimientoEpm: string | null
   tipificacionReq: string | null
@@ -277,7 +276,6 @@ export default function EntregasActas() {
           fechaSolicitudActa: req.fecha_solicitud_acta ?? null,
           fechaLimite: req.fecha_limite ?? null,
           ansActa: req.ans_acta ?? null,
-          motivoCierre: req.motivo_cierre ?? null,
           seguimiento: req.seguimiento ?? null,
           seguimientoEpm: req.seguimiento_epm ?? null,
           tipificacionReq: req.tipificacion ?? null,
@@ -486,7 +484,6 @@ export default function EntregasActas() {
     fechaSolicitudActa: (f) => (f.fechaSolicitudActa ? f.fechaSolicitudActa.slice(0, 10) : ''),
     fechaLimite: (f) => (f.fechaLimite ? f.fechaLimite.slice(0, 10) : ''),
     ansActa: (f) => f.ansActa ?? '',
-    motivoCierre: (f) => f.motivoCierre ?? '',
     seguimiento: (f) => f.seguimiento ?? '',
     seguimientoEpm: (f) => f.seguimientoEpm ?? '',
     tipificacionReq: (f) => f.tipificacionReq ?? '',

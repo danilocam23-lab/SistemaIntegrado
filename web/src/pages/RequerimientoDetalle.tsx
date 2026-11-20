@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Aviso, Boton, Campo, Chip, EncabezadoPagina, Icono, Selector, Tarjeta } from '../components/ui'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import {
+  Aviso, Boton, Campo, Chip, EncabezadoPagina, Icono, PanelPestana, Pestanas, Selector, Tarjeta, usePestanaEnHash,
+} from '../components/ui'
+import type { DefinicionPestana } from '../components/ui'
 import client from '../api/client'
 import Modal from '../components/Modal'
 import { useLista, useEstados } from '../api/hooks'
@@ -12,11 +15,11 @@ import { useAuth } from '../context/AuthContext'
 import type { Aplicacion, Entrega, Persona } from '../types'
 import { useHistorialEstados } from './requerimiento-detalle/useHistorialEstados'
 import ModalHistorialEstados from './requerimiento-detalle/ModalHistorialEstados'
-import ModalEditarEntrega from './requerimiento-detalle/ModalEditarEntrega'
+import ModalEntrega from './requerimiento-detalle/ModalEntrega'
+import type { ModoModalEntrega } from './requerimiento-detalle/ModalEntrega'
 import SeccionLiquidacion from './requerimiento-detalle/SeccionLiquidacion'
 import SeccionBitacora from './requerimiento-detalle/SeccionBitacora'
 import SeccionEntregas from './requerimiento-detalle/SeccionEntregas'
-import FormularioEntrega from './requerimiento-detalle/FormularioEntrega'
 import { useFormularioEntrega } from './requerimiento-detalle/useFormularioEntrega'
 import { calcularEstadosOfrecidos } from './requerimiento-detalle/estadosOfrecidos'
 import { usePersonasDelSquad } from './requerimiento-detalle/usePersonasDelSquad'
@@ -24,18 +27,35 @@ import { useRequerimientoDetalle } from './requerimiento-detalle/useRequerimient
 import SeccionDatosGenerales, { ID_FORMULARIO_DATOS_GENERALES } from './requerimiento-detalle/SeccionDatosGenerales'
 import SeccionResumen from './requerimiento-detalle/SeccionResumen'
 import SeccionSeguimientoHitss from './requerimiento-detalle/SeccionSeguimientoHitss'
+import SeccionSeguimientoEpm from './requerimiento-detalle/SeccionSeguimientoEpm'
 
 export default function RequerimientoDetalle() {
   const { reqId } = useParams<{ reqId: string }>()
-  const { tienePermiso } = useAuth()
+  // Aviso que deja la pantalla de creación si alguna entrega no pudo registrarse.
+  const location = useLocation()
+  const [avisoCreacion] = useState(
+    () => (location.state as { avisoCreacion?: string } | null)?.avisoCreacion ?? '',
+  )
+  const [avisoMovimiento] = useState(
+    () => (location.state as { avisoMovimiento?: string } | null)?.avisoMovimiento ?? '',
+  )
+  const { tienePermiso, usuario } = useAuth()
   const { modoConsolidado } = useAplicacion()
   const puedeEditarReq = tienePermiso('requerimientos.editar')
+  // Mover entre squads: solo administradores, nunca en modo consolidado (el backend responde 409).
+  const puedeCambiarSquad = puedeEditarReq && !modoConsolidado
+    && (usuario?.rol === 'superadmin' || usuario?.rol === 'admin_app')
   const puedeEditarTipificacion = puedeEditarReq || tienePermiso('requerimientos.tipificacion.editar')
   const puedeEditarIdAzure = puedeEditarReq || tienePermiso('requerimientos.id_azure_hitss.editar')
   const puedeEditarAnalista = puedeEditarReq || tienePermiso('requerimientos.analista.editar')
   const puedeVerHorasSiguienteAnio = tienePermiso('requerimientos.horas_siguiente_anio.ver')
   const puedeEditarHorasSiguienteAnio = puedeVerHorasSiguienteAnio && tienePermiso('requerimientos.horas_siguiente_anio.editar')
   const puedeEliminarBitacora = tienePermiso('admin.roles.editar')
+  // Pestaña activa en `location.hash` (#entregas…); "Horas siguiente año" solo con permiso.
+  const idsPestanas = puedeVerHorasSiguienteAnio
+    ? ['datos', 'entregas', 'seguimiento', 'seguimiento-epm', 'liquidacion', 'horas']
+    : ['datos', 'entregas', 'seguimiento', 'seguimiento-epm', 'liquidacion']
+  const [pestana, cambiarPestana] = usePestanaEnHash(idsPestanas, 'datos')
   const { datos: personas } = useLista<Persona>('/personas')
   const { datos: squads } = useLista<Aplicacion>('/aplicaciones')
   const { estadosReq, estadosEnt } = useEstados()
@@ -57,22 +77,28 @@ export default function RequerimientoDetalle() {
   })
   const { req, liquidacion, eventos, aviso, ok, campos } = detalle
 
-  // Formulario de entrega (estados + lógica de cargar/cancelar/limpiar).
-  // El de alta va al pie de la tabla; el de edición vive en su propio modal y
-  // usa una instancia independiente para no compartir estado con el de alta.
-  const form = useFormularioEntrega(estadosEnt)
-  const formEdicion = useFormularioEntrega(estadosEnt)
-  const [modalEdicionAbierto, setModalEdicionAbierto] = useState(false)
+  // Un solo modal de entrega (crear y editar) con su formulario (estados + lógica de
+  // cargar/cancelar). `modalEntrega` es el modo con el que está abierto, o null si cerrado.
+  const formEntrega = useFormularioEntrega(estadosEnt)
+  const [modalEntrega, setModalEntrega] = useState<ModoModalEntrega | null>(null)
   const [bitacoraAbierta, setBitacoraAbierta] = useState(false)
 
-  function abrirEdicionEntrega(en: Entrega): void {
-    formEdicion.cargarEntrega(en)
-    setModalEdicionAbierto(true)
+  function abrirNuevaEntrega(): void {
+    formEntrega.cancelar()
+    // N.º sugerido: la siguiente a la mayor existente (editable en el modal).
+    const mayor = (req?.entregas ?? []).reduce((m, en) => Math.max(m, en.numero), 0)
+    formEntrega.actualizar('numero', String(mayor + 1))
+    setModalEntrega('crear')
   }
 
-  function cerrarEdicionEntrega(): void {
-    setModalEdicionAbierto(false)
-    formEdicion.cancelar()
+  function abrirEdicionEntrega(en: Entrega): void {
+    formEntrega.cargarEntrega(en)
+    setModalEntrega('editar')
+  }
+
+  function cerrarModalEntrega(): void {
+    setModalEntrega(null)
+    formEntrega.cancelar()
   }
 
   // Historial de estados (popup con cuánto tiempo estuvo en cada estado y a
@@ -115,6 +141,25 @@ export default function RequerimientoDetalle() {
   const ultimaEntrega = entregasOrdenadas.length > 0
     ? entregasOrdenadas[entregasOrdenadas.length - 1]
     : null
+
+  const cantidadSeguimientosEpm = (req.seguimientos_epm ?? []).length
+  const contadorSeguimientoEpm = cantidadSeguimientosEpm > 0
+    ? cantidadSeguimientosEpm
+    : (req.seguimiento_epm?.trim() ? 1 : 0)
+
+  const pestanas: DefinicionPestana[] = [
+    { id: 'datos', etiqueta: 'Datos generales' },
+    { id: 'entregas', etiqueta: 'Entregas', contador: req.entregas.length },
+    {
+      id: 'seguimiento',
+      etiqueta: 'Seguimiento Hitss',
+      aviso: !req.tipificacion,
+      textoAviso: 'Falta la tipificación',
+    },
+    { id: 'seguimiento-epm', etiqueta: 'Seguimiento EPM', contador: contadorSeguimientoEpm },
+    { id: 'liquidacion', etiqueta: 'Liquidación' },
+    { id: 'horas', etiqueta: 'Horas siguiente año', oculta: !puedeVerHorasSiguienteAnio },
+  ]
 
   return (
     <div className="space-y-6">
@@ -168,15 +213,34 @@ export default function RequerimientoDetalle() {
         </Aviso>
       )}
       {ok && <Aviso tono="exito">{ok}</Aviso>}
+      {avisoCreacion && <Aviso tono="alerta">{avisoCreacion}</Aviso>}
+      {avisoMovimiento && <div role="status"><Aviso tono="exito">{avisoMovimiento}</Aviso></div>}
 
-      {/* Bento: fila superior Datos generales (1/2) + columna Resumen/Liquidación
-          apilada (1/2, llena el hueco que deja `items-start` bajo Resumen);
-          fila inferior Seguimiento Hitss (1/4) + Entregas (3/4). */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-4">
-        <div className="lg:col-span-2">
+      <SeccionResumen
+        squadNombre={resolverNombreSquad(campos.valores.squadId)}
+        cumpleAnsEstimacion={cumpleAnsEstimacion}
+        ultimaEntrega={ultimaEntrega}
+        cantidadEntregas={req.entregas.length}
+        horasEstimadas={req.total_horas_estimadas}
+      />
+
+      {/* Pestañas internas. Los paneles ocultos siguen montados para no perder lo escrito;
+          "Guardar cambios" del encabezado envía el formulario de Datos generales aunque
+          esa pestaña no esté a la vista. */}
+      <div className="space-y-4">
+        <Pestanas
+          prefijo="requerimiento"
+          etiqueta="Secciones del requerimiento"
+          pestanas={pestanas}
+          activa={pestana}
+          onCambiar={cambiarPestana}
+        />
+
+        <PanelPestana prefijo="requerimiento" id="datos" activa={pestana}>
           <SeccionDatosGenerales
             campos={campos}
             req={req}
+            puedeCambiarSquad={puedeCambiarSquad}
             puedeEditarReq={puedeEditarReq}
             puedeEditarIdAzure={puedeEditarIdAzure}
             onGuardadoIdAzure={detalle.recargar}
@@ -193,16 +257,55 @@ export default function RequerimientoDetalle() {
             analistaAsignado={analistaAsignado}
             onSubmit={detalle.guardar}
           />
-        </div>
-        <div className="space-y-4 lg:col-span-2">
-          <SeccionResumen
-            squadNombre={resolverNombreSquad(campos.valores.squadId)}
-            cumpleAnsEstimacion={cumpleAnsEstimacion}
-            ultimaEntrega={ultimaEntrega}
-            cantidadEntregas={req.entregas.length}
+        </PanelPestana>
+
+        <PanelPestana prefijo="requerimiento" id="entregas" activa={pestana}>
+          <SeccionEntregas
+            entregas={req.entregas}
+            totalHorasEstimadas={req.total_horas_estimadas}
+            puedeEditarReq={puedeEditarReq}
+            puedeEditarTipificacion={puedeEditarTipificacion}
+            tipifEdicion={detalle.tipifEdicion}
+            guardandoTipif={detalle.guardandoTipif}
+            onIniciarEdicionTipif={detalle.iniciarEdicionTipif}
+            onCambiarTipif={detalle.cambiarTipif}
+            onCancelarTipif={detalle.cancelarTipif}
+            onGuardarTipif={detalle.guardarTipifEntrega}
+            onVerHistorialEntrega={historial.verHistorialEntrega}
+            onEditarEntrega={abrirEdicionEntrega}
+            onEliminarEntrega={detalle.eliminarEntrega}
+            onAgregarEntrega={puedeEditarReq ? abrirNuevaEntrega : undefined}
           />
+        </PanelPestana>
+
+        <PanelPestana prefijo="requerimiento" id="seguimiento" activa={pestana}>
+          <SeccionSeguimientoHitss
+            seguimiento={campos.valores.seguimiento}
+            tipificacion={campos.valores.tipificacion}
+            onCambiar={campos.actualizar}
+            puedeEditarTipificacion={puedeEditarTipificacion}
+            onGuardar={detalle.guardarTipificacionReq}
+          />
+        </PanelPestana>
+
+        <PanelPestana prefijo="requerimiento" id="seguimiento-epm" activa={pestana}>
+          <SeccionSeguimientoEpm
+            registros={req.seguimientos_epm ?? []}
+            textoLegado={req.seguimiento_epm}
+            puedeEditar={puedeEditarReq}
+            guardando={detalle.guardandoSeguimientoEpm}
+            error={detalle.errorSeguimientoEpm}
+            ok={detalle.okSeguimientoEpm}
+            onAgregar={detalle.agregarSeguimientoEpm}
+          />
+        </PanelPestana>
+
+        <PanelPestana prefijo="requerimiento" id="liquidacion" activa={pestana}>
           <SeccionLiquidacion liquidacion={liquidacion} />
-          {puedeVerHorasSiguienteAnio && (
+        </PanelPestana>
+
+        {puedeVerHorasSiguienteAnio && (
+          <PanelPestana prefijo="requerimiento" id="horas" activa={pestana}>
             <Tarjeta>
               <h2 className="etiqueta-sup mb-3">Horas para el siguiente año</h2>
               <p className="mb-3 text-sm text-slate-500">
@@ -261,46 +364,8 @@ export default function RequerimientoDetalle() {
                 )}
               </form>
             </Tarjeta>
-          )}
-        </div>
-
-        <div>
-          <SeccionSeguimientoHitss
-            seguimiento={campos.valores.seguimiento}
-            tipificacion={campos.valores.tipificacion}
-            onCambiar={campos.actualizar}
-            puedeEditarTipificacion={puedeEditarTipificacion}
-            onGuardar={detalle.guardarTipificacionReq}
-          />
-        </div>
-
-        <div className="lg:col-span-3">
-          <SeccionEntregas
-            entregas={req.entregas}
-            totalHorasEstimadas={req.total_horas_estimadas}
-            puedeEditarReq={puedeEditarReq}
-            puedeEditarTipificacion={puedeEditarTipificacion}
-            tipifEdicion={detalle.tipifEdicion}
-            guardandoTipif={detalle.guardandoTipif}
-            onIniciarEdicionTipif={detalle.iniciarEdicionTipif}
-            onCambiarTipif={detalle.cambiarTipif}
-            onCancelarTipif={detalle.cancelarTipif}
-            onGuardarTipif={detalle.guardarTipifEntrega}
-            onVerHistorialEntrega={historial.verHistorialEntrega}
-            onEditarEntrega={abrirEdicionEntrega}
-            onEliminarEntrega={detalle.eliminarEntrega}
-          >
-            {puedeEditarReq && (
-              <FormularioEntrega
-                form={form}
-                estadosEnt={estadosEnt}
-                estadoRequerimiento={req?.estado ?? ''}
-                onSubmit={(e) => detalle.agregarEntrega(e, form.cuerpoEntrega, form.limpiarTrasGuardar)}
-                onVerHistorial={() => historial.verHistorialEntrega(form.valores.numero)}
-              />
-            )}
-          </SeccionEntregas>
-        </div>
+          </PanelPestana>
+        )}
       </div>
 
       {/* Bitácora: fuera del flujo, en botón flotante + panel superpuesto */}
@@ -337,13 +402,14 @@ export default function RequerimientoDetalle() {
         onCerrar={historial.cerrar}
       />
 
-      <ModalEditarEntrega
-        abierto={modalEdicionAbierto}
-        form={formEdicion}
+      <ModalEntrega
+        abierto={modalEntrega !== null}
+        modo={modalEntrega ?? 'crear'}
+        form={formEntrega}
         estadosEnt={estadosEnt}
         estadoRequerimiento={req?.estado ?? ''}
-        onSubmit={(e) => detalle.agregarEntrega(e, formEdicion.cuerpoEntrega, cerrarEdicionEntrega)}
-        onCerrar={cerrarEdicionEntrega}
+        onSubmit={(e) => detalle.agregarEntrega(e, formEntrega.cuerpoEntrega, cerrarModalEntrega)}
+        onCerrar={cerrarModalEntrega}
       />
     </div>
   )

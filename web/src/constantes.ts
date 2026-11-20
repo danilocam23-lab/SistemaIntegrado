@@ -119,7 +119,6 @@ export const ENTREGAS_ACTAS_COLUMNAS: EntregasActasCampo[] = [
   { key: 'fechaSolicitudActa', label: 'F. solicitud acta', grupo: 'Requerimiento' },
   { key: 'fechaLimite', label: 'F. límite', grupo: 'Requerimiento' },
   { key: 'ansActa', label: 'ANS acta', grupo: 'Requerimiento' },
-  { key: 'motivoCierre', label: 'Motivo de cierre', grupo: 'Requerimiento' },
   { key: 'seguimiento', label: 'Seguimiento Hitss', grupo: 'Requerimiento' },
   { key: 'seguimientoEpm', label: 'Seguimiento EPM', grupo: 'Requerimiento' },
   { key: 'tipificacionReq', label: 'Tipificación (requerimiento)', grupo: 'Requerimiento' },
@@ -192,7 +191,6 @@ export const REQUERIMIENTOS_COLUMNAS: EntregasActasCampo[] = [
   { key: 'ansEstimacionReal', label: 'ANS estimación (real)', grupo: 'Requerimiento' },
   { key: 'seLevantoAnsReq', label: '¿Se levantó ANS?', grupo: 'Requerimiento' },
   { key: 'observacionesAnsReq', label: 'Observaciones ANS', grupo: 'Requerimiento' },
-  { key: 'motivoCierre', label: 'Motivo de cierre', grupo: 'Requerimiento' },
   { key: 'seguimiento', label: 'Seguimiento Hitss', grupo: 'Requerimiento' },
   { key: 'seguimientoEpm', label: 'Seguimiento EPM', grupo: 'Requerimiento' },
   { key: 'tipificacion', label: 'Tipificación', grupo: 'Requerimiento' },
@@ -251,7 +249,10 @@ export function leerCamposActivos(
   try {
     const arr = JSON.parse(config.valor)
     if (!Array.isArray(arr) || arr.length === 0) return new Set(porDefecto)
-    return new Set(arr as string[])
+    // Descarta en silencio claves obsoletas (campos eliminados del catálogo).
+    const conocidas = new Set(todos.map((t) => t.key))
+    const vigentes = (arr as unknown[]).filter((k): k is string => typeof k === 'string' && conocidas.has(k))
+    return new Set(vigentes.length === 0 ? porDefecto : vigentes)
   } catch {
     return new Set(porDefecto)
   }

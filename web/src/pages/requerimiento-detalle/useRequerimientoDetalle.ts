@@ -34,9 +34,7 @@ export interface ValoresRequerimiento {
   fechaSolicitudActa: string
   fechaRealEntregaEst: string
   seguimiento: string
-  seguimientoEpm: string
   tipificacion: string
-  motivoCierre: string
   actaTrabajo: string
   idAzureHitss: string
 }
@@ -57,9 +55,7 @@ const VALORES_VACIOS: ValoresRequerimiento = {
   fechaSolicitudActa: '',
   fechaRealEntregaEst: '',
   seguimiento: '',
-  seguimientoEpm: '',
   tipificacion: '',
-  motivoCierre: '',
   actaTrabajo: '',
   idAzureHitss: '',
 }
@@ -98,6 +94,9 @@ export function useRequerimientoDetalle(
   const [guardandoHorasSiguienteAnio, setGuardandoHorasSiguienteAnio] = useState(false)
   const [errorHorasSiguienteAnio, setErrorHorasSiguienteAnio] = useState('')
   const [okHorasSiguienteAnio, setOkHorasSiguienteAnio] = useState('')
+  const [guardandoSeguimientoEpm, setGuardandoSeguimientoEpm] = useState(false)
+  const [errorSeguimientoEpm, setErrorSeguimientoEpm] = useState('')
+  const [okSeguimientoEpm, setOkSeguimientoEpm] = useState('')
 
   // Estado único de "Datos generales", "Seguimiento Hitss" y
   // "Horas para el siguiente año"; el bloque de horas tiene guardado propio.
@@ -139,9 +138,7 @@ export function useRequerimientoDetalle(
           ? data.fecha_real_entrega_estimacion.slice(0, 16)
           : '',
         seguimiento: data.seguimiento ?? '',
-        seguimientoEpm: data.seguimiento_epm ?? '',
         tipificacion: data.tipificacion ?? '',
-        motivoCierre: data.motivo_cierre ?? '',
         actaTrabajo: data.acta_trabajo ?? '',
         idAzureHitss: data.id_azure_hitss != null ? String(data.id_azure_hitss) : '',
       })
@@ -229,6 +226,48 @@ export function useRequerimientoDetalle(
     }
   }
 
+  /** Agrega un registro al historial de Seguimiento EPM. Devuelve true si se guardó. */
+  async function agregarSeguimientoEpm(texto: string): Promise<boolean> {
+    if (guardandoSeguimientoEpm) return false
+    setErrorSeguimientoEpm('')
+    setOkSeguimientoEpm('')
+    const limpio = texto.trim()
+    if (!limpio) return false
+    if (!puedeEditarReq) {
+      setErrorSeguimientoEpm('No tienes permiso para editar requerimientos.')
+      return false
+    }
+    if (!req) return false
+    const config = writeConfig()
+    if (modoConsolidado && !('headers' in config)) {
+      setErrorSeguimientoEpm('No se pudo determinar la aplicación del requerimiento. Selecciona un squad concreto en el selector superior para guardar.')
+      return false
+    }
+    setGuardandoSeguimientoEpm(true)
+    try {
+      const { data } = await client.post<Requerimiento>(
+        `/requerimientos/${reqId}/seguimientos-epm`, { texto: limpio }, config,
+      )
+      // Solo se toman el historial, el espejo y la marca de concurrencia: reemplazar
+      // todo el req no tocaría los borradores, pero así se evita pisar estado ajeno.
+      setReq((actual) => actual
+        ? {
+          ...actual,
+          seguimientos_epm: data.seguimientos_epm ?? actual.seguimientos_epm,
+          seguimiento_epm: data.seguimiento_epm ?? null,
+          ...(data.actualizado_en ? { actualizado_en: data.actualizado_en } : {}),
+        }
+        : actual)
+      setOkSeguimientoEpm('Registro de seguimiento EPM agregado.')
+      return true
+    } catch (err) {
+      setErrorSeguimientoEpm(mensajeError(err))
+      return false
+    } finally {
+      setGuardandoSeguimientoEpm(false)
+    }
+  }
+
   async function guardar(e: FormEvent): Promise<void> {
     e.preventDefault()
     const confirmarFormulario = analitica.prepararEnvioFormulario('requerimiento_general')
@@ -259,9 +298,7 @@ export function useRequerimientoDetalle(
         fecha_solicitud_acta: valores.fechaSolicitudActa || null,
         fecha_real_entrega_estimacion: valores.fechaRealEntregaEst || null,
         seguimiento: valores.seguimiento || null,
-        seguimiento_epm: valores.seguimientoEpm || null,
         tipificacion: valores.tipificacion || null,
-        motivo_cierre: valores.motivoCierre || null,
         acta_trabajo: valores.actaTrabajo || null,
         id_azure_hitss: valores.idAzureHitss ? Number(valores.idAzureHitss) : null,
       }, writeConfig())
@@ -427,6 +464,10 @@ export function useRequerimientoDetalle(
     guardandoHorasSiguienteAnio,
     errorHorasSiguienteAnio,
     okHorasSiguienteAnio,
+    guardandoSeguimientoEpm,
+    errorSeguimientoEpm,
+    okSeguimientoEpm,
+    agregarSeguimientoEpm,
     guardarTipificacionReq,
     transicion,
     agregarEntrega,

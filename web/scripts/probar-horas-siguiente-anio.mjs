@@ -118,8 +118,11 @@ function arbolPagina(detalle, permisos) {
     // La página ahora usa useEffect + client para cargar /requerimientos/transiciones.
     react: { useState: valor => [valor, () => {}], useEffect: () => {} },
     '../api/client': { default: { get: () => new Promise(() => {}) } },
-    'react-router-dom': { Link: 'enlace', useParams: () => ({ reqId: 'REQ-PRUEBA' }) },
+    'react-router-dom': {
+      Link: 'enlace', useParams: () => ({ reqId: 'REQ-PRUEBA' }), useLocation: () => ({ state: null, hash: '' }),
+    },
     '../context/AuthContext': { useAuth: () => ({
+      usuario: { rol: 'lector' },
       tienePermiso: permiso => ({
         'requerimientos.editar': permisos.puedeEditarReq,
         'requerimientos.horas_siguiente_anio.ver': permisos.puedeVerHorasSiguienteAnio,
@@ -129,7 +132,7 @@ function arbolPagina(detalle, permisos) {
     '../context/AplicacionContext': { useAplicacion: () => ({ modoConsolidado: false }) },
     '../api/hooks': { useLista: () => ({ datos: [] }), useEstados: () => ({ estadosReq: [], estadosEnt: [] }) },
     '../components/ui': Object.fromEntries(
-      ['Aviso', 'Boton', 'Campo', 'Chip', 'EncabezadoPagina', 'Icono', 'Selector', 'Tarjeta']
+      ['Aviso', 'Boton', 'Campo', 'Chip', 'EncabezadoPagina', 'Icono', 'PanelPestana', 'Pestanas', 'Selector', 'Tarjeta']
         .map(nombre => [nombre, nombre]),
     ),
     '../components/Modal': { default: 'Modal' },
@@ -140,9 +143,11 @@ function arbolPagina(detalle, permisos) {
       resolverNombreSquad: () => 'Squad de prueba',
     }) },
   }
+  // usePestanaEnHash simulado: pestaña 'datos'; los paneles se montan igual (ocultos con `hidden`).
+  modulos['../components/ui'].usePestanaEnHash = () => ['datos', () => {}]
   for (const nombre of [
-    'ModalHistorialEstados', 'ModalEditarEntrega', 'SeccionLiquidacion', 'SeccionBitacora',
-    'SeccionEntregas', 'FormularioEntrega', 'SeccionResumen', 'SeccionSeguimientoHitss',
+    'ModalHistorialEstados', 'ModalEntrega', 'SeccionLiquidacion', 'SeccionBitacora',
+    'SeccionEntregas', 'SeccionResumen', 'SeccionSeguimientoHitss', 'SeccionSeguimientoEpm',
   ]) modulos[`./requerimiento-detalle/${nombre}`] = { default: nombre }
   modulos['./requerimiento-detalle/SeccionDatosGenerales'] = {
     default: 'SeccionDatosGenerales', ID_FORMULARIO_DATOS_GENERALES: 'formulario-datos-generales',
