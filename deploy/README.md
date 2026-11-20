@@ -68,5 +68,6 @@ Detener:    %windir%\system32\inetsrv\appcmd.exe stop site "IIS_PRD"
 |---|---|
 | HTTP 502.3 / la app no arranca | Revisa `logs\stdout*.log`; suele ser `MONGO_URL` mal configurada o MongoDB apagado |
 | HTTP 500.19 | Falta el módulo HttpPlatformHandler en IIS |
+| HTTP 405.0 con `WebDAVModule` al guardar | WebDAV intercepta la petición antes de FastAPI. La plantilla excluye su módulo y controlador solo en esta aplicación; vuelve a publicar con `bat\publicar-iis.bat DLL` para actualizar el `web.config` del destino DLL |
 | "Access denied" al iniciar Python | El AppPool no tiene permisos sobre el Python base; reejecuta el script como Administrador |
 | El frontend no carga | `web\dist` no se copió; revisa que `npm run build` terminó sin errores |
