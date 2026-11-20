@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import client from '../../api/client'
 import { mensajeError } from '../../api/hooks'
+import { CLAVE_TEMA_ESTACIONAL, publicarTemaEstacional } from '../../hooks/useTemaEstacional'
 import type { Configuracion as Config } from '../../types'
 
 // Claves de configuracion que se administran en otra pestana (fuente de verdad unica).
@@ -74,6 +75,7 @@ export function useParametros({ recargar, setAviso, setOk }: Params) {
         valor: editValor,
         grupo: editGrupo,
       })
+      if (editClave.trim() === CLAVE_TEMA_ESTACIONAL) publicarTemaEstacional(editValor)
       setOk(`"${editClave}" guardado.`)
       setEditItem(null)
       recargar()
@@ -95,6 +97,7 @@ export function useParametros({ recargar, setAviso, setOk }: Params) {
         valor: valorDe(c),
         grupo: c.grupo,
       })
+      if (c.clave.trim() === CLAVE_TEMA_ESTACIONAL) publicarTemaEstacional(valorDe(c))
       setOk(`"${c.clave}" guardado.`)
       recargar()
     } catch (err) {
@@ -116,6 +119,7 @@ export function useParametros({ recargar, setAviso, setOk }: Params) {
         valor: nuevoValor,
         grupo,
       })
+      if (nuevaClave.trim() === CLAVE_TEMA_ESTACIONAL) publicarTemaEstacional(nuevoValor)
       setNuevaClave('')
       setNuevoValor('')
       recargar()

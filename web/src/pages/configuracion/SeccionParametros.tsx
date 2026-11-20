@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Jose Danilo Camacho A. / Tecno-Insights S.A.S.
 // SPDX-License-Identifier: MIT
 
-import { Aviso, Boton, Campo, TablaScroll } from '../../components/ui'
+import { Aviso, Boton, Campo, Selector, TablaScroll } from '../../components/ui'
+import { CLAVE_TEMA_ESTACIONAL, OPCIONES_TEMA_ESTACIONAL } from '../../hooks/useTemaEstacional'
 import type { Configuracion as Config } from '../../types'
 import { ModalEditarParametro } from './ModalEditarParametro'
 import { esGestionada } from './useParametros'
@@ -90,12 +91,29 @@ export function SeccionParametros({
                 <td className="font-mono">{c.clave}</td>
                 <td className="text-slate-500">{c.grupo}</td>
                 <td>
-                  <Campo
-                    value={valorDe(c)}
-                    onChange={(e) => setValores({ ...valores, [c.clave]: e.target.value })}
-                    compacto
-                    className="w-full"
-                  />
+                  {c.clave.trim() === CLAVE_TEMA_ESTACIONAL ? (
+                    <Selector
+                      value={valorDe(c)}
+                      onChange={(e) => setValores({ ...valores, [c.clave]: e.target.value })}
+                      compacto
+                      className="w-full"
+                      aria-label="Tema estacional"
+                    >
+                      {OPCIONES_TEMA_ESTACIONAL.some((o) => o.valor === valorDe(c)) ? null : (
+                        <option value={valorDe(c)}>{valorDe(c) || '(vacío)'}</option>
+                      )}
+                      {OPCIONES_TEMA_ESTACIONAL.map((o) => (
+                        <option key={o.valor} value={o.valor}>{o.etiqueta}</option>
+                      ))}
+                    </Selector>
+                  ) : (
+                    <Campo
+                      value={valorDe(c)}
+                      onChange={(e) => setValores({ ...valores, [c.clave]: e.target.value })}
+                      compacto
+                      className="w-full"
+                    />
+                  )}
                 </td>
                 <td className="text-center">
                   <div className="flex justify-center gap-2">

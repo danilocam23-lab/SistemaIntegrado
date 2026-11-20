@@ -4,6 +4,9 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTemaEstacional } from '../hooks/useTemaEstacional'
+import AdornoIcono from './AdornoIcono'
+import DecoracionEstacional from './DecoracionEstacional'
 import { Icono } from './ui'
 import type { NombreIcono } from './ui'
 
@@ -53,7 +56,6 @@ const GRUPOS: Grupo[] = [
       { to: '/capacidades', label: 'Capacidades', icono: 'grafico-barras', permiso: 'capacidades.ver' },
       { to: '/planes-accion', label: 'Planes de acción', icono: 'check-circulo', permiso: 'planes_accion.ver' },
       { to: '/control-horas-facturable', label: 'Control de Horas Facturable', icono: 'estimacion', permiso: 'control_horas_facturable.ver' },
-      { to: '/azure-devops', label: 'Azure DevOps', icono: 'nube', permiso: 'azure_devops.ver' },
       { to: '/roadmap', label: 'Roadmap y equipo', icono: 'cohete', permiso: 'roadmap.ver' },
     ],
   },
@@ -83,12 +85,27 @@ const GRUPOS: Grupo[] = [
       { to: '/admin/usuarios', label: 'Usuarios', icono: 'personas', permiso: 'admin.usuarios.ver' },
       { to: '/admin/uso-personas', label: 'Uso por personas', icono: 'grafico-barras', permiso: 'admin.auditoria.ver' },
       { to: '/admin/importacion', label: 'Importar / Exportar datos', icono: 'recargar', permiso: 'admin.importacion.ver' },
+      { to: '/azure-devops', label: 'Azure DevOps', icono: 'nube', permiso: 'azure_devops.ver' },
       { to: '/admin/endpoints', label: 'Endpoints', icono: 'globo', permiso: 'admin.endpoints.ver' },
       { to: '/admin/esquema-azure', label: 'Esquema de Azure', icono: 'nube', permiso: 'azure_devops.ver' },
       { to: '/configuracion', label: 'Configuración', icono: 'administracion', permiso: 'admin.configuracion.ver' },
     ],
   },
 ]
+
+/**
+ * Índice estable por posición en el menú ESTÁTICO (cada cabecera cuenta 1 y luego sus ítems),
+ * independiente de los permisos del usuario: el mismo icono lleva siempre el mismo emoji.
+ */
+const INDICE_GRUPO: Record<string, number> = {}
+const INDICE_ITEM: Record<string, number> = {}
+{
+  let n = 0
+  for (const g of GRUPOS) {
+    INDICE_GRUPO[g.titulo] = n++
+    for (const i of g.items) INDICE_ITEM[i.to] = n++
+  }
+}
 
 /** Iniciales (1-2 letras) a partir del nombre completo del usuario, para el avatar del pie. */
 function iniciales(nombre: string | undefined | null): string {
@@ -107,6 +124,7 @@ interface Props {
 export default function Sidebar({ abierto, onCerrar }: Props) {
   const { usuario, tienePermiso, logout } = useAuth()
   const { pathname } = useLocation()
+  const tema = useTemaEstacional()
 
   const [colapsado, setColapsado] = useState<boolean>(() => {
     try {
@@ -194,7 +212,8 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
         <div className="relative z-10 flex h-full min-h-0 flex-col">
           {/* Cabecera */}
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 p-3 md:p-4">
-            <div className={`flex min-w-0 items-center gap-2.5 ${colapsado ? 'md:hidden' : ''}`}>
+            <div className={`relative flex min-w-0 items-center gap-2.5 ${colapsado ? 'md:hidden' : ''}`}>
+              <DecoracionEstacional tema={tema} />
               <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-marca-400 to-marca-600 text-sm font-bold tracking-tight text-white shadow-md shadow-marca-900/40">
                 <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-b from-white/30 to-transparent" />
                 <span className="relative">SI</span>
@@ -259,7 +278,10 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                         : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
                     }`}
                   >
-                    <Icono nombre={grupo.icono} className="h-5 w-5" />
+                    <span className="relative inline-flex">
+                      <Icono nombre={grupo.icono} className="h-5 w-5" />
+                      <AdornoIcono tema={tema} indice={INDICE_GRUPO[grupo.titulo]} />
+                    </span>
                   </button>
                 )
               }
@@ -275,7 +297,10 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                     }`}
                   >
                     <span className="flex min-w-0 items-center gap-2">
-                      <Icono nombre={grupo.icono} className="h-4 w-4" />
+                      <span className="relative inline-flex shrink-0">
+                        <Icono nombre={grupo.icono} className="h-4 w-4" />
+                        <AdornoIcono tema={tema} indice={INDICE_GRUPO[grupo.titulo]} />
+                      </span>
                       <span className="truncate">{grupo.titulo}</span>
                     </span>
                     <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3 w-3 shrink-0 transition-transform duration-200 ${abiertoGrupo ? 'rotate-180' : ''}`}>
@@ -302,11 +327,12 @@ export default function Sidebar({ abierto, onCerrar }: Props) {
                           {({ isActive }) => (
                             <>
                               <span
-                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors ${
+                                className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors ${
                                   isActive ? 'bg-white/20' : 'bg-white/[0.08]'
                                 }`}
                               >
                                 <Icono nombre={item.icono} className="h-3.5 w-3.5" />
+                                <AdornoIcono tema={tema} indice={INDICE_ITEM[item.to]} />
                               </span>
                               <span className="truncate">{item.label}</span>
                             </>

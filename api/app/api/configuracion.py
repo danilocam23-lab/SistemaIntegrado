@@ -24,6 +24,9 @@ router = APIRouter(
 
 _APP_GLOBAL = "global"
 
+CLAVE_TEMA_ESTACIONAL = "tema_estacional"
+TEMAS_ESTACIONALES_VALIDOS = ("auto", "ninguno", "navidad", "halloween", "amor_amistad")
+
 
 class ConfigIn(BaseModel):
     valor: str
@@ -42,6 +45,15 @@ async def guardar(
     _: object = permiso("admin.configuracion.editar"),
 ):
     """Crea o actualiza un parámetro de configuración global."""
+    if clave == CLAVE_TEMA_ESTACIONAL:
+        normalizado = datos.valor.strip().lower()
+        if normalizado not in TEMAS_ESTACIONALES_VALIDOS:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"Valor inválido para '{CLAVE_TEMA_ESTACIONAL}'. Valores válidos: "
+                + ", ".join(TEMAS_ESTACIONALES_VALIDOS),
+            )
+        datos = datos.model_copy(update={"valor": normalizado})
     config = await Configuracion.find_one(
         Configuracion.aplicacion_id == _APP_GLOBAL,
         Configuracion.clave == clave,

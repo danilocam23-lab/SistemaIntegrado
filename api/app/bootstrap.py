@@ -6,6 +6,7 @@ import logging
 
 from app.config import get_settings
 from app.documents.aplicacion import Aplicacion
+from app.documents.configuracion import Configuracion
 from app.documents.enums import RolUsuario
 from app.documents.rol import Rol
 from app.documents.usuario import Usuario
@@ -75,6 +76,21 @@ async def migrar_permisos_roles_base() -> int:
     return actualizados
 
 
+async def sembrar_tema_estacional() -> bool:
+    """Crea ``tema_estacional=auto`` (grupo ``apariencia``, global) si no existe la clave.
+
+    Idempotente: si hay una configuración con esa clave, sea cual sea su
+    ``aplicacion_id``, no se toca. Devuelve ``True`` si la creó.
+    """
+    if await Configuracion.find_one(Configuracion.clave == "tema_estacional") is not None:
+        return False
+    await Configuracion(
+        aplicacion_id="global", clave="tema_estacional", valor="auto", grupo="apariencia"
+    ).insert()
+    _log.info("Parámetro tema_estacional creado con valor 'auto'")
+    return True
+
+
 async def _eliminar_roles_obsoletos(roles: dict[str, Rol]) -> None:
     rol_viewer = roles.get(RolUsuario.VIEWER.value)
     for clave in ROLES_OBSOLETOS:
@@ -119,6 +135,7 @@ async def bootstrap() -> None:
     # base estén presentes aunque se haya desplegado en un entorno nuevo
     # o se hayan eliminado datos. La función no crea duplicados.
     await provisionar_aplicacion(app_inicial.codigo)
+    await sembrar_tema_estacional()
 
     roles = await _asegurar_roles_base()
     if await migrar_permisos_roles_base():

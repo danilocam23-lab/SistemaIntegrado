@@ -2,18 +2,18 @@
   "version": 1,
   "metodo": "AST TypeScript: callsites estáticos, sin inferencia DOM. Alcanzabilidad de imports relativos estáticos desde main; no garantiza acceso por permisos.",
   "totales": {
-    "controles": 806,
+    "controles": 808,
     "explicitos": 102,
-    "automaticos": 636,
+    "automaticos": 638,
     "compartidos": 44,
     "excluidos_seguridad": 10,
     "sin_handler": 10,
     "requiere_adaptador": 4,
     "id_no_registrado": 0,
-    "instrumentados_alcanzables": 709,
+    "instrumentados_alcanzables": 711,
     "formularios": 28,
     "formularios_confirmados": 6,
-    "peticiones": 182,
+    "peticiones": 183,
     "peticiones_catalogadas": 109,
     "peticiones_por_verificar": 17
   },
@@ -119,7 +119,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 174,
+      "linea": 177,
       "componente": "div",
       "handler": "onCerrar",
       "id": "menu.cerrar",
@@ -130,7 +130,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 208,
+      "linea": 212,
       "componente": "button",
       "handler": "setColapsado",
       "id": "menu.colapsar",
@@ -141,7 +141,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 220,
+      "linea": 224,
       "componente": "button",
       "handler": "onCerrar",
       "id": "menu.cerrar",
@@ -152,7 +152,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 243,
+      "linea": 247,
       "componente": "button",
       "handler": "setGruposCerrados",
       "id": "menu.grupo",
@@ -163,7 +163,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 269,
+      "linea": 273,
       "componente": "button",
       "handler": "alternarGrupo",
       "id": "menu.grupo",
@@ -174,7 +174,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 289,
+      "linea": 293,
       "componente": "NavLink",
       "handler": "",
       "id": "menu.navegar",
@@ -185,7 +185,7 @@
     },
     {
       "archivo": "src/components/Sidebar.tsx",
-      "linea": 333,
+      "linea": 337,
       "componente": "button",
       "handler": "logout",
       "id": "menu.salir",
@@ -2641,7 +2641,7 @@
       "linea": 232,
       "componente": "Campo",
       "handler": "setFiltroWo",
-      "id": "control.pages_soportedetalleans.setfiltrowo.308a54e3c33b",
+      "id": "control.pages_soportedetalleans.setfiltrowo.4f8c366e78fe",
       "accion": "accion_setfiltrowo",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -2652,7 +2652,7 @@
       "linea": 244,
       "componente": "Selector",
       "handler": "setFiltroAssignedTo",
-      "id": "control.pages_soportedetalleans.setfiltroassignedt.c5dd75df2f4e",
+      "id": "control.pages_soportedetalleans.setfiltroassignedt.95a88d7cdd3d",
       "accion": "accion_setfiltroassignedto",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -3752,7 +3752,7 @@
       "linea": 106,
       "componente": "Campo",
       "handler": "setConsulta",
-      "id": "control.pages_asignaciones_combobox.setconsulta.85f81ad133fa",
+      "id": "control.pages_asignaciones_combobox.setconsulta.0fe856825a7f",
       "accion": "accion_setconsulta",
       "tipo": "filtro",
       "cobertura": "automatico",
@@ -4841,7 +4841,7 @@
       "linea": 161,
       "componente": "Boton",
       "handler": "onEliminar",
-      "id": "control.pages_capacidades_panelcapacidad.oneliminar.48203b5d4ed5",
+      "id": "control.pages_capacidades_panelcapacidad.oneliminar.863f73770c9c",
       "accion": "accion_oneliminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -4959,7 +4959,7 @@
     },
     {
       "archivo": "src/pages/configuracion/ModalEditarParametro.tsx",
-      "linea": 31,
+      "linea": 32,
       "componente": "Modal",
       "handler": "",
       "id": null,
@@ -4970,7 +4970,7 @@
     },
     {
       "archivo": "src/pages/configuracion/ModalEditarParametro.tsx",
-      "linea": 33,
+      "linea": 34,
       "componente": "Campo",
       "handler": "setEditClave",
       "id": "control.s_configuracion_modaleditarparametro.seteditclave.610b795516ac",
@@ -4981,7 +4981,7 @@
     },
     {
       "archivo": "src/pages/configuracion/ModalEditarParametro.tsx",
-      "linea": 39,
+      "linea": 40,
       "componente": "Campo",
       "handler": "setEditGrupo",
       "id": "control.s_configuracion_modaleditarparametro.seteditgrupo.10484f5aa48c",
@@ -4992,7 +4992,18 @@
     },
     {
       "archivo": "src/pages/configuracion/ModalEditarParametro.tsx",
-      "linea": 45,
+      "linea": 47,
+      "componente": "Selector",
+      "handler": "setEditValor",
+      "id": "control.s_configuracion_modaleditarparametro.seteditvalor.09e8103ea100",
+      "accion": "accion_seteditvalor",
+      "tipo": "filtro",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/configuracion/ModalEditarParametro.tsx",
+      "linea": 61,
       "componente": "AreaTexto",
       "handler": "setEditValor",
       "id": "control.s_configuracion_modaleditarparametro.seteditvalor.cd9f4bdb84df",
@@ -5003,7 +5014,7 @@
     },
     {
       "archivo": "src/pages/configuracion/ModalEditarParametro.tsx",
-      "linea": 53,
+      "linea": 70,
       "componente": "Boton",
       "handler": "setEditItem",
       "id": "control.s_configuracion_modaleditarparametro.setedititem.942221d82612",
@@ -5014,7 +5025,7 @@
     },
     {
       "archivo": "src/pages/configuracion/ModalEditarParametro.tsx",
-      "linea": 56,
+      "linea": 73,
       "componente": "Boton",
       "handler": "guardarEdicion",
       "id": "control.s_configuracion_modaleditarparametro.guardaredicion.af181ca8f5a6",
@@ -5454,7 +5465,18 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 95,
+      "linea": 96,
+      "componente": "Selector",
+      "handler": "setValores",
+      "id": "control.ages_configuracion_seccionparametros.setvalores.379874f9e435",
+      "accion": "accion_setvalores",
+      "tipo": "filtro",
+      "cobertura": "automatico",
+      "alcanzable_desde_main": true
+    },
+    {
+      "archivo": "src/pages/configuracion/SeccionParametros.tsx",
+      "linea": 111,
       "componente": "Campo",
       "handler": "setValores",
       "id": "control.ages_configuracion_seccionparametros.setvalores.bf4e39e61cac",
@@ -5465,7 +5487,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 104,
+      "linea": 121,
       "componente": "button",
       "handler": "guardar",
       "id": "control.ages_configuracion_seccionparametros.guardar.4fa8a0fb4579",
@@ -5476,7 +5498,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 105,
+      "linea": 122,
       "componente": "button",
       "handler": "abrirEdicion",
       "id": "control.ages_configuracion_seccionparametros.abriredicion.f3c57a941da8",
@@ -5487,7 +5509,7 @@
     },
     {
       "archivo": "src/pages/configuracion/SeccionParametros.tsx",
-      "linea": 106,
+      "linea": 123,
       "componente": "button",
       "handler": "eliminarParametro",
       "id": "control.ages_configuracion_seccionparametros.eliminarparametro.5c0dde9a9b25",
@@ -6777,7 +6799,7 @@
       "linea": 67,
       "componente": "Boton",
       "handler": "onCambiar",
-      "id": "control.pages_personas_selectorsquads.oncambiar.6be146f05783",
+      "id": "control.pages_personas_selectorsquads.oncambiar.6a1ac5848408",
       "accion": "accion_oncambiar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -6942,7 +6964,7 @@
       "linea": 97,
       "componente": "Boton",
       "handler": "onEliminar",
-      "id": "control.pages_planes_accion_panelplan.oneliminar.80a8d327c66d",
+      "id": "control.pages_planes_accion_panelplan.oneliminar.a35050c80b3d",
       "accion": "accion_oneliminar",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -8229,7 +8251,7 @@
       "linea": 164,
       "componente": "Boton",
       "handler": "setExpandedEntregas",
-      "id": "control._requerimientos_tarjetarequerimiento.setexpandedentrega.2ad1fc5ca330",
+      "id": "control._requerimientos_tarjetarequerimiento.setexpandedentrega.c24ad030eee1",
       "accion": "accion_setexpandedentregas",
       "tipo": "boton",
       "cobertura": "automatico",
@@ -9120,6 +9142,13 @@
       "instrumentada": false
     },
     {
+      "archivo": "src/hooks/useTemaEstacional.ts",
+      "linea": 56,
+      "metodo": "GET",
+      "plantilla": "/configuracion",
+      "instrumentada": false
+    },
+    {
       "archivo": "src/pages/Actas.tsx",
       "linea": 34,
       "metodo": "PUT",
@@ -9933,28 +9962,28 @@
     },
     {
       "archivo": "src/pages/configuracion/useParametros.ts",
-      "linea": 73,
+      "linea": 74,
       "metodo": "PUT",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/configuracion/useParametros.ts",
-      "linea": 94,
+      "linea": 96,
       "metodo": "PUT",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/configuracion/useParametros.ts",
-      "linea": 115,
+      "linea": 118,
       "metodo": "PUT",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
     },
     {
       "archivo": "src/pages/configuracion/useParametros.ts",
-      "linea": 136,
+      "linea": 140,
       "metodo": "DELETE",
       "plantilla": "/configuracion/:param",
       "instrumentada": true
@@ -11485,11 +11514,11 @@
       "accion_elegirpreset",
       "boton"
     ],
-    "control.pages_soportedetalleans.setfiltrowo.308a54e3c33b": [
+    "control.pages_soportedetalleans.setfiltrowo.4f8c366e78fe": [
       "accion_setfiltrowo",
       "filtro"
     ],
-    "control.pages_soportedetalleans.setfiltroassignedt.c5dd75df2f4e": [
+    "control.pages_soportedetalleans.setfiltroassignedt.95a88d7cdd3d": [
       "accion_setfiltroassignedto",
       "filtro"
     ],
@@ -11745,7 +11774,7 @@
       "accion_oncambio",
       "boton"
     ],
-    "control.pages_asignaciones_combobox.setconsulta.85f81ad133fa": [
+    "control.pages_asignaciones_combobox.setconsulta.0fe856825a7f": [
       "accion_setconsulta",
       "filtro"
     ],
@@ -12121,7 +12150,7 @@
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_capacidades_panelcapacidad.oneliminar.48203b5d4ed5": [
+    "control.pages_capacidades_panelcapacidad.oneliminar.863f73770c9c": [
       "accion_oneliminar",
       "boton"
     ],
@@ -12167,6 +12196,10 @@
     ],
     "control.s_configuracion_modaleditarparametro.seteditgrupo.10484f5aa48c": [
       "accion_seteditgrupo",
+      "filtro"
+    ],
+    "control.s_configuracion_modaleditarparametro.seteditvalor.09e8103ea100": [
+      "accion_seteditvalor",
       "filtro"
     ],
     "control.s_configuracion_modaleditarparametro.seteditvalor.cd9f4bdb84df": [
@@ -12324,6 +12357,10 @@
     "control.ages_configuracion_seccionparametros.boton.f7873e23978b": [
       "activar",
       "boton"
+    ],
+    "control.ages_configuracion_seccionparametros.setvalores.379874f9e435": [
+      "accion_setvalores",
+      "filtro"
     ],
     "control.ages_configuracion_seccionparametros.setvalores.bf4e39e61cac": [
       "accion_setvalores",
@@ -12753,7 +12790,7 @@
       "accion_setq",
       "filtro"
     ],
-    "control.pages_personas_selectorsquads.oncambiar.6be146f05783": [
+    "control.pages_personas_selectorsquads.oncambiar.6a1ac5848408": [
       "accion_oncambiar",
       "boton"
     ],
@@ -12809,7 +12846,7 @@
       "accion_oncerrar",
       "modal"
     ],
-    "control.pages_planes_accion_panelplan.oneliminar.80a8d327c66d": [
+    "control.pages_planes_accion_panelplan.oneliminar.a35050c80b3d": [
       "accion_oneliminar",
       "boton"
     ],
@@ -13157,7 +13194,7 @@
       "navegar",
       "enlace"
     ],
-    "control._requerimientos_tarjetarequerimiento.setexpandedentrega.2ad1fc5ca330": [
+    "control._requerimientos_tarjetarequerimiento.setexpandedentrega.c24ad030eee1": [
       "accion_setexpandedentregas",
       "boton"
     ],
